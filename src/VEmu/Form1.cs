@@ -7,12 +7,13 @@ public partial class Form1 : Form
 {
     Bitmap bitmap;
 
+    const int width = 48;
+    const int height = 32;
+    const int scale = 4;
+
     public Form1()
     {
         InitializeComponent();
-
-        const int width = 48;
-        const int height = 32;
         const int stride = width * 4;
         var pixels = new int[height, width];
 
@@ -48,7 +49,8 @@ public partial class Form1 : Form
 
     private void ScreenBox_Paint(object sender, PaintEventArgs e)
     {
+        // TODO: this is cutting off leftmost column and topmost row of pixels
         e.Graphics.InterpolationMode = InterpolationMode.NearestNeighbor;
-        e.Graphics.DrawImage(bitmap, destRect: new Rectangle(0, 0, 144, 96), srcRect: new Rectangle(0, 0, 48, 32), GraphicsUnit.Pixel);
+        e.Graphics.DrawImage(bitmap, destRect: new Rectangle(0, 0, width*scale, height*scale), srcRect: new Rectangle(0, 0, width, height), GraphicsUnit.Pixel);
     }
 }

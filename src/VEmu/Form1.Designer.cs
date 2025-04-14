@@ -34,9 +34,10 @@ partial class Form1
         // 
         // ScreenBox
         // 
-        ScreenBox.Location = new Point(120, 12);
+        ScreenBox.Anchor = AnchorStyles.None;
+        ScreenBox.Location = new Point(83, 19);
         ScreenBox.Name = "ScreenBox";
-        ScreenBox.Size = new Size(144, 96);
+        ScreenBox.Size = new Size(192, 128);
         ScreenBox.TabIndex = 0;
         ScreenBox.TabStop = false;
         ScreenBox.Paint += ScreenBox_Paint;
@@ -45,7 +46,7 @@ partial class Form1
         // 
         AutoScaleDimensions = new SizeF(7F, 15F);
         AutoScaleMode = AutoScaleMode.Font;
-        ClientSize = new Size(384, 361);
+        ClientSize = new Size(356, 322);
         Controls.Add(ScreenBox);
         Name = "Form1";
         Text = "Form1";
