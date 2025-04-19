@@ -5,7 +5,9 @@ namespace VEmu.Core;
 
 class Cpu
 {
-    // VMU-2: standalone instruction time 183us (microseconds).
+    internal TextWriter Logger { get => field ??= Console.Error; init; }
+
+    // VMU-2: standalone instruction cycle time 183us (microseconds).
     // Compare with 1us when connected to console.
 
     // VMD-35: Accumulator and all registers are mapped to RAM.
@@ -17,6 +19,8 @@ class Cpu
     internal readonly byte[] ROM = new byte[64 * 1024];
 
     internal readonly byte[] RamBank0 = new byte[0x1c0]; // 448 dec
+
+    internal byte[] CurrentRamBank => SFRs.Rambk0 ? RamBank1 : RamBank0;
 
     internal Span<byte> MainRam_0 => RamBank0.AsSpan(0..0x100);
 
@@ -43,7 +47,6 @@ class Cpu
 
     internal void Step()
     {
-        // Fetch
         byte prefix = ROM[Pc];
         switch (OpcodePrefixExtensions.GetPrefix(prefix))
         {
@@ -51,8 +54,6 @@ class Cpu
                 Op_ADD();
                 break;
         }
-        // Decode
-        // Execute
     }
 
     internal (byte operand, byte instructionSize) FetchArithmeticOperand()
@@ -68,8 +69,7 @@ class Cpu
                 {
                     // 9 bit address: oooommmd dddd_dddd
                     var address = ((prefix & 0x1) << 8) | ROM[Pc + 1];
-                    var bank = (SFRs.Psw & 0x10) == 0x10 ? RamBank1 : RamBank0;
-                    return (operand: bank[address], instructionSize: 2);
+                    return (operand: CurrentRamBank[address], instructionSize: 2);
                 }
             case 0b100:
             case 0b110:
@@ -98,12 +98,12 @@ class Cpu
                     byte term;
                     if (bankId == 3)
                     {
-                        Console.Error.WriteLine("Accessing nonexistent bank 3");
+                        Logger.WriteLine("Accessing nonexistent bank 3");
                         term = 0;
                     }
                     else if (bankId == 2)
                     {
-                        Console.Error.WriteLine("Accessing bank 2, but no bounds checks are implemented");
+                        Logger.WriteLine("Accessing bank 2, but no bounds checks are implemented");
                         term = RamBank2[address];
                     }
                     else

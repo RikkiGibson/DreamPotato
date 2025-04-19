@@ -38,7 +38,7 @@ static class OpcodePrefixExtensions
 {
     public static OpcodePrefix GetPrefix(byte b)
     {
-        byte leftNybble = (byte)(b & 0b1111_1100);
+        byte leftNybble = (byte)(b & 0b1111_1000);
         Debug.Assert(Enum.GetValues<OpcodePrefix>().Contains((OpcodePrefix)leftNybble));
         return (OpcodePrefix)leftNybble;
     }
