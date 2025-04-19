@@ -1,0 +1,29 @@
+using System.Diagnostics;
+
+enum OpcodePrefix : byte
+{
+    // Arithmetic
+    ADD =	0b1000_0000,
+    ADDC =	0b1001_0000,
+    SUB =	0b1010_0000,
+    SUBC =	0b1011_0000,
+    INC =	0b0110_0000,
+    DEC =	0b0111_0000,
+    MUL =	0b0011_0000,
+    DIV =	0b0100_0000,
+
+    // Logical
+    AND =	0b1110_0000,
+    OR =	0b1101_0000,
+	XOR =	0b1101_0100,
+}
+
+static class OpcodePrefixExtensions
+{
+    public static OpcodePrefix GetPrefix(byte b)
+    {
+        byte leftNybble = (byte)(b & 0b1111_1100);
+        Debug.Assert(Enum.GetValues<OpcodePrefix>().Contains((OpcodePrefix)leftNybble));
+        return (OpcodePrefix)leftNybble;
+    }
+}

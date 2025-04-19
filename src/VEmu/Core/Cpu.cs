@@ -14,6 +14,8 @@ class Cpu
 
     private Span<byte> MainRam_0 => RamBank0.AsSpan(0..0x100);
 
+    private short Pc;
+
     // VMD-39
     private Span<byte> IndirectAddressRegisters => RamBank0.AsSpan(0..0x10);
 
@@ -22,7 +24,6 @@ class Cpu
 
     /// <summary>LCD video XRAM, bank 0.</summary>
     private Span<byte> XRam_0 => RamBank0.AsSpan(0x180..0x1c0);
-
 
     private byte[] RamBank1 = new byte[0x1c0];
     private Span<byte> MainRam_1 => RamBank1.AsSpan(0..0x100);
@@ -36,6 +37,12 @@ class Cpu
     private void Step()
     {
         // Fetch
+        var prefix = ROM[Pc];
+        switch (prefix)
+        {
+            case 0b10000001: // ADD immediate
+                break;
+        }
         // Decode
         // Execute
     }

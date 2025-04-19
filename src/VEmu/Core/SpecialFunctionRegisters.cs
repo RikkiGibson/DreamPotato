@@ -3,7 +3,7 @@ namespace VEmu.Core;
 /// <summary>See VMD-40, table 2.6</summary>
 public struct SpecialFunctionRegisters(byte[] RamBank0)
 {
-    /// <summary>Program status word. VMD-50</summary>
+    /// <summary>Accumulator. VMD-50</summary>
     ref byte Acc => ref RamBank0[0x100];
     /// <summary>Program status word. VMD-52</summary>
     ref byte Psw => ref RamBank0[0x101];
