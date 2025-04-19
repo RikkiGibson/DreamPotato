@@ -55,40 +55,32 @@ class Cpu
         // Execute
     }
 
-    internal void Op_ADD()
+    internal (byte operand, byte instructionSize) FetchArithmeticOperand()
     {
-        byte prefix = ROM[Pc];
-        byte size;
-
+        var prefix = ROM[Pc];
         var mode = prefix & 0x0f;
         switch (mode)
         {
             case 0b01: // immediate
-                size = 2;
-                SFRs.Acc += ROM[Pc + 1];
-                break;
+                return (operand: ROM[Pc + 1], instructionSize: 2);
             case 0b10: // direct
             case 0b11:
                 {
-                    size = 2;
                     // 9 bit address: oooommmd dddd_dddd
                     var address = ((prefix & 0x1) << 8) | ROM[Pc + 1];
                     var bank = (SFRs.Psw & 0x10) == 0x10 ? RamBank1 : RamBank0;
-                    SFRs.Acc += bank[address];
-                    break;
+                    return (operand: bank[address], instructionSize: 2);
                 }
             case 0b100:
             case 0b110:
             case 0b101:
             case 0b111: // indirect
                 {
-                    size = 1;
                     // There are 16 indirect registers, each 1 byte in size.
                     // - bit 3: IRBK1
                     // - bit 2: IRBK0
                     // - bit 1: j1 (instruction data)
                     // - bit 0: j0 (instruction data)
-
 
                     var irbk = SFRs.Psw & 0b11000; // Mask out IRBK1, IRBK0 bits (VMD-44).
                     var bankId = irbk >> 3; // Normalize for reuse.
@@ -119,13 +111,34 @@ class Cpu
                         var bank = bankId switch { 0 => RamBank0, 1 => RamBank1, _ => throw new InvalidOperationException() };
                         term = bank[address];
                     }
-                    SFRs.Acc += term;
-
-                    break;
+                    return (term, instructionSize: 1);
                 }
             default:
                 throw new InvalidOperationException();
         }
-        Pc += size;
+    }
+
+    internal void Op_ADD()
+    {
+        // ACC <- ACC + operand
+        var (rhs, instructionSize) = FetchArithmeticOperand();
+        var lhs = SFRs.Acc;
+        var result = (byte)(lhs + rhs);
+        SFRs.Acc = result;
+
+        SFRs.Cy = result < lhs;
+        SFRs.Ac = (lhs & 0xf) + (rhs & 0xf) > 0xf;
+
+        // Overflow occurs if either:
+        // - both operands had MSB set (i.e. were two's complement negative), but the result has the MSB cleared.
+        // - both operands had MSB cleared (i.e. were two's complement positive), but the result has the MSB set.
+        SFRs.Ov = (BitHelpers.ReadBit(lhs, bit: 7), BitHelpers.ReadBit(rhs, bit: 7), BitHelpers.ReadBit(result, bit: 7)) switch
+        {
+            (true, true, false) => true,
+            (false, false, true) => true,
+            _ => false
+        };
+
+        Pc += instructionSize;
     }
 }

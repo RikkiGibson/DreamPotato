@@ -14,6 +14,6 @@ static class BitHelpers
         if (value)
             dest = (byte)(dest | 1 << bit);
         else
-            dest = (byte)(dest | ~(1 << bit));
+            dest = (byte)(dest & ~(1 << bit));
     }
 }

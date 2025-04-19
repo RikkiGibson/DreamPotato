@@ -33,7 +33,7 @@ public class SpecialFunctionRegisters(byte[] RamBank0)
         set => BitHelpers.WriteBit(ref Psw, bit: 4, value);
     }
 
-    /// <summary>Overflow flag. VMD-45</summary>
+    /// <summary>Indirect address register bank flag 0. VMD-45</summary>
     public bool Irbk0
     {
         get => BitHelpers.ReadBit(Psw, bit: 3);
