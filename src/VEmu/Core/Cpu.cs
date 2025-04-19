@@ -14,34 +14,34 @@ class Cpu
     //
 
     /// <summary>Read-only memory space.</summary>
-    private readonly byte[] ROM = new byte[64 * 1024];
+    internal readonly byte[] ROM = new byte[64 * 1024];
 
-    private readonly byte[] RamBank0 = new byte[0x1c0]; // 448 dec
+    internal readonly byte[] RamBank0 = new byte[0x1c0]; // 448 dec
 
-    private Span<byte> MainRam_0 => RamBank0.AsSpan(0..0x100);
+    internal Span<byte> MainRam_0 => RamBank0.AsSpan(0..0x100);
 
-    private short Pc;
+    internal short Pc;
 
     // VMD-39
-    private Span<byte> IndirectAddressRegisters => RamBank0.AsSpan(0..0x10); // 16 dec
+    internal Span<byte> IndirectAddressRegisters => RamBank0.AsSpan(0..0x10); // 16 dec
 
 
     // VMD-40, table 2.6
-    private SpecialFunctionRegisters SFRs => new(RamBank0);
+    internal SpecialFunctionRegisters SFRs => new(RamBank0);
 
     /// <summary>LCD video XRAM, bank 0.</summary>
-    private Span<byte> XRam_0 => RamBank0.AsSpan(0x180..0x1c0);
+    internal Span<byte> XRam_0 => RamBank0.AsSpan(0x180..0x1c0);
 
-    private readonly byte[] RamBank1 = new byte[0x1c0];
-    private Span<byte> MainRam_1 => RamBank1.AsSpan(0..0x100);
+    internal readonly byte[] RamBank1 = new byte[0x1c0];
+    internal Span<byte> MainRam_1 => RamBank1.AsSpan(0..0x100);
     /// <summary>LCD video XRAM, bank 1.</summary>
-    private Span<byte> XRam_1 => RamBank1.AsSpan(0x180..0x1c0);
+    internal Span<byte> XRam_1 => RamBank1.AsSpan(0x180..0x1c0);
 
-    private readonly byte[] RamBank2 = new byte[0x1c0];
+    internal readonly byte[] RamBank2 = new byte[0x1c0];
     /// <summary>LCD video XRAM, bank 2.</summary>
-    private Span<byte> XRam_2 => RamBank1.AsSpan(0x180..0x190);
+    internal Span<byte> XRam_2 => RamBank1.AsSpan(0x180..0x190);
 
-    private void Step()
+    internal void Step()
     {
         // Fetch
         byte prefix = ROM[Pc];
@@ -55,7 +55,7 @@ class Cpu
         // Execute
     }
 
-    private void Op_ADD()
+    internal void Op_ADD()
     {
         byte prefix = ROM[Pc];
         byte size;
@@ -63,24 +63,24 @@ class Cpu
         var mode = prefix & 0x0f;
         switch (mode)
         {
-            case 0x01: // immediate
+            case 0b01: // immediate
                 size = 2;
                 SFRs.Acc += ROM[Pc + 1];
                 break;
-            case 0x10: // direct
-            case 0x11:
+            case 0b10: // direct
+            case 0b11:
                 {
                     size = 2;
                     // 9 bit address: oooommmd dddd_dddd
-                    var address = ((prefix & 0x1f) << 8) | ROM[Pc + 1];
+                    var address = ((prefix & 0x1) << 8) | ROM[Pc + 1];
                     var bank = (SFRs.Psw & 0x10) == 0x10 ? RamBank1 : RamBank0;
                     SFRs.Acc += bank[address];
                     break;
                 }
-            case 0x100:
-            case 0x110:
-            case 0x101:
-            case 0x111: // indirect
+            case 0b100:
+            case 0b110:
+            case 0b101:
+            case 0b111: // indirect
                 {
                     size = 1;
                     // There are 16 indirect registers, each 1 byte in size.

@@ -1,12 +1,65 @@
+using System.Numerics;
+
 namespace VEmu.Core;
 
 /// <summary>See VMD-40, table 2.6</summary>
-public struct SpecialFunctionRegisters(byte[] RamBank0)
+/// <remarks>this could be a 'readonly struct' once some language rules are relaxed, but, it doesn't really matter.</remarks>
+public class SpecialFunctionRegisters(byte[] RamBank0)
 {
     /// <summary>Accumulator. VMD-50</summary>
     public ref byte Acc => ref RamBank0[0x100];
+
     /// <summary>Program status word. VMD-52</summary>
     public ref byte Psw => ref RamBank0[0x101];
+
+    /// <summary>Carry flag. VMD-45</summary>
+    public bool Cy
+    {
+        get => BitHelpers.ReadBit(Psw, bit: 7);
+        set => BitHelpers.WriteBit(ref Psw, bit: 7, value);
+    }
+
+    /// <summary>Auxiliary carry flag. VMD-45</summary>
+    public bool Ac
+    {
+        get => BitHelpers.ReadBit(Psw, bit: 6);
+        set => BitHelpers.WriteBit(ref Psw, bit: 6, value);
+    }
+
+    /// <summary>Indirect address register bank flag 1. VMD-45</summary>
+    public bool Irbk1
+    {
+        get => BitHelpers.ReadBit(Psw, bit: 4);
+        set => BitHelpers.WriteBit(ref Psw, bit: 4, value);
+    }
+
+    /// <summary>Overflow flag. VMD-45</summary>
+    public bool Irbk0
+    {
+        get => BitHelpers.ReadBit(Psw, bit: 3);
+        set => BitHelpers.WriteBit(ref Psw, bit: 3, value);
+    }
+
+    /// <summary>Overflow flag. VMD-45</summary>
+    public bool Ov
+    {
+        get => BitHelpers.ReadBit(Psw, bit: 2);
+        set => BitHelpers.WriteBit(ref Psw, bit: 2, value);
+    }
+
+    /// <summary>RAM bank flag. VMD-45</summary>
+    public bool Rambk0
+    {
+        get => BitHelpers.ReadBit(Psw, bit: 1);
+        set => BitHelpers.WriteBit(ref Psw, bit: 1, value);
+    }
+
+    /// <summary>Accumulator (ACC) parity flag. VMD-45</summary>
+    public bool P
+    {
+        get => BitHelpers.ReadBit(Psw, bit: 0);
+        set => BitHelpers.WriteBit(ref Psw, bit: 0, value);
+    }
 
     /// <summary>B register. VMD-51</summary>
     public ref byte B => ref RamBank0[0x102];

@@ -1,4 +1,4 @@
-enum InstructionMode : byte
+internal enum InstructionMode : byte
 {
     Immediate = 0b0001, // oooommmm iiiiiiii
     Direct = 0b0010, // oooommmd dddddddd
@@ -7,12 +7,12 @@ enum InstructionMode : byte
 
 public static class InstructionModeExtensions
 {
-    public static InstructionMode GetInstructionMode(byte b)
+    internal static InstructionMode GetInstructionMode(byte b)
     {
         var rawMode = (InstructionMode)(b & 0x0f);
         if (rawMode == InstructionMode.Immediate)
             return InstructionMode.Immediate;
 
-        
+        throw new NotImplementedException(); // TODO likely delete
     }
 }

@@ -9,4 +9,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="VEMu.Tests" />
+  </ItemGroup>
 </Project>
