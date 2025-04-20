@@ -1,5 +1,7 @@
 using System.Diagnostics;
 
+using VEmu.Core;
+
 // Interesting facts about instructions:
 // - encoding
 // - size
@@ -41,5 +43,10 @@ static class OpcodePrefixExtensions
         byte leftNybble = (byte)(b & 0b1111_1000);
         Debug.Assert(Enum.GetValues<OpcodePrefix>().Contains((OpcodePrefix)leftNybble));
         return (OpcodePrefix)leftNybble;
+    }
+
+    public static byte Compose(this OpcodePrefix prefix, AddressingMode mode)
+    {
+        return (byte)((byte)prefix | (byte)mode);
     }
 }
