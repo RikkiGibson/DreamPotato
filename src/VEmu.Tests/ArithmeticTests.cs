@@ -761,7 +761,7 @@ public class ArithmeticTests
     }
 
     [Fact]
-    public void INC_Indirect_Example1()
+    public void INC_Direct_Example1()
     {
         // VMC-167
         var cpu = new Cpu();
@@ -793,7 +793,7 @@ public class ArithmeticTests
     }
 
     [Fact]
-    public void INC_Indirect_Example2()
+    public void INC_Direct_Example2()
     {
         // VMC-167
         var cpu = new Cpu();
@@ -823,6 +823,8 @@ public class ArithmeticTests
         Assert.Equal(0x01, cpu.RamBank0[0x7f]);
         Assert.Equal(0, cpu.SFRs.Psw);
     }
+
+    // TODO: test inc indirect
 
     // TODO: test an edge case for Ov with SUBC, when the underflow only occurs due to the carry
 }
