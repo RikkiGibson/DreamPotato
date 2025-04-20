@@ -12,14 +12,26 @@ public class SpecialFunctionRegisters(byte[] RamBank0)
     /// <summary>Program status word. VMD-52</summary>
     public ref byte Psw => ref RamBank0[0x101];
 
-    /// <summary>Carry flag. VMD-45</summary>
+    /// <summary>
+    /// Carry flag. VMD-45.
+    /// </summary>
+    /// <remarks>
+    /// For arithmetic operations, carry can be thought of as "unsigned overflow".
+    /// If an addition result exceeds 0xff, or a subtraction is less than 0, the carry flag is set.
+    /// </remarks>
     public bool Cy
     {
         get => BitHelpers.ReadBit(Psw, bit: 7);
         set => BitHelpers.WriteBit(ref Psw, bit: 7, value);
     }
 
-    /// <summary>Auxiliary carry flag. VMD-45</summary>
+    /// <summary>
+    /// Auxiliary carry flag. VMD-45.
+    /// </summary>
+    /// <remarks>
+    /// This flag considers only the lower 4 bits of the operands. i.e. those bits which are retained by (value & 0xf).
+    /// When an addition of the lower 4 bits of all operands exceeds 0xf, or a subtraction of the same is less than 0, the auxiliary carry flag is set.
+    /// </remarks>
     public bool Ac
     {
         get => BitHelpers.ReadBit(Psw, bit: 6);
@@ -40,7 +52,28 @@ public class SpecialFunctionRegisters(byte[] RamBank0)
         set => BitHelpers.WriteBit(ref Psw, bit: 3, value);
     }
 
-    /// <summary>Overflow flag. VMD-45</summary>
+    /// <summary>
+    /// Overflow flag. VMD-45.
+    /// </summary>
+    /// <remarks>
+    /// This flag indicates whether "signed overflow" occurred in an arithmetic operation.
+    /// (Keep in mind that whether operands between 128 and 255 are signed, i.e. are really between -1 and -128, depends on caller's interpretation.)
+    /// It is set when the operation causes the accumulator to "travel across" from 127 to -128 of the signed range, in either direction.
+    ///
+    /// For example, imagine the operation as occurring on a number line, where A (accumulator) initially has value 127, and op has value 3.
+    /// The result A1, if viewed as a signed number, has value -126. "Signed overflow" has occurred, so Ov is set.
+    /// The same can occur for subtraction. for example if A is -128 and op is 1, then the result is 127, so Ov is set.
+    ///  ... 127  -128  -127  -126 ...
+    /// <-    -     -     -     -   ->
+    ///       A                A1
+    ///       op -------------->
+    ///
+    ///       A1    A
+    ///       <---- op
+    ///
+    /// The same can occur when one or both operands are negative, e.g.
+    /// for (-128) + (-1) = 127, or, for 126 - (-2) = -128.
+    /// </remarks>
     public bool Ov
     {
         get => BitHelpers.ReadBit(Psw, bit: 2);

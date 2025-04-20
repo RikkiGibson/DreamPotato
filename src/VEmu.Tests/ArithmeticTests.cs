@@ -824,6 +824,152 @@ public class ArithmeticTests
         Assert.Equal(0, cpu.SFRs.Psw);
     }
 
+    [Fact]
+    public void DEC_Indirect_Example1()
+    {
+        // VMC-170
+        var cpu = new Cpu();
+        ReadOnlySpan<byte> instructions = [
+            OpcodePrefix.DEC.Compose(AddressingMode.Indirect2), // DEC @R2
+            OpcodePrefix.DEC.Compose(AddressingMode.Indirect2),
+            OpcodePrefix.DEC.Compose(AddressingMode.Indirect2),
+            OpcodePrefix.DEC.Compose(AddressingMode.Indirect2),
+        ];
+        instructions.CopyTo(cpu.ROM);
+
+        cpu.IndirectAddressRegisters[2] = 0; // @R2 addresses 0x100-0x1ff range, so, this refers to ACC (0x100).
+        cpu.RamBank0[0x100] = 2;
+        Assert.Equal(2, cpu.SFRs.Acc);
+
+        Assert.Equal(1, cpu.Step());
+        Assert.Equal(1, cpu.SFRs.Acc);
+        Assert.Equal(0, cpu.SFRs.Psw);
+
+        Assert.Equal(1, cpu.Step());
+        Assert.Equal(0, cpu.SFRs.Acc);
+        Assert.Equal(0, cpu.SFRs.Psw);
+
+        Assert.Equal(1, cpu.Step());
+        Assert.Equal(255, cpu.SFRs.Acc);
+        Assert.Equal(0, cpu.SFRs.Psw);
+
+        Assert.Equal(1, cpu.Step());
+        Assert.Equal(254, cpu.SFRs.Acc);
+        Assert.Equal(0, cpu.SFRs.Psw);
+    }
+
+    [Fact]
+    public void MUL_Example1()
+    {
+        // VMC-171
+        var cpu = new Cpu();
+        ReadOnlySpan<byte> instructions = [
+            (byte)Opcode.MUL
+        ];
+        instructions.CopyTo(cpu.ROM);
+
+        cpu.SFRs.Cy = true;
+        cpu.SFRs.Ac = true;
+        cpu.SFRs.Ov = true;
+
+        // 0x1123 * 0x52 = 0x057D36
+        cpu.SFRs.Acc = 0x11;
+        cpu.SFRs.C = 0x23;
+        cpu.SFRs.B = 0x52;
+
+        Assert.Equal(7, cpu.Step());
+        Assert.Equal(0x05, cpu.SFRs.B);
+        Assert.Equal(0x7D, cpu.SFRs.Acc);
+        Assert.Equal(0x36, cpu.SFRs.C);
+        Assert.False(cpu.SFRs.Cy);
+        Assert.True(cpu.SFRs.Ac);
+        Assert.True(cpu.SFRs.Ov);
+    }
+
+    [Fact]
+    public void MUL_Example2()
+    {
+        // VMC-171
+        var cpu = new Cpu();
+        ReadOnlySpan<byte> instructions = [
+            (byte)Opcode.MUL
+        ];
+        instructions.CopyTo(cpu.ROM);
+
+        cpu.SFRs.Cy = true;
+        cpu.SFRs.Ac = true;
+        cpu.SFRs.Ov = true;
+
+        // 0x0705 * 0x10 = 0x007050
+        cpu.SFRs.Acc = 0x07;
+        cpu.SFRs.C = 0x05;
+        cpu.SFRs.B = 0x10;
+
+        Assert.Equal(7, cpu.Step());
+        Assert.Equal(0x00, cpu.SFRs.B);
+        Assert.Equal(0x70, cpu.SFRs.Acc);
+        Assert.Equal(0x50, cpu.SFRs.C);
+        Assert.False(cpu.SFRs.Cy);
+        Assert.True(cpu.SFRs.Ac);
+        Assert.False(cpu.SFRs.Ov);
+    }
+
+    [Fact]
+    public void DIV_Example1()
+    {
+        // VMC-171
+        var cpu = new Cpu();
+        ReadOnlySpan<byte> instructions = [
+            (byte)Opcode.DIV
+        ];
+        instructions.CopyTo(cpu.ROM);
+
+        cpu.SFRs.Cy = true;
+        cpu.SFRs.Ac = true;
+        cpu.SFRs.Ov = true;
+
+        // 0x0705 * 0x10 = 0x007050
+        cpu.SFRs.Acc = 0x79;
+        cpu.SFRs.C = 0x05;
+        cpu.SFRs.B = 0x07;
+
+        Assert.Equal(7, cpu.Step());
+        Assert.Equal(0x06, cpu.SFRs.B);
+        Assert.Equal(0x11, cpu.SFRs.Acc);
+        Assert.Equal(0x49, cpu.SFRs.C);
+        Assert.False(cpu.SFRs.Cy);
+        Assert.True(cpu.SFRs.Ac);
+        Assert.False(cpu.SFRs.Ov);
+    }
+
+    [Fact]
+    public void DIV_Example2()
+    {
+        // VMC-171
+        var cpu = new Cpu();
+        ReadOnlySpan<byte> instructions = [
+            (byte)Opcode.DIV
+        ];
+        instructions.CopyTo(cpu.ROM);
+
+        cpu.SFRs.Cy = true;
+        cpu.SFRs.Ac = true;
+        cpu.SFRs.Ov = true;
+
+        // 0x0705 * 0x10 = 0x007050
+        cpu.SFRs.Acc = 0x07;
+        cpu.SFRs.C = 0x10;
+        cpu.SFRs.B = 0x00;
+
+        Assert.Equal(7, cpu.Step());
+        Assert.Equal(0x00, cpu.SFRs.B);
+        Assert.Equal(0xFF, cpu.SFRs.Acc);
+        Assert.Equal(0x10, cpu.SFRs.C);
+        Assert.False(cpu.SFRs.Cy);
+        Assert.True(cpu.SFRs.Ac);
+        Assert.True(cpu.SFRs.Ov);
+    }
+
     // TODO: test inc indirect
 
     // TODO: test an edge case for Ov with SUBC, when the underflow only occurs due to the carry

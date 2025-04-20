@@ -49,15 +49,30 @@ class Cpu
     /// <returns>Number of cycles consumed by the instruction.</returns>
     internal int Step()
     {
-        // TODO: probably number of cycles consumed should be returned here.
+        // TODO: review the bit patterns and decide whether to represent more of these using "OpcodePrefix"
+        // Perhaps some nifty use of range patterns could help here, e.g. '>= (byte)OpcodePrefix.XOR | (byte)AddressingMode.Immediate and <= (byte)OpcodePrefix.XOR | (byte)AddressingMode.Indirect3
         byte prefix = ROM[Pc];
-        switch (OpcodePrefixExtensions.GetPrefix(prefix))
+        switch ((Opcode)prefix)
+        {
+            case Opcode.MUL: return Op_MUL();
+            case Opcode.DIV: return Op_DIV();
+            case Opcode.ROL: return Op_ROL();
+        }
+
+        switch (prefix.GetOpcodePrefix())
         {
             case OpcodePrefix.ADD: return Op_ADD();
             case OpcodePrefix.ADDC: return Op_ADDC();
             case OpcodePrefix.SUB: return Op_SUB();
             case OpcodePrefix.SUBC: return Op_SUBC();
             case OpcodePrefix.INC: return Op_INC();
+            case OpcodePrefix.DEC: return Op_DEC();
+            // TODO: MUL, DIV might go here
+
+            case OpcodePrefix.AND: return Op_AND();
+            case OpcodePrefix.OR: return Op_OR();
+            case OpcodePrefix.XOR: return Op_XOR();
+            // TODO: ROL, ROLC, ROR, RORC might go here
             default:
                 throw new NotImplementedException();
         }
@@ -278,6 +293,7 @@ class Cpu
         var result = (byte)(lhs - carry - rhs);
         SFRs.Acc = result;
 
+        // Carry is set when the subtraction yields a negative result.
         SFRs.Cy = lhs - carry - rhs < 0;
         SFRs.Ac = (lhs & 0xf) - carry - (rhs & 0xf) < 0;
 
@@ -304,5 +320,108 @@ class Cpu
         operand++;
         Pc += instructionSize;
         return 1;
+    }
+
+    internal int Op_DEC()
+    {
+        // (operand) <- (operand) - 1
+        // (could be either direct or indirect)
+        ref var operand = ref GetArithmeticOperand(out var instructionSize);
+        operand--;
+        Pc += instructionSize;
+        return 1;
+    }
+
+    internal int Op_MUL()
+    {
+        // TODO: interrupts enabled on the 7th cycle.
+        // Have to consider when implementing interrupts.
+
+        // (B) (ACC) (C) <- (ACC) (C) * (B)
+        int result = (SFRs.Acc << 0x8 | SFRs.C) * SFRs.B;
+        SFRs.B = (byte)(result >> 0x10); // Casting to byte just takes the 8 least significant bits of the expression
+        SFRs.Acc = (byte)(result >> 0x8);
+        SFRs.C = (byte)result;
+
+        // Overflow cleared indicates the result can fit into 16 bits, i.e. B is 0.
+        SFRs.Ov = SFRs.B != 0;
+        SFRs.Cy = false;
+        Pc += 1;
+        return 7;
+    }
+
+    internal int Op_DIV()
+    {
+        // (ACC) (C), mod(B) <- (ACC) (C) / (B)
+        if (SFRs.B == 0)
+        {
+            SFRs.Acc = 0xff;
+            SFRs.Ov = true;
+        }
+        else
+        {
+            int lhs = SFRs.Acc << 0x8 | SFRs.C;
+            int result = lhs / SFRs.B;
+            int mod = lhs % SFRs.B;
+
+            SFRs.Acc = (byte)(result >> 0x8);
+            SFRs.C = (byte)result;
+            SFRs.B = (byte)mod;
+            SFRs.Ov = false;
+        }
+        SFRs.Cy = false;
+        Pc += 1;
+        return 7;
+    }
+
+    internal int Op_AND()
+    {
+        // ACC <- ACC & operand
+        var (rhs, instructionSize) = FetchArithmeticOperand();
+        SFRs.Acc &= rhs;
+        Pc += instructionSize;
+        return 1;
+    }
+
+
+    internal int Op_OR()
+    {
+        // ACC <- ACC | operand
+        var (rhs, instructionSize) = FetchArithmeticOperand();
+        SFRs.Acc |= rhs;
+        Pc += instructionSize;
+        return 1;
+    }
+    internal int Op_XOR()
+    {
+        // ACC <- ACC ^ operand
+        var (rhs, instructionSize) = FetchArithmeticOperand();
+        SFRs.Acc ^= rhs;
+        Pc += instructionSize;
+        return 1;
+    }
+
+    internal int Op_ROL()
+    {
+        // (A0) ->CY->A7->A6->A5->A4->A3->A2->A1->A0
+        if (SFRs.B == 0)
+        {
+            SFRs.Acc = 0xff;
+            SFRs.Ov = true;
+        }
+        else
+        {
+            int lhs = SFRs.Acc << 0x8 | SFRs.C;
+            int result = lhs / SFRs.B;
+            int mod = lhs % SFRs.B;
+
+            SFRs.Acc = (byte)(result >> 0x8);
+            SFRs.C = (byte)result;
+            SFRs.B = (byte)mod;
+            SFRs.Ov = false;
+        }
+        SFRs.Cy = false;
+        Pc += 1;
+        return 7;
     }
 }

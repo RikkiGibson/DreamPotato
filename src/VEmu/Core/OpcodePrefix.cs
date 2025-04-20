@@ -9,6 +9,9 @@ using VEmu.Core;
 // - flags affected
 // - interrupts enabled
 
+/// <summary>
+/// Note that a well formed instruction from this group will always have a <see cref="AddressingMode"/> OR'd into it.
+/// </summary>
 enum OpcodePrefix : byte
 {
     // Arithmetic
@@ -38,7 +41,7 @@ enum Opcode : byte
 
 static class OpcodePrefixExtensions
 {
-    public static OpcodePrefix GetPrefix(byte b)
+    public static OpcodePrefix GetOpcodePrefix(this byte b)
     {
         byte leftNybble = (byte)(b & 0b1111_1000);
         Debug.Assert(Enum.GetValues<OpcodePrefix>().Contains((OpcodePrefix)leftNybble));
@@ -48,5 +51,14 @@ static class OpcodePrefixExtensions
     public static byte Compose(this OpcodePrefix prefix, AddressingMode mode)
     {
         return (byte)((byte)prefix | (byte)mode);
+    }
+
+    public static bool SupportsAddressingMode(this OpcodePrefix prefix, AddressingMode mode)
+    {
+        // TODO: introduce this for verification once more instructions are implemented
+        return (prefix, mode) switch
+        {
+            _ => throw new NotImplementedException()
+        };
     }
 }
