@@ -57,6 +57,9 @@ class Cpu
             case Opcode.MUL: return Op_MUL();
             case Opcode.DIV: return Op_DIV();
             case Opcode.ROL: return Op_ROL();
+            case Opcode.ROLC: return Op_ROLC();
+            case Opcode.ROR: return Op_ROR();
+            case Opcode.RORC: return Op_RORC();
         }
 
         switch (prefix.GetOpcodePrefix())
@@ -73,6 +76,8 @@ class Cpu
             case OpcodePrefix.OR: return Op_OR();
             case OpcodePrefix.XOR: return Op_XOR();
             // TODO: ROL, ROLC, ROR, RORC might go here
+
+            case OpcodePrefix.LD: return Op_LD();
             default:
                 throw new NotImplementedException();
         }
@@ -403,25 +408,49 @@ class Cpu
 
     internal int Op_ROL()
     {
-        // (A0) ->CY->A7->A6->A5->A4->A3->A2->A1->A0
-        if (SFRs.B == 0)
-        {
-            SFRs.Acc = 0xff;
-            SFRs.Ov = true;
-        }
-        else
-        {
-            int lhs = SFRs.Acc << 0x8 | SFRs.C;
-            int result = lhs / SFRs.B;
-            int mod = lhs % SFRs.B;
-
-            SFRs.Acc = (byte)(result >> 0x8);
-            SFRs.C = (byte)result;
-            SFRs.B = (byte)mod;
-            SFRs.Ov = false;
-        }
-        SFRs.Cy = false;
+        // <-A7<-A6<-A5<-A4<-A3<-A2<-A1<-A0
+        int shifted = SFRs.Acc << 1;
+        bool bit0 = (shifted & 0x100) != 0;
+        SFRs.Acc = (byte)(shifted | (bit0 ? 1 : 0));
         Pc += 1;
-        return 7;
+        return 1;
+    }
+
+    internal int Op_ROLC()
+    {
+        // <-A7<-A6<-A5<-A4<-A3<-A2<-A1<-A0<-CY<- (A7)
+        int shifted = SFRs.Acc << 1 | (SFRs.Cy ? 1 : 0);
+        SFRs.Cy = (shifted & 0x100) != 0;
+        SFRs.Acc = (byte)shifted;
+        Pc += 1;
+        return 1;
+    }
+
+    internal int Op_ROR()
+    {
+        // (A0) ->A7->A6->A5->A4->A3->A2->A1->A0
+        bool bit7 = (SFRs.Acc & 1) != 0;
+        SFRs.Acc = (byte)((SFRs.Acc >> 1) | (bit7 ? 0x80 : 0));
+        Pc += 1;
+        return 1;
+    }
+
+
+    internal int Op_RORC()
+    {
+        // (A0) ->CY->A7->A6->A5->A4->A3->A2->A1->A0
+        bool newCarry = (SFRs.Acc & 1) != 0;
+        SFRs.Acc = (byte)((SFRs.Cy ? 0x80 : 0) | SFRs.Acc >> 1);
+        SFRs.Cy = newCarry;
+        Pc += 1;
+        return 1;
+    }
+
+    internal int Op_LD()
+    {
+        // (ACC) <- (d9)
+        (SFRs.Acc, var instructionSize) = FetchArithmeticOperand();
+        Pc += instructionSize;
+        return 1;
     }
 }

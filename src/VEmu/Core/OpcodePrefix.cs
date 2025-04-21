@@ -26,6 +26,9 @@ enum OpcodePrefix : byte
     AND =	0b1110_0000,
     OR =	0b1101_0000,
 	XOR =	0b1111_0000,
+
+    // Data Transfer
+    LD =	0b0000_0000,
 }
 
 // Following opcodes do not take arguments, they simply modify ACC.
