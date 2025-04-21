@@ -31,6 +31,7 @@ enum OpcodePrefix : byte
     LD =	0b0000_0000,
     ST =	0b0001_0000,
     MOV =	0b0010_0000,
+    PUSH =	0b0110_0000,
 }
 
 // Following opcodes do not take arguments, they simply modify ACC.
@@ -42,6 +43,7 @@ enum Opcode : byte
 	RORC =	0b11010000,
     MUL =	0b0011_0000,
     DIV =	0b0100_0000,
+    LDC =	0b11000001,
 }
 
 static class OpcodePrefixExtensions

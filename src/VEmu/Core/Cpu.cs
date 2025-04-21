@@ -18,18 +18,35 @@ class Cpu
 
     /// <summary>Read-only memory space.</summary>
     internal readonly byte[] ROM = new byte[64 * 1024];
+    internal readonly byte[] FlashBank0 = new byte[64 * 1024];
+    internal readonly byte[] FlashBank1 = new byte[64 * 1024];
+
+    /// <summary>
+    /// May point to either ROM (BIOS), flash memory bank 0 or bank 1.
+    /// </summary>
+    /// <remarks>
+    /// Note that we need an extra bit of state here. We can't just look at the value of <see cref="SpecialFunctionRegisters.Ext"/>.
+    /// The bank is only actually switched when using a jmpf instruction.
+    /// </remarks>
+    internal byte[] CurrentROMBank;
 
     internal readonly byte[] RamBank0 = new byte[0x1c0]; // 448 dec
+    internal readonly byte[] RamBank1 = new byte[0x1c0];
+    internal readonly byte[] RamBank2 = new byte[0x1c0];
+
+    internal short Pc;
+
+    public Cpu()
+    {
+        CurrentROMBank = ROM;
+    }
 
     internal byte[] CurrentRamBank => SFRs.Rambk0 ? RamBank1 : RamBank0;
 
     internal Span<byte> MainRam_0 => RamBank0.AsSpan(0..0x100);
 
-    internal short Pc;
-
     // VMD-39
     internal Span<byte> IndirectAddressRegisters => RamBank0.AsSpan(0..0x10); // 16 dec
-
 
     // VMD-40, table 2.6
     internal SpecialFunctionRegisters SFRs => new(RamBank0);
@@ -37,12 +54,10 @@ class Cpu
     /// <summary>LCD video XRAM, bank 0.</summary>
     internal Span<byte> XRam_0 => RamBank0.AsSpan(0x180..0x1c0);
 
-    internal readonly byte[] RamBank1 = new byte[0x1c0];
     internal Span<byte> MainRam_1 => RamBank1.AsSpan(0..0x100);
     /// <summary>LCD video XRAM, bank 1.</summary>
     internal Span<byte> XRam_1 => RamBank1.AsSpan(0x180..0x1c0);
 
-    internal readonly byte[] RamBank2 = new byte[0x1c0];
     /// <summary>LCD video XRAM, bank 2.</summary>
     internal Span<byte> XRam_2 => RamBank1.AsSpan(0x180..0x190);
 
@@ -51,7 +66,7 @@ class Cpu
     {
         // TODO: review the bit patterns and decide whether to represent more of these using "OpcodePrefix"
         // Perhaps some nifty use of range patterns could help here, e.g. '>= (byte)OpcodePrefix.XOR | (byte)AddressingMode.Immediate and <= (byte)OpcodePrefix.XOR | (byte)AddressingMode.Indirect3
-        byte prefix = ROM[Pc];
+        byte prefix = CurrentROMBank[Pc];
         switch ((Opcode)prefix)
         {
             case Opcode.MUL: return Op_MUL();
@@ -60,7 +75,11 @@ class Cpu
             case Opcode.ROLC: return Op_ROLC();
             case Opcode.ROR: return Op_ROR();
             case Opcode.RORC: return Op_RORC();
+            case Opcode.LDC: return Op_LDC();
         }
+
+        // TODO: the limited supported addressing modes of various ops are used to pack in more kinds of ops.
+        // e.g. INC does not support immediate mode, so that bit pattern is used for PUSH, which only supports direct mode.
 
         switch (prefix.GetOpcodePrefix())
         {
@@ -80,6 +99,7 @@ class Cpu
             case OpcodePrefix.LD: return Op_LD();
             case OpcodePrefix.ST: return Op_ST();
             case OpcodePrefix.MOV: return Op_MOV();
+            // TODO: LDC,...might go here
 
             default: throw new NotImplementedException();
         }
@@ -87,17 +107,17 @@ class Cpu
 
     internal (byte operand, byte instructionSize) FetchOperand()
     {
-        var prefix = ROM[Pc];
+        var prefix = CurrentROMBank[Pc];
         var mode = prefix & 0x0f;
         switch (mode)
         {
             case 0b01: // immediate
-                return (operand: ROM[Pc + 1], instructionSize: 2);
+                return (operand: CurrentROMBank[Pc + 1], instructionSize: 2);
             case 0b10: // direct
             case 0b11:
                 {
                     // 9 bit address: oooommmd dddd_dddd
-                    var address = ((prefix & 0x1) << 8) | ROM[Pc + 1];
+                    var address = ((prefix & 0x1) << 8) | CurrentROMBank[Pc + 1];
                     return (operand: CurrentRamBank[address], instructionSize: 2);
                 }
             case 0b100:
@@ -149,18 +169,18 @@ class Cpu
 
     internal ref byte GetOperandRef(out byte instructionSize)
     {
-        var prefix = ROM[Pc];
+        var prefix = CurrentROMBank[Pc];
         var mode = prefix & 0x0f;
         switch (mode)
         {
             case 0b01: // immediate
                 instructionSize = 2;
-                return ref ROM[Pc + 1];
+                return ref CurrentROMBank[Pc + 1];
             case 0b10: // direct
             case 0b11:
                 {
                     // 9 bit address: oooommmd dddd_dddd
-                    var address = ((prefix & 0x1) << 8) | ROM[Pc + 1];
+                    var address = ((prefix & 0x1) << 8) | CurrentROMBank[Pc + 1];
                     instructionSize = 2;
                     return ref CurrentRamBank[address];
                 }
@@ -471,8 +491,20 @@ class Cpu
         // (d9) <- #i8
         ref var dest = ref GetOperandRef(out var instructionSize);
         Pc += instructionSize;
-        dest = ROM[Pc];
+        dest = CurrentROMBank[Pc];
         Pc++;
         return instructionSize; // instructionSize at this moment (1 less than true instruction size) also happens to be the cycle count.
+    }
+
+    internal int Op_LDC()
+    {
+        // (ACC) <- (BNK)((TRR) + (ACC)) [ROM]
+        // For a program running in ROM, ROM is accessed.
+        // For a program running in flash memory, bank 0 of flash memory is accessed.
+        // Cannot access bank 1 of flash memory. System BIOS function must be used instead.
+        var address = ((SFRs.Trh << 8) | SFRs.Trl) + SFRs.Acc;
+        SFRs.Acc = CurrentROMBank[address];
+        Pc++;
+        return 2;
     }
 }

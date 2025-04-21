@@ -274,4 +274,69 @@ public class DataTransferTests
         Assert.Equal(0xfa, cpu.SFRs.B);
         Assert.Equal(0, cpu.SFRs.Psw);
     }
+
+    [Fact]
+    public void LDC_Example()
+    {
+        // VMC-192
+        var cpu = new Cpu();
+        ReadOnlySpan<byte> instructions = [
+            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x05, 0x01, // Trh
+            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x04, 0x23, // Trl
+            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x00, 0x00, // Acc
+            (byte)Opcode.LDC,
+            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x00, 0x01, // Acc
+            (byte)Opcode.LDC,
+            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x00, 0x02, // Acc
+            (byte)Opcode.LDC,
+            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x00, 0x03, // Acc
+            (byte)Opcode.LDC,
+        ];
+        instructions.CopyTo(cpu.ROM);
+
+        cpu.SFRs.Acc = 0xff;
+        cpu.ROM[0x123] = 0x30;
+        cpu.ROM[0x124] = 0xff;
+        cpu.ROM[0x125] = 0x57;
+        cpu.ROM[0x126] = 0xea;
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0x01, cpu.SFRs.Trh);
+        Assert.Equal(0, cpu.SFRs.Trl);
+        Assert.Equal(0xff, cpu.SFRs.Acc);
+        Assert.Equal(0, cpu.SFRs.Psw);
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0x01, cpu.SFRs.Trh);
+        Assert.Equal(0x23, cpu.SFRs.Trl);
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0x01, cpu.SFRs.Trh);
+        Assert.Equal(0x23, cpu.SFRs.Trl);
+        Assert.Equal(0, cpu.SFRs.Acc);
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0x30, cpu.SFRs.Acc);
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0x1, cpu.SFRs.Acc);
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0xff, cpu.SFRs.Acc);
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0x02, cpu.SFRs.Acc);
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0x57, cpu.SFRs.Acc);
+        Assert.Equal(0, cpu.SFRs.Psw);
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0x03, cpu.SFRs.Acc);
+        Assert.Equal(0, cpu.SFRs.Psw);
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0xea, cpu.SFRs.Acc);
+        Assert.Equal(0, cpu.SFRs.Psw);
+    }
 }

@@ -9,6 +9,7 @@ internal enum AddressingMode : byte
     Direct0 = 0b010, // ooooommd dddddddd
 
     /// <summary>Direct addressing with 0 for the MSB of the address. The instruction operand is at the address indicated by 0b1_dddd_dddd.</summary>
+    /// <remarks>When <see cref="SpecialFunctionRegisters.Rambk0"/> is cleared, this refers to the special function registers range.</remarks>
     Direct1 = 0b011,
 
     /// <summary>Indirect addressing using indirect address register @R0.</summary>
