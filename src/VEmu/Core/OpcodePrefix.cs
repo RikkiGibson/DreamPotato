@@ -29,6 +29,8 @@ enum OpcodePrefix : byte
 
     // Data Transfer
     LD =	0b0000_0000,
+    ST =	0b0001_0000,
+    MOV =	0b0010_0000,
 }
 
 // Following opcodes do not take arguments, they simply modify ACC.

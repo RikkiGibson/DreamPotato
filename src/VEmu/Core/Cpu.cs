@@ -78,12 +78,14 @@ class Cpu
             // TODO: ROL, ROLC, ROR, RORC might go here
 
             case OpcodePrefix.LD: return Op_LD();
-            default:
-                throw new NotImplementedException();
+            case OpcodePrefix.ST: return Op_ST();
+            case OpcodePrefix.MOV: return Op_MOV();
+
+            default: throw new NotImplementedException();
         }
     }
 
-    internal (byte operand, byte instructionSize) FetchArithmeticOperand()
+    internal (byte operand, byte instructionSize) FetchOperand()
     {
         var prefix = ROM[Pc];
         var mode = prefix & 0x0f;
@@ -145,7 +147,7 @@ class Cpu
         }
     }
 
-    internal ref byte GetArithmeticOperand(out byte instructionSize)
+    internal ref byte GetOperandRef(out byte instructionSize)
     {
         var prefix = ROM[Pc];
         var mode = prefix & 0x0f;
@@ -216,7 +218,7 @@ class Cpu
     internal int Op_ADD()
     {
         // ACC <- ACC + operand
-        var (rhs, instructionSize) = FetchArithmeticOperand();
+        var (rhs, instructionSize) = FetchOperand();
         var lhs = SFRs.Acc;
         var result = (byte)(lhs + rhs);
         SFRs.Acc = result;
@@ -241,7 +243,7 @@ class Cpu
     internal int Op_ADDC()
     {
         // ACC <- ACC + CY + operand
-        var (rhs, instructionSize) = FetchArithmeticOperand();
+        var (rhs, instructionSize) = FetchOperand();
         var lhs = SFRs.Acc;
         var carry = SFRs.Cy ? 1 : 0;
         var result = (byte)(lhs + carry + rhs);
@@ -267,7 +269,7 @@ class Cpu
     internal int Op_SUB()
     {
         // ACC <- ACC - operand
-        var (rhs, instructionSize) = FetchArithmeticOperand();
+        var (rhs, instructionSize) = FetchOperand();
         var lhs = SFRs.Acc;
         var result = (byte)(lhs - rhs);
         SFRs.Acc = result;
@@ -292,7 +294,7 @@ class Cpu
     internal int Op_SUBC()
     {
         // ACC <- ACC - CY - operand
-        var (rhs, instructionSize) = FetchArithmeticOperand();
+        var (rhs, instructionSize) = FetchOperand();
         var lhs = SFRs.Acc;
         var carry = SFRs.Cy ? 1 : 0;
         var result = (byte)(lhs - carry - rhs);
@@ -321,7 +323,7 @@ class Cpu
     {
         // (operand) <- (operand) + 1
         // (could be either direct or indirect)
-        ref var operand = ref GetArithmeticOperand(out var instructionSize);
+        ref var operand = ref GetOperandRef(out var instructionSize);
         operand++;
         Pc += instructionSize;
         return 1;
@@ -331,7 +333,7 @@ class Cpu
     {
         // (operand) <- (operand) - 1
         // (could be either direct or indirect)
-        ref var operand = ref GetArithmeticOperand(out var instructionSize);
+        ref var operand = ref GetOperandRef(out var instructionSize);
         operand--;
         Pc += instructionSize;
         return 1;
@@ -382,7 +384,7 @@ class Cpu
     internal int Op_AND()
     {
         // ACC <- ACC & operand
-        var (rhs, instructionSize) = FetchArithmeticOperand();
+        var (rhs, instructionSize) = FetchOperand();
         SFRs.Acc &= rhs;
         Pc += instructionSize;
         return 1;
@@ -392,7 +394,7 @@ class Cpu
     internal int Op_OR()
     {
         // ACC <- ACC | operand
-        var (rhs, instructionSize) = FetchArithmeticOperand();
+        var (rhs, instructionSize) = FetchOperand();
         SFRs.Acc |= rhs;
         Pc += instructionSize;
         return 1;
@@ -400,7 +402,7 @@ class Cpu
     internal int Op_XOR()
     {
         // ACC <- ACC ^ operand
-        var (rhs, instructionSize) = FetchArithmeticOperand();
+        var (rhs, instructionSize) = FetchOperand();
         SFRs.Acc ^= rhs;
         Pc += instructionSize;
         return 1;
@@ -449,8 +451,28 @@ class Cpu
     internal int Op_LD()
     {
         // (ACC) <- (d9)
-        (SFRs.Acc, var instructionSize) = FetchArithmeticOperand();
+        (SFRs.Acc, var instructionSize) = FetchOperand();
         Pc += instructionSize;
         return 1;
+    }
+
+    internal int Op_ST()
+    {
+        // (d9) <- (ACC)
+        GetOperandRef(out var instructionSize) = SFRs.Acc;
+        Pc += instructionSize;
+        return 1;
+    }
+
+    internal int Op_MOV()
+    {
+        // two operands: direct or indirect address, followed by immediate data.
+        // TODO: perhaps some renaming here.
+        // (d9) <- #i8
+        ref var dest = ref GetOperandRef(out var instructionSize);
+        Pc += instructionSize;
+        dest = ROM[Pc];
+        Pc++;
+        return instructionSize; // instructionSize at this moment (1 less than true instruction size) also happens to be the cycle count.
     }
 }
