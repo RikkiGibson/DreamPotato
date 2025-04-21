@@ -105,6 +105,7 @@ public class SpecialFunctionRegisters(byte[] RamBank0)
     public ref byte Trh => ref RamBank0[0x105];
 
     /// <summary>Stack pointer. VMD-53</summary>
+    /// <remarks>Note that a well-behaved stack pointer always refers to 0x80 of RAM bank 0, growing upwards.</remarks>
     public ref byte Sp => ref RamBank0[0x106];
 
     /// <summary>Power control register. VMD-158</summary>

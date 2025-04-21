@@ -81,25 +81,28 @@ class Cpu
         // TODO: the limited supported addressing modes of various ops are used to pack in more kinds of ops.
         // e.g. INC does not support immediate mode, so that bit pattern is used for PUSH, which only supports direct mode.
 
-        switch (prefix.GetOpcodePrefix())
+        switch (prefix)
         {
-            case OpcodePrefix.ADD: return Op_ADD();
-            case OpcodePrefix.ADDC: return Op_ADDC();
-            case OpcodePrefix.SUB: return Op_SUB();
-            case OpcodePrefix.SUBC: return Op_SUBC();
-            case OpcodePrefix.INC: return Op_INC();
-            case OpcodePrefix.DEC: return Op_DEC();
+            case >= ((byte)OpcodePrefix.ADD | (byte)AddressingMode.Immediate) and <= ((byte)OpcodePrefix.ADD | (byte)AddressingMode.Indirect3): return Op_ADD();
+            case >= ((byte)OpcodePrefix.ADDC | (byte)AddressingMode.Immediate) and <= ((byte)OpcodePrefix.ADDC | (byte)AddressingMode.Indirect3): return Op_ADDC();
+            case >= ((byte)OpcodePrefix.SUB | (byte)AddressingMode.Immediate) and <= ((byte)OpcodePrefix.SUB | (byte)AddressingMode.Indirect3): return Op_SUB();
+            case >= ((byte)OpcodePrefix.SUBC | (byte)AddressingMode.Immediate) and <= ((byte)OpcodePrefix.SUBC | (byte)AddressingMode.Indirect3): return Op_SUBC();
+            case >= ((byte)OpcodePrefix.INC | (byte)AddressingMode.Direct0) and <= ((byte)OpcodePrefix.INC | (byte)AddressingMode.Indirect3): return Op_INC();
+            case >= ((byte)OpcodePrefix.DEC | (byte)AddressingMode.Direct0) and <= ((byte)OpcodePrefix.DEC | (byte)AddressingMode.Indirect3): return Op_DEC();
             // TODO: MUL, DIV might go here
 
-            case OpcodePrefix.AND: return Op_AND();
-            case OpcodePrefix.OR: return Op_OR();
-            case OpcodePrefix.XOR: return Op_XOR();
+            case >= ((byte)OpcodePrefix.AND | (byte)AddressingMode.Immediate) and <= ((byte)OpcodePrefix.AND | (byte)AddressingMode.Indirect3): return Op_AND();
+            case >= ((byte)OpcodePrefix.OR | (byte)AddressingMode.Immediate) and <= ((byte)OpcodePrefix.OR | (byte)AddressingMode.Indirect3): return Op_OR();
+            case >= ((byte)OpcodePrefix.XOR | (byte)AddressingMode.Immediate) and <= ((byte)OpcodePrefix.XOR | (byte)AddressingMode.Indirect3): return Op_XOR();
             // TODO: ROL, ROLC, ROR, RORC might go here
 
-            case OpcodePrefix.LD: return Op_LD();
-            case OpcodePrefix.ST: return Op_ST();
-            case OpcodePrefix.MOV: return Op_MOV();
+            case >= ((byte)OpcodePrefix.LD | (byte)AddressingMode.Immediate) and <= ((byte)OpcodePrefix.LD | (byte)AddressingMode.Indirect3): return Op_LD();
+            case >= ((byte)OpcodePrefix.ST | (byte)AddressingMode.Immediate) and <= ((byte)OpcodePrefix.ST | (byte)AddressingMode.Indirect3): return Op_ST();
+            case >= ((byte)OpcodePrefix.MOV | (byte)AddressingMode.Immediate) and <= ((byte)OpcodePrefix.MOV | (byte)AddressingMode.Indirect3): return Op_MOV();
             // TODO: LDC,...might go here
+
+            case (byte)OpcodePrefix.PUSH or ((byte)OpcodePrefix.PUSH | 1): return Op_PUSH();
+            case (byte)OpcodePrefix.POP or ((byte)OpcodePrefix.POP | 1): return Op_POP();
 
             default: throw new NotImplementedException();
         }
@@ -505,6 +508,28 @@ class Cpu
         var address = ((SFRs.Trh << 8) | SFRs.Trl) + SFRs.Acc;
         SFRs.Acc = CurrentROMBank[address];
         Pc++;
+        return 2;
+    }
+
+    internal int Op_PUSH()
+    {
+        // (SP) <- (SP) + 1, ((SP)) <- d9
+        SFRs.Sp++;
+        var dAddress = ((CurrentROMBank[Pc] & 0x1) << 8) | CurrentROMBank[Pc + 1];
+        RamBank0[SFRs.Sp] = CurrentRamBank[dAddress];
+
+        Pc += 2;
+        return 2;
+    }
+
+    internal int Op_POP()
+    {
+        // (d9) <- ((SP)), (SP) <- (SP) - 1
+        var dAddress = ((CurrentROMBank[Pc] & 0x1) << 8) | CurrentROMBank[Pc + 1];
+        CurrentRamBank[dAddress] = RamBank0[SFRs.Sp];
+        SFRs.Sp--;
+
+        Pc += 2;
         return 2;
     }
 }

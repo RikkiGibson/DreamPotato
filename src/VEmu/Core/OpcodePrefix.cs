@@ -32,6 +32,7 @@ enum OpcodePrefix : byte
     ST =	0b0001_0000,
     MOV =	0b0010_0000,
     PUSH =	0b0110_0000,
+    POP =	0b0111_0000,
 }
 
 // Following opcodes do not take arguments, they simply modify ACC.

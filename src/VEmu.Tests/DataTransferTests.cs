@@ -339,4 +339,48 @@ public class DataTransferTests
         Assert.Equal(0xea, cpu.SFRs.Acc);
         Assert.Equal(0, cpu.SFRs.Psw);
     }
+
+    [Fact]
+    public void PUSH_Example()
+    {
+        // VMC-193
+        var cpu = new Cpu();
+        ReadOnlySpan<byte> instructions = [
+            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x00, 0xaa, // acc
+            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x02, 0x55, // b
+            OpcodePrefix.MOV.Compose(AddressingMode.Direct0), 0x00, 0x12,
+            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x06, 0x1f, // sp
+            (byte)OpcodePrefix.PUSH | 1, 0x00, // acc
+            (byte)OpcodePrefix.PUSH | 1, 0x02, // b
+            (byte)OpcodePrefix.PUSH, 0x00,
+            (byte)OpcodePrefix.POP | 1, 0x02, // b
+            (byte)OpcodePrefix.POP | 1, 0x00, // acc
+            (byte)OpcodePrefix.POP, 0x00,
+        ];
+        instructions.CopyTo(cpu.ROM);
+
+        cpu.RamBank0[0] = 0xff;
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(2, cpu.Step());
+
+        Assert.Equal(0xaa, cpu.SFRs.Acc);
+        Assert.Equal(0x55, cpu.SFRs.B);
+        Assert.Equal(0x12, cpu.RamBank0[0]);
+        Assert.Equal(0x55, cpu.SFRs.B);
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0x20, cpu.SFRs.Sp);
+        Assert.Equal(0xaa, cpu.RamBank0[cpu.SFRs.Sp]);
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0x21, cpu.SFRs.Sp);
+        Assert.Equal(0x55, cpu.RamBank0[cpu.SFRs.Sp]);
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0x22, cpu.SFRs.Sp);
+        Assert.Equal(0x12, cpu.RamBank0[cpu.SFRs.Sp]);
+    }
 }
