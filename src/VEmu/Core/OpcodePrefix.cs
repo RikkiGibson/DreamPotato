@@ -11,6 +11,7 @@ using VEmu.Core;
 
 /// <summary>
 /// Note that a well formed instruction from this group will always have a <see cref="AddressingMode"/> OR'd into it.
+/// TODO: this isn't always true, addressing modes and address bits are not packed into these instructions all in the same way.
 /// </summary>
 enum OpcodePrefix : byte
 {
@@ -33,6 +34,10 @@ enum OpcodePrefix : byte
     MOV =	0b0010_0000,
     PUSH =	0b0110_0000,
     POP =	0b0111_0000,
+    XCH =	0b1100_0000,
+
+    // Jump
+    JMP =	0b0010_1000,
 }
 
 // Following opcodes do not take arguments, they simply modify ACC.
@@ -44,7 +49,17 @@ enum Opcode : byte
 	RORC =	0b11010000,
     MUL =	0b0011_0000,
     DIV =	0b0100_0000,
-    LDC =	0b11000001,
+
+    // Data Transfer
+    LDC =	0b1100_0001,
+
+    // Jump
+    JMPF =	0b0010_0001,
+    BR =	0b0000_0001,
+    BRF =	0b0001_0001,
+
+    // Misc
+    NOP =	0b0000_0000,
 }
 
 static class OpcodePrefixExtensions
@@ -59,6 +74,19 @@ static class OpcodePrefixExtensions
     public static byte Compose(this OpcodePrefix prefix, AddressingMode mode)
     {
         return (byte)((byte)prefix | (byte)mode);
+    }
+
+    public static (byte first, byte second) ComposeJMP(ushort address)
+    {
+        // TODO: adopt a pattern for assembling/disassembling instructions which accommodates lots of different ways of encoding the operands
+        // address must fit within 12 bits
+        Debug.Assert((address & 0xf0_00) == 0);
+
+        // turn 0000_aaaa of upper byte of address into 001a_1aaa of instruction
+        bool bit11 = (address & 0x8_00) != 0;
+        var first = (byte)((bit11 ? 0x08 : 0) | address >> 8 & 0x7 | (byte)OpcodePrefix.JMP);
+        var second = (byte)address;
+        return (first, second);
     }
 
     public static bool SupportsAddressingMode(this OpcodePrefix prefix, AddressingMode mode)

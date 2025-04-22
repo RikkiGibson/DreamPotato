@@ -34,7 +34,7 @@ class Cpu
     internal readonly byte[] RamBank1 = new byte[0x1c0];
     internal readonly byte[] RamBank2 = new byte[0x1c0];
 
-    internal short Pc;
+    internal ushort Pc;
 
     public Cpu()
     {
@@ -75,7 +75,14 @@ class Cpu
             case Opcode.ROLC: return Op_ROLC();
             case Opcode.ROR: return Op_ROR();
             case Opcode.RORC: return Op_RORC();
+
             case Opcode.LDC: return Op_LDC();
+
+            case Opcode.JMPF: return Op_JMPF();
+            case Opcode.BR: return Op_BR();
+            case Opcode.BRF: return Op_BRF();
+
+            case Opcode.NOP: return Op_NOP();
         }
 
         // TODO: the limited supported addressing modes of various ops are used to pack in more kinds of ops.
@@ -98,11 +105,13 @@ class Cpu
 
             case >= ((byte)OpcodePrefix.LD | (byte)AddressingMode.Immediate) and <= ((byte)OpcodePrefix.LD | (byte)AddressingMode.Indirect3): return Op_LD();
             case >= ((byte)OpcodePrefix.ST | (byte)AddressingMode.Immediate) and <= ((byte)OpcodePrefix.ST | (byte)AddressingMode.Indirect3): return Op_ST();
-            case >= ((byte)OpcodePrefix.MOV | (byte)AddressingMode.Immediate) and <= ((byte)OpcodePrefix.MOV | (byte)AddressingMode.Indirect3): return Op_MOV();
+            case >= ((byte)OpcodePrefix.MOV | (byte)AddressingMode.Direct0) and <= ((byte)OpcodePrefix.MOV | (byte)AddressingMode.Indirect3): return Op_MOV();
             // TODO: LDC,...might go here
 
             case (byte)OpcodePrefix.PUSH or ((byte)OpcodePrefix.PUSH | 1): return Op_PUSH();
             case (byte)OpcodePrefix.POP or ((byte)OpcodePrefix.POP | 1): return Op_POP();
+            case >= ((byte)OpcodePrefix.XCH | (byte)AddressingMode.Direct0) and <= ((byte)OpcodePrefix.XCH | (byte)AddressingMode.Indirect3): return Op_XCH();
+            case (>= 0b0010_1000 and <= 0b0010_1111) or (>= 0b0011_1000 and <= 0b0011_1111): return Op_JMP();
 
             default: throw new NotImplementedException();
         }
@@ -531,5 +540,69 @@ class Cpu
 
         Pc += 2;
         return 2;
+    }
+
+    internal int Op_XCH()
+    {
+        // (ACC) <--> (d9)
+        // (ACC) <--> ((Rj)) j = 0, 1, 2, 3
+        ref var operand = ref GetOperandRef(out var instructionSize);
+        var temp = operand;
+        operand = SFRs.Acc;
+        SFRs.Acc = temp;
+
+        Pc += instructionSize;
+        return 1;
+    }
+
+    /// <summary>Jump near absolute address</summary>
+    internal int Op_JMP()
+    {
+        // (PC) <- (PC) + 2, (PC11 to 00) <- a12
+        // 001a_1aaa aaaa_aaaa
+        byte prefix = CurrentROMBank[Pc];
+        bool bit11 = (prefix & 0b1_0000) != 0;
+        int a12 = (bit11 ? 0x800 : 0) | (prefix & 0b111) << 8 | CurrentROMBank[Pc + 1];
+        Pc += 2;
+        Pc &= 0b1111_0000__0000_0000;
+        Pc |= (ushort)a12;
+        return 2;
+    }
+
+    /// <summary>Jump far absolute address</summary>
+    internal int Op_JMPF()
+    {
+        // (PC) <- a16
+        Pc = (ushort)(CurrentROMBank[Pc + 1] << 8 | CurrentROMBank[Pc + 2]);
+        // TODO: Set CurrentROMBank based on Ext
+        return 2;
+    }
+
+    /// <summary>Branch near relative address</summary>
+    internal int Op_BR()
+    {
+        // (PC) <- (PC) + 2, (PC) <- (PC) + r8
+        var r8 = CurrentROMBank[Pc + 1];
+        Pc += (ushort)(2 + r8);
+        return 2;
+    }
+
+    /// <summary>Branch far relative address</summary>
+    internal int Op_BRF()
+    {
+        // (PC) <- (PC) + 3, (PC) <- (PC) - 1 + r16
+        // NB: for some reason, this instruction is little endian (starts with least significant byte).
+        var currentPc = Pc;
+        var r16 = (ushort)(CurrentROMBank[currentPc + 1] + (CurrentROMBank[currentPc + 2] << 8));
+        currentPc += 3;
+        Pc = (ushort)(currentPc - 1 + r16);
+        return 4;
+    }
+
+    /// <summary>No operation</summary>
+    internal int Op_NOP()
+    {
+        Pc++;
+        return 1;
     }
 }

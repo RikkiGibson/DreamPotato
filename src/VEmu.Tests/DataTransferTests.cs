@@ -383,4 +383,78 @@ public class DataTransferTests
         Assert.Equal(0x22, cpu.SFRs.Sp);
         Assert.Equal(0x12, cpu.RamBank0[cpu.SFRs.Sp]);
     }
+
+    [Fact]
+    public void XCH_Direct_Example1()
+    {
+        // VMC-195
+        var cpu = new Cpu();
+        ReadOnlySpan<byte> instructions = [
+            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x00, 0xff, // acc
+            OpcodePrefix.MOV.Compose(AddressingMode.Direct0), 0x23, 0x55,
+            OpcodePrefix.XCH.Compose(AddressingMode.Direct0), 0x23,
+            OpcodePrefix.XCH.Compose(AddressingMode.Direct0), 0x23,
+            OpcodePrefix.XCH.Compose(AddressingMode.Direct0), 0x23,
+            OpcodePrefix.XCH.Compose(AddressingMode.Direct0), 0x23,
+        ];
+        instructions.CopyTo(cpu.ROM);
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(2, cpu.Step());
+
+        Assert.Equal(0xff, cpu.SFRs.Acc);
+        Assert.Equal(0x55, cpu.RamBank0[0x23]);
+
+        Assert.Equal(1, cpu.Step());
+        Assert.Equal(0x55, cpu.SFRs.Acc);
+        Assert.Equal(0xff, cpu.RamBank0[0x23]);
+
+        Assert.Equal(1, cpu.Step());
+        Assert.Equal(0xff, cpu.SFRs.Acc);
+        Assert.Equal(0x55, cpu.RamBank0[0x23]);
+
+        Assert.Equal(1, cpu.Step());
+        Assert.Equal(0x55, cpu.SFRs.Acc);
+        Assert.Equal(0xff, cpu.RamBank0[0x23]);
+
+        Assert.Equal(1, cpu.Step());
+        Assert.Equal(0xff, cpu.SFRs.Acc);
+        Assert.Equal(0x55, cpu.RamBank0[0x23]);
+    }
+
+    [Fact]
+    public void XCH_Indirect_Example2()
+    {
+        // VMC-195
+        var cpu = new Cpu();
+        ReadOnlySpan<byte> instructions = [
+            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x00, 0xaa, // acc
+            OpcodePrefix.MOV.Compose(AddressingMode.Direct0), 0x03, 0x04, // R3->Trl
+            OpcodePrefix.MOV.Compose(AddressingMode.Indirect3), 0x55,
+            OpcodePrefix.XCH.Compose(AddressingMode.Indirect3),
+            OpcodePrefix.XCH.Compose(AddressingMode.Indirect3),
+            OpcodePrefix.XCH.Compose(AddressingMode.Indirect3),
+        ];
+        instructions.CopyTo(cpu.ROM);
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(1, cpu.Step());
+
+        Assert.Equal(0xaa, cpu.SFRs.Acc);
+        Assert.Equal(0x04, cpu.IndirectAddressRegisters[3]);
+        Assert.Equal(0x55, cpu.SFRs.Trl);
+
+        Assert.Equal(1, cpu.Step());
+        Assert.Equal(0x55, cpu.SFRs.Acc);
+        Assert.Equal(0xaa, cpu.SFRs.Trl);
+
+        Assert.Equal(1, cpu.Step());
+        Assert.Equal(0xaa, cpu.SFRs.Acc);
+        Assert.Equal(0x55, cpu.SFRs.Trl);
+
+        Assert.Equal(1, cpu.Step());
+        Assert.Equal(0x55, cpu.SFRs.Acc);
+        Assert.Equal(0xaa, cpu.SFRs.Trl);
+    }
 }
