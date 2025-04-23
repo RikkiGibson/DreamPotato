@@ -38,6 +38,9 @@ enum OpcodePrefix : byte
 
     // Jump
     JMP =	0b0010_1000,
+
+    // Conditional Branch
+    BP =	0b0110_1000,
 }
 
 // Following opcodes do not take arguments, they simply modify ACC.
@@ -57,6 +60,8 @@ enum Opcode : byte
     JMPF =	0b0010_0001,
     BR =	0b0000_0001,
     BRF =	0b0001_0001,
+    BZ =	0b1000_0000,
+    BNZ =	0b1001_0000,
 
     // Misc
     NOP =	0b0000_0000,

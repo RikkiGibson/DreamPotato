@@ -81,6 +81,8 @@ class Cpu
             case Opcode.JMPF: return Op_JMPF();
             case Opcode.BR: return Op_BR();
             case Opcode.BRF: return Op_BRF();
+            case Opcode.BZ: return Op_BZ();
+            case Opcode.BNZ: return Op_BNZ();
 
             case Opcode.NOP: return Op_NOP();
         }
@@ -112,6 +114,7 @@ class Cpu
             case (byte)OpcodePrefix.POP or ((byte)OpcodePrefix.POP | 1): return Op_POP();
             case >= ((byte)OpcodePrefix.XCH | (byte)AddressingMode.Direct0) and <= ((byte)OpcodePrefix.XCH | (byte)AddressingMode.Indirect3): return Op_XCH();
             case (>= 0b0010_1000 and <= 0b0010_1111) or (>= 0b0011_1000 and <= 0b0011_1111): return Op_JMP();
+            case (>= 0b0110_1000 and <= 0b0110_1111) or (>= 0b0111_1000 and <= 0b0111_1111): return Op_BP();
 
             default: throw new NotImplementedException();
         }
@@ -594,8 +597,58 @@ class Cpu
         // NB: for some reason, this instruction is little endian (starts with least significant byte).
         var r16 = (ushort)(CurrentROMBank[Pc + 1] + (CurrentROMBank[Pc + 2] << 8));
         Pc = (ushort)(Pc + 3 - 1 + r16);
-        // Will have to try more software/samples and see what's up.
+
         return 4;
+    }
+
+    /// <summary>Branch near relative address if accumulator is zero</summary>
+    internal int Op_BZ()
+    {
+        // (PC) <- (PC) + 2, if (ACC) = 0 then (PC) <- PC + r8
+        var r8 = CurrentROMBank[Pc + 1];
+        var z = SFRs.Acc == 0;
+
+        Pc += 2;
+        if (z)
+            Pc += r8;
+
+        return 2;
+    }
+
+    /// <summary>Branch near relative address if accumulator is not zero</summary>
+    internal int Op_BNZ()
+    {
+        // (PC) <- (PC) + 2, if (ACC) != 0 then (PC) <- PC + r8
+        var r8 = CurrentROMBank[Pc + 1];
+        var nz = SFRs.Acc != 0;
+
+        Pc += 2;
+        if (nz)
+            Pc += r8;
+
+        return 2;
+    }
+
+    /// <summary>Branch near relative address if direct bit is one ("positive")</summary>
+    internal int Op_BP()
+    {
+        // 3 operands: 'd' direct address, 'b' bit within (d), 'r' relative address to branch to
+        // 011d_1bbb dddd_dddd rrrr_rrrr
+        // (PC) <- (PC) + 3, if (d9, b3) = 1 then (PC) <- (PC) + r8
+        var prefix = CurrentROMBank[Pc];
+        bool d_bit9 = (prefix & 0x10) != 0;
+        var d9 = (d_bit9 ? 0x100 : 0) | CurrentROMBank[Pc + 1];
+        var b3 = prefix & 0b0111;
+        var r8 = CurrentROMBank[Pc + 2];
+
+        var d_value = CurrentRamBank[d9];
+        bool d_bitb = (d_value & (1 << b3)) != 0;
+
+        Pc += 3;
+        if (d_bitb)
+            Pc += r8;
+
+        return 2;
     }
 
     /// <summary>No operation</summary>
