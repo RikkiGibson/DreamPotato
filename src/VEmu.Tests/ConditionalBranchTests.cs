@@ -113,9 +113,6 @@ public class ConditionalBranchTests
         // VMC-203
         var cpu = new Cpu();
 
-        // The example was a little unclear, but, I think the NOPs are supposed to
-        // directly precede the INC, because otherwise it is unspecified how to get from the NOPs to the first INC.
-
         ReadOnlySpan<byte> instructions = [
             OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x02, 0x01, // b
             0x78, 0x02, 0x3f, // BP B,0,LA
@@ -139,6 +136,78 @@ public class ConditionalBranchTests
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(2, cpu.SFRs.B);
+        Assert.Equal(0xf61, cpu.Pc);
+
+        Assert.Equal(1, cpu.Step());
+        Assert.Equal(0xf62, cpu.Pc);
+    }
+
+    [Fact]
+    public void BPC_Example1()
+    {
+        // VMC-204
+        var cpu = new Cpu();
+
+        ReadOnlySpan<byte> instructions = [
+            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x02, 0x01, // b
+            0x58, 0x02, 0x3f, // BPC B,0,LA
+        ];
+        instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf1a));
+
+        instructions = [
+            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x02, // b
+            (byte)Opcode.NOP,
+        ];
+        instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf5f));
+
+        cpu.Pc = 0xf1a;
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(1, cpu.SFRs.B);
+        Assert.Equal(0xf1d, cpu.Pc);
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0, cpu.SFRs.B);
+        Assert.Equal(0xf5f, cpu.Pc);
+
+        Assert.Equal(1, cpu.Step());
+        Assert.Equal(1, cpu.SFRs.B);
+        Assert.Equal(0xf61, cpu.Pc);
+
+        Assert.Equal(1, cpu.Step());
+        Assert.Equal(0xf62, cpu.Pc);
+    }
+
+    [Fact]
+    public void BPC_Example1_Bit2()
+    {
+        // VMC-204
+        var cpu = new Cpu();
+
+        ReadOnlySpan<byte> instructions = [
+            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x02, 0x04, // b
+            0x5a, 0x02, 0x3f, // BPC B,2,LA
+        ];
+        instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf1a));
+
+        instructions = [
+            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x02, // b
+            (byte)Opcode.NOP,
+        ];
+        instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf5f));
+
+        cpu.Pc = 0xf1a;
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(4, cpu.SFRs.B);
+        Assert.Equal(0xf1d, cpu.Pc);
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0, cpu.SFRs.B);
+        Assert.Equal(0xf5f, cpu.Pc);
+
+        Assert.Equal(1, cpu.Step());
+        Assert.Equal(1, cpu.SFRs.B);
         Assert.Equal(0xf61, cpu.Pc);
 
         Assert.Equal(1, cpu.Step());

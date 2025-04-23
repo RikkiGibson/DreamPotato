@@ -204,6 +204,58 @@ public class SpecialFunctionRegisters(byte[] RamBank0)
     /// <summary>Port 1 function control register. VMD-59</summary>
     public ref byte P1Fcr => ref RamBank0[0x146];
 
+    /// <summary>Port 3 latch. VMD-54</summary>
+    public ref byte P3 => ref RamBank0[0x14C];
+
+    // NB: application must set a button value to 1. When it is pressed, the bit is reset to 0.
+    public bool ButtonSleep
+    {
+        get => BitHelpers.ReadBit(P3, bit: 7);
+        set => BitHelpers.WriteBit(ref P3, bit: 7, value);
+    }
+
+    public bool ButtonMode
+    {
+        get => BitHelpers.ReadBit(P3, bit: 6);
+        set => BitHelpers.WriteBit(ref P3, bit: 6, value);
+    }
+
+    public bool ButtonB
+    {
+        get => BitHelpers.ReadBit(P3, bit: 5);
+        set => BitHelpers.WriteBit(ref P3, bit: 5, value);
+    }
+
+    public bool ButtonA
+    {
+        get => BitHelpers.ReadBit(P3, bit: 4);
+        set => BitHelpers.WriteBit(ref P3, bit: 4, value);
+    }
+
+    public bool Right
+    {
+        get => BitHelpers.ReadBit(P3, bit: 3);
+        set => BitHelpers.WriteBit(ref P3, bit: 3, value);
+    }
+
+    public bool Left
+    {
+        get => BitHelpers.ReadBit(P3, bit: 2);
+        set => BitHelpers.WriteBit(ref P3, bit: 2, value);
+    }
+
+    public bool Down
+    {
+        get => BitHelpers.ReadBit(P3, bit: 1);
+        set => BitHelpers.WriteBit(ref P3, bit: 1, value);
+    }
+
+    public bool Up
+    {
+        get => BitHelpers.ReadBit(P3, bit: 0);
+        set => BitHelpers.WriteBit(ref P3, bit: 0, value);
+    }
+
     /// <summary>Port 3 data direction register. VMD-62</summary>
     public ref byte P3Ddr => ref RamBank0[0x14D];
 

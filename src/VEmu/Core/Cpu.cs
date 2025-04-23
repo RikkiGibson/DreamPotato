@@ -115,6 +115,7 @@ class Cpu
             case >= ((byte)OpcodePrefix.XCH | (byte)AddressingMode.Direct0) and <= ((byte)OpcodePrefix.XCH | (byte)AddressingMode.Indirect3): return Op_XCH();
             case (>= 0b0010_1000 and <= 0b0010_1111) or (>= 0b0011_1000 and <= 0b0011_1111): return Op_JMP();
             case (>= 0b0110_1000 and <= 0b0110_1111) or (>= 0b0111_1000 and <= 0b0111_1111): return Op_BP();
+            case (>= 0b0100_1000 and <= 0b0100_1111) or (>= 0b0101_1000 and <= 0b0101_1111): return Op_BPC();
 
             default: throw new NotImplementedException();
         }
@@ -636,8 +637,7 @@ class Cpu
         // 011d_1bbb dddd_dddd rrrr_rrrr
         // (PC) <- (PC) + 3, if (d9, b3) = 1 then (PC) <- (PC) + r8
         var prefix = CurrentROMBank[Pc];
-        bool d_bit9 = (prefix & 0x10) != 0;
-        var d9 = (d_bit9 ? 0x100 : 0) | CurrentROMBank[Pc + 1];
+        var d9 = (BitHelpers.ReadBit(prefix, 4) ? 0x100 : 0) | CurrentROMBank[Pc + 1];
         var b3 = prefix & 0b0111;
         var r8 = CurrentROMBank[Pc + 2];
 
@@ -650,6 +650,35 @@ class Cpu
 
         return 2;
     }
+
+    /// <summary>Branch near relative address if direct bit is one ("positive"), and clear</summary>
+    internal int Op_BPC()
+    {
+        // When applied to port P1 and P3, the latch of each port is selected. The external signal is not selected.
+        // When applied to port P7, there is no change in status.
+
+        // 3 operands: 'd' direct address, 'b' bit within (d), 'r' relative address to branch to
+        // 010d_1bbb dddd_dddd rrrr_rrrr
+        // (PC) <- (PC) + 3, if (d9, b3) = 1 then (PC) <- (PC) + r8, (d9, b3) = 0
+        var prefix = CurrentROMBank[Pc];
+        var d9 = (BitHelpers.ReadBit(prefix, 4) ? 0x100 : 0) | CurrentROMBank[Pc + 1];
+        var b3 = (byte)(prefix & 0b0111);
+        var r8 = CurrentROMBank[Pc + 2];
+
+        var d_value = CurrentRamBank[d9];
+        var new_d_value = d_value;
+        BitHelpers.WriteBit(ref new_d_value, bit: b3, value: false);
+
+        Pc += 3;
+        if (d_value != new_d_value)
+            Pc += r8;
+
+        CurrentRamBank[d9] = new_d_value;
+
+        return 2;
+    }
+
+    // Next: Op_BN()
 
     /// <summary>No operation</summary>
     internal int Op_NOP()

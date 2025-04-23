@@ -43,7 +43,6 @@ enum OpcodePrefix : byte
     BP =	0b0110_1000,
 }
 
-// Following opcodes do not take arguments, they simply modify ACC.
 enum Opcode : byte
 {
 	ROL =	0b11100000,
