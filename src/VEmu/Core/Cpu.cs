@@ -592,10 +592,9 @@ class Cpu
     {
         // (PC) <- (PC) + 3, (PC) <- (PC) - 1 + r16
         // NB: for some reason, this instruction is little endian (starts with least significant byte).
-        var currentPc = Pc;
-        var r16 = (ushort)(CurrentROMBank[currentPc + 1] + (CurrentROMBank[currentPc + 2] << 8));
-        currentPc += 3;
-        Pc = (ushort)(currentPc - 1 + r16);
+        var r16 = (ushort)(CurrentROMBank[Pc + 1] + (CurrentROMBank[Pc + 2] << 8));
+        Pc = (ushort)(Pc + 3 - 1 + r16);
+        // Will have to try more software/samples and see what's up.
         return 4;
     }
 

@@ -189,6 +189,44 @@ public class JumpTests
     }
 
     [Fact]
+    public void BRF_Example1()
+    {
+        // VMC-200
+        var cpu = new Cpu();
+
+        // The example was a little unclear, but, I think the NOPs are supposed to
+        // directly precede the INC, because otherwise it is unspecified how to get from the NOPs to the first INC.
+        scoped ReadOnlySpan<byte> instructions = [
+            (byte)Opcode.NOP,
+            (byte)Opcode.NOP,
+            (byte)Opcode.BRF, 0x3f, 0x01,
+        ];
+        instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0x0F1C));
+
+        instructions = [
+            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x00, // acc,
+            (byte)Opcode.ROR,
+        ];
+        instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0x105F));
+
+        cpu.SFRs.Acc = 0;
+        cpu.Pc = 0xF1C;
+
+        Assert.Equal(1, cpu.Step());
+        Assert.Equal(1, cpu.Step());
+        Assert.Equal(0xF1E, cpu.Pc);
+
+        Assert.Equal(4, cpu.Step());
+        Assert.Equal(0x105F, cpu.Pc);
+
+        Assert.Equal(1, cpu.Step());
+        Assert.Equal(1, cpu.SFRs.Acc);
+
+        Assert.Equal(1, cpu.Step());
+        Assert.Equal(0x80, cpu.SFRs.Acc);
+    }
+
+    [Fact]
     public void BRF_Example2()
     {
         // VMC-200
@@ -217,22 +255,27 @@ public class JumpTests
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(1, cpu.SFRs.Acc);
+        Assert.Equal(0x1F10, cpu.Pc);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0x80, cpu.SFRs.Acc);
+        Assert.Equal(0x1F11, cpu.Pc);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0x1F13, cpu.Pc);
 
-        // brf backwards
+        // The sample seems to go to 1F0D instead of 1F0E as indicated, so we have to execute an extra NOP.
         Assert.Equal(4, cpu.Step());
-        Assert.Equal(0x1F0E, cpu.Pc); // TODO: Pc is off by one here. Need to test Example1 as well.
+        Assert.Equal(0x1F0D, cpu.Pc);
+
+        Assert.Equal(1, cpu.Step());
+        Assert.Equal(0x80, cpu.SFRs.Acc);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0x81, cpu.SFRs.Acc);
 
         Assert.Equal(1, cpu.Step());
-        Assert.Equal(0xB0, cpu.SFRs.Acc);
+        Assert.Equal(0xC0, cpu.SFRs.Acc);
     }
 }
