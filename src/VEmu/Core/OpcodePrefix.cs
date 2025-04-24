@@ -41,6 +41,10 @@ enum OpcodePrefix : byte
 
     // Conditional Branch
     BP =	0b0110_1000,
+    BN =	0b1000_1000,
+    DBNZ =	0b0101_0000,
+    BE =	0b0011_0000,
+    BNE =	0b0100_0000,
 }
 
 enum Opcode : byte

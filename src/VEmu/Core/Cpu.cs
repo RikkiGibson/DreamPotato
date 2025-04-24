@@ -116,6 +116,10 @@ class Cpu
             case (>= 0b0010_1000 and <= 0b0010_1111) or (>= 0b0011_1000 and <= 0b0011_1111): return Op_JMP();
             case (>= 0b0110_1000 and <= 0b0110_1111) or (>= 0b0111_1000 and <= 0b0111_1111): return Op_BP();
             case (>= 0b0100_1000 and <= 0b0100_1111) or (>= 0b0101_1000 and <= 0b0101_1111): return Op_BPC();
+            case (>= 0b1000_1000 and <= 0b1000_1111) or (>= 0b1001_1000 and <= 0b1001_1111): return Op_BN();
+            case >= ((byte)OpcodePrefix.DBNZ | (byte)AddressingMode.Direct0) and <= ((byte)OpcodePrefix.DBNZ | (byte)AddressingMode.Indirect3): return Op_DBNZ();
+            case >= ((byte)OpcodePrefix.BE | (byte)AddressingMode.Immediate) and <= ((byte)OpcodePrefix.BE | (byte)AddressingMode.Indirect3): return Op_BE();
+            case >= ((byte)OpcodePrefix.BNE | (byte)AddressingMode.Immediate) and <= ((byte)OpcodePrefix.BNE | (byte)AddressingMode.Indirect3): return Op_BNE();
 
             default: throw new NotImplementedException();
         }
@@ -638,14 +642,11 @@ class Cpu
         // (PC) <- (PC) + 3, if (d9, b3) = 1 then (PC) <- (PC) + r8
         var prefix = CurrentROMBank[Pc];
         var d9 = (BitHelpers.ReadBit(prefix, 4) ? 0x100 : 0) | CurrentROMBank[Pc + 1];
-        var b3 = prefix & 0b0111;
+        var b3 = (byte)(prefix & 0b0111);
         var r8 = CurrentROMBank[Pc + 2];
 
-        var d_value = CurrentRamBank[d9];
-        bool d_bitb = (d_value & (1 << b3)) != 0;
-
         Pc += 3;
-        if (d_bitb)
+        if (BitHelpers.ReadBit(CurrentRamBank[d9], b3))
             Pc += r8;
 
         return 2;
@@ -678,7 +679,82 @@ class Cpu
         return 2;
     }
 
-    // Next: Op_BN()
+    /// <summary>Branch near relative address if direct bit is zero ("negative")</summary>
+    internal int Op_BN()
+    {
+        // 3 operands: 'd' direct address, 'b' bit within (d), 'r' relative address to branch to
+        // 100d_1bbb dddd_dddd rrrr_rrrr
+        // (PC) <- (PC) + 3, if (d9, b3) = 0 then (PC) <- (PC) + r8
+        var prefix = CurrentROMBank[Pc];
+        var d9 = (BitHelpers.ReadBit(prefix, 4) ? 0x100 : 0) | CurrentROMBank[Pc + 1];
+        var b3 = (byte)(prefix & 0b0111);
+        var r8 = CurrentROMBank[Pc + 2];
+
+        Pc += 3;
+        if (!BitHelpers.ReadBit(CurrentRamBank[d9], b3))
+            Pc += r8;
+
+        return 2;
+    }
+
+    /// <summary>Decrement direct byte and branch near relative address if direct byte is nonzero</summary>
+    internal int Op_DBNZ()
+    {
+        // (PC) <- (PC) + 3, (d9) = (d9)-1, if (d9) != 0 then (PC) <- (PC) + r8
+        ref var d9 = ref GetOperandRef(out var operandSize);
+        var r8 = CurrentROMBank[Pc + operandSize];
+
+        Pc += (byte)(operandSize + 1); // 2 or 3 depending on addressing mode
+        --d9;
+        if (d9 != 0)
+            Pc += r8;
+
+        return 2;
+    }
+
+    /// <summary>
+    /// - Compare immediate data or direct byte to accumulator and branch near relative address if equal
+    /// - Compare immediate data to indirect byte and branch near relative address if equal
+    /// </summary>
+    internal int Op_BE()
+    {
+        // (PC) <- (PC) + 3, if (ACC) = #i8 then (PC) <- (PC) + r8
+        var indirectMode = BitHelpers.ReadBit(CurrentROMBank[Pc], bit: 2);
+        // lhs is indirect byte in indirect mode, or acc in immediate or direct mode
+        var lhs = indirectMode ? FetchOperand().operand : SFRs.Acc;
+        // rhs is immediate data in indirect mode or immediate mode, and direct byte in direct mode
+        var rhs = indirectMode ? CurrentROMBank[Pc + 1] : FetchOperand().operand;
+        var r8 = CurrentROMBank[Pc + 2];
+
+        Pc += 3;
+        SFRs.Cy = lhs < rhs;
+        if (lhs == rhs)
+            Pc += r8;
+
+        return 2;
+    }
+
+    /// <summary>
+    /// - Compare immediate data or direct byte to accumulator and branch near relative address if not equal
+    /// - Compare immediate data to indirect byte and branch near relative address if not equal
+    /// </summary>
+    internal int Op_BNE()
+    {
+        // (PC) <- (PC) + 3, if (ACC) != #i8 then (PC) <- (PC) + r8
+        var indirectMode = BitHelpers.ReadBit(CurrentROMBank[Pc], bit: 2);
+        // lhs is indirect byte in indirect mode, or acc in immediate or direct mode
+        var lhs = indirectMode ? FetchOperand().operand : SFRs.Acc;
+        // rhs is immediate data in indirect mode or immediate mode, and direct byte in direct mode
+        var rhs = indirectMode ? CurrentROMBank[Pc + 1] : FetchOperand().operand;
+        var r8 = CurrentROMBank[Pc + 2];
+
+        Pc += 3;
+        SFRs.Cy = lhs < rhs;
+        if (lhs != rhs)
+            Pc += r8;
+
+        return 2;
+    }
 
     /// <summary>No operation</summary>
     internal int Op_NOP()
