@@ -1,11 +1,10 @@
-using System.Numerics;
-
 namespace VEmu.Core;
 
 /// <summary>See VMD-40, table 2.6</summary>
 /// <remarks>this could be a 'readonly struct' once some language rules are relaxed, but, it doesn't really matter.</remarks>
 public class SpecialFunctionRegisters(byte[] RamBank0)
 {
+    // TODO: these probably need to turn into get/set props.
     /// <summary>Accumulator. VMD-50</summary>
     public ref byte Acc => ref RamBank0[0x100];
 
@@ -262,6 +261,23 @@ public class SpecialFunctionRegisters(byte[] RamBank0)
     /// <summary>Port 3 interrupt function control register. VMD-62</summary>
     public ref byte P3Int => ref RamBank0[0x14E];
 
+    /// <summary>Flash Program Register. Undocumented.</summary>
+    public ref byte FPR => ref RamBank0[0x154];
+
+    /// <summary>Flash Address Bank. Used as the upper bit of the address for flash access, i.e. whether flash bank 0 or 1 is used.</summary>
+    public bool FPR0
+    {
+        get => BitHelpers.ReadBit(FPR, bit: 0);
+        set => BitHelpers.WriteBit(ref FPR, bit: 0, value);
+    }
+
+    /// <summary>Flash Write Unlock</summary>
+    public bool FPR1
+    {
+        get => BitHelpers.ReadBit(FPR, bit: 1);
+        set => BitHelpers.WriteBit(ref FPR, bit: 1, value);
+    }
+
     /// <summary>Port 7 latch. VMD-64</summary>
     public ref byte P7 => ref RamBank0[0x15C];
 
@@ -274,18 +290,27 @@ public class SpecialFunctionRegisters(byte[] RamBank0)
     /// <summary>Input signal select. VMD-138</summary>
     public ref byte Isl => ref RamBank0[0x15F];
 
+#region Work RAM
     /// <summary>Control register. VMD-143</summary>
+    /// TODO: the application is only supposed to be able to alter bit 4.
     public ref byte Vsel => ref RamBank0[0x163];
 
-    /// <summary>System address register 1. VMD-144</summary>
+    /// <summary>If set, increments Vramad (pair of Vramad1 and Vram</summary>
+    public bool Vsel4_Ince
+    {
+        get => BitHelpers.ReadBit(Vsel, bit: 4);
+        set => BitHelpers.WriteBit(ref Vsel, bit: 4, value);
+    }
+
+    /// <summary>Bits 0-7 of Vramad (work RAM address). VMD-144</summary>
     public ref byte Vrmad1 => ref RamBank0[0x164];
 
-    /// <summary>System address register 2. VMD-144</summary>
+    /// <summary>Bit 8 of Vramad (work RAM address). VMD-144</summary>
     public ref byte Vrmad2 => ref RamBank0[0x165];
 
     /// <summary>Send/receive buffer. VMD-144</summary>
     public ref byte Vtrbf => ref RamBank0[0x166];
-
+#endregion
     /// <summary>Base timer control. VMD-101</summary>
     public ref byte Btcr => ref RamBank0[0x17F];
 }

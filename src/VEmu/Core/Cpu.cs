@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 
 namespace VEmu.Core;
 
-class Cpu
+public class Cpu
 {
     internal TextWriter Logger { get => field ??= Console.Error; init; }
 
@@ -34,6 +34,8 @@ class Cpu
     internal readonly byte[] RamBank1 = new byte[0x1c0];
     internal readonly byte[] RamBank2 = new byte[0x1c0];
 
+    internal readonly byte[] WorkRam = new byte[0x200]; // 512 dec
+
     internal ushort Pc;
 
     public Cpu()
@@ -41,7 +43,63 @@ class Cpu
         CurrentROMBank = ROM;
     }
 
-    internal byte[] CurrentRamBank => SFRs.Rambk0 ? RamBank1 : RamBank0;
+    public byte ReadRam(int address)
+    {
+        return ReadRam(address, GetCurrentBankId());
+    }
+
+    public byte ReadRam((int address, int bankId) pair) => ReadRam(pair.address, pair.bankId);
+
+    public byte ReadRam(int address, int bankId)
+    {
+        Debug.Assert(address < 0x200);
+        if (bankId == 0 && address == (ushort)SpecialFunctionRegisterKind.Vtrbf)
+        {
+            return readWorkRam();
+        }
+
+        var bank = GetRamBankDoNotUseDirectly(bankId);
+        return bank[address];
+
+        byte readWorkRam()
+        {
+            var address = (BitHelpers.ReadBit(SFRs.Vrmad2, bit: 0) ? 0x100 : 0) | SFRs.Vrmad1;
+            return WorkRam[address];
+        }
+    }
+
+    public void WriteRam(int address, byte value)
+    {
+        WriteRam(address, GetCurrentBankId(), value);
+    }
+
+    public void WriteRam((int address, int bankId) pair, byte value) => WriteRam(pair.address, pair.bankId, value);
+
+    public void WriteRam(int address, int bankId, byte value)
+    {
+        Debug.Assert(address < 0x200);
+        if (bankId == 0 && address == (ushort)SpecialFunctionRegisterKind.Vtrbf)
+        {
+            writeWorkRam(value);
+            return;
+        }
+
+        var bank = GetRamBankDoNotUseDirectly(bankId);
+        bank[address] = value;
+
+        void writeWorkRam(byte value)
+        {
+            var address = (BitHelpers.ReadBit(SFRs.Vrmad2, bit: 0) ? 0x100 : 0) | SFRs.Vrmad1;
+            WorkRam[address] = value;
+
+            if (SFRs.Vsel4_Ince)
+            {
+                address++;
+                SFRs.Vrmad1 = (byte)address;
+                SFRs.Vrmad2 = (byte)((address & 0x100) != 0 ? 1 : 0);
+            }
+        }
+    }
 
     internal Span<byte> MainRam_0 => RamBank0.AsSpan(0..0x100);
 
@@ -98,6 +156,7 @@ class Cpu
             case Opcode.CALLR: return Op_CALLR();
             case Opcode.RET: return Op_RET();
 
+            case Opcode.LDF: return Op_LDF();
             case Opcode.NOP: return Op_NOP();
         }
 
@@ -140,6 +199,7 @@ class Cpu
             case (>= 0b1100_1000 and <= 0b1100_1111) or (>= 0b1101_1000 and <= 0b1101_1111): return Op_CLR1();
             case (>= 0b1110_1000 and <= 0b1110_1111) or (>= 0b1111_1000 and <= 0b1111_1111): return Op_SET1();
 
+            // Missing: LDF (0101_0000), STF (0101_0001)
             default: throw new NotImplementedException();
         }
     }
@@ -157,7 +217,7 @@ class Cpu
                 {
                     // 9 bit address: oooommmd dddd_dddd
                     var address = ((prefix & 0x1) << 8) | CurrentROMBank[Pc + 1];
-                    return (operand: CurrentRamBank[address], instructionSize: 2);
+                    return (operand: this.ReadRam(address), instructionSize: 2);
                 }
             case 0b100:
             case 0b110:
@@ -206,22 +266,47 @@ class Cpu
         }
     }
 
-    internal ref byte GetOperandRef(out byte instructionSize)
+    internal int GetCurrentBankId() => this.SFRs.Rambk0 ? 1 : 0;
+    /// <summary>
+    /// Only for use by ReadRam/WriteRam.
+    /// </summary>
+    internal byte[] GetRamBankDoNotUseDirectly(int bankId)
+    {
+        if (bankId == 3)
+        {
+            Logger.WriteLine($"[PC: 0x{Pc:X}] Accessing nonexistent bank 3");
+            return null!;
+        }
+        else if (bankId == 2)
+        {
+            Logger.WriteLine($"[PC: 0x{Pc:X}] Accessing bank 2, but no bounds checks are implemented");
+            return RamBank2;
+        }
+        else
+        {
+            var bank = bankId switch { 0 => RamBank0, 1 => RamBank1, _ => throw new InvalidOperationException() };
+            return bank;
+        }
+    }
+
+    /// <param name="operandSize">how many bytes of instructions were used to represent this operand. e.g. 2 in direct or immediate mode, 1 in indirect mode. If this is the only argument to the instruction then it is usually the same as the instruction size.</param>
+    internal (int address, int bankId) GetOperandAddress(out byte operandSize)
     {
         var prefix = CurrentROMBank[Pc];
         var mode = prefix & 0x0f;
         switch (mode)
         {
             case 0b01: // immediate
-                instructionSize = 2;
-                return ref CurrentROMBank[Pc + 1];
+                Debug.Assert(false);
+                operandSize = 0;
+                return default;
             case 0b10: // direct
             case 0b11:
                 {
                     // 9 bit address: oooommmd dddd_dddd
                     var address = ((prefix & 0x1) << 8) | CurrentROMBank[Pc + 1];
-                    instructionSize = 2;
-                    return ref CurrentRamBank[address];
+                    operandSize = 2;
+                    return (address, GetCurrentBankId());
                 }
             case 0b100:
             case 0b110:
@@ -246,28 +331,8 @@ class Cpu
                     // 9-bit address, where the 9th bit is j1 from instruction data (indicating to check SFRs range 0x100-1x1ff)
                     var address = ((prefix & 0b10) == 0b10 ? 0b1_0000_0000 : 0)
                         | IndirectAddressRegisters[registerAddress];
-
-                    if (bankId == 3)
-                    {
-                        Logger.WriteLine($"[PC: 0x{Pc:X}] Accessing nonexistent bank 3");
-                        instructionSize = 2;
-                        unsafe
-                        {
-                            return ref Unsafe.AsRef<byte>(null);
-                        }
-                    }
-                    else if (bankId == 2)
-                    {
-                        Logger.WriteLine($"[PC: 0x{Pc:X}] Accessing bank 2, but no bounds checks are implemented");
-                        instructionSize = 1;
-                        return ref RamBank2[address];
-                    }
-                    else
-                    {
-                        var bank = bankId switch { 0 => RamBank0, 1 => RamBank1, _ => throw new InvalidOperationException() };
-                        instructionSize = 1;
-                        return ref bank[address];
-                    }
+                    operandSize = 1;
+                    return (address, bankId);
                 }
             default:
                 throw new InvalidOperationException();
@@ -276,6 +341,7 @@ class Cpu
 
     internal int Op_ADD()
     {
+        Logger.WriteLine("Op_ADD");
         // ACC <- ACC + operand
         var (rhs, instructionSize) = FetchOperand();
         var lhs = SFRs.Acc;
@@ -301,6 +367,7 @@ class Cpu
 
     internal int Op_ADDC()
     {
+        Logger.WriteLine("Op_ADDC");
         // ACC <- ACC + CY + operand
         var (rhs, instructionSize) = FetchOperand();
         var lhs = SFRs.Acc;
@@ -327,6 +394,7 @@ class Cpu
 
     internal int Op_SUB()
     {
+        Logger.WriteLine("Op_SUB");
         // ACC <- ACC - operand
         var (rhs, instructionSize) = FetchOperand();
         var lhs = SFRs.Acc;
@@ -352,6 +420,7 @@ class Cpu
 
     internal int Op_SUBC()
     {
+        Logger.WriteLine("Op_SUBC");
         // ACC <- ACC - CY - operand
         var (rhs, instructionSize) = FetchOperand();
         var lhs = SFRs.Acc;
@@ -380,26 +449,33 @@ class Cpu
 
     internal int Op_INC()
     {
+        Logger.WriteLine("Op_INC");
         // (operand) <- (operand) + 1
         // (could be either direct or indirect)
-        ref var operand = ref GetOperandRef(out var instructionSize);
+        var (address, bankId) = GetOperandAddress(out var operandSize);
+        var operand = ReadRam(address, bankId);
         operand++;
-        Pc += instructionSize;
+        WriteRam(address, bankId, operand);
+        Pc += operandSize;
         return 1;
     }
 
     internal int Op_DEC()
     {
+        Logger.WriteLine("Op_DEC");
         // (operand) <- (operand) - 1
         // (could be either direct or indirect)
-        ref var operand = ref GetOperandRef(out var instructionSize);
+        var address = GetOperandAddress(out var operandSize);
+        var operand = ReadRam(address);
         operand--;
-        Pc += instructionSize;
+        WriteRam(address, operand);
+        Pc += operandSize;
         return 1;
     }
 
     internal int Op_MUL()
     {
+        Logger.WriteLine("Op_MUL");
         // TODO: interrupts enabled on the 7th cycle.
         // Have to consider when implementing interrupts.
 
@@ -418,6 +494,7 @@ class Cpu
 
     internal int Op_DIV()
     {
+        Logger.WriteLine("Op_DIV");
         // (ACC) (C), mod(B) <- (ACC) (C) / (B)
         if (SFRs.B == 0)
         {
@@ -442,6 +519,7 @@ class Cpu
 
     internal int Op_AND()
     {
+        Logger.WriteLine("Op_AND");
         // ACC <- ACC & operand
         var (rhs, instructionSize) = FetchOperand();
         SFRs.Acc &= rhs;
@@ -452,6 +530,7 @@ class Cpu
 
     internal int Op_OR()
     {
+        Logger.WriteLine("Op_OR");
         // ACC <- ACC | operand
         var (rhs, instructionSize) = FetchOperand();
         SFRs.Acc |= rhs;
@@ -460,6 +539,7 @@ class Cpu
     }
     internal int Op_XOR()
     {
+        Logger.WriteLine("Op_XOR");
         // ACC <- ACC ^ operand
         var (rhs, instructionSize) = FetchOperand();
         SFRs.Acc ^= rhs;
@@ -469,6 +549,7 @@ class Cpu
 
     internal int Op_ROL()
     {
+        Logger.WriteLine("Op_ROL");
         // <-A7<-A6<-A5<-A4<-A3<-A2<-A1<-A0
         int shifted = SFRs.Acc << 1;
         bool bit0 = (shifted & 0x100) != 0;
@@ -479,6 +560,7 @@ class Cpu
 
     internal int Op_ROLC()
     {
+        Logger.WriteLine("Op_ROLC");
         // <-A7<-A6<-A5<-A4<-A3<-A2<-A1<-A0<-CY<- (A7)
         int shifted = SFRs.Acc << 1 | (SFRs.Cy ? 1 : 0);
         SFRs.Cy = (shifted & 0x100) != 0;
@@ -489,6 +571,7 @@ class Cpu
 
     internal int Op_ROR()
     {
+        Logger.WriteLine("Op_ROR");
         // (A0) ->A7->A6->A5->A4->A3->A2->A1->A0
         bool bit7 = (SFRs.Acc & 1) != 0;
         SFRs.Acc = (byte)((SFRs.Acc >> 1) | (bit7 ? 0x80 : 0));
@@ -499,6 +582,7 @@ class Cpu
 
     internal int Op_RORC()
     {
+        Logger.WriteLine("Op_RORC");
         // (A0) ->CY->A7->A6->A5->A4->A3->A2->A1->A0
         bool newCarry = (SFRs.Acc & 1) != 0;
         SFRs.Acc = (byte)((SFRs.Cy ? 0x80 : 0) | SFRs.Acc >> 1);
@@ -509,6 +593,7 @@ class Cpu
 
     internal int Op_LD()
     {
+        Logger.WriteLine("Op_LD");
         // (ACC) <- (d9)
         (SFRs.Acc, var instructionSize) = FetchOperand();
         Pc += instructionSize;
@@ -517,26 +602,30 @@ class Cpu
 
     internal int Op_ST()
     {
+        Logger.WriteLine("Op_ST");
         // (d9) <- (ACC)
-        GetOperandRef(out var instructionSize) = SFRs.Acc;
-        Pc += instructionSize;
+        var address = GetOperandAddress(out var operandSize);
+        WriteRam(address, SFRs.Acc);
+        Pc += operandSize;
         return 1;
     }
 
     internal int Op_MOV()
     {
+        Logger.WriteLine("Op_MOV");
         // two operands: direct or indirect address, followed by immediate data.
         // TODO: perhaps some renaming here.
         // (d9) <- #i8
-        ref var dest = ref GetOperandRef(out var instructionSize);
-        Pc += instructionSize;
-        dest = CurrentROMBank[Pc];
+        var address = GetOperandAddress(out var operandSize);
+        Pc += operandSize;
+        WriteRam(address, CurrentROMBank[Pc]);
         Pc++;
-        return instructionSize; // instructionSize at this moment (1 less than true instruction size) also happens to be the cycle count.
+        return operandSize; // instructionSize at this moment (1 less than true instruction size) also happens to be the cycle count.
     }
 
     internal int Op_LDC()
     {
+        Logger.WriteLine("Op_LDC");
         // (ACC) <- (BNK)((TRR) + (ACC)) [ROM]
         // For a program running in ROM, ROM is accessed.
         // For a program running in flash memory, bank 0 of flash memory is accessed.
@@ -549,10 +638,11 @@ class Cpu
 
     internal int Op_PUSH()
     {
+        Logger.WriteLine("Op_PUSH");
         // (SP) <- (SP) + 1, ((SP)) <- d9
         SFRs.Sp++;
         var dAddress = ((CurrentROMBank[Pc] & 0x1) << 8) | CurrentROMBank[Pc + 1];
-        RamBank0[SFRs.Sp] = CurrentRamBank[dAddress];
+        RamBank0[SFRs.Sp] = ReadRam(dAddress);
 
         Pc += 2;
         return 2;
@@ -560,9 +650,10 @@ class Cpu
 
     internal int Op_POP()
     {
+        Logger.WriteLine("Op_POP");
         // (d9) <- ((SP)), (SP) <- (SP) - 1
         var dAddress = ((CurrentROMBank[Pc] & 0x1) << 8) | CurrentROMBank[Pc + 1];
-        CurrentRamBank[dAddress] = RamBank0[SFRs.Sp];
+        WriteRam(dAddress, RamBank0[SFRs.Sp]);
         SFRs.Sp--;
 
         Pc += 2;
@@ -571,20 +662,22 @@ class Cpu
 
     internal int Op_XCH()
     {
+        Logger.WriteLine("Op_XCH");
         // (ACC) <--> (d9)
         // (ACC) <--> ((Rj)) j = 0, 1, 2, 3
-        ref var operand = ref GetOperandRef(out var instructionSize);
-        var temp = operand;
-        operand = SFRs.Acc;
+        var address = GetOperandAddress(out var operandSize);
+        var temp = ReadRam(address);
+        WriteRam(address, SFRs.Acc);
         SFRs.Acc = temp;
 
-        Pc += instructionSize;
+        Pc += operandSize;
         return 1;
     }
 
     /// <summary>Jump near absolute address</summary>
     internal int Op_JMP()
     {
+        Logger.WriteLine("Op_JMP");
         // (PC) <- (PC) + 2, (PC11 to 00) <- a12
         // 001a_1aaa aaaa_aaaa
         byte prefix = CurrentROMBank[Pc];
@@ -599,6 +692,7 @@ class Cpu
     /// <summary>Jump far absolute address</summary>
     internal int Op_JMPF()
     {
+        Logger.WriteLine("Op_JMPF");
         // (PC) <- a16
         Pc = (ushort)(CurrentROMBank[Pc + 1] << 8 | CurrentROMBank[Pc + 2]);
         // TODO: Set CurrentROMBank based on Ext
@@ -608,6 +702,7 @@ class Cpu
     /// <summary>Branch near relative address</summary>
     internal int Op_BR()
     {
+        Logger.WriteLine("Op_BR");
         // (PC) <- (PC) + 2, (PC) <- (PC) + r8
         var r8 = CurrentROMBank[Pc + 1];
         Pc += (ushort)(2 + r8);
@@ -617,6 +712,7 @@ class Cpu
     /// <summary>Branch far relative address</summary>
     internal int Op_BRF()
     {
+        Logger.WriteLine("Op_BRF");
         // (PC) <- (PC) + 3, (PC) <- (PC) - 1 + r16
         // NB: for some reason, this instruction is little endian (starts with least significant byte).
         var r16 = (ushort)(CurrentROMBank[Pc + 1] + (CurrentROMBank[Pc + 2] << 8));
@@ -628,6 +724,7 @@ class Cpu
     /// <summary>Branch near relative address if accumulator is zero</summary>
     internal int Op_BZ()
     {
+        Logger.WriteLine("Op_BZ");
         // (PC) <- (PC) + 2, if (ACC) = 0 then (PC) <- PC + r8
         var r8 = CurrentROMBank[Pc + 1];
         var z = SFRs.Acc == 0;
@@ -642,6 +739,7 @@ class Cpu
     /// <summary>Branch near relative address if accumulator is not zero</summary>
     internal int Op_BNZ()
     {
+        Logger.WriteLine("Op_BNZ");
         // (PC) <- (PC) + 2, if (ACC) != 0 then (PC) <- PC + r8
         var r8 = CurrentROMBank[Pc + 1];
         var nz = SFRs.Acc != 0;
@@ -656,6 +754,7 @@ class Cpu
     /// <summary>Branch near relative address if direct bit is one ("positive")</summary>
     internal int Op_BP()
     {
+        Logger.WriteLine("Op_BP");
         // 3 operands: 'd' direct address, 'b' bit within (d), 'r' relative address to branch to
         // 011d_1bbb dddd_dddd rrrr_rrrr
         // (PC) <- (PC) + 3, if (d9, b3) = 1 then (PC) <- (PC) + r8
@@ -665,7 +764,7 @@ class Cpu
         var r8 = CurrentROMBank[Pc + 2];
 
         Pc += 3;
-        if (BitHelpers.ReadBit(CurrentRamBank[d9], b3))
+        if (BitHelpers.ReadBit(ReadRam(d9), b3))
             Pc += r8;
 
         return 2;
@@ -674,6 +773,7 @@ class Cpu
     /// <summary>Branch near relative address if direct bit is one ("positive"), and clear</summary>
     internal int Op_BPC()
     {
+        Logger.WriteLine("Op_BPC");
         // When applied to port P1 and P3, the latch of each port is selected. The external signal is not selected.
         // When applied to port P7, there is no change in status.
 
@@ -685,7 +785,7 @@ class Cpu
         var b3 = (byte)(prefix & 0b0111);
         var r8 = CurrentROMBank[Pc + 2];
 
-        var d_value = CurrentRamBank[d9];
+        var d_value = ReadRam(d9);
         var new_d_value = d_value;
         BitHelpers.WriteBit(ref new_d_value, bit: b3, value: false);
 
@@ -693,7 +793,7 @@ class Cpu
         if (d_value != new_d_value)
             Pc += r8;
 
-        CurrentRamBank[d9] = new_d_value;
+        WriteRam(d9, new_d_value);
 
         return 2;
     }
@@ -701,6 +801,7 @@ class Cpu
     /// <summary>Branch near relative address if direct bit is zero ("negative")</summary>
     internal int Op_BN()
     {
+        Logger.WriteLine("Op_BN");
         // 3 operands: 'd' direct address, 'b' bit within (d), 'r' relative address to branch to
         // 100d_1bbb dddd_dddd rrrr_rrrr
         // (PC) <- (PC) + 3, if (d9, b3) = 0 then (PC) <- (PC) + r8
@@ -710,7 +811,7 @@ class Cpu
         var r8 = CurrentROMBank[Pc + 2];
 
         Pc += 3;
-        if (!BitHelpers.ReadBit(CurrentRamBank[d9], b3))
+        if (!BitHelpers.ReadBit(ReadRam(d9), b3))
             Pc += r8;
 
         return 2;
@@ -719,13 +820,16 @@ class Cpu
     /// <summary>Decrement direct byte and branch near relative address if direct byte is nonzero</summary>
     internal int Op_DBNZ()
     {
+        Logger.WriteLine("Op_DBNZ");
         // (PC) <- (PC) + 3, (d9) = (d9)-1, if (d9) != 0 then (PC) <- (PC) + r8
-        ref var d9 = ref GetOperandRef(out var operandSize);
+        var d9 = GetOperandAddress(out var operandSize);
+        var d9Value = ReadRam(d9);
         var r8 = CurrentROMBank[Pc + operandSize];
 
         Pc += (byte)(operandSize + 1); // 2 or 3 depending on addressing mode
-        --d9;
-        if (d9 != 0)
+        --d9Value;
+        WriteRam(d9, d9Value);
+        if (d9Value != 0)
             Pc += r8;
 
         return 2;
@@ -737,6 +841,7 @@ class Cpu
     /// </summary>
     internal int Op_BE()
     {
+        Logger.WriteLine("Op_BE");
         // (PC) <- (PC) + 3, if (ACC) = #i8 then (PC) <- (PC) + r8
         var indirectMode = BitHelpers.ReadBit(CurrentROMBank[Pc], bit: 2);
         // lhs is indirect byte in indirect mode, or acc in immediate or direct mode
@@ -759,6 +864,7 @@ class Cpu
     /// </summary>
     internal int Op_BNE()
     {
+        Logger.WriteLine("Op_BNE");
         // (PC) <- (PC) + 3, if (ACC) != #i8 then (PC) <- (PC) + r8
         var indirectMode = BitHelpers.ReadBit(CurrentROMBank[Pc], bit: 2);
         // lhs is indirect byte in indirect mode, or acc in immediate or direct mode
@@ -778,6 +884,7 @@ class Cpu
     /// <summary>Near absolute subroutine call</summary>
     internal int Op_CALL()
     {
+        Logger.WriteLine("Op_CALL");
         // similar to OP_JMP
         // (PC) <- (PC) + 2, (SP) <- (SP) + 1, ((SP)) <- (PC7 to 0), (SP) <- (SP) + 1, ((SP)) <- (PC15 to 8), (PC11 to 00) <- a12
         // 000a_1aaa aaaa_aaaa
@@ -799,6 +906,7 @@ class Cpu
     /// <summary>Far absolute subroutine call</summary>
     internal int Op_CALLF()
     {
+        Logger.WriteLine("Op_CALLF");
         // Similar to Op_JMPF
         // (PC) <- (PC) + 3, (SP) <- (SP) + 1, ((SP)) <- (PC7 to 0),
         // (SP) <- (SP) + 1, ((SP)) <- (PC15 to 8), (PC) <- a16
@@ -815,6 +923,7 @@ class Cpu
     /// <summary>Far relative subroutine call</summary>
     internal int Op_CALLR()
     {
+        Logger.WriteLine("Op_CALLR");
         // (PC) <- (PC) + 3, (SP) <- (SP) + 1, ((SP)) <- (PC7 to 0),
         // (SP) <- (SP) + 1, ((SP)) <- (PC15 to 8), (PC) <- (PC) - 1 + r16
         // NB: for some reason, this instruction is little endian (starts with least significant byte).
@@ -833,6 +942,7 @@ class Cpu
     /// <summary>Return from subroutine</summary>
     internal int Op_RET()
     {
+        Logger.WriteLine("Op_RET");
         // (PC15 to 8) <- ((SP)), (SP) <- (SP) - 1, (PC7 to 0) <- ((SP)), (SP) <- (SP) -1
         var Pc15_8 = RamBank0[SFRs.Sp];
         SFRs.Sp--;
@@ -847,12 +957,15 @@ class Cpu
     /// <summary>Clear direct bit</summary>
     internal int Op_CLR1()
     {
+        Logger.WriteLine("Op_CLR1");
         // (d9, b3) <- 0
         // Similar to Op_BP()
         var prefix = CurrentROMBank[Pc];
         var d9 = (BitHelpers.ReadBit(prefix, 4) ? 0x100 : 0) | CurrentROMBank[Pc + 1];
         var b3 = (byte)(prefix & 0b0111);
-        BitHelpers.WriteBit(ref CurrentRamBank[d9], bit: b3, value: false);
+        var memory = ReadRam(d9);
+        BitHelpers.WriteBit(ref memory, bit: b3, value: false);
+        WriteRam(d9, memory);
         Pc += 2;
         return 1;
     }
@@ -860,11 +973,14 @@ class Cpu
     /// <summary>Set direct bit</summary>
     internal int Op_SET1()
     {
+        Logger.WriteLine("Op_SET1");
         // (d9, b3) <- 1
         var prefix = CurrentROMBank[Pc];
         var d9 = (BitHelpers.ReadBit(prefix, 4) ? 0x100 : 0) | CurrentROMBank[Pc + 1];
         var b3 = (byte)(prefix & 0b0111);
-        BitHelpers.WriteBit(ref CurrentRamBank[d9], bit: b3, value: true);
+        var memory = ReadRam(d9);
+        BitHelpers.WriteBit(ref memory, bit: b3, value: true);
+        WriteRam(d9, memory);
         Pc += 2;
         return 1;
     }
@@ -872,20 +988,36 @@ class Cpu
     /// <summary>Not direct bit</summary>
     internal int Op_NOT1()
     {
+        Logger.WriteLine("Op_NOT1");
         // (d9, b3) <- !(d9, b3)
         var prefix = CurrentROMBank[Pc];
         var d9 = (BitHelpers.ReadBit(prefix, 4) ? 0x100 : 0) | CurrentROMBank[Pc + 1];
         var b3 = (byte)(prefix & 0b0111);
-        ref var dest = ref CurrentRamBank[d9];
-        var bit = BitHelpers.ReadBit(dest, b3);
-        BitHelpers.WriteBit(ref dest, bit: b3, value: !bit);
+        var memory = ReadRam(d9);
+        var bit = BitHelpers.ReadBit(memory, b3);
+        BitHelpers.WriteBit(ref memory, bit: b3, value: !bit);
+        WriteRam(d9, memory);
         Pc += 2;
         return 1;
     }
 
+    /// <summary>Load a value from flash memory into accumulator. Undocumented.</summary>
+    internal int Op_LDF()
+    {
+        Logger.WriteLine("Op_LDF");
+        var a16 = SFRs.Trl | (SFRs.Trh << 8);
+        var bank = SFRs.FPR0 ? FlashBank1 : FlashBank0;
+        SFRs.Acc = bank[a16];
+        Pc += 2;
+        return 2;
+    }
+
+    // OP_STF
+
     /// <summary>No operation</summary>
     internal int Op_NOP()
     {
+        Logger.WriteLine("Op_NOP");
         Pc++;
         return 1;
     }

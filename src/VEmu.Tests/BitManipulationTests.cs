@@ -36,10 +36,10 @@ public class BitManipulationTests
         instructions.CopyTo(cpu.ROM.AsSpan());
 
         Assert.Equal(2, cpu.Step());
-        Assert.Equal(0x01, cpu.CurrentRamBank[0x7f]);
+        Assert.Equal(0x01, cpu.ReadRam(0x7f));
 
         Assert.Equal(1, cpu.Step());
-        Assert.Equal(0x41, cpu.CurrentRamBank[0x7f]);
+        Assert.Equal(0x41, cpu.ReadRam(0x7f));
     }
 
     [Fact]
@@ -55,10 +55,10 @@ public class BitManipulationTests
         instructions.CopyTo(cpu.ROM.AsSpan());
 
         Assert.Equal(2, cpu.Step());
-        Assert.Equal(0x01, cpu.CurrentRamBank[0x7f]);
+        Assert.Equal(0x01, cpu.ReadRam(0x7f));
 
         Assert.Equal(1, cpu.Step());
-        Assert.Equal(0x41, cpu.CurrentRamBank[0x7f]);
+        Assert.Equal(0x41, cpu.ReadRam(0x7f));
     }
 
     // SET1, NOT1

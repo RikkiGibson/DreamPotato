@@ -13,11 +13,12 @@ public class HelloWorldTest(ITestOutputHelper outputHelper)
         var writer = new StringWriter();
         var cpu = new Cpu() { Logger = writer };
 
-        s_instructions.CopyTo(cpu.ROM.AsSpan());
+        s_instructions.CopyTo(cpu.FlashBank0.AsSpan());
+        cpu.CurrentROMBank = cpu.FlashBank0;
 
         try
         {
-            cpu.Run(2000);
+            cpu.Run(200_000);
         }
         catch
         {

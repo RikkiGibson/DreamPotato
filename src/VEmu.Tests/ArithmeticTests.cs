@@ -303,8 +303,7 @@ public class ArithmeticTests
         Assert.Equal(0b1_0000, cpu.SFRs.Psw);
 
         cpu.Step();
-        // Note that <object> is passed here and many other places to ensure the entire log is printed when the assertion fails
-        Assert.Equal<object>("""
+        Assert.Contains("""
             [PC: 0x0] Accessing bank 2, but no bounds checks are implemented
 
             """, cpu.Logger.ToString());
@@ -317,8 +316,11 @@ public class ArithmeticTests
         Assert.Equal(84, cpu.SFRs.Acc);
         Assert.True(cpu.SFRs.Ac);
         Assert.Equal(0b101_0000, cpu.SFRs.Psw);
-        Assert.Equal<object>("""
+        Assert.Contains("""
             [PC: 0x0] Accessing bank 2, but no bounds checks are implemented
+
+            """, cpu.Logger.ToString());
+        Assert.Contains("""
             [PC: 0x1] Accessing bank 2, but no bounds checks are implemented
 
             """, cpu.Logger.ToString());
@@ -342,7 +344,7 @@ public class ArithmeticTests
         Assert.Equal(0b1_1000, cpu.SFRs.Psw);
 
         cpu.Step();
-        Assert.Equal<object>("""
+        Assert.Contains("""
             [PC: 0x0] Accessing nonexistent bank 3
 
             """, cpu.Logger.ToString());
@@ -355,8 +357,11 @@ public class ArithmeticTests
         Assert.Equal(0, cpu.SFRs.Acc);
         Assert.False(cpu.SFRs.Ac);
         Assert.Equal(0b1_1000, cpu.SFRs.Psw);
-        Assert.Equal<object>("""
+        Assert.Contains("""
             [PC: 0x0] Accessing nonexistent bank 3
+
+            """, cpu.Logger.ToString());
+        Assert.Contains("""
             [PC: 0x1] Accessing nonexistent bank 3
 
             """, cpu.Logger.ToString());

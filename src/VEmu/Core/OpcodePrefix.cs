@@ -78,6 +78,10 @@ enum Opcode : byte
 
     // Misc
     NOP =	0b0000_0000,
+
+    // Undocumented
+    LDF =	0b0101_0000,
+    STF =	0b0101_0001,
 }
 
 static class OpcodePrefixExtensions
