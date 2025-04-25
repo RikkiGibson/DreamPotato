@@ -119,13 +119,11 @@ public class SubroutineTests
 
     // RET is tested by the other methods in this file
 
-    // RETI
+    [Fact]
     public void RETI_Example1()
     {
         // VMC-217
         var cpu = new Cpu();
         // TODO: not going to be able to test this meaningfully, until interrupts are handled.
     }
-
-    // CLR1, SET1, NOT1
 }

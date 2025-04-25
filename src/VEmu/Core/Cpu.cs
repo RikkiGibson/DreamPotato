@@ -61,11 +61,22 @@ class Cpu
     /// <summary>LCD video XRAM, bank 2.</summary>
     internal Span<byte> XRam_2 => RamBank1.AsSpan(0x180..0x190);
 
+    internal int Run(int cyclesToRun)
+    {
+        int cyclesSoFar = 0;
+        while (cyclesSoFar < cyclesToRun)
+        {
+            cyclesSoFar += Step();
+        }
+        return cyclesSoFar;
+    }
+
     /// <returns>Number of cycles consumed by the instruction.</returns>
     internal int Step()
     {
         // TODO: cleanup the way opcode ranges are represented
         byte prefix = CurrentROMBank[Pc];
+        Logger.WriteLine($"Step Pc=0x{Pc:X} Code=0x{prefix:X}");
         switch ((Opcode)prefix)
         {
             case Opcode.MUL: return Op_MUL();
