@@ -64,8 +64,7 @@ class Cpu
     /// <returns>Number of cycles consumed by the instruction.</returns>
     internal int Step()
     {
-        // TODO: review the bit patterns and decide whether to represent more of these using "OpcodePrefix"
-        // Perhaps some nifty use of range patterns could help here, e.g. '>= (byte)OpcodePrefix.XOR | (byte)AddressingMode.Immediate and <= (byte)OpcodePrefix.XOR | (byte)AddressingMode.Indirect3
+        // TODO: cleanup the way opcode ranges are represented
         byte prefix = CurrentROMBank[Pc];
         switch ((Opcode)prefix)
         {
@@ -84,10 +83,14 @@ class Cpu
             case Opcode.BZ: return Op_BZ();
             case Opcode.BNZ: return Op_BNZ();
 
+            case Opcode.CALLF: return Op_CALLF();
+            case Opcode.CALLR: return Op_CALLR();
+            case Opcode.RET: return Op_RET();
+
             case Opcode.NOP: return Op_NOP();
         }
 
-        // TODO: the limited supported addressing modes of various ops are used to pack in more kinds of ops.
+        // the limited supported addressing modes of various ops are used to pack in more kinds of ops.
         // e.g. INC does not support immediate mode, so that bit pattern is used for PUSH, which only supports direct mode.
 
         switch (prefix)
@@ -113,6 +116,7 @@ class Cpu
             case (byte)OpcodePrefix.PUSH or ((byte)OpcodePrefix.PUSH | 1): return Op_PUSH();
             case (byte)OpcodePrefix.POP or ((byte)OpcodePrefix.POP | 1): return Op_POP();
             case >= ((byte)OpcodePrefix.XCH | (byte)AddressingMode.Direct0) and <= ((byte)OpcodePrefix.XCH | (byte)AddressingMode.Indirect3): return Op_XCH();
+
             case (>= 0b0010_1000 and <= 0b0010_1111) or (>= 0b0011_1000 and <= 0b0011_1111): return Op_JMP();
             case (>= 0b0110_1000 and <= 0b0110_1111) or (>= 0b0111_1000 and <= 0b0111_1111): return Op_BP();
             case (>= 0b0100_1000 and <= 0b0100_1111) or (>= 0b0101_1000 and <= 0b0101_1111): return Op_BPC();
@@ -120,6 +124,10 @@ class Cpu
             case >= ((byte)OpcodePrefix.DBNZ | (byte)AddressingMode.Direct0) and <= ((byte)OpcodePrefix.DBNZ | (byte)AddressingMode.Indirect3): return Op_DBNZ();
             case >= ((byte)OpcodePrefix.BE | (byte)AddressingMode.Immediate) and <= ((byte)OpcodePrefix.BE | (byte)AddressingMode.Indirect3): return Op_BE();
             case >= ((byte)OpcodePrefix.BNE | (byte)AddressingMode.Immediate) and <= ((byte)OpcodePrefix.BNE | (byte)AddressingMode.Indirect3): return Op_BNE();
+
+            case (>= 0b0000_1000 and <= 0b0000_1111) or (>= 0b0001_1000 and <= 0b0001_1111): return Op_CALL();
+            case (>= 0b1100_1000 and <= 0b1100_1111) or (>= 0b1101_1000 and <= 0b1101_1111): return Op_CLR1();
+            case (>= 0b1110_1000 and <= 0b1110_1111) or (>= 0b1111_1000 and <= 0b1111_1111): return Op_SET1();
 
             default: throw new NotImplementedException();
         }
@@ -754,6 +762,114 @@ class Cpu
             Pc += r8;
 
         return 2;
+    }
+
+    /// <summary>Near absolute subroutine call</summary>
+    internal int Op_CALL()
+    {
+        // similar to OP_JMP
+        // (PC) <- (PC) + 2, (SP) <- (SP) + 1, ((SP)) <- (PC7 to 0), (SP) <- (SP) + 1, ((SP)) <- (PC15 to 8), (PC11 to 00) <- a12
+        // 000a_1aaa aaaa_aaaa
+        byte prefix = CurrentROMBank[Pc];
+        bool a12_bit11 = BitHelpers.ReadBit(prefix, bit: 4);
+        int a12 = (a12_bit11 ? 0x800 : 0) | (prefix & 0b111) << 8 | CurrentROMBank[Pc + 1];
+
+        Pc += 2;
+        SFRs.Sp++;
+        RamBank0[SFRs.Sp] = (byte)Pc;
+        SFRs.Sp++;
+        RamBank0[SFRs.Sp] = (byte)(Pc >> 8);
+
+        Pc &= 0b1111_0000__0000_0000;
+        Pc |= (ushort)a12;
+        return 2;
+    }
+
+    /// <summary>Far absolute subroutine call</summary>
+    internal int Op_CALLF()
+    {
+        // Similar to Op_JMPF
+        // (PC) <- (PC) + 3, (SP) <- (SP) + 1, ((SP)) <- (PC7 to 0),
+        // (SP) <- (SP) + 1, ((SP)) <- (PC15 to 8), (PC) <- a16
+        var a16 = (ushort)(CurrentROMBank[Pc + 1] << 8 | CurrentROMBank[Pc + 2]);
+        Pc += 3;
+        SFRs.Sp++;
+        RamBank0[SFRs.Sp] = (byte)Pc;
+        SFRs.Sp++;
+        RamBank0[SFRs.Sp] = (byte)(Pc >> 8);
+        Pc = a16;
+        return 2;
+    }
+
+    /// <summary>Far relative subroutine call</summary>
+    internal int Op_CALLR()
+    {
+        // (PC) <- (PC) + 3, (SP) <- (SP) + 1, ((SP)) <- (PC7 to 0),
+        // (SP) <- (SP) + 1, ((SP)) <- (PC15 to 8), (PC) <- (PC) - 1 + r16
+        // NB: for some reason, this instruction is little endian (starts with least significant byte).
+
+        var r16 = (ushort)(CurrentROMBank[Pc + 1] + (CurrentROMBank[Pc + 2] << 8));
+        Pc += 3;
+        SFRs.Sp++;
+        RamBank0[SFRs.Sp] = (byte)Pc;
+        SFRs.Sp++;
+        RamBank0[SFRs.Sp] = (byte)(Pc >> 8);
+        Pc = (ushort)(Pc - 1 + r16);
+
+        return 4;
+    }
+
+    /// <summary>Return from subroutine</summary>
+    internal int Op_RET()
+    {
+        // (PC15 to 8) <- ((SP)), (SP) <- (SP) - 1, (PC7 to 0) <- ((SP)), (SP) <- (SP) -1
+        var Pc15_8 = RamBank0[SFRs.Sp];
+        SFRs.Sp--;
+        var Pc7_0 = RamBank0[SFRs.Sp];
+        SFRs.Sp--;
+        Pc = (ushort)(Pc15_8 << 8 | Pc7_0);
+        return 2;
+    }
+
+    // RETI
+
+    /// <summary>Clear direct bit</summary>
+    internal int Op_CLR1()
+    {
+        // (d9, b3) <- 0
+        // Similar to Op_BP()
+        var prefix = CurrentROMBank[Pc];
+        var d9 = (BitHelpers.ReadBit(prefix, 4) ? 0x100 : 0) | CurrentROMBank[Pc + 1];
+        var b3 = (byte)(prefix & 0b0111);
+        BitHelpers.WriteBit(ref CurrentRamBank[d9], bit: b3, value: false);
+        Pc += 2;
+        return 1;
+    }
+
+    /// <summary>Set direct bit</summary>
+    internal int Op_SET1()
+    {
+        // (d9, b3) <- 1
+        var prefix = CurrentROMBank[Pc];
+        var d9 = (BitHelpers.ReadBit(prefix, 4) ? 0x100 : 0) | CurrentROMBank[Pc + 1];
+        var b3 = (byte)(prefix & 0b0111);
+        BitHelpers.WriteBit(ref CurrentRamBank[d9], bit: b3, value: true);
+        Pc += 2;
+        return 1;
+    }
+
+    /// <summary>Not direct bit</summary>
+    internal int Op_NOT1()
+    {
+        // (d9, b3) <- !(d9, b3)
+        var prefix = CurrentROMBank[Pc];
+        var d9 = (BitHelpers.ReadBit(prefix, 4) ? 0x100 : 0) | CurrentROMBank[Pc + 1];
+        var b3 = (byte)(prefix & 0b0111);
+        ref var dest = ref CurrentRamBank[d9];
+        var bit = BitHelpers.ReadBit(dest, b3);
+        BitHelpers.WriteBit(ref dest, bit: b3, value: !bit);
+        Pc += 2;
+        return 1;
     }
 
     /// <summary>No operation</summary>

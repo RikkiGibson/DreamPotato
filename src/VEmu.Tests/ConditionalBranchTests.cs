@@ -508,7 +508,4 @@ public class ConditionalBranchTests
         Assert.Equal(0xf1, cpu.SFRs.Acc);
         Assert.Equal(0xf22, cpu.Pc);
     }
-
-    // TODO: CALL, CALLF, (similar to JMP and JMPF), CALLR similar to BR, RET, RETI
-    // CLR1, SET1, NOT1
 }

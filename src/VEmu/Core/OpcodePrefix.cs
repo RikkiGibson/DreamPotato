@@ -45,14 +45,19 @@ enum OpcodePrefix : byte
     DBNZ =	0b0101_0000,
     BE =	0b0011_0000,
     BNE =	0b0100_0000,
+
+    // Bit Manipulation
+    CLR1 =	0b1100_1000,
+    SET1 =	0b1110_1000,
+    NOT1 =	0b1010_1000,
 }
 
 enum Opcode : byte
 {
-	ROL =	0b11100000,
-	ROLC =	0b11110000,
-	ROR =	0b11000000,
-	RORC =	0b11010000,
+	ROL =	0b1110_0000,
+	ROLC =	0b1111_0000,
+	ROR =	0b1100_0000,
+	RORC =	0b1101_0000,
     MUL =	0b0011_0000,
     DIV =	0b0100_0000,
 
@@ -65,6 +70,11 @@ enum Opcode : byte
     BRF =	0b0001_0001,
     BZ =	0b1000_0000,
     BNZ =	0b1001_0000,
+
+    // Subroutine
+    CALLF =	0b0010_0000,
+    CALLR =	0b0001_0000,
+    RET =	0b1010_0000,
 
     // Misc
     NOP =	0b0000_0000,
