@@ -108,6 +108,46 @@ public class ConditionalBranchTests
     }
 
     [Fact]
+    public void BNZ_BranchBackwards()
+    {
+        // VMC-202
+        var cpu = new Cpu();
+
+        // take difference between address of dest instruction, and address of instruction after BNZ.
+        var offset = 0xf64 - 0xf1f;
+        var twoC = ~offset + 1;
+        Assert.Equal(0, twoC + offset);
+
+        ReadOnlySpan<byte> instructions = [
+            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x00, 0x01, // acc
+            (byte)Opcode.BNZ, (byte)twoC,
+        ];
+        instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf5f));
+
+        instructions = [
+            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x00, // acc
+            (byte)Opcode.ROR,
+        ];
+        instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf1f));
+
+        cpu.SFRs.Acc = 1;
+        cpu.Pc = 0xf5f;
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(1, cpu.SFRs.Acc);
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(1, cpu.SFRs.Acc);
+        Assert.Equal(0xf1f, cpu.Pc);
+
+        Assert.Equal(1, cpu.Step());
+        Assert.Equal(2, cpu.SFRs.Acc);
+
+        Assert.Equal(1, cpu.Step());
+        Assert.Equal(1, cpu.SFRs.Acc);
+    }
+
+    [Fact]
     public void BP_Example1()
     {
         // VMC-203

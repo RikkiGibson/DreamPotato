@@ -139,6 +139,8 @@ record struct Instruction(Operation Operation, ushort[] Arguments)
         // Including cpu state really reflects a moment in time interpretation of the instruction though.
         // Same instruction could be run with different cpu states and mean different things.
         // Both forms of display are possibly useful.
+        // We can include not only symbols, but, we can also include the values which are being modified, as well as whether branches are taken.
+        // In other words logging the execution of hte program in quite useful detail.
         return $"{Operation.Opcode} {string.Join(',', Arguments.Select(a => a.ToString("X")))}";
     }
 }
@@ -166,10 +168,10 @@ public enum ParameterKind
     /// <summary>3-bit bit address</summary>
     B3,
 
-    /// <summary>8-bit relative code address</summary>
+    /// <summary>8-bit signed relative code address</summary>
     R8,
 
-    /// <summary>16-bit relative code address</summary>
+    /// <summary>16-bit unsigned relative code address</summary>
     R16,
 
     /// <summary>8-bit absolute code address</summary>

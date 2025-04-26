@@ -687,8 +687,8 @@ public class Cpu
     internal int Op_BR()
     {
         // (PC) <- (PC) + 2, (PC) <- (PC) + r8
-        var r8 = CurrentROMBank[Pc + 1];
-        Pc += (ushort)(2 + r8);
+        var r8 = (sbyte)CurrentROMBank[Pc + 1];
+        Pc = (ushort)(Pc + 2 + r8);
         return 2;
     }
 
@@ -707,12 +707,12 @@ public class Cpu
     internal int Op_BZ()
     {
         // (PC) <- (PC) + 2, if (ACC) = 0 then (PC) <- PC + r8
-        var r8 = CurrentROMBank[Pc + 1];
+        var r8 = (sbyte)CurrentROMBank[Pc + 1];
         var z = SFRs.Acc == 0;
 
         Pc += 2;
         if (z)
-            Pc += r8;
+            Pc = (ushort)(Pc + r8);
 
         return 2;
     }
@@ -721,12 +721,12 @@ public class Cpu
     internal int Op_BNZ()
     {
         // (PC) <- (PC) + 2, if (ACC) != 0 then (PC) <- PC + r8
-        var r8 = CurrentROMBank[Pc + 1];
+        var r8 = (sbyte)CurrentROMBank[Pc + 1];
         var nz = SFRs.Acc != 0;
 
         Pc += 2;
         if (nz)
-            Pc += r8;
+            Pc = (ushort)(Pc + r8);
 
         return 2;
     }
@@ -740,11 +740,11 @@ public class Cpu
         var prefix = CurrentROMBank[Pc];
         var d9 = (BitHelpers.ReadBit(prefix, 4) ? 0x100 : 0) | CurrentROMBank[Pc + 1];
         var b3 = (byte)(prefix & 0b0111);
-        var r8 = CurrentROMBank[Pc + 2];
+        var r8 = (sbyte)CurrentROMBank[Pc + 2];
 
         Pc += 3;
         if (BitHelpers.ReadBit(ReadRam(d9), b3))
-            Pc += r8;
+            Pc = (ushort)(Pc + r8);
 
         return 2;
     }
@@ -761,7 +761,7 @@ public class Cpu
         var prefix = CurrentROMBank[Pc];
         var d9 = (BitHelpers.ReadBit(prefix, 4) ? 0x100 : 0) | CurrentROMBank[Pc + 1];
         var b3 = (byte)(prefix & 0b0111);
-        var r8 = CurrentROMBank[Pc + 2];
+        var r8 = (sbyte)CurrentROMBank[Pc + 2];
 
         var d_value = ReadRam(d9);
         var new_d_value = d_value;
@@ -769,7 +769,7 @@ public class Cpu
 
         Pc += 3;
         if (d_value != new_d_value)
-            Pc += r8;
+            Pc = (ushort)(Pc + r8);
 
         WriteRam(d9, new_d_value);
 
@@ -785,11 +785,11 @@ public class Cpu
         var prefix = CurrentROMBank[Pc];
         var d9 = (BitHelpers.ReadBit(prefix, 4) ? 0x100 : 0) | CurrentROMBank[Pc + 1];
         var b3 = (byte)(prefix & 0b0111);
-        var r8 = CurrentROMBank[Pc + 2];
+        var r8 = (sbyte)CurrentROMBank[Pc + 2];
 
         Pc += 3;
         if (!BitHelpers.ReadBit(ReadRam(d9), b3))
-            Pc += r8;
+            Pc = (ushort)(Pc + r8);
 
         return 2;
     }
@@ -800,13 +800,13 @@ public class Cpu
         // (PC) <- (PC) + 3, (d9) = (d9)-1, if (d9) != 0 then (PC) <- (PC) + r8
         var d9 = GetOperandAddress(out var operandSize);
         var d9Value = ReadRam(d9);
-        var r8 = CurrentROMBank[Pc + operandSize];
+        var r8 = (sbyte)CurrentROMBank[Pc + operandSize];
 
         Pc += (byte)(operandSize + 1); // 2 or 3 depending on addressing mode
         --d9Value;
         WriteRam(d9, d9Value);
         if (d9Value != 0)
-            Pc += r8;
+            Pc = (ushort)(Pc + r8);
 
         return 2;
     }
@@ -823,12 +823,12 @@ public class Cpu
         var lhs = indirectMode ? FetchOperand().operand : SFRs.Acc;
         // rhs is immediate data in indirect mode or immediate mode, and direct byte in direct mode
         var rhs = indirectMode ? CurrentROMBank[Pc + 1] : FetchOperand().operand;
-        var r8 = CurrentROMBank[Pc + 2];
+        var r8 = (sbyte)CurrentROMBank[Pc + 2];
 
         Pc += 3;
         SFRs.Cy = lhs < rhs;
         if (lhs == rhs)
-            Pc += r8;
+            Pc = (ushort)(Pc + r8);
 
         return 2;
     }
@@ -845,12 +845,12 @@ public class Cpu
         var lhs = indirectMode ? FetchOperand().operand : SFRs.Acc;
         // rhs is immediate data in indirect mode or immediate mode, and direct byte in direct mode
         var rhs = indirectMode ? CurrentROMBank[Pc + 1] : FetchOperand().operand;
-        var r8 = CurrentROMBank[Pc + 2];
+        var r8 = (sbyte)CurrentROMBank[Pc + 2];
 
         Pc += 3;
         SFRs.Cy = lhs < rhs;
         if (lhs != rhs)
-            Pc += r8;
+            Pc = (ushort)(Pc + r8);
 
         return 2;
     }
