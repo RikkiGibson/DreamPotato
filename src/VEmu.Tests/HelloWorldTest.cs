@@ -18,11 +18,15 @@ public class HelloWorldTest(ITestOutputHelper outputHelper)
 
         try
         {
-            Assert.Equal(1, cpu.Run(200));
+            Assert.Equal(1, cpu.Run(100000));
         }
         catch
         {
-            outputHelper.WriteLine(writer.ToString());
+            foreach (var str in writer.ToString().Split("\n").TakeLast(50))
+            {
+                outputHelper.WriteLine(str);
+            }
+
             throw;
         }
     }

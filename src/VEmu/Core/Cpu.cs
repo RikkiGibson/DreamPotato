@@ -30,9 +30,9 @@ public class Cpu
     /// </remarks>
     internal byte[] CurrentROMBank;
 
-    internal readonly byte[] RamBank0 = new byte[0x1c0]; // 448 dec
-    internal readonly byte[] RamBank1 = new byte[0x1c0];
-    internal readonly byte[] RamBank2 = new byte[0x1c0];
+    internal readonly byte[] RamBank0 = new byte[0x200];
+    internal readonly byte[] RamBank1 = new byte[0x200];
+    internal readonly byte[] RamBank2 = new byte[0x200];
 
     internal readonly byte[] WorkRam = new byte[0x200]; // 512 dec
 
@@ -140,6 +140,11 @@ public class Cpu
     /// <returns>Number of cycles consumed by the instruction.</returns>
     internal int Step()
     {
+        if (BitHelpers.ReadBit(SFRs.Pcon, bit: 0))
+        {
+            Logger.WriteLine("---HALT---");
+        }
+
         // TODO: cleanup the way opcode ranges are represented
         byte prefix = CurrentROMBank[Pc];
         Logger.WriteLine($"[0x{Pc:X}] {InstructionDecoder.Decode(CurrentROMBank.AsSpan(Pc))}");
@@ -206,9 +211,10 @@ public class Cpu
             case (>= 0b0000_1000 and <= 0b0000_1111) or (>= 0b0001_1000 and <= 0b0001_1111): return Op_CALL();
             case (>= 0b1100_1000 and <= 0b1100_1111) or (>= 0b1101_1000 and <= 0b1101_1111): return Op_CLR1();
             case (>= 0b1110_1000 and <= 0b1110_1111) or (>= 0b1111_1000 and <= 0b1111_1111): return Op_SET1();
+            case (>= 0b1010_1000 and <= 0b1010_1111) or (>= 0b1011_1000 and <= 0b1011_1111): return Op_NOT1();
 
             // Missing: STF (0101_0001)
-            default: throw new NotImplementedException();
+            default: throw new NotImplementedException($"[0x{Pc:X}] Unknown prefix: 0x{prefix:X}");
         }
     }
 

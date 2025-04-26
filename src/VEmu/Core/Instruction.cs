@@ -14,6 +14,9 @@ namespace VEmu.Core;
 // can we code up a set of "valid instruction symbols?"
 // e.g. show which modes are valid. think of this as doing a lookup.
 
+// TODO: eventually would like to be able to debug the emulated program
+// https://vscode-docs.readthedocs.io/en/stable/extensions/example-debuggers/
+
 /// <summary>
 /// Definition of an instruction, including opcode and parameters.
 /// TODO: consider dropping allocs by baking in the fact that instructions have at most 3 parameters.
@@ -184,7 +187,7 @@ public enum ParameterKind
     A16,
 }
 
-enum OperationKind
+enum OperationKind : byte
 {
     ADD,
     ADDC,
@@ -327,51 +330,55 @@ static class OpcodeMask
     /// </summary>
     internal static byte GetOpcodeMask(this OperationKind kind)
     {
-        switch (kind)
+#pragma warning disable CS8524 // The switch expression does not handle some values of its input type (it is not exhaustive) involving an unnamed enum value.
+        return kind switch
         {
-            case OperationKind.ADD:		return ADD;
-            case OperationKind.ADDC:	return ADDC;
-            case OperationKind.SUB:		return SUB;
-            case OperationKind.SUBC:	return SUBC;
-            case OperationKind.INC:		return INC;
-            case OperationKind.DEC:		return DEC;
-            case OperationKind.ROL:		return ROL;
-            case OperationKind.ROLC:	return ROLC;
-            case OperationKind.ROR:		return ROR;
-            case OperationKind.RORC:	return RORC;
-            case OperationKind.MUL:		return MUL;
-            case OperationKind.DIV:		return DIV;
-            case OperationKind.AND:		return AND;
-            case OperationKind.OR:		return OR;
-            case OperationKind.XOR:		return XOR;
-            case OperationKind.LD:		return LD;
-            case OperationKind.ST:		return ST;
-            case OperationKind.MOV:		return MOV;
-            case OperationKind.PUSH:	return PUSH;
-            case OperationKind.POP:		return POP;
-            case OperationKind.XCH:		return XCH;
-            case OperationKind.LDC:		return LDC;
-            case OperationKind.JMP:		return JMP;
-            case OperationKind.JMPF:	return JMPF;
-            case OperationKind.BR:		return BR;
-            case OperationKind.BRF:		return BRF;
-            case OperationKind.BZ:		return BZ;
-            case OperationKind.BNZ:		return BNZ;
-            case OperationKind.BP:		return BP;
-            case OperationKind.BN:		return BN;
-            case OperationKind.DBNZ:	return DBNZ;
-            case OperationKind.BE:		return BE;
-            case OperationKind.BNE:		return BNE;
-            case OperationKind.CALLF:	return CALLF;
-            case OperationKind.CALLR:	return CALLR;
-            case OperationKind.RET:		return RET;
-            case OperationKind.CLR1:	return CLR1;
-            case OperationKind.SET1:	return SET1;
-            case OperationKind.NOT1:	return NOT1;
-            case OperationKind.NOP:		return NOP;
-            case OperationKind.LDF:		return LDF;
-            case OperationKind.STF:		return STF;
-            default: throw new ArgumentException($"Unknown OperationKind: 0x{kind:X}");
-        }
+            OperationKind.ADD => ADD,
+            OperationKind.ADDC => ADDC,
+            OperationKind.SUB => SUB,
+            OperationKind.SUBC => SUBC,
+            OperationKind.INC => INC,
+            OperationKind.DEC => DEC,
+            OperationKind.ROL => ROL,
+            OperationKind.ROLC => ROLC,
+            OperationKind.ROR => ROR,
+            OperationKind.RORC => RORC,
+            OperationKind.MUL => MUL,
+            OperationKind.DIV => DIV,
+            OperationKind.AND => AND,
+            OperationKind.OR => OR,
+            OperationKind.XOR => XOR,
+            OperationKind.LD => LD,
+            OperationKind.ST => ST,
+            OperationKind.MOV => MOV,
+            OperationKind.PUSH => PUSH,
+            OperationKind.POP => POP,
+            OperationKind.XCH => XCH,
+            OperationKind.LDC => LDC,
+            OperationKind.JMP => JMP,
+            OperationKind.JMPF => JMPF,
+            OperationKind.BR => BR,
+            OperationKind.BRF => BRF,
+            OperationKind.BZ => BZ,
+            OperationKind.BNZ => BNZ,
+            OperationKind.BP => BP,
+            OperationKind.BPC => BP,
+            OperationKind.BN => BN,
+            OperationKind.DBNZ => DBNZ,
+            OperationKind.BE => BE,
+            OperationKind.BNE => BNE,
+            OperationKind.CALL => CALL,
+            OperationKind.CALLF => CALLF,
+            OperationKind.CALLR => CALLR,
+            OperationKind.RET => RET,
+            OperationKind.RETI => RETI,
+            OperationKind.CLR1 => CLR1,
+            OperationKind.SET1 => SET1,
+            OperationKind.NOT1 => NOT1,
+            OperationKind.NOP => NOP,
+            OperationKind.LDF => LDF,
+            OperationKind.STF => STF,
+        };
+#pragma warning restore CS8524 // The switch expression does not handle some values of its input type (it is not exhaustive) involving an unnamed enum value.
     }
 }

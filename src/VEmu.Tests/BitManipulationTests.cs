@@ -50,7 +50,7 @@ public class BitManipulationTests
 
         ReadOnlySpan<byte> instructions = [
             OpcodePrefix.MOV.Compose(AddressingMode.Direct0), 0x7f, 0x01, // MOV #001H,07FH
-            ((byte)OpcodePrefix.SET1 | 0b0_0000 /*d8*/ | 0b110 /*b2-0*/), 0x7F, // SET1 07FH,6
+            ((byte)OpcodePrefix.NOT1 | 0b0_0000 /*d8*/ | 0b110 /*b2-0*/), 0x7F, // NOT1 07FH,6
         ];
         instructions.CopyTo(cpu.ROM.AsSpan());
 
