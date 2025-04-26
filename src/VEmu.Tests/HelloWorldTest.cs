@@ -18,7 +18,7 @@ public class HelloWorldTest(ITestOutputHelper outputHelper)
 
         try
         {
-            cpu.Run(200_000);
+            Assert.Equal(1, cpu.Run(100));
         }
         catch
         {

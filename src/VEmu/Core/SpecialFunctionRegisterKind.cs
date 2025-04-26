@@ -151,9 +151,17 @@ public enum SpecialFunctionRegisterKind : ushort
     /// <summary>System address register 2. VMD-144</summary>
     Vrmad2 = 0x165,
 
-    /// <summary>Send/receive buffer. VMD-144</summary>
+    /// <summary>Work RAM access (Send/receive buffer). VMD-144</summary>
     Vtrbf = 0x166,
 
     /// <summary>Base timer control. VMD-101</summary>
     Btcr = 0x17F,
+}
+
+public static class SpecialFunctionRegisterKindExtensions
+{
+    public static byte Suffix(this SpecialFunctionRegisterKind kind)
+    {
+        return unchecked((byte)kind);
+    }
 }
