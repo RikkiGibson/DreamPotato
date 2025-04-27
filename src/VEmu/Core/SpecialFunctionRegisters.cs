@@ -76,7 +76,8 @@ public class SpecialFunctionRegisters
         }
     }
 
-    // TODO: these probably need to turn into get/set props.
+    // TODO: these all should probably be get/set props delegating to the main Read/Write methods.
+
     /// <summary>Accumulator. VMD-50</summary>
     public ref byte Acc => ref _rawMemory[Ids.Acc];
 
