@@ -147,7 +147,7 @@ public class Cpu
 
         // TODO: cleanup the way opcode ranges are represented
         byte prefix = CurrentROMBank[Pc];
-        Logger.WriteLine($"[0x{Pc:X}] {InstructionDecoder.Decode(CurrentROMBank.AsSpan(Pc))}");
+        Logger.WriteLine($"[0x{Pc:X}] {InstructionDecoder.Decode(CurrentROMBank, Pc)} Acc={SFRs.Acc:X} B={SFRs.B:X} C={SFRs.C:X}");
         switch ((Opcode)prefix)
         {
             case Opcode.MUL: return Op_MUL();

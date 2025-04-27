@@ -1,6 +1,7 @@
 
 
 using System.Diagnostics;
+using System.Text;
 
 namespace VEmu.Core;
 
@@ -117,8 +118,8 @@ static class Operations
     public static Operation BNE_Ri_i8_r8 = new(OperationKind.BNE, [new(ParameterKind.Ri), new(ParameterKind.I8), new(ParameterKind.R8)], Size: 3, Cycles: 2);
 
     public static Operation CALL_a12 = new(OperationKind.CALL, [new(ParameterKind.A12)], Size: 2, Cycles: 2);
-    public static Operation CALLF_a16 = new(OperationKind.CALL, [new(ParameterKind.A16)], Size: 3, Cycles: 2);
-    public static Operation CALLR_r16 = new(OperationKind.CALL, [new(ParameterKind.R16)], Size: 3, Cycles: 4);
+    public static Operation CALLF_a16 = new(OperationKind.CALLF, [new(ParameterKind.A16)], Size: 3, Cycles: 2);
+    public static Operation CALLR_r16 = new(OperationKind.CALLR, [new(ParameterKind.R16)], Size: 3, Cycles: 4);
 
     public static Operation RET = new(OperationKind.RET, [], Size: 1, Cycles: 2);
     public static Operation RETI = new(OperationKind.RETI, [], Size: 1, Cycles: 2);
@@ -133,7 +134,7 @@ static class Operations
 /// <summary>
 /// The information we know about an instruction originating solely from the code, and not any cpu state.
 /// </summary>
-record struct Instruction(Operation Operation, ushort[] Arguments)
+record struct Instruction(Operation Operation, ushort[] Arguments, ushort Offset)
 {
     public override string ToString()
     {
@@ -144,7 +145,30 @@ record struct Instruction(Operation Operation, ushort[] Arguments)
         // Both forms of display are possibly useful.
         // We can include not only symbols, but, we can also include the values which are being modified, as well as whether branches are taken.
         // In other words logging the execution of hte program in quite useful detail.
-        return $"{Operation.Opcode} {string.Join(',', Arguments.Select(a => a.ToString("X")))}";
+        var builder = new StringBuilder();
+        builder.Append($"[{Offset:X4}] {Operation.Opcode} ");
+
+        var parameters = Operation.Parameters;
+        for (var i = 0; i < parameters.Length; i++)
+        {
+            var param = parameters[i];
+            var prefix = param.Kind switch
+            {
+                ParameterKind.I8 => "#",
+                ParameterKind.Ri => "@R",
+                _ => ""
+            };
+            builder.Append(prefix);
+
+            var arg = Arguments[i];
+            builder.Append($"{arg:X}");
+            if (arg > 9)
+                builder.Append("H");
+
+            if (i != parameters.Length - 1)
+                builder.Append(", ");
+        }
+        return builder.ToString();
     }
 }
 
@@ -362,7 +386,7 @@ static class OpcodeMask
             OperationKind.BZ => BZ,
             OperationKind.BNZ => BNZ,
             OperationKind.BP => BP,
-            OperationKind.BPC => BP,
+            OperationKind.BPC => BPC,
             OperationKind.BN => BN,
             OperationKind.DBNZ => DBNZ,
             OperationKind.BE => BE,
