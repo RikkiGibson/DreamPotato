@@ -329,7 +329,7 @@ public class ArithmeticTests
     [Fact]
     public void ADD_Indirect_R0_Bank3()
     {
-        // AFIAK, there is no bank 3, so there's no reason to ever use these registers. All reads will return 0(?).
+        // AFAIK, there is no bank 3, so there's no reason to ever use these registers. All reads will return 0(?).
         var cpu = new Cpu() { Logger = new StringWriter() };
         ReadOnlySpan<byte> instructions = [0b1000_0100, 0b1000_0100];
         instructions.CopyTo(cpu.ROM);

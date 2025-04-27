@@ -187,7 +187,7 @@ record struct Instruction(Operation Operation, ushort[] Arguments, ushort Offset
 // To minimize garbage, maybe an operation should have 'Execute(Cpu, Arguments)'
 
 // TODO: Consider allowing parameter names.
-// TODO: display an instruction using parameterkind and argument to come up with a useful mnemonic.
+// TODO: display an instruction using parameterKind and argument to come up with a useful mnemonic.
 record struct Parameter(ParameterKind Kind);
 
 public enum ParameterKind

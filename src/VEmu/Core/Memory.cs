@@ -1,5 +1,11 @@
+using System.Diagnostics;
+
 namespace VEmu.Core;
 
+/// <summary>
+/// Manages main RAM, SFRs, XRAM and Work RAM.
+/// Doesn't manage ROM/flash.
+/// </summary>
 class Memory
 {
     // Memory map:
@@ -33,7 +39,7 @@ class Memory
     /// </summary>
     private readonly byte[] _mainRam1 = new byte[0x100];
 
-    private readonly byte[] _sfrs = new byte[0x80];
+    internal readonly SpecialFunctionRegisters SFRs;
 
     /// <summary>
     /// Video memory. Bank 0, 0x180-0x1bf.
@@ -51,8 +57,191 @@ class Memory
     /// </summary>
     private readonly byte[] _xram2 = new byte[0x10];
 
+    private readonly byte[] _workRam = new byte[0x200];
+
+    public Memory()
+    {
+        SFRs = new SpecialFunctionRegisters(workRam: _workRam);
+    }
+
     public byte ReadMemory(ushort address)
     {
-        return 0;
+        Debug.Assert(address < 0x200);
+        switch (address)
+        {
+            case >= 0 and < 0x100:
+                return ReadMainMemory(address);
+            case >= 0x100 and < 0x180:
+                return SFRs.Read((byte)(address - 0x100));
+            case >= 0x180 and < 0x1B0:
+                return ReadXram((byte)(address - 0x180));
+            default:
+                // TODO: log warning: read out of range
+                return 0xff;
+        }
+    }
+
+    public void WriteMemory(ushort address, byte value)
+    {
+        Debug.Assert(address < 0x200);
+        switch (address)
+        {
+            case >= 0 and < 0x100:
+                WriteMainMemory(address, value);
+                return;
+            case >= 0x100 and < 0x180:
+                SFRs.Write((byte)(address - 0x100), value);
+                return;
+            case >= 0x180 and < 0x1B0:
+                WriteXram((byte)(address - 0x180), value);
+                return;
+            default:
+                // TODO: log warning: write out of range
+                return;
+        }
+    }
+
+    public void PushStack(byte value)
+    {
+        // Stack is always bank 0, 0x90-0xff; do not use the same routines as for memory access from user code.
+        // Stack also points to last element, rather than pointing past last element. So it is inc'd before writing.
+        if (SFRs.Sp is not (>= 0x90 and <= 0xfe))
+        {
+            // TODO: log fatal: invalid stack pointer
+            throw new InvalidOperationException();
+        }
+
+        SFRs.Sp++;
+        _mainRam0[SFRs.Sp] = value;
+    }
+
+    public byte PopStack()
+    {
+        // Stack is always bank 0, 0x90-0xff; do not use the same routines as for memory access from user code.
+        // Stack also points to last element, rather than pointing past last element. So it is dec'd after reading.
+        if (SFRs.Sp is not (>= 0x91 and <= 0xff))
+        {
+            // TODO: log fatal: invalid stack pointer
+            throw new InvalidOperationException();
+        }
+
+        var value = _mainRam0[SFRs.Sp];
+        SFRs.Sp--;
+        return value;
+    }
+
+    private byte ReadMainMemory(ushort address)
+    {
+        Debug.Assert(address < 0x100);
+        var bank = SFRs.Rambk0 ? _mainRam0 : _mainRam1;
+        return bank[address];
+    }
+
+    private byte ReadXram(ushort address)
+    {
+        Debug.Assert(address < 0x100);
+        switch (SFRs.Xbnk)
+        {
+            case 0:
+                return readMainXram(_xram0, address);
+            case 1:
+                return readMainXram(_xram1, address);
+            case 2:
+                return readIconXram(_xram2, address);
+            case 3:
+                // TODO log warning: reading nonexistent bank
+                return 0xff;
+        }
+
+        // TODO: log warning: Xbnk out of range
+        return 0xff;
+
+        byte readMainXram(byte[] bank, ushort address)
+        {
+            if ((address & 0xf) is >= 0xc and <= 0xf)
+            {
+                // TODO: log warning: reading skipped bytes
+                return 0xff;
+            }
+
+            return bank[address];
+        }
+
+        byte readIconXram(byte[] bank, ushort address)
+        {
+            if (address > 0xf)
+            {
+                // TODO: log warning: read out of range
+                // There is weird undocumented behavior around what this range does.
+                return 0xff;
+            }
+
+            if ((address & 0xf) is >= 0xc and <= 0xf)
+            {
+                // TODO: log warning: reading skipped bytes
+                return 0xff;
+            }
+
+            return bank[address];
+        }
+    }
+
+    private void WriteMainMemory(ushort address, byte value)
+    {
+        Debug.Assert(address < 0x100);
+        var bank = SFRs.Rambk0 ? _mainRam0 : _mainRam1;
+        bank[address] = value;
+    }
+
+    private void WriteXram(ushort address, byte value)
+    {
+        Debug.Assert(address < 0x100);
+        switch (SFRs.Xbnk)
+        {
+            case 0:
+                writeMainXram(_xram0, address, value);
+                return;
+            case 1:
+                writeMainXram(_xram1, address, value);
+                return;
+            case 2:
+                writeIconXram(_xram2, address, value);
+                return;
+            case 3:
+                // TODO log warning: writing nonexistent bank
+                return;
+        }
+
+        // TODO: log warning: Xbnk out of range
+        return;
+
+        void writeMainXram(byte[] bank, ushort address, byte value)
+        {
+            if ((address & 0xf) is >= 0xc and <= 0xf)
+            {
+                // TODO: log warning: write skipped bytes
+                return;
+            }
+
+            bank[address] = value;
+        }
+
+        void writeIconXram(byte[] bank, ushort address, byte value)
+        {
+            if (address > 0xf)
+            {
+                // TODO: log warning: write out of range
+                // There is weird undocumented behavior around what this range does.
+                return;
+            }
+
+            if ((address & 0xf) is >= 0xc and <= 0xf)
+            {
+                // TODO: log warning: reading skipped bytes
+                return;
+            }
+
+            bank[address] = value;
+        }
     }
 }

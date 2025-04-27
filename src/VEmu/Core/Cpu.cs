@@ -53,7 +53,7 @@ public class Cpu
     public byte ReadRam(int address, int bankId)
     {
         Debug.Assert(address < 0x200);
-        if (bankId == 0 && address == (ushort)SpecialFunctionRegisterKind.Vtrbf)
+        if (bankId == 0 && address == (ushort)SpecialFunctionRegisterIds.Vtrbf)
         {
             return readWorkRam();
         }
@@ -86,7 +86,7 @@ public class Cpu
     public void WriteRam(int address, int bankId, byte value)
     {
         Debug.Assert(address < 0x200);
-        if (bankId == 0 && address == (ushort)SpecialFunctionRegisterKind.Vtrbf)
+        if (bankId == 0 && address == (ushort)SpecialFunctionRegisterIds.Vtrbf)
         {
             writeWorkRam(value);
             return;
@@ -276,7 +276,7 @@ public class Cpu
             case 0b10: // direct
             case 0b11:
                 {
-                    // 9 bit address: oooommmd dddd_dddd
+                    // 9 bit address: oooo_mmmd dddd_dddd
                     var address = ((prefix & 0x1) << 8) | CurrentROMBank[Pc + 1];
                     operandSize = 2;
                     return (address, GetCurrentBankId());

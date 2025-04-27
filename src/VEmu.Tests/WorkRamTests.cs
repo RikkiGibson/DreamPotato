@@ -15,9 +15,9 @@ public class WorkRamTests
         cpu.SFRs.Vrmad2 = 1;
 
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.LD.Compose(AddressingMode.Direct1), SpecialFunctionRegisterKind.Vtrbf.Suffix(),
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), SpecialFunctionRegisterKind.Vtrbf.Suffix(), 0x01,
-            OpcodePrefix.LD.Compose(AddressingMode.Direct1), SpecialFunctionRegisterKind.Vtrbf.Suffix(),
+            OpcodePrefix.LD.Compose(AddressingMode.Direct1), SpecialFunctionRegisterIds.Vtrbf,
+            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), SpecialFunctionRegisterIds.Vtrbf, 0x01,
+            OpcodePrefix.LD.Compose(AddressingMode.Direct1), SpecialFunctionRegisterIds.Vtrbf,
         ];
 
         instructions.CopyTo(cpu.CurrentROMBank);
@@ -38,9 +38,9 @@ public class WorkRamTests
         cpu.SFRs.Vrmad2 = 1;
 
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.LD.Compose(AddressingMode.Direct1), SpecialFunctionRegisterKind.Vtrbf.Suffix(),
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), SpecialFunctionRegisterKind.Vtrbf.Suffix(), 0x01,
-            OpcodePrefix.LD.Compose(AddressingMode.Direct1), SpecialFunctionRegisterKind.Vtrbf.Suffix(),
+            OpcodePrefix.LD.Compose(AddressingMode.Direct1), SpecialFunctionRegisterIds.Vtrbf,
+            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), SpecialFunctionRegisterIds.Vtrbf, 0x01,
+            OpcodePrefix.LD.Compose(AddressingMode.Direct1), SpecialFunctionRegisterIds.Vtrbf,
         ];
 
         instructions.CopyTo(cpu.CurrentROMBank);
@@ -62,9 +62,9 @@ public class WorkRamTests
         cpu.SFRs.Vrmad2 = 1;
 
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.LD.Compose(AddressingMode.Direct1), SpecialFunctionRegisterKind.Vtrbf.Suffix(),
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), SpecialFunctionRegisterKind.Vrmad1.Suffix(),
-            OpcodePrefix.LD.Compose(AddressingMode.Direct1), SpecialFunctionRegisterKind.Vtrbf.Suffix(),
+            OpcodePrefix.LD.Compose(AddressingMode.Direct1), SpecialFunctionRegisterIds.Vtrbf,
+            OpcodePrefix.INC.Compose(AddressingMode.Direct1), SpecialFunctionRegisterIds.Vrmad1,
+            OpcodePrefix.LD.Compose(AddressingMode.Direct1), SpecialFunctionRegisterIds.Vtrbf,
         ];
 
         instructions.CopyTo(cpu.CurrentROMBank);
@@ -87,8 +87,8 @@ public class WorkRamTests
         cpu.SFRs.Vsel4_Ince = true;
 
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.LD.Compose(AddressingMode.Direct1), SpecialFunctionRegisterKind.Vtrbf.Suffix(),
-            OpcodePrefix.LD.Compose(AddressingMode.Direct1), SpecialFunctionRegisterKind.Vtrbf.Suffix(),
+            OpcodePrefix.LD.Compose(AddressingMode.Direct1), SpecialFunctionRegisterIds.Vtrbf,
+            OpcodePrefix.LD.Compose(AddressingMode.Direct1), SpecialFunctionRegisterIds.Vtrbf,
         ];
 
         instructions.CopyTo(cpu.CurrentROMBank);

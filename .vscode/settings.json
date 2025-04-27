@@ -1,0 +1,31 @@
+{
+    "cSpell.words": [
+        "ADDC",
+        "Btcr",
+        "CALLF",
+        "CALLR",
+        "DBNZ",
+        "Ince",
+        "Irbk",
+        "jmpf",
+        "mmmd",
+        "Pcon",
+        "Rambk",
+        "RETI",
+        "ROLC",
+        "RORC",
+        "Sbuf",
+        "Scon",
+        "Stad",
+        "SUBC",
+        "Vccr",
+        "Vramad",
+        "Vrmad",
+        "Vsel",
+        "Vtrbf",
+        "Xbnk",
+        "XRAM",
+        "Xunit"
+    ],
+    "cSpell.minWordLength": 4
+}

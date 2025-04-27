@@ -1,14 +1,87 @@
+using System.Diagnostics;
+
 namespace VEmu.Core;
 
+using Ids = SpecialFunctionRegisterIds;
+
 /// <summary>See VMD-40, table 2.6</summary>
-public class SpecialFunctionRegisters(byte[] RamBank0)
+public class SpecialFunctionRegisters
 {
+    public const int Size = 0x80;
+
+    // TODO: Elysian docs state there are 143 SFRs, but, the memory space is only 0x80 (128 bytes).
+    // Where are the extra 15?
+    private readonly byte[] _rawMemory = new byte[Size];
+    private readonly byte[] _workRam;
+
+    public SpecialFunctionRegisters(byte[] workRam)
+    {
+        Debug.Assert(workRam.Length == 0x200);
+        _workRam = workRam;
+    }
+
+    public byte Read(byte address)
+    {
+        Debug.Assert(address < Size);
+
+        // TODO: there are many more special cases for reading/writing SFRs than this.
+        switch (address)
+        {
+            case Ids.Vtrbf:
+                return readWorkRam();
+            default:
+                return _rawMemory[address];
+        }
+
+        byte readWorkRam()
+        {
+            var address = (BitHelpers.ReadBit(Vrmad2, bit: 0) ? 0x100 : 0) | Vrmad1;
+            var memory = _workRam[address];
+            if (Vsel4_Ince)
+            {
+                address++;
+                Vrmad1 = (byte)address;
+                Vrmad2 = (byte)((address & 0x100) != 0 ? 1 : 0);
+            }
+
+            return memory;
+        }
+    }
+
+    public void Write(byte address, byte value)
+    {
+        Debug.Assert(address < Size);
+
+        switch (address)
+        {
+            case Ids.Vtrbf:
+                writeWorkRam(value);
+                return;
+            default:
+                _rawMemory[address] = value;
+                return;
+        }
+
+        void writeWorkRam(byte value)
+        {
+            var address = (BitHelpers.ReadBit(Vrmad2, bit: 0) ? 0x100 : 0) | Vrmad1;
+            _workRam[address] = value;
+
+            if (Vsel4_Ince)
+            {
+                address++;
+                Vrmad1 = (byte)address;
+                Vrmad2 = (byte)((address & 0x100) != 0 ? 1 : 0);
+            }
+        }
+    }
+
     // TODO: these probably need to turn into get/set props.
     /// <summary>Accumulator. VMD-50</summary>
-    public ref byte Acc => ref RamBank0[0x100];
+    public ref byte Acc => ref _rawMemory[Ids.Acc];
 
     /// <summary>Program status word. VMD-52</summary>
-    public ref byte Psw => ref RamBank0[0x101];
+    public ref byte Psw => ref _rawMemory[Ids.Psw];
 
     /// <summary>
     /// Carry flag. VMD-45.
@@ -93,117 +166,117 @@ public class SpecialFunctionRegisters(byte[] RamBank0)
     }
 
     /// <summary>B register. VMD-51</summary>
-    public ref byte B => ref RamBank0[0x102];
+    public ref byte B => ref _rawMemory[Ids.B];
     /// <summary>C register. VMD-51</summary>
-    public ref byte C => ref RamBank0[0x103];
+    public ref byte C => ref _rawMemory[Ids.C];
 
     /// <summary>Table reference register lower byte. VMD-54</summary>
-    public ref byte Trl => ref RamBank0[0x104];
+    public ref byte Trl => ref _rawMemory[Ids.Trl];
     /// <summary>Table reference register upper byte. VMD-54</summary>
-    public ref byte Trh => ref RamBank0[0x105];
+    public ref byte Trh => ref _rawMemory[Ids.Trh];
 
     /// <summary>Stack pointer. VMD-53</summary>
     /// <remarks>Note that a well-behaved stack pointer always refers to 0x80 of RAM bank 0, growing upwards.</remarks>
-    public ref byte Sp => ref RamBank0[0x106];
+    public ref byte Sp => ref _rawMemory[Ids.Sp];
 
     /// <summary>Power control register. VMD-158</summary>
-    public ref byte Pcon => ref RamBank0[0x107];
+    public ref byte Pcon => ref _rawMemory[Ids.Pcon];
 
     /// <summary>Master interrupt enable control register. VMD-138</summary>
-    public ref byte Ie => ref RamBank0[0x108];
+    public ref byte Ie => ref _rawMemory[Ids.Ie];
 
     /// <summary>Interrupt priority control register. VMD-151</summary>
-    public ref byte Ip => ref RamBank0[0x109];
+    public ref byte Ip => ref _rawMemory[Ids.Ip];
 
     /// <summary>External memory control register. No VMD page</summary>
-    public ref byte Ext => ref RamBank0[0x10d];
+    public ref byte Ext => ref _rawMemory[Ids.Ext];
 
     /// <summary>Oscillation control register. VMD-156</summary>
-    public ref byte Ocr => ref RamBank0[0x10e];
+    public ref byte Ocr => ref _rawMemory[Ids.Ocr];
 
     /// <summary>Timer 0 control register. VMD-67</summary>
-    public ref byte T0Cnt => ref RamBank0[0x110];
+    public ref byte T0Cnt => ref _rawMemory[Ids.T0Cnt];
 
     /// <summary>Timer 0 prescaler data. VMD-71</summary>
-    public ref byte T0Prr => ref RamBank0[0x111];
+    public ref byte T0Prr => ref _rawMemory[Ids.T0Prr];
 
     /// <summary>Timer 0 low. VMD-71</summary>
-    public ref byte T0L => ref RamBank0[0x112];
+    public ref byte T0L => ref _rawMemory[Ids.T0L];
 
     /// <summary>Timer 0 low reload data. VMD-71</summary>
-    public ref byte T0Lr => ref RamBank0[0x113];
+    public ref byte T0Lr => ref _rawMemory[Ids.T0Lr];
 
     /// <summary>Timer 0 high. VMD-72</summary>
-    public ref byte T0H => ref RamBank0[0x114];
+    public ref byte T0H => ref _rawMemory[Ids.T0H];
 
     /// <summary>Timer 0 high reload data. VMD-72</summary>
-    public ref byte T0Hr => ref RamBank0[0x115];
+    public ref byte T0Hr => ref _rawMemory[Ids.T0Hr];
 
     /// <summary>Timer 1 control register. VMD-83</summary>
-    public ref byte T1Cnt => ref RamBank0[0x118];
+    public ref byte T1Cnt => ref _rawMemory[Ids.T1Cnt];
 
     /// <summary>Timer 1 low comparison data. VMD-86</summary>
-    public ref byte T1Lc => ref RamBank0[0x11a];
+    public ref byte T1Lc => ref _rawMemory[Ids.T1Lc];
 
     /// <summary>Timer 1 low. VMD-85</summary>
-    public ref byte T1L => ref RamBank0[0x11b];
+    public ref byte T1L => ref _rawMemory[Ids.T1L];
 
     /// <summary>Timer 1 low reload data. VMD-85</summary>
-    public ref byte T1Lr => throw new NotImplementedException(); //ref RamBank0[0x???];
+    public ref byte T1Lr => throw new NotImplementedException(); //ref RamBank0[N.T1Lr???];
 
     /// <summary>Timer 1 high comparison data. VMD-87</summary>
-    public ref byte T1Hc => ref RamBank0[0x11c];
+    public ref byte T1Hc => ref _rawMemory[Ids.T1Hc];
 
     /// <summary>Timer 1 high. VMD-86</summary>
-    public ref byte T1H => ref RamBank0[0x11d];
+    public ref byte T1H => ref _rawMemory[Ids.T1H];
 
     /// <summary>Timer 1 high reload data. VMD-86</summary>
-    public ref byte T1Hr => throw new NotImplementedException(); //ref RamBank0[0x];
+    public ref byte T1Hr => throw new NotImplementedException(); //ref RamBank0[N.T1Hr];
 
     /// <summary>Mode control register. VMD-127</summary>
-    public ref byte Mcr => ref RamBank0[0x120];
+    public ref byte Mcr => ref _rawMemory[Ids.Mcr];
 
     /// <summary>Start address register. VMD-129</summary>
-    public ref byte Stad => ref RamBank0[0x122];
+    public ref byte Stad => ref _rawMemory[Ids.Stad];
 
     /// <summary>Character count register. VMD-130</summary>
-    public ref byte Cnr => ref RamBank0[0x123];
+    public ref byte Cnr => ref _rawMemory[Ids.Cnr];
 
     /// <summary>Time division register. VMD-130</summary>
-    public ref byte Tdr => ref RamBank0[0x124];
+    public ref byte Tdr => ref _rawMemory[Ids.Tdr];
 
     /// <summary>Bank address register. Bits 1-0 control whether XRAM bank 0, 1, or 2 is in use. VMD-125</summary>
-    public ref byte Xbnk => ref RamBank0[0x125];
+    public ref byte Xbnk => ref _rawMemory[Ids.Xbnk];
 
     /// <summary>LCD contrast control register. VMD-131</summary>
-    public ref byte Vccr => ref RamBank0[0x127];
+    public ref byte Vccr => ref _rawMemory[Ids.Vccr];
 
     /// <summary>SIO0 control register. VMD-108</summary>
-    public ref byte Scon0 => ref RamBank0[0x130];
+    public ref byte Scon0 => ref _rawMemory[Ids.Scon0];
 
     /// <summary>SIO0 buffer. VMD-113</summary>
-    public ref byte Sbuf0 => ref RamBank0[0x131];
+    public ref byte Sbuf0 => ref _rawMemory[Ids.Sbuf0];
 
     /// <summary>SIO0 baud rate generator. VMD-113</summary>
-    public ref byte Sbr => ref RamBank0[0x132];
+    public ref byte Sbr => ref _rawMemory[Ids.Sbr];
 
     /// <summary>SIO1 control register. VMD-111</summary>
-    public ref byte Scon1 => ref RamBank0[0x134];
+    public ref byte Scon1 => ref _rawMemory[Ids.Scon1];
 
     /// <summary>SIO1 buffer. VMD-113</summary>
-    public ref byte Sbuf1 => ref RamBank0[0x135];
+    public ref byte Sbuf1 => ref _rawMemory[Ids.Sbuf1];
 
     /// <summary>Port 1 latch. VMD-58</summary>
-    public ref byte P1 => ref RamBank0[0x144];
+    public ref byte P1 => ref _rawMemory[Ids.P1];
 
     /// <summary>Port 1 data direction register. VMD-58</summary>
-    public ref byte P1Ddr => ref RamBank0[0x145];
+    public ref byte P1Ddr => ref _rawMemory[Ids.P1Ddr];
 
     /// <summary>Port 1 function control register. VMD-59</summary>
-    public ref byte P1Fcr => ref RamBank0[0x146];
+    public ref byte P1Fcr => ref _rawMemory[Ids.P1Fcr];
 
     /// <summary>Port 3 latch. VMD-54</summary>
-    public ref byte P3 => ref RamBank0[0x14C];
+    public ref byte P3 => ref _rawMemory[Ids.P3];
 
     // NB: application must set a button value to 1. When it is pressed, the bit is reset to 0.
     public bool ButtonSleep
@@ -255,13 +328,13 @@ public class SpecialFunctionRegisters(byte[] RamBank0)
     }
 
     /// <summary>Port 3 data direction register. VMD-62</summary>
-    public ref byte P3Ddr => ref RamBank0[0x14D];
+    public ref byte P3Ddr => ref _rawMemory[Ids.P3Ddr];
 
     /// <summary>Port 3 interrupt function control register. VMD-62</summary>
-    public ref byte P3Int => ref RamBank0[0x14E];
+    public ref byte P3Int => ref _rawMemory[Ids.P3Int];
 
     /// <summary>Flash Program Register. Undocumented.</summary>
-    public ref byte FPR => ref RamBank0[0x154];
+    public ref byte FPR => ref _rawMemory[Ids.FPR];
 
     /// <summary>Flash Address Bank. Used as the upper bit of the address for flash access, i.e. whether flash bank 0 or 1 is used.</summary>
     public bool FPR0
@@ -278,21 +351,21 @@ public class SpecialFunctionRegisters(byte[] RamBank0)
     }
 
     /// <summary>Port 7 latch. VMD-64</summary>
-    public ref byte P7 => ref RamBank0[0x15C];
+    public ref byte P7 => ref _rawMemory[Ids.P7];
 
     /// <summary>External interrupt 0, 1 control. VMD-135</summary>
-    public ref byte I01Cr => ref RamBank0[0x15D];
+    public ref byte I01Cr => ref _rawMemory[Ids.I01Cr];
 
     /// <summary>External interrupt 2, 3 control. VMD-137</summary>
-    public ref byte I23Cr => ref RamBank0[0x15E];
+    public ref byte I23Cr => ref _rawMemory[Ids.I23Cr];
 
     /// <summary>Input signal select. VMD-138</summary>
-    public ref byte Isl => ref RamBank0[0x15F];
+    public ref byte Isl => ref _rawMemory[Ids.Isl];
 
 #region Work RAM
     /// <summary>Control register. VMD-143</summary>
     /// TODO: the application is only supposed to be able to alter bit 4.
-    public ref byte Vsel => ref RamBank0[0x163];
+    public ref byte Vsel => ref _rawMemory[Ids.Vsel];
 
     /// <summary>If set, increments Vramad (pair of Vramad1 and Vram</summary>
     public bool Vsel4_Ince
@@ -302,14 +375,14 @@ public class SpecialFunctionRegisters(byte[] RamBank0)
     }
 
     /// <summary>Bits 0-7 of Vramad (work RAM address). VMD-144</summary>
-    public ref byte Vrmad1 => ref RamBank0[0x164];
+    public ref byte Vrmad1 => ref _rawMemory[Ids.Vrmad1];
 
     /// <summary>Bit 8 of Vramad (work RAM address). VMD-144</summary>
-    public ref byte Vrmad2 => ref RamBank0[0x165];
+    public ref byte Vrmad2 => ref _rawMemory[Ids.Vrmad2];
 
     /// <summary>Send/receive buffer. VMD-144</summary>
-    public ref byte Vtrbf => ref RamBank0[0x166];
+    public ref byte Vtrbf => ref _rawMemory[Ids.Vtrbf];
 #endregion
     /// <summary>Base timer control. VMD-101</summary>
-    public ref byte Btcr => ref RamBank0[0x17F];
+    public ref byte Btcr => ref _rawMemory[Ids.Btcr];
 }
