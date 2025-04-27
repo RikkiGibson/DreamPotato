@@ -136,8 +136,13 @@ static class Operations
 /// </summary>
 record struct Instruction(Operation Operation, ushort[] Arguments, ushort Offset)
 {
+    public bool HasValue => Operation is not null;
+
     public override string ToString()
     {
+        if (!HasValue)
+            return "";
+
         // TODO: the most interesting/useful display is going to include some(?) cpu state.
         // e.g. if bank 0, can show built-in symbols for that bank. Same for bank 1.
         // Including cpu state really reflects a moment in time interpretation of the instruction though.
@@ -161,8 +166,14 @@ record struct Instruction(Operation Operation, ushort[] Arguments, ushort Offset
             builder.Append(prefix);
 
             var arg = Arguments[i];
-            builder.Append($"{arg:X}");
-            if (arg > 9)
+            var displayValue = param.Kind switch
+            {
+                ParameterKind.R8 => Offset + Operation.Size + (sbyte)arg,
+                ParameterKind.R16 => Offset + arg,
+                _ => arg
+            };
+            builder.Append($"{displayValue:X}");
+            if (displayValue > 9)
                 builder.Append("H");
 
             if (i != parameters.Length - 1)

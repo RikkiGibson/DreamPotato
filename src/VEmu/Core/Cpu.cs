@@ -1,6 +1,4 @@
 using System.Diagnostics;
-using System.Numerics;
-using System.Runtime.CompilerServices;
 
 namespace VEmu.Core;
 
@@ -20,6 +18,8 @@ public class Cpu
     internal readonly byte[] ROM = new byte[64 * 1024];
     internal readonly byte[] FlashBank0 = new byte[64 * 1024];
     internal readonly byte[] FlashBank1 = new byte[64 * 1024];
+
+    internal readonly InstructionMap InstructionMap = new();
 
     /// <summary>
     /// May point to either ROM (BIOS), flash memory bank 0 or bank 1.
@@ -59,7 +59,7 @@ public class Cpu
         }
 
         var bank = GetRamBankDoNotUseDirectly(bankId);
-        return bank[address];
+        return bank?[address] ?? 0;
 
         byte readWorkRam()
         {
@@ -93,7 +93,10 @@ public class Cpu
         }
 
         var bank = GetRamBankDoNotUseDirectly(bankId);
-        bank[address] = value;
+        if (bank == null)
+            Logger.WriteLine($"[{Pc}] Unexpected write '[0x{address:X}] = 0x{value:X}' to unsupported RAM bank {bankId}");
+        else
+            bank[address] = value;
 
         void writeWorkRam(byte value)
         {
@@ -124,6 +127,7 @@ public class Cpu
     /// <summary>Lower half of LCD video XRAM.</summary>
     internal Span<byte> XRam_1 => RamBank1.AsSpan(0x180..0x1c0);
 
+    // Applications may not manipulate XRAM bank 2.
     /// <summary>LCD video XRAM, bank 2.</summary>
     internal Span<byte> XRam_2 => RamBank1.AsSpan(0x180..0x190);
 
@@ -147,7 +151,11 @@ public class Cpu
 
         // TODO: cleanup the way opcode ranges are represented
         byte prefix = CurrentROMBank[Pc];
-        Logger.WriteLine($"[0x{Pc:X}] {InstructionDecoder.Decode(CurrentROMBank, Pc)} Acc={SFRs.Acc:X} B={SFRs.B:X} C={SFRs.C:X}");
+
+        var inst = InstructionDecoder.Decode(CurrentROMBank, Pc);
+        InstructionMap[Pc] = inst;
+        Logger.WriteLine($"{inst} Acc={SFRs.Acc:X} B={SFRs.B:X} C={SFRs.C:X} R2={ReadRam(2)}");
+
         switch ((Opcode)prefix)
         {
             case Opcode.MUL: return Op_MUL();
@@ -222,74 +230,25 @@ public class Cpu
     {
         var prefix = CurrentROMBank[Pc];
         var mode = prefix & 0x0f;
-        switch (mode)
-        {
-            case 0b01: // immediate
-                return (operand: CurrentROMBank[Pc + 1], instructionSize: 2);
-            case 0b10: // direct
-            case 0b11:
-                {
-                    // 9 bit address: oooommmd dddd_dddd
-                    var address = ((prefix & 0x1) << 8) | CurrentROMBank[Pc + 1];
-                    return (operand: this.ReadRam(address), instructionSize: 2);
-                }
-            case 0b100:
-            case 0b110:
-            case 0b101:
-            case 0b111: // indirect
-                {
-                    // There are 16 indirect registers, each 1 byte in size.
-                    // - bit 3: IRBK1
-                    // - bit 2: IRBK0
-                    // - bit 1: j1 (instruction data)
-                    // - bit 0: j0 (instruction data)
+        if (mode == 0b01) // immediate
+            return (operand: CurrentROMBank[Pc + 1], instructionSize: 2);
 
-                    var irbk = SFRs.Psw & 0b11000; // Mask out IRBK1, IRBK0 bits (VMD-44).
-                    var bankId = irbk >> 3; // Normalize for reuse.
-                    Debug.Assert(bankId is >= 0 and < 4);
-
-                    var instructionBits = prefix & 0b11; // Mask out j1, j0 bits from instruction data.
-
-                    var registerAddress = (irbk >> 1) | instructionBits; // compose (IRBK1, IRBK0, j1, j0)
-                    Debug.Assert(registerAddress is >= 0 and < 16);
-
-                    // 9-bit address, where the 9th bit is j1 from instruction data (indicating to check SFRs range 0x100-1x1ff)
-                    var address = ((prefix & 0b10) == 0b10 ? 0b1_0000_0000 : 0)
-                        | IndirectAddressRegisters[registerAddress];
-
-                    byte term;
-                    if (bankId == 3)
-                    {
-                        Logger.WriteLine($"[PC: 0x{Pc:X}] Accessing nonexistent bank 3");
-                        term = 0;
-                    }
-                    else if (bankId == 2)
-                    {
-                        Logger.WriteLine($"[PC: 0x{Pc:X}] Accessing bank 2, but no bounds checks are implemented");
-                        term = RamBank2[address];
-                    }
-                    else
-                    {
-                        var bank = bankId switch { 0 => RamBank0, 1 => RamBank1, _ => throw new InvalidOperationException() };
-                        term = bank[address];
-                    }
-                    return (term, instructionSize: 1);
-                }
-            default:
-                throw new InvalidOperationException();
-        }
+        var address = GetOperandAddress(out var operandSize);
+        return (ReadRam(address), operandSize);
     }
 
+    // TODO: different regions of memory are controlled by multiple banks.
     internal int GetCurrentBankId() => this.SFRs.Rambk0 ? 1 : 0;
+
     /// <summary>
     /// Only for use by ReadRam/WriteRam.
     /// </summary>
-    internal byte[] GetRamBankDoNotUseDirectly(int bankId)
+    internal byte[]? GetRamBankDoNotUseDirectly(int bankId)
     {
         if (bankId == 3)
         {
             Logger.WriteLine($"[PC: 0x{Pc:X}] Accessing nonexistent bank 3");
-            return null!;
+            return null;
         }
         else if (bankId == 2)
         {

@@ -262,7 +262,7 @@ static class InstructionDecoder
     private static (ushort D9, ushort B3) DecodeD9AndB3(ReadOnlySpan<byte> code)
     {
         // 000d_0bbb dddd_dddd
-        var d9 = (ushort)((code[0] & D8) << 3 | code[1]);
+        var d9 = (ushort)((code[0] & D8) << 4 | code[1]);
         var b3 = (ushort)(code[0] & B2_1_0);
         return (d9, b3);
     }

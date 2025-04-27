@@ -1,7 +1,6 @@
 namespace VEmu.Core;
 
 /// <summary>See VMD-40, table 2.6</summary>
-/// <remarks>this could be a 'readonly struct' once some language rules are relaxed, but, it doesn't really matter.</remarks>
 public class SpecialFunctionRegisters(byte[] RamBank0)
 {
     // TODO: these probably need to turn into get/set props.
@@ -173,7 +172,7 @@ public class SpecialFunctionRegisters(byte[] RamBank0)
     /// <summary>Time division register. VMD-130</summary>
     public ref byte Tdr => ref RamBank0[0x124];
 
-    /// <summary>Bank address register. VMD-130</summary>
+    /// <summary>Bank address register. Bits 1-0 control whether XRAM bank 0, 1, or 2 is in use. VMD-125</summary>
     public ref byte Xbnk => ref RamBank0[0x125];
 
     /// <summary>LCD contrast control register. VMD-131</summary>
