@@ -16,4 +16,10 @@ static class BitHelpers
         else
             dest = (byte)(dest & ~(1 << bit));
     }
+
+    public static byte WithBit(byte operand, byte bit, bool value)
+    {
+        WriteBit(ref operand, bit, value);
+        return operand;
+    }
 }

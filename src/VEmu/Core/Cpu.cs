@@ -4,6 +4,8 @@ namespace VEmu.Core;
 
 public class Cpu
 {
+    // TODO: bring in a logger type with configurable severity etc
+    // perhaps with a rolling buffer
     internal TextWriter Logger { get => field ??= Console.Error; init; }
 
     // VMU-2: standalone instruction cycle time 183us (microseconds).
@@ -30,11 +32,7 @@ public class Cpu
     /// </remarks>
     internal byte[] CurrentROMBank;
 
-    internal readonly byte[] RamBank0 = new byte[0x200];
-    internal readonly byte[] RamBank1 = new byte[0x200];
-    internal readonly byte[] RamBank2 = new byte[0x200];
-
-    internal readonly byte[] WorkRam = new byte[0x200]; // 512 dec
+    internal readonly Memory Memory = new Memory();
 
     internal ushort Pc;
 
@@ -45,91 +43,17 @@ public class Cpu
 
     public byte ReadRam(int address)
     {
-        return ReadRam(address, GetCurrentBankId());
-    }
-
-    public byte ReadRam((int address, int bankId) pair) => ReadRam(pair.address, pair.bankId);
-
-    public byte ReadRam(int address, int bankId)
-    {
-        Debug.Assert(address < 0x200);
-        if (bankId == 0 && address == (ushort)SpecialFunctionRegisterIds.Vtrbf)
-        {
-            return readWorkRam();
-        }
-
-        var bank = GetRamBankDoNotUseDirectly(bankId);
-        return bank?[address] ?? 0;
-
-        byte readWorkRam()
-        {
-            var address = (BitHelpers.ReadBit(SFRs.Vrmad2, bit: 0) ? 0x100 : 0) | SFRs.Vrmad1;
-            var memory = WorkRam[address];
-            if (SFRs.Vsel4_Ince)
-            {
-                address++;
-                SFRs.Vrmad1 = (byte)address;
-                SFRs.Vrmad2 = (byte)((address & 0x100) != 0 ? 1 : 0);
-            }
-
-            return memory;
-        }
+        Debug.Assert(address <= 0x200);
+        return Memory.Read((ushort)address);
     }
 
     public void WriteRam(int address, byte value)
     {
-        WriteRam(address, GetCurrentBankId(), value);
+        Debug.Assert(address <= 0x200);
+        Memory.Write((ushort)address, value);
     }
 
-    public void WriteRam((int address, int bankId) pair, byte value) => WriteRam(pair.address, pair.bankId, value);
-
-    public void WriteRam(int address, int bankId, byte value)
-    {
-        Debug.Assert(address < 0x200);
-        if (bankId == 0 && address == (ushort)SpecialFunctionRegisterIds.Vtrbf)
-        {
-            writeWorkRam(value);
-            return;
-        }
-
-        var bank = GetRamBankDoNotUseDirectly(bankId);
-        if (bank == null)
-            Logger.WriteLine($"[{Pc}] Unexpected write '[0x{address:X}] = 0x{value:X}' to unsupported RAM bank {bankId}");
-        else
-            bank[address] = value;
-
-        void writeWorkRam(byte value)
-        {
-            var address = (BitHelpers.ReadBit(SFRs.Vrmad2, bit: 0) ? 0x100 : 0) | SFRs.Vrmad1;
-            WorkRam[address] = value;
-
-            if (SFRs.Vsel4_Ince)
-            {
-                address++;
-                SFRs.Vrmad1 = (byte)address;
-                SFRs.Vrmad2 = (byte)((address & 0x100) != 0 ? 1 : 0);
-            }
-        }
-    }
-
-    internal Span<byte> MainRam_0 => RamBank0.AsSpan(0..0x100);
-
-    // VMD-39
-    internal Span<byte> IndirectAddressRegisters => RamBank0.AsSpan(0..0x10); // 16 dec
-
-    // VMD-40, table 2.6
-    internal SpecialFunctionRegisters SFRs => new(RamBank0);
-
-    /// <summary>Upper half of LCD video XRAM.</summary>
-    internal Span<byte> XRam_0 => RamBank0.AsSpan(0x180..0x1c0);
-
-    internal Span<byte> MainRam_1 => RamBank1.AsSpan(0..0x100);
-    /// <summary>Lower half of LCD video XRAM.</summary>
-    internal Span<byte> XRam_1 => RamBank1.AsSpan(0x180..0x1c0);
-
-    // Applications may not manipulate XRAM bank 2.
-    /// <summary>LCD video XRAM, bank 2.</summary>
-    internal Span<byte> XRam_2 => RamBank1.AsSpan(0x180..0x190);
+    internal SpecialFunctionRegisters SFRs => Memory.SFRs;
 
     internal int Run(int cyclesToRun)
     {
@@ -233,37 +157,15 @@ public class Cpu
         if (mode == 0b01) // immediate
             return (operand: CurrentROMBank[Pc + 1], instructionSize: 2);
 
-        var address = GetOperandAddress(out var operandSize);
-        return (ReadRam(address), operandSize);
+        var address = GetOperandAddress(out var operandSize).address;
+        return (Memory.Read(address), operandSize);
     }
 
     // TODO: different regions of memory are controlled by multiple banks.
     internal int GetCurrentBankId() => this.SFRs.Rambk0 ? 1 : 0;
 
-    /// <summary>
-    /// Only for use by ReadRam/WriteRam.
-    /// </summary>
-    internal byte[]? GetRamBankDoNotUseDirectly(int bankId)
-    {
-        if (bankId == 3)
-        {
-            Logger.WriteLine($"[PC: 0x{Pc:X}] Accessing nonexistent bank 3");
-            return null;
-        }
-        else if (bankId == 2)
-        {
-            Logger.WriteLine($"[PC: 0x{Pc:X}] Accessing bank 2, but no bounds checks are implemented");
-            return RamBank2;
-        }
-        else
-        {
-            var bank = bankId switch { 0 => RamBank0, 1 => RamBank1, _ => throw new InvalidOperationException() };
-            return bank;
-        }
-    }
-
     /// <param name="operandSize">how many bytes of instructions were used to represent this operand. e.g. 2 in direct or immediate mode, 1 in indirect mode. If this is the only argument to the instruction then it is usually the same as the instruction size.</param>
-    internal (int address, int bankId) GetOperandAddress(out byte operandSize)
+    internal (ushort address, int bankId) GetOperandAddress(out byte operandSize)
     {
         var prefix = CurrentROMBank[Pc];
         var mode = prefix & 0x0f;
@@ -279,33 +181,15 @@ public class Cpu
                     // 9 bit address: oooo_mmmd dddd_dddd
                     var address = ((prefix & 0x1) << 8) | CurrentROMBank[Pc + 1];
                     operandSize = 2;
-                    return (address, GetCurrentBankId());
+                    return ((ushort)address, GetCurrentBankId());
                 }
             case 0b100:
             case 0b110:
             case 0b101:
             case 0b111: // indirect
                 {
-                    // There are 16 indirect registers, each 1 byte in size.
-                    // - bit 3: IRBK1
-                    // - bit 2: IRBK0
-                    // - bit 1: j1 (instruction data)
-                    // - bit 0: j0 (instruction data)
-
-                    var irbk = SFRs.Psw & 0b11000; // Mask out IRBK1, IRBK0 bits (VMD-44).
-                    var bankId = irbk >> 3; // Normalize for reuse.
-                    Debug.Assert(bankId is >= 0 and < 4);
-
-                    var instructionBits = prefix & 0b11; // Mask out j1, j0 bits from instruction data.
-
-                    var registerAddress = (irbk >> 1) | instructionBits; // compose (IRBK1, IRBK0, j1, j0)
-                    Debug.Assert(registerAddress is >= 0 and < 16);
-
-                    // 9-bit address, where the 9th bit is j1 from instruction data (indicating to check SFRs range 0x100-1x1ff)
-                    var address = ((prefix & 0b10) == 0b10 ? 0b1_0000_0000 : 0)
-                        | IndirectAddressRegisters[registerAddress];
                     operandSize = 1;
-                    return (address, bankId);
+                    return (Memory.ReadIndirectAddressRegister(prefix & 0b11), GetCurrentBankId());
                 }
             default:
                 throw new InvalidOperationException();
@@ -420,10 +304,10 @@ public class Cpu
     {
         // (operand) <- (operand) + 1
         // (could be either direct or indirect)
-        var (address, bankId) = GetOperandAddress(out var operandSize);
-        var operand = ReadRam(address, bankId);
+        var address = GetOperandAddress(out var operandSize).address;
+        var operand = ReadRam(address);
         operand++;
-        WriteRam(address, bankId, operand);
+        WriteRam(address, operand);
         Pc += operandSize;
         return 1;
     }
@@ -432,7 +316,7 @@ public class Cpu
     {
         // (operand) <- (operand) - 1
         // (could be either direct or indirect)
-        var address = GetOperandAddress(out var operandSize);
+        var address = GetOperandAddress(out var operandSize).address;
         var operand = ReadRam(address);
         operand--;
         WriteRam(address, operand);
@@ -560,7 +444,7 @@ public class Cpu
     internal int Op_ST()
     {
         // (d9) <- (ACC)
-        var address = GetOperandAddress(out var operandSize);
+        var address = GetOperandAddress(out var operandSize).address;
         WriteRam(address, SFRs.Acc);
         Pc += operandSize;
         return 1;
@@ -571,7 +455,7 @@ public class Cpu
         // two operands: direct or indirect address, followed by immediate data.
         // TODO: perhaps some renaming here.
         // (d9) <- #i8
-        var address = GetOperandAddress(out var operandSize);
+        var address = GetOperandAddress(out var operandSize).address;
         Pc += operandSize;
         WriteRam(address, CurrentROMBank[Pc]);
         Pc++;
@@ -593,9 +477,8 @@ public class Cpu
     internal int Op_PUSH()
     {
         // (SP) <- (SP) + 1, ((SP)) <- d9
-        SFRs.Sp++;
-        var dAddress = ((CurrentROMBank[Pc] & 0x1) << 8) | CurrentROMBank[Pc + 1];
-        RamBank0[SFRs.Sp] = ReadRam(dAddress);
+        var dAddress = (ushort)(((CurrentROMBank[Pc] & 0x1) << 8) | CurrentROMBank[Pc + 1]);
+        Memory.PushStack(Memory.Read(dAddress));
 
         Pc += 2;
         return 2;
@@ -605,8 +488,7 @@ public class Cpu
     {
         // (d9) <- ((SP)), (SP) <- (SP) - 1
         var dAddress = ((CurrentROMBank[Pc] & 0x1) << 8) | CurrentROMBank[Pc + 1];
-        WriteRam(dAddress, RamBank0[SFRs.Sp]);
-        SFRs.Sp--;
+        WriteRam(dAddress, Memory.PopStack());
 
         Pc += 2;
         return 2;
@@ -616,7 +498,7 @@ public class Cpu
     {
         // (ACC) <--> (d9)
         // (ACC) <--> ((Rj)) j = 0, 1, 2, 3
-        var address = GetOperandAddress(out var operandSize);
+        var address = GetOperandAddress(out var operandSize).address;
         var temp = ReadRam(address);
         WriteRam(address, SFRs.Acc);
         SFRs.Acc = temp;
@@ -763,7 +645,7 @@ public class Cpu
     internal int Op_DBNZ()
     {
         // (PC) <- (PC) + 3, (d9) = (d9)-1, if (d9) != 0 then (PC) <- (PC) + r8
-        var d9 = GetOperandAddress(out var operandSize);
+        var d9 = GetOperandAddress(out var operandSize).address;
         var d9Value = ReadRam(d9);
         var r8 = (sbyte)CurrentROMBank[Pc + operandSize];
 
@@ -831,10 +713,8 @@ public class Cpu
         int a12 = (a12_bit11 ? 0x800 : 0) | (prefix & 0b111) << 8 | CurrentROMBank[Pc + 1];
 
         Pc += 2;
-        SFRs.Sp++;
-        RamBank0[SFRs.Sp] = (byte)Pc;
-        SFRs.Sp++;
-        RamBank0[SFRs.Sp] = (byte)(Pc >> 8);
+        Memory.PushStack((byte)Pc);
+        Memory.PushStack((byte)(Pc >> 8));
 
         Pc &= 0b1111_0000__0000_0000;
         Pc |= (ushort)a12;
@@ -849,10 +729,8 @@ public class Cpu
         // (SP) <- (SP) + 1, ((SP)) <- (PC15 to 8), (PC) <- a16
         var a16 = (ushort)(CurrentROMBank[Pc + 1] << 8 | CurrentROMBank[Pc + 2]);
         Pc += 3;
-        SFRs.Sp++;
-        RamBank0[SFRs.Sp] = (byte)Pc;
-        SFRs.Sp++;
-        RamBank0[SFRs.Sp] = (byte)(Pc >> 8);
+        Memory.PushStack((byte)Pc);
+        Memory.PushStack((byte)(Pc >> 8));
         Pc = a16;
         return 2;
     }
@@ -866,10 +744,8 @@ public class Cpu
 
         var r16 = (ushort)(CurrentROMBank[Pc + 1] + (CurrentROMBank[Pc + 2] << 8));
         Pc += 3;
-        SFRs.Sp++;
-        RamBank0[SFRs.Sp] = (byte)Pc;
-        SFRs.Sp++;
-        RamBank0[SFRs.Sp] = (byte)(Pc >> 8);
+        Memory.PushStack((byte)Pc);
+        Memory.PushStack((byte)(Pc >> 8));
         Pc = (ushort)(Pc - 1 + r16);
 
         return 4;
@@ -879,10 +755,8 @@ public class Cpu
     internal int Op_RET()
     {
         // (PC15 to 8) <- ((SP)), (SP) <- (SP) - 1, (PC7 to 0) <- ((SP)), (SP) <- (SP) -1
-        var Pc15_8 = RamBank0[SFRs.Sp];
-        SFRs.Sp--;
-        var Pc7_0 = RamBank0[SFRs.Sp];
-        SFRs.Sp--;
+        var Pc15_8 = Memory.PopStack();
+        var Pc7_0 = Memory.PopStack();
         Pc = (ushort)(Pc15_8 << 8 | Pc7_0);
         return 2;
     }

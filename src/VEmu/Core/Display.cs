@@ -9,7 +9,7 @@ public class Display(Cpu cpu)
     {
         // 48x32 1bpp
         Debug.Assert(display.Length == DisplaySize);
-        cpu.XRam_0.CopyTo(display);
-        cpu.XRam_1.CopyTo(display.AsSpan(start: DisplaySize / 2));
+        cpu.ToString();
+        // TODO: read XRAM into 'display'
     }
 }

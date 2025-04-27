@@ -102,13 +102,13 @@ public class LogicalTests
         instructions.CopyTo(cpu.ROM);
 
         cpu.SFRs.Acc = 0x0;
-        cpu.RamBank0[0x23] = 0x55;
+        cpu.Memory.Write(0x23, 0x55);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0x55, cpu.SFRs.Acc);
         Assert.Equal(0, cpu.SFRs.Psw);
 
-        cpu.RamBank0[0x23] = 0xaa;
+        cpu.Memory.Write(0x23, 0xaa);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0xff, cpu.SFRs.Acc);

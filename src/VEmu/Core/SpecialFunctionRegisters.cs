@@ -79,10 +79,18 @@ public class SpecialFunctionRegisters
     // TODO: these all should probably be get/set props delegating to the main Read/Write methods.
 
     /// <summary>Accumulator. VMD-50</summary>
-    public ref byte Acc => ref _rawMemory[Ids.Acc];
+    public byte Acc
+    {
+        get => Read(Ids.Acc);
+        set => Write(Ids.Acc, value);
+    }
 
     /// <summary>Program status word. VMD-52</summary>
-    public ref byte Psw => ref _rawMemory[Ids.Psw];
+    public byte Psw
+    {
+        get => Read(Ids.Psw);
+        set => Write(Ids.Psw, value);
+    }
 
     /// <summary>
     /// Carry flag. VMD-45.
@@ -94,7 +102,7 @@ public class SpecialFunctionRegisters
     public bool Cy
     {
         get => BitHelpers.ReadBit(Psw, bit: 7);
-        set => BitHelpers.WriteBit(ref Psw, bit: 7, value);
+        set => Psw = BitHelpers.WithBit(Psw, bit: 7, value);
     }
 
     /// <summary>
@@ -107,21 +115,21 @@ public class SpecialFunctionRegisters
     public bool Ac
     {
         get => BitHelpers.ReadBit(Psw, bit: 6);
-        set => BitHelpers.WriteBit(ref Psw, bit: 6, value);
+        set => Psw = BitHelpers.WithBit(Psw, bit: 6, value);
     }
 
     /// <summary>Indirect address register bank flag 1. VMD-45</summary>
     public bool Irbk1
     {
         get => BitHelpers.ReadBit(Psw, bit: 4);
-        set => BitHelpers.WriteBit(ref Psw, bit: 4, value);
+        set => Psw = BitHelpers.WithBit(Psw, bit: 4, value);
     }
 
     /// <summary>Indirect address register bank flag 0. VMD-45</summary>
     public bool Irbk0
     {
         get => BitHelpers.ReadBit(Psw, bit: 3);
-        set => BitHelpers.WriteBit(ref Psw, bit: 3, value);
+        set => Psw = BitHelpers.WithBit(Psw, bit: 3, value);
     }
 
     /// <summary>
@@ -149,241 +157,441 @@ public class SpecialFunctionRegisters
     public bool Ov
     {
         get => BitHelpers.ReadBit(Psw, bit: 2);
-        set => BitHelpers.WriteBit(ref Psw, bit: 2, value);
+        set => Psw = BitHelpers.WithBit(Psw, bit: 2, value);
     }
 
-    /// <summary>RAM bank flag. VMD-45</summary>
+    /// <summary>When true, main memory access uses bank 1, otherwise it uses bank 0. RAM bank flag. VMD-45</summary>
     public bool Rambk0
     {
         get => BitHelpers.ReadBit(Psw, bit: 1);
-        set => BitHelpers.WriteBit(ref Psw, bit: 1, value);
+        set => Psw = BitHelpers.WithBit(Psw, bit: 1, value);
     }
 
     /// <summary>Accumulator (ACC) parity flag. VMD-45</summary>
     public bool P
     {
         get => BitHelpers.ReadBit(Psw, bit: 0);
-        set => BitHelpers.WriteBit(ref Psw, bit: 0, value);
+        set => Psw = BitHelpers.WithBit(Psw, bit: 0, value);
     }
 
     /// <summary>B register. VMD-51</summary>
-    public ref byte B => ref _rawMemory[Ids.B];
+    public byte B
+    {
+        get => Read(Ids.B);
+        set => Write(Ids.B, value);
+    }
     /// <summary>C register. VMD-51</summary>
-    public ref byte C => ref _rawMemory[Ids.C];
+    public byte C
+    {
+        get => Read(Ids.C);
+        set => Write(Ids.C, value);
+    }
 
     /// <summary>Table reference register lower byte. VMD-54</summary>
-    public ref byte Trl => ref _rawMemory[Ids.Trl];
+    public byte Trl
+    {
+        get => Read(Ids.Trl);
+        set => Write(Ids.Trl, value);
+    }
     /// <summary>Table reference register upper byte. VMD-54</summary>
-    public ref byte Trh => ref _rawMemory[Ids.Trh];
+    public byte Trh
+    {
+        get => Read(Ids.Trh);
+        set => Write(Ids.Trh, value);
+    }
 
     /// <summary>Stack pointer. VMD-53</summary>
     /// <remarks>Note that a well-behaved stack pointer always refers to 0x80 of RAM bank 0, growing upwards.</remarks>
-    public ref byte Sp => ref _rawMemory[Ids.Sp];
+    public byte Sp
+    {
+        get => Read(Ids.Sp);
+        set => Write(Ids.Sp, value);
+    }
 
     /// <summary>Power control register. VMD-158</summary>
-    public ref byte Pcon => ref _rawMemory[Ids.Pcon];
+    public byte Pcon
+    {
+        get => Read(Ids.Pcon);
+        set => Write(Ids.Pcon, value);
+    }
 
     /// <summary>Master interrupt enable control register. VMD-138</summary>
-    public ref byte Ie => ref _rawMemory[Ids.Ie];
+    public byte Ie
+    {
+        get => Read(Ids.Ie);
+        set => Write(Ids.Ie, value);
+    }
 
     /// <summary>Interrupt priority control register. VMD-151</summary>
-    public ref byte Ip => ref _rawMemory[Ids.Ip];
+    public byte Ip
+    {
+        get => Read(Ids.Ip);
+        set => Write(Ids.Ip, value);
+    }
 
     /// <summary>External memory control register. No VMD page</summary>
-    public ref byte Ext => ref _rawMemory[Ids.Ext];
+    public byte Ext
+    {
+        get => Read(Ids.Ext);
+        set => Write(Ids.Ext, value);
+    }
 
     /// <summary>Oscillation control register. VMD-156</summary>
-    public ref byte Ocr => ref _rawMemory[Ids.Ocr];
+    public byte Ocr
+    {
+        get => Read(Ids.Ocr);
+        set => Write(Ids.Ocr, value);
+    }
 
     /// <summary>Timer 0 control register. VMD-67</summary>
-    public ref byte T0Cnt => ref _rawMemory[Ids.T0Cnt];
+    public byte T0Cnt
+    {
+        get => Read(Ids.T0Cnt);
+        set => Write(Ids.T0Cnt, value);
+    }
 
     /// <summary>Timer 0 prescaler data. VMD-71</summary>
-    public ref byte T0Prr => ref _rawMemory[Ids.T0Prr];
+    public byte T0Prr
+    {
+        get => Read(Ids.T0Prr);
+        set => Write(Ids.T0Prr, value);
+    }
 
     /// <summary>Timer 0 low. VMD-71</summary>
-    public ref byte T0L => ref _rawMemory[Ids.T0L];
+    public byte T0L
+    {
+        get => Read(Ids.T0L);
+        set => Write(Ids.T0L, value);
+    }
 
     /// <summary>Timer 0 low reload data. VMD-71</summary>
-    public ref byte T0Lr => ref _rawMemory[Ids.T0Lr];
+    public byte T0Lr
+    {
+        get => Read(Ids.T0Lr);
+        set => Write(Ids.T0Lr, value);
+    }
 
     /// <summary>Timer 0 high. VMD-72</summary>
-    public ref byte T0H => ref _rawMemory[Ids.T0H];
+    public byte T0H
+    {
+        get => Read(Ids.T0H);
+        set => Write(Ids.T0H, value);
+    }
 
     /// <summary>Timer 0 high reload data. VMD-72</summary>
-    public ref byte T0Hr => ref _rawMemory[Ids.T0Hr];
+    public byte T0Hr
+    {
+        get => Read(Ids.T0Hr);
+        set => Write(Ids.T0Hr, value);
+    }
 
     /// <summary>Timer 1 control register. VMD-83</summary>
-    public ref byte T1Cnt => ref _rawMemory[Ids.T1Cnt];
+    public byte T1Cnt
+    {
+        get => Read(Ids.T1Cnt);
+        set => Write(Ids.T1Cnt, value);
+    }
 
     /// <summary>Timer 1 low comparison data. VMD-86</summary>
-    public ref byte T1Lc => ref _rawMemory[Ids.T1Lc];
+    public byte T1Lc
+    {
+        get => Read(Ids.T1Lc);
+        set => Write(Ids.T1Lc, value);
+    }
 
     /// <summary>Timer 1 low. VMD-85</summary>
-    public ref byte T1L => ref _rawMemory[Ids.T1L];
+    public byte T1L
+    {
+        get => Read(Ids.T1L);
+        set => Write(Ids.T1L, value);
+    }
 
     /// <summary>Timer 1 low reload data. VMD-85</summary>
-    public ref byte T1Lr => throw new NotImplementedException(); //ref RamBank0[N.T1Lr???];
+    public byte T1Lr
+    {
+        get => Read(Ids.T1Lr);
+        set => Write(Ids.T1Lr, value);
+    }
 
     /// <summary>Timer 1 high comparison data. VMD-87</summary>
-    public ref byte T1Hc => ref _rawMemory[Ids.T1Hc];
+    public byte T1Hc
+    {
+        get => Read(Ids.T1Hc);
+        set => Write(Ids.T1Hc, value);
+    }
 
     /// <summary>Timer 1 high. VMD-86</summary>
-    public ref byte T1H => ref _rawMemory[Ids.T1H];
+    public byte T1H
+    {
+        get => Read(Ids.T1H);
+        set => Write(Ids.T1H, value);
+    }
 
     /// <summary>Timer 1 high reload data. VMD-86</summary>
-    public ref byte T1Hr => throw new NotImplementedException(); //ref RamBank0[N.T1Hr];
+    public byte T1Hr
+    {
+        get => Read(Ids.T1Hr);
+        set => Write(Ids.T1Hr, value);
+    }
 
     /// <summary>Mode control register. VMD-127</summary>
-    public ref byte Mcr => ref _rawMemory[Ids.Mcr];
+    public byte Mcr
+    {
+        get => Read(Ids.Mcr);
+        set => Write(Ids.Mcr, value);
+    }
 
     /// <summary>Start address register. VMD-129</summary>
-    public ref byte Stad => ref _rawMemory[Ids.Stad];
+    public byte Stad
+    {
+        get => Read(Ids.Stad);
+        set => Write(Ids.Stad, value);
+    }
 
     /// <summary>Character count register. VMD-130</summary>
-    public ref byte Cnr => ref _rawMemory[Ids.Cnr];
+    public byte Cnr
+    {
+        get => Read(Ids.Cnr);
+        set => Write(Ids.Cnr, value);
+    }
 
     /// <summary>Time division register. VMD-130</summary>
-    public ref byte Tdr => ref _rawMemory[Ids.Tdr];
+    public byte Tdr
+    {
+        get => Read(Ids.Tdr);
+        set => Write(Ids.Tdr, value);
+    }
 
     /// <summary>Bank address register. Bits 1-0 control whether XRAM bank 0, 1, or 2 is in use. VMD-125</summary>
-    public ref byte Xbnk => ref _rawMemory[Ids.Xbnk];
+    public byte Xbnk
+    {
+        get => Read(Ids.Xbnk);
+        set => Write(Ids.Xbnk, value);
+    }
 
     /// <summary>LCD contrast control register. VMD-131</summary>
-    public ref byte Vccr => ref _rawMemory[Ids.Vccr];
+    public byte Vccr
+    {
+        get => Read(Ids.Vccr);
+        set => Write(Ids.Vccr, value);
+    }
 
     /// <summary>SIO0 control register. VMD-108</summary>
-    public ref byte Scon0 => ref _rawMemory[Ids.Scon0];
+    public byte Scon0
+    {
+        get => Read(Ids.Scon0);
+        set => Write(Ids.Scon0, value);
+    }
 
     /// <summary>SIO0 buffer. VMD-113</summary>
-    public ref byte Sbuf0 => ref _rawMemory[Ids.Sbuf0];
+    public byte Sbuf0
+    {
+        get => Read(Ids.Sbuf0);
+        set => Write(Ids.Sbuf0, value);
+    }
 
     /// <summary>SIO0 baud rate generator. VMD-113</summary>
-    public ref byte Sbr => ref _rawMemory[Ids.Sbr];
+    public byte Sbr
+    {
+        get => Read(Ids.Sbr);
+        set => Write(Ids.Sbr, value);
+    }
 
     /// <summary>SIO1 control register. VMD-111</summary>
-    public ref byte Scon1 => ref _rawMemory[Ids.Scon1];
+    public byte Scon1
+    {
+        get => Read(Ids.Scon1);
+        set => Write(Ids.Scon1, value);
+    }
 
     /// <summary>SIO1 buffer. VMD-113</summary>
-    public ref byte Sbuf1 => ref _rawMemory[Ids.Sbuf1];
+    public byte Sbuf1
+    {
+        get => Read(Ids.Sbuf1);
+        set => Write(Ids.Sbuf1, value);
+    }
 
     /// <summary>Port 1 latch. VMD-58</summary>
-    public ref byte P1 => ref _rawMemory[Ids.P1];
+    public byte P1
+    {
+        get => Read(Ids.P1);
+        set => Write(Ids.P1, value);
+    }
 
     /// <summary>Port 1 data direction register. VMD-58</summary>
-    public ref byte P1Ddr => ref _rawMemory[Ids.P1Ddr];
+    public byte P1Ddr
+    {
+        get => Read(Ids.P1Ddr);
+        set => Write(Ids.P1Ddr, value);
+    }
 
     /// <summary>Port 1 function control register. VMD-59</summary>
-    public ref byte P1Fcr => ref _rawMemory[Ids.P1Fcr];
+    public byte P1Fcr
+    {
+        get => Read(Ids.P1Fcr);
+        set => Write(Ids.P1Fcr, value);
+    }
 
     /// <summary>Port 3 latch. VMD-54</summary>
-    public ref byte P3 => ref _rawMemory[Ids.P3];
+    public byte P3
+    {
+        get => Read(Ids.P3);
+        set => Write(Ids.P3, value);
+    }
 
     // NB: application must set a button value to 1. When it is pressed, the bit is reset to 0.
     public bool ButtonSleep
     {
         get => BitHelpers.ReadBit(P3, bit: 7);
-        set => BitHelpers.WriteBit(ref P3, bit: 7, value);
+        set => P3 = BitHelpers.WithBit(P3, bit: 7, value);
     }
 
     public bool ButtonMode
     {
         get => BitHelpers.ReadBit(P3, bit: 6);
-        set => BitHelpers.WriteBit(ref P3, bit: 6, value);
+        set => P3 = BitHelpers.WithBit(P3, bit: 6, value);
     }
 
     public bool ButtonB
     {
         get => BitHelpers.ReadBit(P3, bit: 5);
-        set => BitHelpers.WriteBit(ref P3, bit: 5, value);
+        set => P3 = BitHelpers.WithBit(P3, bit: 5, value);
     }
 
     public bool ButtonA
     {
         get => BitHelpers.ReadBit(P3, bit: 4);
-        set => BitHelpers.WriteBit(ref P3, bit: 4, value);
+        set => P3 = BitHelpers.WithBit(P3, bit: 4, value);
     }
 
     public bool Right
     {
         get => BitHelpers.ReadBit(P3, bit: 3);
-        set => BitHelpers.WriteBit(ref P3, bit: 3, value);
+        set => P3 = BitHelpers.WithBit(P3, bit: 3, value);
     }
 
     public bool Left
     {
         get => BitHelpers.ReadBit(P3, bit: 2);
-        set => BitHelpers.WriteBit(ref P3, bit: 2, value);
+        set => P3 = BitHelpers.WithBit(P3, bit: 2, value);
     }
 
     public bool Down
     {
         get => BitHelpers.ReadBit(P3, bit: 1);
-        set => BitHelpers.WriteBit(ref P3, bit: 1, value);
+        set => P3 = BitHelpers.WithBit(P3, bit: 1, value);
     }
 
     public bool Up
     {
         get => BitHelpers.ReadBit(P3, bit: 0);
-        set => BitHelpers.WriteBit(ref P3, bit: 0, value);
+        set => P3 = BitHelpers.WithBit(P3, bit: 0, value);
     }
 
     /// <summary>Port 3 data direction register. VMD-62</summary>
-    public ref byte P3Ddr => ref _rawMemory[Ids.P3Ddr];
+    public byte P3Ddr
+    {
+        get => Read(Ids.P3Ddr);
+        set => Write(Ids.P3Ddr, value);
+    }
 
     /// <summary>Port 3 interrupt function control register. VMD-62</summary>
-    public ref byte P3Int => ref _rawMemory[Ids.P3Int];
+    public byte P3Int
+    {
+        get => Read(Ids.P3Int);
+        set => Write(Ids.P3Int, value);
+    }
 
     /// <summary>Flash Program Register. Undocumented.</summary>
-    public ref byte FPR => ref _rawMemory[Ids.FPR];
+    public byte FPR
+    {
+        get => Read(Ids.FPR);
+        set => Write(Ids.FPR, value);
+    }
 
     /// <summary>Flash Address Bank. Used as the upper bit of the address for flash access, i.e. whether flash bank 0 or 1 is used.</summary>
     public bool FPR0
     {
         get => BitHelpers.ReadBit(FPR, bit: 0);
-        set => BitHelpers.WriteBit(ref FPR, bit: 0, value);
+        set => FPR = BitHelpers.WithBit(FPR, bit: 0, value);
     }
 
     /// <summary>Flash Write Unlock</summary>
     public bool FPR1
     {
         get => BitHelpers.ReadBit(FPR, bit: 1);
-        set => BitHelpers.WriteBit(ref FPR, bit: 1, value);
+        set => FPR = BitHelpers.WithBit(FPR, bit: 1, value);
     }
 
     /// <summary>Port 7 latch. VMD-64</summary>
-    public ref byte P7 => ref _rawMemory[Ids.P7];
+    public byte P7
+    {
+        get => Read(Ids.P7);
+        set => Write(Ids.P7, value);
+    }
 
     /// <summary>External interrupt 0, 1 control. VMD-135</summary>
-    public ref byte I01Cr => ref _rawMemory[Ids.I01Cr];
+    public byte I01Cr
+    {
+        get => Read(Ids.I01Cr);
+        set => Write(Ids.I01Cr, value);
+    }
 
     /// <summary>External interrupt 2, 3 control. VMD-137</summary>
-    public ref byte I23Cr => ref _rawMemory[Ids.I23Cr];
+    public byte I23Cr
+    {
+        get => Read(Ids.I23Cr);
+        set => Write(Ids.I23Cr, value);
+    }
 
     /// <summary>Input signal select. VMD-138</summary>
-    public ref byte Isl => ref _rawMemory[Ids.Isl];
+    public byte Isl
+    {
+        get => Read(Ids.Isl);
+        set => Write(Ids.Isl, value);
+    }
 
 #region Work RAM
     /// <summary>Control register. VMD-143</summary>
     /// TODO: the application is only supposed to be able to alter bit 4.
-    public ref byte Vsel => ref _rawMemory[Ids.Vsel];
+    public byte Vsel
+    {
+        get => Read(Ids.Vsel);
+        set => Write(Ids.Vsel, value);
+    }
 
     /// <summary>If set, increments Vramad (pair of Vramad1 and Vram</summary>
     public bool Vsel4_Ince
     {
         get => BitHelpers.ReadBit(Vsel, bit: 4);
-        set => BitHelpers.WriteBit(ref Vsel, bit: 4, value);
+        set => Vsel = BitHelpers.WithBit(Vsel, bit: 4, value);
     }
 
     /// <summary>Bits 0-7 of Vramad (work RAM address). VMD-144</summary>
-    public ref byte Vrmad1 => ref _rawMemory[Ids.Vrmad1];
+    public byte Vrmad1
+    {
+        get => Read(Ids.Vrmad1);
+        set => Write(Ids.Vrmad1, value);
+    }
 
     /// <summary>Bit 8 of Vramad (work RAM address). VMD-144</summary>
-    public ref byte Vrmad2 => ref _rawMemory[Ids.Vrmad2];
+    public byte Vrmad2
+    {
+        get => Read(Ids.Vrmad2);
+        set => Write(Ids.Vrmad2, value);
+    }
 
     /// <summary>Send/receive buffer. VMD-144</summary>
-    public ref byte Vtrbf => ref _rawMemory[Ids.Vtrbf];
+    public byte Vtrbf
+    {
+        get => Read(Ids.Vtrbf);
+        set => Write(Ids.Vtrbf, value);
+    }
 #endregion
     /// <summary>Base timer control. VMD-101</summary>
-    public ref byte Btcr => ref _rawMemory[Ids.Btcr];
+    public byte Btcr
+    {
+        get => Read(Ids.Btcr);
+        set => Write(Ids.Btcr, value);
+    }
 }

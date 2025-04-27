@@ -81,7 +81,7 @@ public class ArithmeticTests
         ReadOnlySpan<byte> instructions = [0b1000_0010, 0b1000];
         instructions.CopyTo(cpu.ROM);
 
-        cpu.RamBank0[0b1000] = 42;
+        cpu.Memory.Write(0b1000, 42);
 
         Assert.Equal(0, cpu.Pc);
         Assert.Equal(0, cpu.SFRs.Acc);
@@ -100,7 +100,7 @@ public class ArithmeticTests
         instructions.CopyTo(cpu.ROM);
 
         cpu.SFRs.Rambk0 = true;
-        cpu.RamBank1[0b1000] = 42;
+        cpu.Memory.Write(0b1000, 42);
 
         Assert.Equal(0, cpu.Pc);
         Assert.Equal(0, cpu.SFRs.Acc);
@@ -120,8 +120,8 @@ public class ArithmeticTests
         ReadOnlySpan<byte> instructions = [0b1000_0100];
         instructions.CopyTo(cpu.ROM);
 
-        cpu.IndirectAddressRegisters[0] = 0b1000;
-        cpu.RamBank0[0b1000] = 42;
+        cpu.Memory.Write(0, 0b1000);
+        cpu.Memory.Write(0b1000, 42);
 
         Assert.Equal(0, cpu.Pc);
         Assert.Equal(0, cpu.SFRs.Acc);
@@ -141,8 +141,8 @@ public class ArithmeticTests
         ReadOnlySpan<byte> instructions = [0b1000_0101];
         instructions.CopyTo(cpu.ROM);
 
-        cpu.IndirectAddressRegisters[1] = 0b1000;
-        cpu.RamBank0[0b1000] = 42;
+        cpu.Memory.Write(1, 0b1000);
+        cpu.Memory.Write(0b1000, 42);
 
         Assert.Equal(0, cpu.Pc);
         Assert.Equal(0, cpu.SFRs.Acc);
@@ -159,14 +159,14 @@ public class ArithmeticTests
     {
         // Reads 0x100-0x1ff of bank 0 (i.e. SFRs and XRAM)
         // XRAM (easier to write since it won't stomp on SFRs such as Psw) starts at 0x180
-        // Therefore an interesting address to read from would be 0x18f
+        // Therefore an interesting address to read from would be 0x184
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [0b1000_0110];
         instructions.CopyTo(cpu.ROM);
 
-        cpu.IndirectAddressRegisters[2] = 0x8f;
-        cpu.XRam_0[0xf] = 42;
-        Assert.Equal(42, cpu.RamBank0[0x18f]);
+        cpu.Memory.Write(2, 0x84);
+        cpu.Memory.Write(0x184, 42);
+        Assert.Equal(42, cpu.Memory.Read(0x184));
 
         Assert.Equal(0, cpu.Pc);
         Assert.Equal(0, cpu.SFRs.Acc);
@@ -183,14 +183,14 @@ public class ArithmeticTests
     {
         // Reads 0x100-0x1ff of bank 0 (i.e. SFRs and XRAM)
         // XRAM (easier to write since it won't stomp on SFRs such as Psw) starts at 0x180
-        // Therefore an interesting address to read from would be 0x18f
+        // Therefore an interesting address to read from would be 0x184
         var cpu = new Cpu();
-        ReadOnlySpan<byte> instructions = [0b1000_0111];
+        ReadOnlySpan<byte> instructions = [OpcodeMask.ADD | AddressModeMask.Indirect3];
         instructions.CopyTo(cpu.ROM);
 
-        cpu.IndirectAddressRegisters[3] = 0x8f;
-        cpu.XRam_0[0xf] = 42;
-        Assert.Equal(42, cpu.RamBank0[0x18f]);
+        cpu.Memory.Write(3, 0x84);
+        cpu.Memory.Write(0x184, 42);
+        Assert.Equal(42, cpu.Memory.Read(0x184));
 
         Assert.Equal(0, cpu.Pc);
         Assert.Equal(0, cpu.SFRs.Acc);
@@ -211,8 +211,8 @@ public class ArithmeticTests
         instructions.CopyTo(cpu.ROM);
 
         cpu.SFRs.Irbk0 = true;
-        cpu.IndirectAddressRegisters[4] = 0b1000;
-        cpu.RamBank1[0b1000] = 42;
+        cpu.Memory.Write(4, 0b1000);
+        cpu.Memory.Write(0b1000, 42);
 
         Assert.Equal(0, cpu.Pc);
         Assert.Equal(0, cpu.SFRs.Acc);
@@ -239,8 +239,8 @@ public class ArithmeticTests
         instructions.CopyTo(cpu.ROM);
 
         cpu.SFRs.Irbk0 = true;
-        cpu.IndirectAddressRegisters[5] = 0b1000;
-        cpu.RamBank1[0b1000] = 42;
+        cpu.Memory.Write(5, 0b1000);
+        cpu.Memory.Write(0b1000, 42);
 
         Assert.Equal(0, cpu.Pc);
         Assert.Equal(0, cpu.SFRs.Acc);
@@ -267,8 +267,8 @@ public class ArithmeticTests
         instructions.CopyTo(cpu.ROM);
 
         cpu.SFRs.Irbk0 = true;
-        cpu.IndirectAddressRegisters[6] = 0x8f;
-        cpu.XRam_1[0xf] = 42;
+        cpu.Memory.Write(6, 0x84);
+        cpu.Memory.Write(0x184, 42);
 
         Assert.Equal(0, cpu.Pc);
         Assert.Equal(0, cpu.SFRs.Acc);
@@ -289,24 +289,23 @@ public class ArithmeticTests
     [Fact]
     public void ADD_Indirect_R0_Bank2()
     {
-        // Reads from bank 2 are allowed for now but we need to bounds check.
+        // R0 in Bank2 means use address 8
         var cpu = new Cpu() { Logger = new StringWriter() };
-        ReadOnlySpan<byte> instructions = [0b1000_0100, 0b1000_0100];
+        ReadOnlySpan<byte> instructions = [
+            OpcodeMask.ADD | AddressModeMask.Indirect0,
+            OpcodeMask.ADD | AddressModeMask.Indirect0
+        ];
         instructions.CopyTo(cpu.ROM);
 
         cpu.SFRs.Irbk1 = true;
-        cpu.IndirectAddressRegisters[8] = 0xf;
-        cpu.RamBank2[0xf] = 42;
+        cpu.Memory.Write(8, 0xf);
+        cpu.Memory.Write(0xf, 42);
 
         Assert.Equal(0, cpu.Pc);
         Assert.Equal(0, cpu.SFRs.Acc);
         Assert.Equal(0b1_0000, cpu.SFRs.Psw);
 
         cpu.Step();
-        Assert.Contains("""
-            [PC: 0x0] Accessing bank 2, but no bounds checks are implemented
-
-            """, cpu.Logger.ToString());
         Assert.Equal(1, cpu.Pc);
         Assert.Equal(42, cpu.SFRs.Acc);
         Assert.Equal(0b1_0000, cpu.SFRs.Psw);
@@ -316,55 +315,38 @@ public class ArithmeticTests
         Assert.Equal(84, cpu.SFRs.Acc);
         Assert.True(cpu.SFRs.Ac);
         Assert.Equal(0b101_0000, cpu.SFRs.Psw);
-        Assert.Contains("""
-            [PC: 0x0] Accessing bank 2, but no bounds checks are implemented
-
-            """, cpu.Logger.ToString());
-        Assert.Contains("""
-            [PC: 0x1] Accessing bank 2, but no bounds checks are implemented
-
-            """, cpu.Logger.ToString());
     }
 
     [Fact]
     public void ADD_Indirect_R0_Bank3()
     {
-        // AFAIK, there is no bank 3, so there's no reason to ever use these registers. All reads will return 0(?).
-        var cpu = new Cpu() { Logger = new StringWriter() };
-        ReadOnlySpan<byte> instructions = [0b1000_0100, 0b1000_0100];
+        // R0 in Bank3 means use address 12
+        var cpu = new Cpu();
+        ReadOnlySpan<byte> instructions = [
+            OpcodeMask.ADD | AddressModeMask.Indirect0,
+            OpcodeMask.ADD | AddressModeMask.Indirect0
+        ];
         instructions.CopyTo(cpu.ROM);
 
         cpu.SFRs.Irbk0 = true;
         cpu.SFRs.Irbk1 = true;
-        cpu.IndirectAddressRegisters[12] = 0xf;
-        cpu.RamBank2[0xf] = 42;
+        cpu.Memory.Write(12, 0xf);
+        cpu.Memory.Write(0xf, 42);
 
         Assert.Equal(0, cpu.Pc);
         Assert.Equal(0, cpu.SFRs.Acc);
         Assert.Equal(0b1_1000, cpu.SFRs.Psw);
 
         cpu.Step();
-        Assert.Contains("""
-            [PC: 0x0] Accessing nonexistent bank 3
-
-            """, cpu.Logger.ToString());
         Assert.Equal(1, cpu.Pc);
-        Assert.Equal(0, cpu.SFRs.Acc);
+        Assert.Equal(42, cpu.SFRs.Acc);
         Assert.Equal(0b1_1000, cpu.SFRs.Psw);
 
         cpu.Step();
         Assert.Equal(2, cpu.Pc);
-        Assert.Equal(0, cpu.SFRs.Acc);
-        Assert.False(cpu.SFRs.Ac);
-        Assert.Equal(0b1_1000, cpu.SFRs.Psw);
-        Assert.Contains("""
-            [PC: 0x0] Accessing nonexistent bank 3
-
-            """, cpu.Logger.ToString());
-        Assert.Contains("""
-            [PC: 0x1] Accessing nonexistent bank 3
-
-            """, cpu.Logger.ToString());
+        Assert.Equal(84, cpu.SFRs.Acc);
+        Assert.True(cpu.SFRs.Ac);
+        Assert.Equal(0b101_1000, cpu.SFRs.Psw);
     }
 
     [Fact]
@@ -419,18 +401,18 @@ public class ArithmeticTests
         instructions.CopyTo(cpu.ROM);
 
         cpu.SFRs.Acc = 0x55;
-        cpu.RamBank0[0x023] = 0x68;
+        cpu.Memory.Write(0x023, 0x68);
 
         cpu.Step();
         Assert.Equal(0x61, cpu.SFRs.Acc);
-        Assert.Equal(0x68, cpu.RamBank0[0x023]);
+        Assert.Equal(0x68, cpu.Memory.Read(0x023));
         Assert.False(cpu.SFRs.Cy);
         Assert.True(cpu.SFRs.Ac);
         Assert.False(cpu.SFRs.Ov);
 
         cpu.Step();
         Assert.Equal(0xc9, cpu.SFRs.Acc);
-        Assert.Equal(0x68, cpu.RamBank0[0x023]);
+        Assert.Equal(0x68, cpu.Memory.Read(0x023));
         Assert.False(cpu.SFRs.Cy);
         Assert.False(cpu.SFRs.Ac);
         Assert.True(cpu.SFRs.Ov);
@@ -478,21 +460,21 @@ public class ArithmeticTests
 
         // TODO: it would be good to use MOVs instead once it is implemented.
         cpu.SFRs.Acc = 0x55;
-        cpu.IndirectAddressRegisters[0] = 0x68;
-        cpu.RamBank0[0x68] = 0x10;
+        cpu.Memory.Write(0, 0x68);
+        cpu.Memory.Write(0x68, 0x10);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0x6a, cpu.SFRs.Acc);
-        Assert.Equal(0x68, cpu.IndirectAddressRegisters[0]);
-        Assert.Equal(0x10, cpu.RamBank0[0x68]);
+        Assert.Equal(0x68, cpu.Memory.Read(0));
+        Assert.Equal(0x10, cpu.Memory.Read(0x68));
         Assert.False(cpu.SFRs.Cy);
         Assert.False(cpu.SFRs.Ac);
         Assert.False(cpu.SFRs.Ov);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0x7a, cpu.SFRs.Acc);
-        Assert.Equal(0x68, cpu.IndirectAddressRegisters[0]);
-        Assert.Equal(0x10, cpu.RamBank0[0x68]);
+        Assert.Equal(0x68, cpu.Memory.Read(0));
+        Assert.Equal(0x10, cpu.Memory.Read(0x68));
         Assert.False(cpu.SFRs.Cy);
         Assert.False(cpu.SFRs.Ac);
         Assert.False(cpu.SFRs.Ov);
@@ -511,21 +493,21 @@ public class ArithmeticTests
 
         // TODO: it would be good to use MOVs instead once it is implemented.
         cpu.SFRs.Acc = 0xaa;
-        cpu.IndirectAddressRegisters[2] = 0x04;
-        cpu.RamBank0[0x104] = 0x55;
+        cpu.Memory.Write(2, 0x04);
+        cpu.Memory.Write(0x104, 0x55);
 
         cpu.Step();
         Assert.Equal(0xab, cpu.SFRs.Acc);
-        Assert.Equal(0x04, cpu.IndirectAddressRegisters[2]);
-        Assert.Equal(0x55, cpu.RamBank0[0x104]);
+        Assert.Equal(0x04, cpu.Memory.Read(2));
+        Assert.Equal(0x55, cpu.Memory.Read(0x104));
         Assert.False(cpu.SFRs.Cy);
         Assert.False(cpu.SFRs.Ac);
         Assert.False(cpu.SFRs.Ov);
 
         cpu.Step();
         Assert.Equal(0x00, cpu.SFRs.Acc);
-        Assert.Equal(0x04, cpu.IndirectAddressRegisters[2]);
-        Assert.Equal(0x55, cpu.RamBank0[0x104]);
+        Assert.Equal(0x04, cpu.Memory.Read(2));
+        Assert.Equal(0x55, cpu.Memory.Read(0x104));
         Assert.True(cpu.SFRs.Cy);
         Assert.True(cpu.SFRs.Ac);
         Assert.False(cpu.SFRs.Ov);
@@ -743,8 +725,8 @@ public class ArithmeticTests
         instructions.CopyTo(cpu.ROM);
 
         cpu.SFRs.Acc = 0x55;
-        cpu.IndirectAddressRegisters[0] = 0x68;
-        cpu.RamBank0[0x68] = 0x40;
+        cpu.Memory.Write(0, 0x68);
+        cpu.Memory.Write(0x68, 0x40);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0x3f, cpu.SFRs.Acc);
@@ -810,22 +792,22 @@ public class ArithmeticTests
         ];
         instructions.CopyTo(cpu.ROM);
 
-        cpu.RamBank0[0x7f] = 0xfd;
+        cpu.Memory.Write(0x7f, 0xfd);
 
         Assert.Equal(1, cpu.Step());
-        Assert.Equal(0xfe, cpu.RamBank0[0x7f]);
+        Assert.Equal(0xfe, cpu.Memory.Read(0x7f));
         Assert.Equal(0, cpu.SFRs.Psw);
 
         Assert.Equal(1, cpu.Step());
-        Assert.Equal(0xff, cpu.RamBank0[0x7f]);
+        Assert.Equal(0xff, cpu.Memory.Read(0x7f));
         Assert.Equal(0, cpu.SFRs.Psw);
 
         Assert.Equal(1, cpu.Step());
-        Assert.Equal(0x00, cpu.RamBank0[0x7f]);
+        Assert.Equal(0x00, cpu.Memory.Read(0x7f));
         Assert.Equal(0, cpu.SFRs.Psw);
 
         Assert.Equal(1, cpu.Step());
-        Assert.Equal(0x01, cpu.RamBank0[0x7f]);
+        Assert.Equal(0x01, cpu.Memory.Read(0x7f));
         Assert.Equal(0, cpu.SFRs.Psw);
     }
 
@@ -842,8 +824,8 @@ public class ArithmeticTests
         ];
         instructions.CopyTo(cpu.ROM);
 
-        cpu.IndirectAddressRegisters[2] = 0; // @R2 addresses 0x100-0x1ff range, so, this refers to ACC (0x100).
-        cpu.RamBank0[0x100] = 2;
+        cpu.Memory.Write(2, 0); // @R2 addresses 0x100-0x1ff range, so, this refers to ACC (0x100).
+        cpu.Memory.Write(0x100, 2);
         Assert.Equal(2, cpu.SFRs.Acc);
 
         Assert.Equal(1, cpu.Step());

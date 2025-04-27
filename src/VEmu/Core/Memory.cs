@@ -64,7 +64,7 @@ class Memory
         SFRs = new SpecialFunctionRegisters(workRam: _workRam);
     }
 
-    public byte ReadMemory(ushort address)
+    public byte Read(ushort address)
     {
         Debug.Assert(address < 0x200);
         switch (address)
@@ -81,7 +81,7 @@ class Memory
         }
     }
 
-    public void WriteMemory(ushort address, byte value)
+    public void Write(ushort address, byte value)
     {
         Debug.Assert(address < 0x200);
         switch (address)
@@ -105,10 +105,10 @@ class Memory
     {
         // Stack is always bank 0, 0x90-0xff; do not use the same routines as for memory access from user code.
         // Stack also points to last element, rather than pointing past last element. So it is inc'd before writing.
-        if (SFRs.Sp is not (>= 0x90 and <= 0xfe))
+        if (SFRs.Sp + 1 is not (>= 0x90 and <= 0xff))
         {
             // TODO: log fatal: invalid stack pointer
-            throw new InvalidOperationException();
+            //throw new InvalidOperationException($"Stack pointer (0x{SFRs.Sp:X2}) outside of expected range (0x90-0xff).");
         }
 
         SFRs.Sp++;
@@ -119,10 +119,10 @@ class Memory
     {
         // Stack is always bank 0, 0x90-0xff; do not use the same routines as for memory access from user code.
         // Stack also points to last element, rather than pointing past last element. So it is dec'd after reading.
-        if (SFRs.Sp is not (>= 0x91 and <= 0xff))
+        if (SFRs.Sp - 1 is not (>= 0x90 and <= 0xff))
         {
             // TODO: log fatal: invalid stack pointer
-            throw new InvalidOperationException();
+            //throw new InvalidOperationException($"Stack pointer (0x{SFRs.Sp:X4}) outside of expected range (0x90-0xff).");
         }
 
         var value = _mainRam0[SFRs.Sp];
@@ -130,10 +130,44 @@ class Memory
         return value;
     }
 
+    /// <summary>
+    /// Get the address stored in an indirect address register R0-R3.
+    /// Address is offset based on regId, so R2-3 already have 0x100 OR'd in.
+    /// </summary>
+    public ushort ReadIndirectAddressRegister(int regId)
+    {
+        Debug.Assert(regId is >= 0 and < 4);
+
+        // There are 16 indirect registers, each 1 byte in size.
+        // - bit 3: IRBK1
+        // - bit 2: IRBK0
+        // - bit 1: j1 (regId, from instruction data)
+        // - bit 0: j0 (regId, from instruction data)
+
+        var irbk = SFRs.Psw & 0b11000; // Mask out IRBK1, IRBK0 bits (VMD-44).
+        var registerAddress = (ushort)((irbk >> 1) | regId); // compose (IRBK1, IRBK0, j1, j0)
+        Debug.Assert(registerAddress is >= 0 and < 16);
+
+        // 9-bit address, where the 8th bit is j1 from instruction data (indicating the result address is in range 0x100-1x1ff)
+        var bit8 = (regId & 0b10) == 0b10 ? 0x100 : 0;
+        // TODO: confirm whether each main mem bank has own set of IARs, or if only bank 0 has them
+        var address = (ushort)(bit8 | Read(registerAddress));
+        return address;
+    }
+
+    /// <summary>
+    /// Use only to initialize work RAM state for testing
+    /// </summary>
+    public void Direct_WriteWorkRam(int address, byte value)
+    {
+        Debug.Assert(address < 0x200);
+        _workRam[address] = value;
+    }
+
     private byte ReadMainMemory(ushort address)
     {
         Debug.Assert(address < 0x100);
-        var bank = SFRs.Rambk0 ? _mainRam0 : _mainRam1;
+        var bank = SFRs.Rambk0 ? _mainRam1 : _mainRam0;
         return bank[address];
     }
 
@@ -189,7 +223,7 @@ class Memory
     private void WriteMainMemory(ushort address, byte value)
     {
         Debug.Assert(address < 0x100);
-        var bank = SFRs.Rambk0 ? _mainRam0 : _mainRam1;
+        var bank = SFRs.Rambk0 ? _mainRam1 : _mainRam0;
         bank[address] = value;
     }
 

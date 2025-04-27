@@ -392,7 +392,7 @@ public class ConditionalBranchTests
         Assert.Equal(2, cpu.Step());
         Assert.Equal(2, cpu.Step());
         Assert.Equal(0x02, cpu.SFRs.B);
-        Assert.Equal(0x02, cpu.IndirectAddressRegisters[3]);
+        Assert.Equal(0x02, cpu.Memory.Read(3));
         Assert.Equal(0xf1e, cpu.Pc);
 
         Assert.Equal(2, cpu.Step());
@@ -500,7 +500,7 @@ public class ConditionalBranchTests
         Assert.Equal(2, cpu.Step());
         Assert.Equal(2, cpu.Step());
         Assert.Equal(0x05, cpu.SFRs.B);
-        Assert.Equal(0x02, cpu.IndirectAddressRegisters[3]);
+        Assert.Equal(0x02, cpu.Memory.Read(3));
 
         Assert.Equal(2, cpu.Step());
         Assert.False(cpu.SFRs.Cy);

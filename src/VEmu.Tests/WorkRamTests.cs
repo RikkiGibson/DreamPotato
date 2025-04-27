@@ -10,7 +10,7 @@ public class WorkRamTests
     public void StoreAndLoadSingleValue()
     {
         var cpu = new Cpu();
-        cpu.WorkRam[0x11f] = 0x40;
+        cpu.Memory.Direct_WriteWorkRam(0x11f, 0x40);
         cpu.SFRs.Vrmad1 = 0x1f;
         cpu.SFRs.Vrmad2 = 1;
 
@@ -33,7 +33,7 @@ public class WorkRamTests
     public void StoreAndLoadSingleValue_WrongAddress()
     {
         var cpu = new Cpu();
-        cpu.WorkRam[0x11f] = 0x40;
+        cpu.Memory.Direct_WriteWorkRam(0x11f, 0x40);
         cpu.SFRs.Vrmad1 = 0x10;
         cpu.SFRs.Vrmad2 = 1;
 
@@ -56,8 +56,8 @@ public class WorkRamTests
     public void StoreAndLoadMultipleValues()
     {
         var cpu = new Cpu();
-        cpu.WorkRam[0x110] = 0x20;
-        cpu.WorkRam[0x111] = 0x40;
+        cpu.Memory.Direct_WriteWorkRam(0x110, 0x20);
+        cpu.Memory.Direct_WriteWorkRam(0x111, 0x40);
         cpu.SFRs.Vrmad1 = 0x10;
         cpu.SFRs.Vrmad2 = 1;
 
@@ -80,8 +80,8 @@ public class WorkRamTests
     public void AutoIncrementRead()
     {
         var cpu = new Cpu();
-        cpu.WorkRam[0x110] = 0x20;
-        cpu.WorkRam[0x111] = 0x40;
+        cpu.Memory.Direct_WriteWorkRam(0x110, 0x20);
+        cpu.Memory.Direct_WriteWorkRam(0x111, 0x40);
         cpu.SFRs.Vrmad1 = 0x10;
         cpu.SFRs.Vrmad2 = 1;
         cpu.SFRs.Vsel4_Ince = true;
