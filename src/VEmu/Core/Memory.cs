@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics;
 
 namespace VEmu.Core;
@@ -42,14 +43,14 @@ class Memory
     internal readonly SpecialFunctionRegisters SFRs;
 
     /// <summary>
-    /// Video memory. Bank 0, 0x180-0x1bf.
+    /// Video memory. Bank 0, 0x180-0x1df.
     /// </summary>
-    private readonly byte[] _xram0 = new byte[0x40];
+    private readonly byte[] _xram0 = new byte[0x60];
 
     /// <summary>
-    /// Video memory. Bank 1, 0x180-0x1bf.
+    /// Video memory. Bank 1, 0x180-0x1df.
     /// </summary>
-    private readonly byte[] _xram1 = new byte[0x40];
+    private readonly byte[] _xram1 = new byte[0x60];
 
     /// <summary>
     /// Video memory. Bank 2, 0x180-0x18f.
@@ -73,7 +74,7 @@ class Memory
                 return ReadMainMemory(address);
             case >= 0x100 and < 0x180:
                 return SFRs.Read((byte)(address - 0x100));
-            case >= 0x180 and < 0x1B0:
+            case >= 0x180 and < 0x1E0:
                 return ReadXram((byte)(address - 0x180));
             default:
                 // TODO: log warning: read out of range
@@ -92,7 +93,7 @@ class Memory
             case >= 0x100 and < 0x180:
                 SFRs.Write((byte)(address - 0x100), value);
                 return;
-            case >= 0x180 and < 0x1B0:
+            case >= 0x180 and < 0x1E0:
                 WriteXram((byte)(address - 0x180), value);
                 return;
             default:
@@ -155,6 +156,9 @@ class Memory
         return address;
     }
 
+    // Direct_ functions sidestep hardware behaviors such as auto-increment VTRBF.
+    // Do not use these to execute VMU code, they should be used for testing, front-ends etc only.
+
     /// <summary>
     /// Use only to initialize work RAM state for testing
     /// </summary>
@@ -163,6 +167,16 @@ class Memory
         Debug.Assert(address < 0x200);
         _workRam[address] = value;
     }
+
+    /// <summary>
+    /// Use for front-end rendering.
+    /// </summary>
+    public ReadOnlySpan<byte> Direct_ReadXram0() => _xram0;
+
+    /// <summary>
+    /// Use for front-end rendering.
+    /// </summary>
+    public ReadOnlySpan<byte> Direct_ReadXram1() => _xram1;
 
     private byte ReadMainMemory(ushort address)
     {

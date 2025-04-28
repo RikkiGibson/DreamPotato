@@ -31,9 +31,24 @@ public partial class Form1 : Form
             }
         }
 
+        var pixels1 = HelloWorld.GetDisplayBytes();
+        var pixels2 = new int[height * width];
+
+        int i = 0;
+        foreach (var b in pixels1)
+        {
+            pixels2[i++] = (int)(BitHelpers.ReadBit(b, 7) ? 0x00000000 : 0xFFFFFFFF);
+            pixels2[i++] = (int)(BitHelpers.ReadBit(b, 6) ? 0x00000000 : 0xFFFFFFFF);
+            pixels2[i++] = (int)(BitHelpers.ReadBit(b, 5) ? 0x00000000 : 0xFFFFFFFF);
+            pixels2[i++] = (int)(BitHelpers.ReadBit(b, 4) ? 0x00000000 : 0xFFFFFFFF);
+            pixels2[i++] = (int)(BitHelpers.ReadBit(b, 3) ? 0x00000000 : 0xFFFFFFFF);
+            pixels2[i++] = (int)(BitHelpers.ReadBit(b, 2) ? 0x00000000 : 0xFFFFFFFF);
+            pixels2[i++] = (int)(BitHelpers.ReadBit(b, 1) ? 0x00000000 : 0xFFFFFFFF);
+            pixels2[i++] = (int)(BitHelpers.ReadBit(b, 0) ? 0x00000000 : 0xFFFFFFFF);
+        }
         unsafe
         {
-            fixed (int* p = pixels)
+            fixed (int* p = pixels2)
             {
                 bitmap = new Bitmap(width, height, stride, PixelFormat.Format32bppRgb, (nint)p);
             }

@@ -290,7 +290,7 @@ public class ArithmeticTests
     public void ADD_Indirect_R0_Bank2()
     {
         // R0 in Bank2 means use address 8
-        var cpu = new Cpu() { Logger = new StringWriter() };
+        var cpu = new Cpu() { };
         ReadOnlySpan<byte> instructions = [
             OpcodeMask.ADD | AddressModeMask.Indirect0,
             OpcodeMask.ADD | AddressModeMask.Indirect0

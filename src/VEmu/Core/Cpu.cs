@@ -6,7 +6,7 @@ public class Cpu
 {
     // TODO: bring in a logger type with configurable severity etc
     // perhaps with a rolling buffer
-    internal TextWriter Logger { get => field ??= Console.Error; init; }
+    internal Logger Logger { get; }
 
     // VMU-2: standalone instruction cycle time 183us (microseconds).
     // Compare with 1us when connected to console.
@@ -39,6 +39,7 @@ public class Cpu
     public Cpu()
     {
         CurrentROMBank = ROM;
+        Logger = new Logger(LogLevel.Trace, this);
     }
 
     public byte ReadRam(int address)
@@ -70,7 +71,7 @@ public class Cpu
     {
         if (BitHelpers.ReadBit(SFRs.Pcon, bit: 0))
         {
-            Logger.WriteLine("---HALT---");
+            Logger.LogDebug("---HALT---");
         }
 
         // TODO: cleanup the way opcode ranges are represented
@@ -78,7 +79,7 @@ public class Cpu
 
         var inst = InstructionDecoder.Decode(CurrentROMBank, Pc);
         InstructionMap[Pc] = inst;
-        Logger.WriteLine($"{inst} Acc={SFRs.Acc:X} B={SFRs.B:X} C={SFRs.C:X} R2={ReadRam(2)}");
+        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X} B={SFRs.B:X} C={SFRs.C:X} R2={ReadRam(2)}");
 
         switch ((Opcode)prefix)
         {
@@ -813,7 +814,7 @@ public class Cpu
         var a16 = SFRs.Trl | (SFRs.Trh << 8);
         var bank = SFRs.FPR0 ? FlashBank1 : FlashBank0;
         SFRs.Acc = bank[a16];
-        Pc += 2;
+        Pc += 1;
         return 2;
     }
 
