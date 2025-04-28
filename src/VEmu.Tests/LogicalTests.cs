@@ -91,8 +91,6 @@ public class LogicalTests
     [Fact]
     public void OR_Direct_Example1()
     {
-        // TODO: this one will also be good to return to once MOV is implemented
-
         // VMC-173
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [

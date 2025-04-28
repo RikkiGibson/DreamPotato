@@ -458,7 +458,6 @@ public class ArithmeticTests
         ];
         instructions.CopyTo(cpu.ROM);
 
-        // TODO: it would be good to use MOVs instead once it is implemented.
         cpu.SFRs.Acc = 0x55;
         cpu.Memory.Write(0, 0x68);
         cpu.Memory.Write(0x68, 0x10);
@@ -491,7 +490,6 @@ public class ArithmeticTests
         ];
         instructions.CopyTo(cpu.ROM);
 
-        // TODO: it would be good to use MOVs instead once it is implemented.
         cpu.SFRs.Acc = 0xaa;
         cpu.Memory.Write(2, 0x04);
         cpu.Memory.Write(0x104, 0x55);

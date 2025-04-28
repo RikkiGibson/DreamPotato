@@ -76,8 +76,6 @@ public class SpecialFunctionRegisters
         }
     }
 
-    // TODO: these all should probably be get/set props delegating to the main Read/Write methods.
-
     /// <summary>Accumulator. VMD-50</summary>
     public byte Acc
     {

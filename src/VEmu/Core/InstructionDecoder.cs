@@ -8,23 +8,6 @@ using System.Diagnostics;
 
 static class InstructionDecoder
 {
-    // TODO: not all code is executable. Some of it is just data.
-    // Ideally we have a structure here which is oriented around runtime instrumentation
-    // e.g. it fills-in as instructions are executed at runtime, showing which parts of the code are executable
-    // Also it needs to be able to access instructions based on offset.
-    // Quite possibly we want an indexer which given some offset, will search backwards a few bytes for an instruction which includes that offset in its span.
-    public static List<Instruction> DecodeRange(ReadOnlySpan<byte> code, ushort startingOffset = 0)
-    {
-        List<Instruction> list = [];
-        for (ushort index = startingOffset; index < code.Length;)
-        {
-            var inst = Decode(code, index);
-            list.Add(inst);
-            index += inst.Operation.Size;
-        }
-        return list;
-    }
-
     public static Instruction Decode(ReadOnlySpan<byte> code, ushort offset)
     {
         var instruction = DecodeCore(code.Slice(offset), offset);
