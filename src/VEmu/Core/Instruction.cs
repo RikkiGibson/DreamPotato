@@ -1,5 +1,6 @@
 
 
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Text;
 
@@ -20,14 +21,14 @@ namespace VEmu.Core;
 
 /// <summary>
 /// Definition of an instruction, including opcode and parameters.
-/// TODO: consider dropping allocs by baking in the fact that instructions have at most 3 parameters.
+/// Note that order of parameters comes from assembly mnemonics, *not* from memory layout of instructions.
 /// </summary>
-record Operation(OperationKind Opcode, Parameter[] Parameters, byte Size, byte Cycles)
+record Operation(OperationKind Kind, ImmutableArray<Parameter> Parameters, byte Size, byte Cycles)
 {
     public override string ToString()
     {
         // e.g. ADD I8
-        return $"{Opcode} {string.Join(',', Parameters.Select(p => p.Kind))}";
+        return $"{Kind} {string.Join(',', Parameters.Select(p => p.Kind))}";
     }
 }
 
@@ -134,9 +135,25 @@ static class Operations
 /// <summary>
 /// The information we know about an instruction originating solely from the code, and not any cpu state.
 /// </summary>
-record struct Instruction(Operation Operation, ushort[] Arguments, ushort Offset)
+record struct Instruction(ushort Offset, Operation Operation, ushort Arg0 = default, ushort Arg1 = default, ushort Arg2 = default)
 {
     public bool HasValue => Operation is not null;
+
+    public ImmutableArray<Parameter> Parameters => Operation.Parameters;
+    public byte Size => Operation.Size;
+
+    public ushort GetArgument(int i)
+    {
+        Debug.Assert(i < Parameters.Length);
+        return i switch
+        {
+            0 => Arg0,
+            1 => Arg1,
+            2 => Arg2,
+            _ => Throw()
+        };
+        static ushort Throw() => throw new ArgumentOutOfRangeException(nameof(i));
+    }
 
     public override string ToString()
     {
@@ -151,9 +168,9 @@ record struct Instruction(Operation Operation, ushort[] Arguments, ushort Offset
         // We can include not only symbols, but, we can also include the values which are being modified, as well as whether branches are taken.
         // In other words logging the execution of hte program in quite useful detail.
         var builder = new StringBuilder();
-        builder.Append($"[{Offset:X4}] {Operation.Opcode} ");
+        builder.Append($"[{Offset:X4}] {Operation.Kind} ");
 
-        var parameters = Operation.Parameters;
+        var parameters = Parameters;
         for (var i = 0; i < parameters.Length; i++)
         {
             var param = parameters[i];
@@ -165,7 +182,7 @@ record struct Instruction(Operation Operation, ushort[] Arguments, ushort Offset
             };
             builder.Append(prefix);
 
-            var arg = Arguments[i];
+            var arg = GetArgument(i);
             var displayValue = param.Kind switch
             {
                 ParameterKind.R8 => Offset + Operation.Size + (sbyte)arg,

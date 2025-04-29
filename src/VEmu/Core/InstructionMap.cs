@@ -1,5 +1,7 @@
 namespace VEmu.Core;
 
+// TODO: ideally we would use this map to maintain info on which regions of ROM are executable or not
+// we could then feed this info back into reverse engineering tools
 readonly struct InstructionMap()
 {
     private readonly Instruction[] _instructions = new Instruction[ushort.MaxValue];

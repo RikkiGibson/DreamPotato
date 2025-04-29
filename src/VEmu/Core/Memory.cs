@@ -131,6 +131,13 @@ class Memory
         return value;
     }
 
+    public byte ReadIndirect(int regId)
+    {
+        var address = ReadIndirectAddressRegister(regId);
+        var value = Read(address);
+        return value;
+    }
+
     /// <summary>
     /// Get the address stored in an indirect address register R0-R3.
     /// Address is offset based on regId, so R2-3 already have 0x100 OR'd in.
