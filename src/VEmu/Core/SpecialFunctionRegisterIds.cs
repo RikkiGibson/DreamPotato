@@ -134,7 +134,7 @@ static class SpecialFunctionRegisterIds
     /// <summary>Flash Program Register. Undocumented.</summary>
     public const byte FPR = 0x54;
 
-    /// <summary>Port 7 latch. VMD-64</summary>
+    /// <summary>Port 7 latch. Used for low voltage detection and Dreamcast connection status. VMD-64</summary>
     public const byte P7 = 0x5C;
 
     /// <summary>External interrupt 0, 1 control. VMD-135</summary>
@@ -143,7 +143,7 @@ static class SpecialFunctionRegisterIds
     /// <summary>External interrupt 2, 3 control. VMD-137</summary>
     public const byte I23Cr = 0x5E;
 
-    /// <summary>Input signal select. VMD-138</summary>
+    /// <summary>Input signal select. (Cannot be manipulated by application.) VMD-138</summary>
     public const byte Isl = 0x5F;
 
     /// <summary>Control register. VMD-143</summary>
