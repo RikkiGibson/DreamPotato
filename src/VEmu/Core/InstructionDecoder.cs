@@ -108,7 +108,7 @@ static class InstructionDecoder
             case MOV | Direct0 or MOV | Direct1:
                 return new(offset, Operations.MOV_i8_d9, code[2], DecodeD9(code));
             case >= (MOV | Indirect0) and <= (MOV | Indirect3):
-                return new(offset, Operations.MOV_i8_Rj, code[2], DecodeRi(code));
+                return new(offset, Operations.MOV_i8_Rj, code[1], DecodeRi(code));
 
             case LDC: return new(offset, Operations.LDC);
             case LDF: return new(offset, Operations.LDF);

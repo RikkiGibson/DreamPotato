@@ -69,138 +69,99 @@ public class Cpu
     /// <returns>Number of cycles consumed by the instruction.</returns>
     internal int Step()
     {
+        // TODO: figure out why this is not getting hit
+        // Also, it probably needs to be in 'Run' in order to terminate the loop
         if (BitHelpers.ReadBit(SFRs.Pcon, bit: 0))
         {
             Logger.LogDebug("---HALT---");
         }
 
-        // TODO: cleanup the way opcode ranges are represented
-        byte prefix = CurrentROMBank[Pc];
-
         var inst = InstructionDecoder.Decode(CurrentROMBank, Pc);
         InstructionMap[Pc] = inst;
         Logger.LogTrace($"{inst} Acc={SFRs.Acc:X} B={SFRs.B:X} C={SFRs.C:X} R2={ReadRam(2)}");
 
-        switch ((Opcode)prefix)
+        switch (inst.Kind)
         {
-            case Opcode.MUL: return Op_MUL();
-            case Opcode.DIV: return Op_DIV();
-            case Opcode.ROL: return Op_ROL();
-            case Opcode.ROLC: return Op_ROLC();
-            case Opcode.ROR: return Op_ROR();
-            case Opcode.RORC: return Op_RORC();
-
-            case Opcode.LDC: return Op_LDC();
-
-            case Opcode.JMPF: return Op_JMPF();
-            case Opcode.BR: return Op_BR();
-            case Opcode.BRF: return Op_BRF();
-            case Opcode.BZ: return Op_BZ();
-            case Opcode.BNZ: return Op_BNZ();
-
-            case Opcode.CALLF: return Op_CALLF();
-            case Opcode.CALLR: return Op_CALLR();
-            case Opcode.RET: return Op_RET();
-
-            case Opcode.LDF: return Op_LDF();
-            case Opcode.NOP: return Op_NOP();
+            case OperationKind.ADD: Op_ADD(inst); break;
+            case OperationKind.ADDC: Op_ADDC(inst); break;
+            case OperationKind.SUB: Op_SUB(inst); break;
+            case OperationKind.SUBC: Op_SUBC(inst); break;
+            case OperationKind.INC: Op_INC(inst); break;
+            case OperationKind.DEC: Op_DEC(inst); break;
+            case OperationKind.MUL: Op_MUL(inst); break;
+            case OperationKind.DIV: Op_DIV(inst); break;
+            case OperationKind.AND: Op_AND(inst); break;
+            case OperationKind.OR: Op_OR(inst); break;
+            case OperationKind.XOR: Op_XOR(inst); break;
+            case OperationKind.ROL: Op_ROL(inst); break;
+            case OperationKind.ROLC: Op_ROLC(inst); break;
+            case OperationKind.ROR: Op_ROR(inst); break;
+            case OperationKind.RORC: Op_RORC(inst); break;
+            case OperationKind.LD: Op_LD(inst); break;
+            case OperationKind.ST: Op_ST(inst); break;
+            case OperationKind.MOV: Op_MOV(inst); break;
+            case OperationKind.LDC: Op_LDC(inst); break;
+            case OperationKind.PUSH: Op_PUSH(inst); break;
+            case OperationKind.POP: Op_POP(inst); break;
+            case OperationKind.XCH: Op_XCH(inst); break;
+            case OperationKind.JMP: Op_JMP(inst); break;
+            case OperationKind.JMPF: Op_JMPF(inst); break;
+            case OperationKind.BR: Op_BR(inst); break;
+            case OperationKind.BRF: Op_BRF(inst); break;
+            case OperationKind.BZ: Op_BZ(inst); break;
+            case OperationKind.BNZ: Op_BNZ(inst); break;
+            case OperationKind.BP: Op_BP(inst); break;
+            case OperationKind.BPC: Op_BPC(inst); break;
+            case OperationKind.BN: Op_BN(inst); break;
+            case OperationKind.DBNZ: Op_DBNZ(inst); break;
+            case OperationKind.BE: Op_BE(inst); break;
+            case OperationKind.BNE: Op_BNE(inst); break;
+            case OperationKind.CALL: Op_CALL(inst); break;
+            case OperationKind.CALLF: Op_CALLF(inst); break;
+            case OperationKind.CALLR: Op_CALLR(inst); break;
+            case OperationKind.RET: Op_RET(inst); break;
+            case OperationKind.CLR1: Op_CLR1(inst); break;
+            case OperationKind.SET1: Op_SET1(inst); break;
+            case OperationKind.NOT1: Op_NOT1(inst); break;
+            case OperationKind.LDF: Op_LDF(inst); break;
+            case OperationKind.NOP: Op_NOP(inst); break;
+            default: Throw(inst); break;
         }
 
-        // the limited supported addressing modes of various ops are used to pack in more kinds of ops.
-        // e.g. INC does not support immediate mode, so that bit pattern is used for PUSH, which only supports direct mode.
+        return inst.Cycles;
 
-        switch (prefix)
-        {
-            case >= ((byte)OpcodePrefix.ADD | (byte)AddressingMode.Immediate) and <= ((byte)OpcodePrefix.ADD | (byte)AddressingMode.Indirect3): return Op_ADD();
-            case >= ((byte)OpcodePrefix.ADDC | (byte)AddressingMode.Immediate) and <= ((byte)OpcodePrefix.ADDC | (byte)AddressingMode.Indirect3): return Op_ADDC();
-            case >= ((byte)OpcodePrefix.SUB | (byte)AddressingMode.Immediate) and <= ((byte)OpcodePrefix.SUB | (byte)AddressingMode.Indirect3): return Op_SUB();
-            case >= ((byte)OpcodePrefix.SUBC | (byte)AddressingMode.Immediate) and <= ((byte)OpcodePrefix.SUBC | (byte)AddressingMode.Indirect3): return Op_SUBC();
-            case >= ((byte)OpcodePrefix.INC | (byte)AddressingMode.Direct0) and <= ((byte)OpcodePrefix.INC | (byte)AddressingMode.Indirect3): return Op_INC();
-            case >= ((byte)OpcodePrefix.DEC | (byte)AddressingMode.Direct0) and <= ((byte)OpcodePrefix.DEC | (byte)AddressingMode.Indirect3): return Op_DEC();
-            // TODO: MUL, DIV might go here
-
-            case >= ((byte)OpcodePrefix.AND | (byte)AddressingMode.Immediate) and <= ((byte)OpcodePrefix.AND | (byte)AddressingMode.Indirect3): return Op_AND();
-            case >= ((byte)OpcodePrefix.OR | (byte)AddressingMode.Immediate) and <= ((byte)OpcodePrefix.OR | (byte)AddressingMode.Indirect3): return Op_OR();
-            case >= ((byte)OpcodePrefix.XOR | (byte)AddressingMode.Immediate) and <= ((byte)OpcodePrefix.XOR | (byte)AddressingMode.Indirect3): return Op_XOR();
-            // TODO: ROL, ROLC, ROR, RORC might go here
-
-            case >= ((byte)OpcodePrefix.LD | (byte)AddressingMode.Immediate) and <= ((byte)OpcodePrefix.LD | (byte)AddressingMode.Indirect3): return Op_LD();
-            case >= ((byte)OpcodePrefix.ST | (byte)AddressingMode.Immediate) and <= ((byte)OpcodePrefix.ST | (byte)AddressingMode.Indirect3): return Op_ST();
-            case >= ((byte)OpcodePrefix.MOV | (byte)AddressingMode.Direct0) and <= ((byte)OpcodePrefix.MOV | (byte)AddressingMode.Indirect3): return Op_MOV();
-            // TODO: LDC,...might go here
-
-            case (byte)OpcodePrefix.PUSH or ((byte)OpcodePrefix.PUSH | 1): return Op_PUSH();
-            case (byte)OpcodePrefix.POP or ((byte)OpcodePrefix.POP | 1): return Op_POP();
-            case >= ((byte)OpcodePrefix.XCH | (byte)AddressingMode.Direct0) and <= ((byte)OpcodePrefix.XCH | (byte)AddressingMode.Indirect3): return Op_XCH();
-
-            case (>= 0b0010_1000 and <= 0b0010_1111) or (>= 0b0011_1000 and <= 0b0011_1111): return Op_JMP();
-            case (>= 0b0110_1000 and <= 0b0110_1111) or (>= 0b0111_1000 and <= 0b0111_1111): return Op_BP();
-            case (>= 0b0100_1000 and <= 0b0100_1111) or (>= 0b0101_1000 and <= 0b0101_1111): return Op_BPC();
-            case (>= 0b1000_1000 and <= 0b1000_1111) or (>= 0b1001_1000 and <= 0b1001_1111): return Op_BN();
-            case >= ((byte)OpcodePrefix.DBNZ | (byte)AddressingMode.Direct0) and <= ((byte)OpcodePrefix.DBNZ | (byte)AddressingMode.Indirect3): return Op_DBNZ();
-            case >= ((byte)OpcodePrefix.BE | (byte)AddressingMode.Immediate) and <= ((byte)OpcodePrefix.BE | (byte)AddressingMode.Indirect3): return Op_BE();
-            case >= ((byte)OpcodePrefix.BNE | (byte)AddressingMode.Immediate) and <= ((byte)OpcodePrefix.BNE | (byte)AddressingMode.Indirect3): return Op_BNE();
-
-            case (>= 0b0000_1000 and <= 0b0000_1111) or (>= 0b0001_1000 and <= 0b0001_1111): return Op_CALL();
-            case (>= 0b1100_1000 and <= 0b1100_1111) or (>= 0b1101_1000 and <= 0b1101_1111): return Op_CLR1();
-            case (>= 0b1110_1000 and <= 0b1110_1111) or (>= 0b1111_1000 and <= 0b1111_1111): return Op_SET1();
-            case (>= 0b1010_1000 and <= 0b1010_1111) or (>= 0b1011_1000 and <= 0b1011_1111): return Op_NOT1();
-
-            // Missing: STF (0101_0001)
-            default: throw new NotImplementedException($"[0x{Pc:X}] Unknown prefix: 0x{prefix:X}");
-        }
+        static void Throw(Instruction inst) => throw new InvalidOperationException($"Unknown operation '{inst}'");
     }
 
-    internal (byte operand, byte instructionSize) FetchOperand()
+    private byte FetchOperand(Parameter param, ushort arg)
     {
-        var prefix = CurrentROMBank[Pc];
-        var mode = prefix & 0x0f;
-        if (mode == 0b01) // immediate
-            return (operand: CurrentROMBank[Pc + 1], instructionSize: 2);
-
-        var address = GetOperandAddress(out var operandSize).address;
-        return (Memory.Read(address), operandSize);
-    }
-
-    // TODO: different regions of memory are controlled by multiple banks.
-    internal int GetCurrentBankId() => this.SFRs.Rambk0 ? 1 : 0;
-
-    /// <param name="operandSize">how many bytes of instructions were used to represent this operand. e.g. 2 in direct or immediate mode, 1 in indirect mode. If this is the only argument to the instruction then it is usually the same as the instruction size.</param>
-    internal (ushort address, int bankId) GetOperandAddress(out byte operandSize)
-    {
-        var prefix = CurrentROMBank[Pc];
-        var mode = prefix & 0x0f;
-        switch (mode)
+        return param.Kind switch
         {
-            case 0b01: // immediate
-                Debug.Assert(false);
-                operandSize = 0;
-                return default;
-            case 0b10: // direct
-            case 0b11:
-                {
-                    // 9 bit address: oooo_mmmd dddd_dddd
-                    var address = ((prefix & 0x1) << 8) | CurrentROMBank[Pc + 1];
-                    operandSize = 2;
-                    return ((ushort)address, GetCurrentBankId());
-                }
-            case 0b100:
-            case 0b110:
-            case 0b101:
-            case 0b111: // indirect
-                {
-                    operandSize = 1;
-                    return (Memory.ReadIndirectAddressRegister(prefix & 0b11), GetCurrentBankId());
-                }
-            default:
-                throw new InvalidOperationException();
-        }
+            ParameterKind.I8 => (byte)arg,
+            ParameterKind.D9 => Memory.Read(arg),
+            ParameterKind.Ri => Memory.ReadIndirect(arg),
+            _ => Throw()
+        };
+
+        byte Throw() => throw new InvalidOperationException($"Cannot fetch operand for parameter '{param}'");
     }
 
-    internal int Op_ADD()
+    private ushort GetOperandAddress(Parameter param, ushort arg)
+    {
+        return param.Kind switch
+        {
+            ParameterKind.D9 => arg,
+            ParameterKind.Ri => Memory.ReadIndirectAddressRegister(arg),
+            _ => Throw()
+        };
+
+        byte Throw() => throw new InvalidOperationException($"Cannot fetch address for parameter '{param}'");
+    }
+
+    private void Op_ADD(Instruction inst)
     {
         // ACC <- ACC + operand
-        var (rhs, instructionSize) = FetchOperand();
+        var rhs = FetchOperand(inst.Parameters[0], inst.Arg0);
         var lhs = SFRs.Acc;
         var result = (byte)(lhs + rhs);
         SFRs.Acc = result;
@@ -218,14 +179,13 @@ public class Cpu
             _ => false
         };
 
-        Pc += instructionSize;
-        return 1;
+        Pc += inst.Size;
     }
 
-    internal int Op_ADDC()
+    private void Op_ADDC(Instruction inst)
     {
         // ACC <- ACC + CY + operand
-        var (rhs, instructionSize) = FetchOperand();
+        var rhs = FetchOperand(inst.Parameters[0], inst.Arg0);
         var lhs = SFRs.Acc;
         var carry = SFRs.Cy ? 1 : 0;
         var result = (byte)(lhs + carry + rhs);
@@ -244,14 +204,13 @@ public class Cpu
             _ => false
         };
 
-        Pc += instructionSize;
-        return 1;
+        Pc += inst.Size;
     }
 
-    internal int Op_SUB()
+    private void Op_SUB(Instruction inst)
     {
         // ACC <- ACC - operand
-        var (rhs, instructionSize) = FetchOperand();
+        var rhs = FetchOperand(inst.Parameters[0], inst.Arg0);
         var lhs = SFRs.Acc;
         var result = (byte)(lhs - rhs);
         SFRs.Acc = result;
@@ -269,14 +228,13 @@ public class Cpu
             _ => false
         };
 
-        Pc += instructionSize;
-        return 1;
+        Pc += inst.Size;
     }
 
-    internal int Op_SUBC()
+    private void Op_SUBC(Instruction inst)
     {
         // ACC <- ACC - CY - operand
-        var (rhs, instructionSize) = FetchOperand();
+        var rhs = FetchOperand(inst.Parameters[0], inst.Arg0);
         var lhs = SFRs.Acc;
         var carry = SFRs.Cy ? 1 : 0;
         var result = (byte)(lhs - carry - rhs);
@@ -297,35 +255,32 @@ public class Cpu
             _ => false
         };
 
-        Pc += instructionSize;
-        return 1;
+        Pc += inst.Size;
     }
 
-    internal int Op_INC()
+    private void Op_INC(Instruction inst)
     {
         // (operand) <- (operand) + 1
         // (could be either direct or indirect)
-        var address = GetOperandAddress(out var operandSize).address;
+        var address = GetOperandAddress(inst.Parameters[0], inst.Arg0);
         var operand = ReadRam(address);
         operand++;
         WriteRam(address, operand);
-        Pc += operandSize;
-        return 1;
+        Pc += inst.Size;
     }
 
-    internal int Op_DEC()
+    private void Op_DEC(Instruction inst)
     {
         // (operand) <- (operand) - 1
         // (could be either direct or indirect)
-        var address = GetOperandAddress(out var operandSize).address;
+        var address = GetOperandAddress(inst.Parameters[0], inst.Arg0);
         var operand = ReadRam(address);
         operand--;
         WriteRam(address, operand);
-        Pc += operandSize;
-        return 1;
+        Pc += inst.Size;
     }
 
-    internal int Op_MUL()
+    private void Op_MUL(Instruction inst)
     {
         // TODO: interrupts enabled on the 7th cycle.
         // Have to consider when implementing interrupts.
@@ -339,11 +294,10 @@ public class Cpu
         // Overflow cleared indicates the result can fit into 16 bits, i.e. B is 0.
         SFRs.Ov = SFRs.B != 0;
         SFRs.Cy = false;
-        Pc += 1;
-        return 7;
+        Pc += inst.Size;
     }
 
-    internal int Op_DIV()
+    private void Op_DIV(Instruction inst)
     {
         // (ACC) (C), mod(B) <- (ACC) (C) / (B)
         if (SFRs.B == 0)
@@ -363,467 +317,402 @@ public class Cpu
             SFRs.Ov = false;
         }
         SFRs.Cy = false;
-        Pc += 1;
-        return 7;
+        Pc += inst.Size;
     }
 
-    internal int Op_AND()
+    private void Op_AND(Instruction inst)
     {
         // ACC <- ACC & operand
-        var (rhs, instructionSize) = FetchOperand();
+        var rhs = FetchOperand(inst.Parameters[0], inst.Arg0);
         SFRs.Acc &= rhs;
-        Pc += instructionSize;
-        return 1;
+        Pc += inst.Size;
     }
 
 
-    internal int Op_OR()
+    private void Op_OR(Instruction inst)
     {
         // ACC <- ACC | operand
-        var (rhs, instructionSize) = FetchOperand();
+        var rhs = FetchOperand(inst.Parameters[0], inst.Arg0);
         SFRs.Acc |= rhs;
-        Pc += instructionSize;
-        return 1;
+        Pc += inst.Size;
     }
-    internal int Op_XOR()
+    private void Op_XOR(Instruction inst)
     {
         // ACC <- ACC ^ operand
-        var (rhs, instructionSize) = FetchOperand();
+        var rhs = FetchOperand(inst.Parameters[0], inst.Arg0);
         SFRs.Acc ^= rhs;
-        Pc += instructionSize;
-        return 1;
+        Pc += inst.Size;
     }
 
-    internal int Op_ROL()
+    private void Op_ROL(Instruction inst)
     {
         // <-A7<-A6<-A5<-A4<-A3<-A2<-A1<-A0
         int shifted = SFRs.Acc << 1;
         bool bit0 = (shifted & 0x100) != 0;
         SFRs.Acc = (byte)(shifted | (bit0 ? 1 : 0));
-        Pc += 1;
-        return 1;
+        Pc += inst.Size;
     }
 
-    internal int Op_ROLC()
+    private void Op_ROLC(Instruction inst)
     {
         // <-A7<-A6<-A5<-A4<-A3<-A2<-A1<-A0<-CY<- (A7)
         int shifted = SFRs.Acc << 1 | (SFRs.Cy ? 1 : 0);
         SFRs.Cy = (shifted & 0x100) != 0;
         SFRs.Acc = (byte)shifted;
-        Pc += 1;
-        return 1;
+        Pc += inst.Size;
     }
 
-    internal int Op_ROR()
+    private void Op_ROR(Instruction inst)
     {
         // (A0) ->A7->A6->A5->A4->A3->A2->A1->A0
         bool bit7 = (SFRs.Acc & 1) != 0;
         SFRs.Acc = (byte)((SFRs.Acc >> 1) | (bit7 ? 0x80 : 0));
-        Pc += 1;
-        return 1;
+        Pc += inst.Size;
     }
 
 
-    internal int Op_RORC()
+    private void Op_RORC(Instruction inst)
     {
         // (A0) ->CY->A7->A6->A5->A4->A3->A2->A1->A0
         bool newCarry = (SFRs.Acc & 1) != 0;
         SFRs.Acc = (byte)((SFRs.Cy ? 0x80 : 0) | SFRs.Acc >> 1);
         SFRs.Cy = newCarry;
-        Pc += 1;
-        return 1;
+        Pc += inst.Size;
     }
 
-    internal int Op_LD()
+    private void Op_LD(Instruction inst)
     {
         // (ACC) <- (d9)
-        (SFRs.Acc, var instructionSize) = FetchOperand();
-        Pc += instructionSize;
-        return 1;
+        SFRs.Acc = FetchOperand(inst.Parameters[0], inst.Arg0);
+        Pc += inst.Size;
     }
 
-    internal int Op_ST()
+    private void Op_ST(Instruction inst)
     {
         // (d9) <- (ACC)
-        var address = GetOperandAddress(out var operandSize).address;
+        var address = GetOperandAddress(inst.Parameters[0], inst.Arg0);
         WriteRam(address, SFRs.Acc);
-        Pc += operandSize;
-        return 1;
+        Pc += inst.Size;
     }
 
-    internal int Op_MOV()
+    private void Op_MOV(Instruction inst)
     {
-        // two operands: direct or indirect address, followed by immediate data.
-        // TODO: perhaps some renaming here.
+        // MOV i8,d9
         // (d9) <- #i8
-        var address = GetOperandAddress(out var operandSize).address;
-        Pc += operandSize;
-        WriteRam(address, CurrentROMBank[Pc]);
-        Pc++;
-        return operandSize; // instructionSize at this moment (1 less than true instruction size) also happens to be the cycle count.
+        // ((Ri)) <- #i8
+        var i8 = (byte)inst.Arg0;
+        var address = GetOperandAddress(inst.Parameters[1], inst.Arg1);
+        WriteRam(address, i8);
+        Pc += inst.Size;
     }
 
-    internal int Op_LDC()
+    private void Op_LDC(Instruction inst)
     {
         // (ACC) <- (BNK)((TRR) + (ACC)) [ROM]
         // For a program running in ROM, ROM is accessed.
         // For a program running in flash memory, bank 0 of flash memory is accessed.
-        // Cannot access bank 1 of flash memory. System BIOS function must be used instead.
+        // TODO: Cannot access bank 1 of flash memory. System BIOS function must be used instead.
         var address = ((SFRs.Trh << 8) | SFRs.Trl) + SFRs.Acc;
         SFRs.Acc = CurrentROMBank[address];
-        Pc++;
-        return 2;
+        Pc += inst.Size;
     }
 
-    internal int Op_PUSH()
+    private void Op_PUSH(Instruction inst)
     {
-        // (SP) <- (SP) + 1, ((SP)) <- d9
-        var dAddress = (ushort)(((CurrentROMBank[Pc] & 0x1) << 8) | CurrentROMBank[Pc + 1]);
-        Memory.PushStack(Memory.Read(dAddress));
-
-        Pc += 2;
-        return 2;
+        // (SP) <- (SP) + 1, ((SP)) <- (d9)
+        Memory.PushStack(FetchOperand(inst.Parameters[0], inst.Arg0));
+        Pc += inst.Size;
     }
 
-    internal int Op_POP()
+    private void Op_POP(Instruction inst)
     {
         // (d9) <- ((SP)), (SP) <- (SP) - 1
-        var dAddress = ((CurrentROMBank[Pc] & 0x1) << 8) | CurrentROMBank[Pc + 1];
+        var dAddress = GetOperandAddress(inst.Parameters[0], inst.Arg0);
         WriteRam(dAddress, Memory.PopStack());
 
-        Pc += 2;
-        return 2;
+        Pc += inst.Size;
     }
 
-    internal int Op_XCH()
+    private void Op_XCH(Instruction inst)
     {
         // (ACC) <--> (d9)
         // (ACC) <--> ((Rj)) j = 0, 1, 2, 3
-        var address = GetOperandAddress(out var operandSize).address;
+        var address = GetOperandAddress(inst.Parameters[0], inst.Arg0);
         var temp = ReadRam(address);
         WriteRam(address, SFRs.Acc);
         SFRs.Acc = temp;
 
-        Pc += operandSize;
-        return 1;
+        Pc += inst.Size;
     }
 
     /// <summary>Jump near absolute address</summary>
-    internal int Op_JMP()
+    private void Op_JMP(Instruction inst)
     {
         // (PC) <- (PC) + 2, (PC11 to 00) <- a12
-        // 001a_1aaa aaaa_aaaa
-        byte prefix = CurrentROMBank[Pc];
-        bool bit11 = (prefix & 0b1_0000) != 0;
-        int a12 = (bit11 ? 0x800 : 0) | (prefix & 0b111) << 8 | CurrentROMBank[Pc + 1];
+        ushort a12 = inst.Arg0;
         Pc += 2;
         Pc &= 0b1111_0000__0000_0000;
-        Pc |= (ushort)a12;
-        return 2;
+        Pc |= a12;
     }
 
     /// <summary>Jump far absolute address</summary>
-    internal int Op_JMPF()
+    private void Op_JMPF(Instruction inst)
     {
         // (PC) <- a16
-        Pc = (ushort)(CurrentROMBank[Pc + 1] << 8 | CurrentROMBank[Pc + 2]);
-        // TODO: Set CurrentROMBank based on Ext
-        return 2;
+        Pc = inst.Arg0;
     }
 
     /// <summary>Branch near relative address</summary>
-    internal int Op_BR()
+    private void Op_BR(Instruction inst)
     {
         // (PC) <- (PC) + 2, (PC) <- (PC) + r8
-        var r8 = (sbyte)CurrentROMBank[Pc + 1];
-        Pc = (ushort)(Pc + 2 + r8);
-        return 2;
+        var r8 = (sbyte)inst.Arg0;
+        Pc = (ushort)(Pc + inst.Size + r8);
     }
 
     /// <summary>Branch far relative address</summary>
-    internal int Op_BRF()
+    private void Op_BRF(Instruction inst)
     {
         // (PC) <- (PC) + 3, (PC) <- (PC) - 1 + r16
-        // NB: for some reason, this instruction is little endian (starts with least significant byte).
-        var r16 = (ushort)(CurrentROMBank[Pc + 1] + (CurrentROMBank[Pc + 2] << 8));
-        Pc = (ushort)(Pc + 3 - 1 + r16);
-
-        return 4;
+        var r16 = inst.Arg0;
+        Pc = (ushort)(Pc + inst.Size - 1 + r16);
     }
 
     /// <summary>Branch near relative address if accumulator is zero</summary>
-    internal int Op_BZ()
+    private void Op_BZ(Instruction inst)
     {
         // (PC) <- (PC) + 2, if (ACC) = 0 then (PC) <- PC + r8
-        var r8 = (sbyte)CurrentROMBank[Pc + 1];
+        var r8 = (sbyte)inst.Arg0;
         var z = SFRs.Acc == 0;
 
-        Pc += 2;
+        Pc += inst.Size;
         if (z)
             Pc = (ushort)(Pc + r8);
-
-        return 2;
     }
 
     /// <summary>Branch near relative address if accumulator is not zero</summary>
-    internal int Op_BNZ()
+    private void Op_BNZ(Instruction inst)
     {
         // (PC) <- (PC) + 2, if (ACC) != 0 then (PC) <- PC + r8
-        var r8 = (sbyte)CurrentROMBank[Pc + 1];
+        var r8 = (sbyte)inst.Arg0;
         var nz = SFRs.Acc != 0;
 
-        Pc += 2;
+        Pc += inst.Size;
         if (nz)
             Pc = (ushort)(Pc + r8);
-
-        return 2;
     }
 
     /// <summary>Branch near relative address if direct bit is one ("positive")</summary>
-    internal int Op_BP()
+    private void Op_BP(Instruction inst)
     {
-        // 3 operands: 'd' direct address, 'b' bit within (d), 'r' relative address to branch to
-        // 011d_1bbb dddd_dddd rrrr_rrrr
         // (PC) <- (PC) + 3, if (d9, b3) = 1 then (PC) <- (PC) + r8
-        var prefix = CurrentROMBank[Pc];
-        var d9 = (BitHelpers.ReadBit(prefix, 4) ? 0x100 : 0) | CurrentROMBank[Pc + 1];
-        var b3 = (byte)(prefix & 0b0111);
-        var r8 = (sbyte)CurrentROMBank[Pc + 2];
+        var d9 = inst.Arg0;
+        var b3 = (byte)inst.Arg1;
+        var r8 = (sbyte)inst.Arg2;
 
         Pc += 3;
         if (BitHelpers.ReadBit(ReadRam(d9), b3))
             Pc = (ushort)(Pc + r8);
-
-        return 2;
     }
 
     /// <summary>Branch near relative address if direct bit is one ("positive"), and clear</summary>
-    internal int Op_BPC()
+    private void Op_BPC(Instruction inst)
     {
         // When applied to port P1 and P3, the latch of each port is selected. The external signal is not selected.
         // When applied to port P7, there is no change in status.
 
-        // 3 operands: 'd' direct address, 'b' bit within (d), 'r' relative address to branch to
-        // 010d_1bbb dddd_dddd rrrr_rrrr
         // (PC) <- (PC) + 3, if (d9, b3) = 1 then (PC) <- (PC) + r8, (d9, b3) = 0
-        var prefix = CurrentROMBank[Pc];
-        var d9 = (BitHelpers.ReadBit(prefix, 4) ? 0x100 : 0) | CurrentROMBank[Pc + 1];
-        var b3 = (byte)(prefix & 0b0111);
-        var r8 = (sbyte)CurrentROMBank[Pc + 2];
+        var d9 = inst.Arg0;
+        var b3 = (byte)inst.Arg1;
+        var r8 = (sbyte)inst.Arg2;
 
         var d_value = ReadRam(d9);
         var new_d_value = d_value;
         BitHelpers.WriteBit(ref new_d_value, bit: b3, value: false);
 
-        Pc += 3;
+        Pc += inst.Size;
         if (d_value != new_d_value)
             Pc = (ushort)(Pc + r8);
 
         WriteRam(d9, new_d_value);
-
-        return 2;
     }
 
     /// <summary>Branch near relative address if direct bit is zero ("negative")</summary>
-    internal int Op_BN()
+    private void Op_BN(Instruction inst)
     {
-        // 3 operands: 'd' direct address, 'b' bit within (d), 'r' relative address to branch to
-        // 100d_1bbb dddd_dddd rrrr_rrrr
         // (PC) <- (PC) + 3, if (d9, b3) = 0 then (PC) <- (PC) + r8
-        var prefix = CurrentROMBank[Pc];
-        var d9 = (BitHelpers.ReadBit(prefix, 4) ? 0x100 : 0) | CurrentROMBank[Pc + 1];
-        var b3 = (byte)(prefix & 0b0111);
-        var r8 = (sbyte)CurrentROMBank[Pc + 2];
+        var d9 = inst.Arg0;
+        var b3 = (byte)inst.Arg1;
+        var r8 = (sbyte)inst.Arg2;
 
-        Pc += 3;
+        Pc += inst.Size;
         if (!BitHelpers.ReadBit(ReadRam(d9), b3))
             Pc = (ushort)(Pc + r8);
-
-        return 2;
     }
 
     /// <summary>Decrement direct byte and branch near relative address if direct byte is nonzero</summary>
-    internal int Op_DBNZ()
+    private void Op_DBNZ(Instruction inst)
     {
         // (PC) <- (PC) + 3, (d9) = (d9)-1, if (d9) != 0 then (PC) <- (PC) + r8
-        var d9 = GetOperandAddress(out var operandSize).address;
-        var d9Value = ReadRam(d9);
-        var r8 = (sbyte)CurrentROMBank[Pc + operandSize];
+        // (PC) <- (PC) + 3, ((Ri)) = ((Ri))-1, if ((Ri)) != 0 then (PC) <- (PC) + r8
+        var address = GetOperandAddress(inst.Parameters[0], inst.Arg0);
+        var value = ReadRam(address);
+        var r8 = (sbyte)inst.Arg1;
 
-        Pc += (byte)(operandSize + 1); // 2 or 3 depending on addressing mode
-        --d9Value;
-        WriteRam(d9, d9Value);
-        if (d9Value != 0)
+        --value;
+        WriteRam(address, value);
+
+        Pc += inst.Size;
+        if (value != 0)
             Pc = (ushort)(Pc + r8);
-
-        return 2;
     }
 
     /// <summary>
     /// - Compare immediate data or direct byte to accumulator and branch near relative address if equal
     /// - Compare immediate data to indirect byte and branch near relative address if equal
     /// </summary>
-    internal int Op_BE()
+    private void Op_BE(Instruction inst)
     {
-        // (PC) <- (PC) + 3, if (ACC) = #i8 then (PC) <- (PC) + r8
-        var indirectMode = BitHelpers.ReadBit(CurrentROMBank[Pc], bit: 2);
-        // lhs is indirect byte in indirect mode, or acc in immediate or direct mode
-        var lhs = indirectMode ? FetchOperand().operand : SFRs.Acc;
-        // rhs is immediate data in indirect mode or immediate mode, and direct byte in direct mode
-        var rhs = indirectMode ? CurrentROMBank[Pc + 1] : FetchOperand().operand;
-        var r8 = (sbyte)CurrentROMBank[Pc + 2];
+        // (PC) <- (PC) + 3, if (ACC) == #i8 then (PC) <- (PC) + r8
+        // (PC) <- (PC) + 3, if (ACC) == d9 then (PC) <- (PC) + r8
+        // (PC) <- (PC) + 3, if ((Ri)) == #i8 then (PC) <- (PC) + r8
+        var param0 = inst.Parameters[0];
+        var indirectMode = param0.Kind == ParameterKind.Ri;
+        var (lhs, rhs, r8) = indirectMode
+            ? (lhs: Memory.ReadIndirect(inst.Arg0), rhs: inst.Arg1, r8: (sbyte)inst.Arg2)
+            : (lhs: SFRs.Acc, rhs: FetchOperand(param0, inst.Arg0), r8: (sbyte)inst.Arg1);
 
-        Pc += 3;
+        Pc += inst.Operation.Size;
         SFRs.Cy = lhs < rhs;
         if (lhs == rhs)
             Pc = (ushort)(Pc + r8);
-
-        return 2;
     }
 
     /// <summary>
     /// - Compare immediate data or direct byte to accumulator and branch near relative address if not equal
     /// - Compare immediate data to indirect byte and branch near relative address if not equal
     /// </summary>
-    internal int Op_BNE()
+    private void Op_BNE(Instruction inst)
     {
         // (PC) <- (PC) + 3, if (ACC) != #i8 then (PC) <- (PC) + r8
-        var indirectMode = BitHelpers.ReadBit(CurrentROMBank[Pc], bit: 2);
-        // lhs is indirect byte in indirect mode, or acc in immediate or direct mode
-        var lhs = indirectMode ? FetchOperand().operand : SFRs.Acc;
-        // rhs is immediate data in indirect mode or immediate mode, and direct byte in direct mode
-        var rhs = indirectMode ? CurrentROMBank[Pc + 1] : FetchOperand().operand;
-        var r8 = (sbyte)CurrentROMBank[Pc + 2];
+        // (PC) <- (PC) + 3, if (ACC) != d9 then (PC) <- (PC) + r8
+        // (PC) <- (PC) + 3, if ((Ri)) != #i8 then (PC) <- (PC) + r8
+        var param0 = inst.Parameters[0];
+        var indirectMode = param0.Kind == ParameterKind.Ri;
+        var (lhs, rhs, r8) = indirectMode
+            ? (lhs: Memory.ReadIndirect(inst.Arg0), rhs: inst.Arg1, r8: (sbyte)inst.Arg2)
+            : (lhs: SFRs.Acc, rhs: FetchOperand(param0, inst.Arg0), r8: (sbyte)inst.Arg1);
 
-        Pc += 3;
+        Pc += inst.Operation.Size;
         SFRs.Cy = lhs < rhs;
         if (lhs != rhs)
             Pc = (ushort)(Pc + r8);
-
-        return 2;
     }
 
     /// <summary>Near absolute subroutine call</summary>
-    internal int Op_CALL()
+    private void Op_CALL(Instruction inst)
     {
         // similar to OP_JMP
         // (PC) <- (PC) + 2, (SP) <- (SP) + 1, ((SP)) <- (PC7 to 0), (SP) <- (SP) + 1, ((SP)) <- (PC15 to 8), (PC11 to 00) <- a12
         // 000a_1aaa aaaa_aaaa
-        byte prefix = CurrentROMBank[Pc];
-        bool a12_bit11 = BitHelpers.ReadBit(prefix, bit: 4);
-        int a12 = (a12_bit11 ? 0x800 : 0) | (prefix & 0b111) << 8 | CurrentROMBank[Pc + 1];
 
-        Pc += 2;
+        ushort a12 = inst.Arg0;
+
+        Pc += inst.Size;
         Memory.PushStack((byte)Pc);
         Memory.PushStack((byte)(Pc >> 8));
 
         Pc &= 0b1111_0000__0000_0000;
-        Pc |= (ushort)a12;
-        return 2;
+        Pc |= a12;
     }
 
     /// <summary>Far absolute subroutine call</summary>
-    internal int Op_CALLF()
+    private void Op_CALLF(Instruction inst)
     {
         // Similar to Op_JMPF
         // (PC) <- (PC) + 3, (SP) <- (SP) + 1, ((SP)) <- (PC7 to 0),
         // (SP) <- (SP) + 1, ((SP)) <- (PC15 to 8), (PC) <- a16
-        var a16 = (ushort)(CurrentROMBank[Pc + 1] << 8 | CurrentROMBank[Pc + 2]);
+        var a16 = inst.Arg0;
         Pc += 3;
         Memory.PushStack((byte)Pc);
         Memory.PushStack((byte)(Pc >> 8));
         Pc = a16;
-        return 2;
     }
 
     /// <summary>Far relative subroutine call</summary>
-    internal int Op_CALLR()
+    private void Op_CALLR(Instruction inst)
     {
         // (PC) <- (PC) + 3, (SP) <- (SP) + 1, ((SP)) <- (PC7 to 0),
         // (SP) <- (SP) + 1, ((SP)) <- (PC15 to 8), (PC) <- (PC) - 1 + r16
-        // NB: for some reason, this instruction is little endian (starts with least significant byte).
-
-        var r16 = (ushort)(CurrentROMBank[Pc + 1] + (CurrentROMBank[Pc + 2] << 8));
-        Pc += 3;
+        var r16 = inst.Arg0;
+        Pc += inst.Size;
         Memory.PushStack((byte)Pc);
         Memory.PushStack((byte)(Pc >> 8));
         Pc = (ushort)(Pc - 1 + r16);
-
-        return 4;
     }
 
     /// <summary>Return from subroutine</summary>
-    internal int Op_RET()
+    private void Op_RET(Instruction inst)
     {
         // (PC15 to 8) <- ((SP)), (SP) <- (SP) - 1, (PC7 to 0) <- ((SP)), (SP) <- (SP) -1
         var Pc15_8 = Memory.PopStack();
         var Pc7_0 = Memory.PopStack();
         Pc = (ushort)(Pc15_8 << 8 | Pc7_0);
-        return 2;
     }
 
-    // RETI
+    // TODO: RETI
 
     /// <summary>Clear direct bit</summary>
-    internal int Op_CLR1()
+    private void Op_CLR1(Instruction inst)
     {
         // (d9, b3) <- 0
-        // Similar to Op_BP()
-        var prefix = CurrentROMBank[Pc];
-        var d9 = (BitHelpers.ReadBit(prefix, 4) ? 0x100 : 0) | CurrentROMBank[Pc + 1];
-        var b3 = (byte)(prefix & 0b0111);
+        var d9 = inst.Arg0;
+        var b3 = (byte)inst.Arg1;
         var memory = ReadRam(d9);
         BitHelpers.WriteBit(ref memory, bit: b3, value: false);
         WriteRam(d9, memory);
-        Pc += 2;
-        return 1;
+        Pc += inst.Size;
     }
 
     /// <summary>Set direct bit</summary>
-    internal int Op_SET1()
+    private void Op_SET1(Instruction inst)
     {
         // (d9, b3) <- 1
-        var prefix = CurrentROMBank[Pc];
-        var d9 = (BitHelpers.ReadBit(prefix, 4) ? 0x100 : 0) | CurrentROMBank[Pc + 1];
-        var b3 = (byte)(prefix & 0b0111);
+        var d9 = inst.Arg0;
+        var b3 = (byte)inst.Arg1;
         var memory = ReadRam(d9);
         BitHelpers.WriteBit(ref memory, bit: b3, value: true);
         WriteRam(d9, memory);
-        Pc += 2;
-        return 1;
+        Pc += inst.Size;
     }
 
     /// <summary>Not direct bit</summary>
-    internal int Op_NOT1()
+    private void Op_NOT1(Instruction inst)
     {
         // (d9, b3) <- !(d9, b3)
-        var prefix = CurrentROMBank[Pc];
-        var d9 = (BitHelpers.ReadBit(prefix, 4) ? 0x100 : 0) | CurrentROMBank[Pc + 1];
-        var b3 = (byte)(prefix & 0b0111);
+        var d9 = inst.Arg0;
+        var b3 = (byte)inst.Arg1;
         var memory = ReadRam(d9);
         var bit = BitHelpers.ReadBit(memory, b3);
         BitHelpers.WriteBit(ref memory, bit: b3, value: !bit);
         WriteRam(d9, memory);
-        Pc += 2;
-        return 1;
+        Pc += inst.Size;
     }
 
     /// <summary>Load a value from flash memory into accumulator. Undocumented.</summary>
-    internal int Op_LDF()
+    private void Op_LDF(Instruction inst)
     {
         var a16 = SFRs.Trl | (SFRs.Trh << 8);
         var bank = SFRs.FPR0 ? FlashBank1 : FlashBank0;
         SFRs.Acc = bank[a16];
-        Pc += 1;
-        return 2;
+        Pc += inst.Size;
     }
 
     // OP_STF
 
     /// <summary>No operation</summary>
-    internal int Op_NOP()
+    private void Op_NOP(Instruction inst)
     {
-        Pc++;
-        return 1;
+        Pc += inst.Size;
     }
 }

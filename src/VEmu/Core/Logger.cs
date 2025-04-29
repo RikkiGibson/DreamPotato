@@ -15,6 +15,7 @@ class Logger(LogLevel _minimumLogLevel, Cpu _cpu)
     private readonly string?[] _messages = new string[1000];
     private int _messageCount = 0;
 
+    // TODO: InterpolatedStringHandler
     public void LogTrace(string s)
         => LogCore(LogLevel.Trace, s);
 

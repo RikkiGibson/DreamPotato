@@ -139,10 +139,12 @@ record struct Instruction(ushort Offset, Operation Operation, ushort Arg0 = defa
 {
     public bool HasValue => Operation is not null;
 
+    public OperationKind Kind => Operation.Kind;
     public ImmutableArray<Parameter> Parameters => Operation.Parameters;
     public byte Size => Operation.Size;
+    public byte Cycles => Operation.Cycles;
 
-    public ushort GetArgument(int i)
+    private ushort GetArgument(int i)
     {
         Debug.Assert(i < Parameters.Length);
         return i switch
@@ -166,7 +168,7 @@ record struct Instruction(ushort Offset, Operation Operation, ushort Arg0 = defa
         // Same instruction could be run with different cpu states and mean different things.
         // Both forms of display are possibly useful.
         // We can include not only symbols, but, we can also include the values which are being modified, as well as whether branches are taken.
-        // In other words logging the execution of hte program in quite useful detail.
+        // In other words logging the execution of the program in quite useful detail.
         var builder = new StringBuilder();
         builder.Append($"[{Offset:X4}] {Operation.Kind} ");
 
@@ -199,9 +201,6 @@ record struct Instruction(ushort Offset, Operation Operation, ushort Arg0 = defa
         return builder.ToString();
     }
 }
-
-// TODO: it feels like an instruction should have a delegate like 'Execute(Cpu)'.
-// To minimize garbage, maybe an operation should have 'Execute(Cpu, Arguments)'
 
 // TODO: Consider allowing parameter names.
 // TODO: display an instruction using parameterKind and argument to come up with a useful mnemonic.
