@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace VEmu.Core;
 
 enum LogLevel
@@ -12,8 +14,9 @@ class Logger(LogLevel _minimumLogLevel, Cpu _cpu)
     private readonly LogLevel _minimumLogLevel = _minimumLogLevel;
     private readonly Cpu _cpu = _cpu;
 
+    // Rolling buffer of log messages.
     private readonly string?[] _messages = new string[1000];
-    private int _messageCount = 0;
+    private int _nextMessageIndex = 0;
 
     // TODO: InterpolatedStringHandler
     public void LogTrace(string s)
@@ -30,20 +33,28 @@ class Logger(LogLevel _minimumLogLevel, Cpu _cpu)
         if (level < _minimumLogLevel)
             return;
 
-        var index = _messageCount % _messages.Length;
+        var index = _nextMessageIndex % _messages.Length;
         _messages[index] = $"[{_cpu.Pc:X4}]: [{level}] {s}";
-        _messageCount = index + 1;
+        _nextMessageIndex = index + 1;
     }
 
-    public string?[] GetLogs(int recentCount)
+    public List<string> GetLogs(int recentCount)
     {
-        var result = new string?[recentCount];
-        var messageIndex = (_messageCount - recentCount) % _messages.Length;
-        for (int i = 0; i < recentCount; i++, messageIndex++)
+        List<string> result = [];
+        var startIndex = _nextMessageIndex - recentCount;
+        for (int i = 0; i < recentCount; i++)
         {
-            result[i] = _messages[messageIndex];
+            var currentIndex = modPositive(startIndex + i, _messages.Length);
+            if (_messages[currentIndex] is string message)
+                result.Add(message);
         }
 
         return result;
+
+        static int modPositive(int x, int m)
+        {
+            Debug.Assert(m > 0);
+            return (x % m + m) % m;
+        }
     }
 }
