@@ -5,7 +5,7 @@ namespace VEmu.Core;
 using Ids = SpecialFunctionRegisterIds;
 
 /// <summary>See VMD-40, table 2.6</summary>
-public class SpecialFunctionRegisters
+class SpecialFunctionRegisters
 {
     public const int Size = 0x80;
 
@@ -13,11 +13,13 @@ public class SpecialFunctionRegisters
     // Where are the extra 15?
     private readonly byte[] _rawMemory = new byte[Size];
     private readonly byte[] _workRam;
+    private readonly Logger _logger;
 
-    public SpecialFunctionRegisters(byte[] workRam)
+    public SpecialFunctionRegisters(byte[] workRam, Logger logger)
     {
         Debug.Assert(workRam.Length == 0x200);
         _workRam = workRam;
+        _logger = logger;
     }
 
     public byte Read(byte address)
@@ -430,7 +432,7 @@ public class SpecialFunctionRegisters
         set => Write(Ids.P1Fcr, value);
     }
 
-    /// <summary>Port 3 latch. VMD-54</summary>
+    /// <summary>Port 3 latch. Buttons SLEEP, MODE, B, A, directions. VMD-54</summary>
     public byte P3
     {
         get => Read(Ids.P3);

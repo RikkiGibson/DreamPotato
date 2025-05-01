@@ -9,7 +9,7 @@ public partial class Form1 : Form
 
     const int width = 48;
     const int height = 32;
-    const int scale = 4;
+    const int scale = 6;
 
     public Form1()
     {
@@ -64,8 +64,9 @@ public partial class Form1 : Form
 
     private void ScreenBox_Paint(object sender, PaintEventArgs e)
     {
-        // TODO: this is cutting off leftmost column and topmost row of pixels
-        e.Graphics.InterpolationMode = InterpolationMode.NearestNeighbor;
+        var graphics = e.Graphics;
+        graphics.InterpolationMode = InterpolationMode.NearestNeighbor;
+        graphics.PixelOffsetMode = PixelOffsetMode.Half;
         e.Graphics.DrawImage(bitmap, destRect: new Rectangle(0, 0, width*scale, height*scale), srcRect: new Rectangle(0, 0, width, height), GraphicsUnit.Pixel);
     }
 }

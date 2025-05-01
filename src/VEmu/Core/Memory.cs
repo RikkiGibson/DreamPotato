@@ -63,7 +63,7 @@ class Memory
     private readonly Logger _logger;
     public Memory(Logger logger)
     {
-        SFRs = new SpecialFunctionRegisters(workRam: _workRam);
+        SFRs = new SpecialFunctionRegisters(workRam: _workRam, logger);
         _logger = logger;
     }
 

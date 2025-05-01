@@ -59,9 +59,17 @@ public class Cpu
 
     internal int Run(int cyclesToRun)
     {
+        // TODO: each step, we need to check for halt mode, tick timers, and check for interrupts
+        // I think setting some SFR values needs to be able to trigger interrupts as well
+
         int cyclesSoFar = 0;
         while (cyclesSoFar < cyclesToRun)
         {
+            if (BitHelpers.ReadBit(SFRs.Pcon, bit: 0))
+            {
+                Logger.LogDebug("---HALT---");
+            }
+
             cyclesSoFar += Step();
         }
         return cyclesSoFar;
@@ -70,13 +78,6 @@ public class Cpu
     /// <returns>Number of cycles consumed by the instruction.</returns>
     internal int Step()
     {
-        // TODO: figure out why this is not getting hit
-        // Also, it probably needs to be in 'Run' in order to terminate the loop
-        if (BitHelpers.ReadBit(SFRs.Pcon, bit: 0))
-        {
-            Logger.LogDebug("---HALT---");
-        }
-
         var inst = InstructionDecoder.Decode(CurrentROMBank, Pc);
         InstructionMap[Pc] = inst;
         Logger.LogTrace($"{inst} Acc={SFRs.Acc:X} B={SFRs.B:X} C={SFRs.C:X} R2={ReadRam(2)}");

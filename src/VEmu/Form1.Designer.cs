@@ -35,9 +35,9 @@ partial class Form1
         // ScreenBox
         // 
         ScreenBox.Anchor = AnchorStyles.None;
-        ScreenBox.Location = new Point(83, 19);
+        ScreenBox.Location = new Point(36, 12);
         ScreenBox.Name = "ScreenBox";
-        ScreenBox.Size = new Size(192, 128);
+        ScreenBox.Size = new Size(288, 192);
         ScreenBox.TabIndex = 0;
         ScreenBox.TabStop = false;
         ScreenBox.Paint += ScreenBox_Paint;

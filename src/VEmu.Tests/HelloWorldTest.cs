@@ -14,11 +14,14 @@ public class HelloWorldTest(ITestOutputHelper outputHelper)
 
         s_instructions.CopyTo(cpu.FlashBank0.AsSpan());
         cpu.CurrentROMBank = cpu.FlashBank0;
+
+        // It seems like this code is relying on the bios initializing stack and pulling-up P3
+        cpu.SFRs.P3 = 0xff;
         cpu.SFRs.Sp = 0x90;
 
         try
         {
-            Assert.Equal(2901, cpu.Run(2900));
+            Assert.Equal(4500, cpu.Run(4500));
             var display = new Display(cpu);
             var bytes = new byte[Display.DisplaySize];
             display.Draw(bytes);

@@ -405,6 +405,24 @@ public class ConditionalBranchTests
     }
 
     [Fact]
+    public void DBNZ_StartingAtZero()
+    {
+        var cpu = new Cpu();
+        ReadOnlySpan<byte> instructions = [
+            OpcodeMask.DBNZ | AddressModeMask.Direct0, 0x14, 0x2,
+            OpcodeMask.INC | AddressModeMask.Direct1, 0x00, // acc
+            OpcodeMask.INC | AddressModeMask.Direct1, 0x02, // b
+        ];
+        instructions.CopyTo(cpu.CurrentROMBank);
+
+        cpu.Step();
+        cpu.Step();
+
+        Assert.Equal(0, cpu.SFRs.Acc);
+        Assert.Equal(1, cpu.SFRs.B);
+    }
+
+    [Fact]
     public void BE_Immediate_Example1()
     {
         // VMC-208
