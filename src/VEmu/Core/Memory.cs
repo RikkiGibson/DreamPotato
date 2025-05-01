@@ -60,9 +60,11 @@ class Memory
 
     private readonly byte[] _workRam = new byte[0x200];
 
-    public Memory()
+    private readonly Logger _logger;
+    public Memory(Logger logger)
     {
         SFRs = new SpecialFunctionRegisters(workRam: _workRam);
+        _logger = logger;
     }
 
     public byte Read(ushort address)
@@ -77,7 +79,7 @@ class Memory
             case >= 0x180 and < 0x1E0:
                 return ReadXram((byte)(address - 0x180));
             default:
-                // TODO: log warning: read out of range
+                _logger.LogDebug($"Read out of range: 0x{address:X}");
                 return 0xff;
         }
     }
@@ -97,7 +99,7 @@ class Memory
                 WriteXram((byte)(address - 0x180), value);
                 return;
             default:
-                // TODO: log warning: write out of range
+                _logger.LogDebug($"Write out of range: 0x{address:X}");
                 return;
         }
     }
@@ -108,8 +110,7 @@ class Memory
         // Stack also points to last element, rather than pointing past last element. So it is inc'd before writing.
         if (SFRs.Sp + 1 is not (>= 0x90 and <= 0xff))
         {
-            // TODO: log fatal: invalid stack pointer
-            //throw new InvalidOperationException($"Stack pointer (0x{SFRs.Sp:X2}) outside of expected range (0x90-0xff).");
+            _logger.LogError($"Stack pointer (0x{SFRs.Sp:X2}) outside of expected range (0x90-0xff)!");
         }
 
         SFRs.Sp++;
@@ -122,8 +123,7 @@ class Memory
         // Stack also points to last element, rather than pointing past last element. So it is dec'd after reading.
         if (SFRs.Sp - 1 is not (>= 0x90 and <= 0xff))
         {
-            // TODO: log fatal: invalid stack pointer
-            //throw new InvalidOperationException($"Stack pointer (0x{SFRs.Sp:X4}) outside of expected range (0x90-0xff).");
+            _logger.LogError($"Stack pointer (0x{SFRs.Sp:X2}) outside of expected range (0x90-0xff)!");
         }
 
         var value = _mainRam0[SFRs.Sp];
@@ -203,19 +203,16 @@ class Memory
                 return readMainXram(_xram1, address);
             case 2:
                 return readIconXram(_xram2, address);
-            case 3:
-                // TODO log warning: reading nonexistent bank
-                return 0xff;
         }
 
-        // TODO: log warning: Xbnk out of range
+        _logger.LogDebug($"Reading from nonexistent XRAM bank {SFRs.Xbnk}! Address: 0x{address:X}");
         return 0xff;
 
         byte readMainXram(byte[] bank, ushort address)
         {
             if ((address & 0xf) is >= 0xc and <= 0xf)
             {
-                // TODO: log warning: reading skipped bytes
+                _logger.LogDebug($"Reading skipped XRAM {address:X}!");
                 return 0xff;
             }
 
@@ -226,14 +223,14 @@ class Memory
         {
             if (address > 0xf)
             {
-                // TODO: log warning: read out of range
-                // There is weird undocumented behavior around what this range does.
+                _logger.LogDebug($"Read out of range of icon XRAM! Address: 0x{address:X}");
+                // TODO: There is weird undocumented behavior around what this range does.
                 return 0xff;
             }
 
             if ((address & 0xf) is >= 0xc and <= 0xf)
             {
-                // TODO: log warning: reading skipped bytes
+                _logger.LogDebug($"Reading skipped XRAM 0x{address:X}!");
                 return 0xff;
             }
 
@@ -262,19 +259,16 @@ class Memory
             case 2:
                 writeIconXram(_xram2, address, value);
                 return;
-            case 3:
-                // TODO log warning: writing nonexistent bank
-                return;
         }
 
-        // TODO: log warning: Xbnk out of range
+        _logger.LogDebug($"Writing to nonexistent XRAM bank {SFRs.Xbnk}! Address: 0x{address:X}");
         return;
 
         void writeMainXram(byte[] bank, ushort address, byte value)
         {
             if ((address & 0xf) is >= 0xc and <= 0xf)
             {
-                // TODO: log warning: write skipped bytes
+                _logger.LogDebug($"Writing skipped XRAM {SFRs.Xbnk} {address:X}!");
                 return;
             }
 
@@ -285,14 +279,14 @@ class Memory
         {
             if (address > 0xf)
             {
-                // TODO: log warning: write out of range
+                _logger.LogDebug($"Write out of range of icon XRAM {SFRs.Xbnk}! Address: 0x{address:X}");
                 // There is weird undocumented behavior around what this range does.
                 return;
             }
 
             if ((address & 0xf) is >= 0xc and <= 0xf)
             {
-                // TODO: log warning: reading skipped bytes
+                _logger.LogDebug($"Writing skipped XRAM {SFRs.Xbnk}: 0x{address:X}!");
                 return;
             }
 

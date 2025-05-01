@@ -32,7 +32,7 @@ public class Cpu
     /// </remarks>
     internal byte[] CurrentROMBank;
 
-    internal readonly Memory Memory = new Memory();
+    internal readonly Memory Memory;
 
     internal ushort Pc;
 
@@ -40,6 +40,7 @@ public class Cpu
     {
         CurrentROMBank = ROM;
         Logger = new Logger(LogLevel.Trace, this);
+        Memory = new Memory(Logger);
     }
 
     public byte ReadRam(int address)
