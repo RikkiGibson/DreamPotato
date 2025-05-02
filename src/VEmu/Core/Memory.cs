@@ -61,9 +61,9 @@ class Memory
     private readonly byte[] _workRam = new byte[0x200];
 
     private readonly Logger _logger;
-    public Memory(Logger logger)
+    public Memory(Cpu cpu, Logger logger)
     {
-        SFRs = new SpecialFunctionRegisters(workRam: _workRam, logger);
+        SFRs = new SpecialFunctionRegisters(cpu, workRam: _workRam, logger);
         _logger = logger;
     }
 

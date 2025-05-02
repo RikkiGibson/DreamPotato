@@ -36,11 +36,13 @@ public class Cpu
 
     internal ushort Pc;
 
+    internal ushort Interrupts;
+
     public Cpu()
     {
         CurrentROMBank = ROM;
         Logger = new Logger(LogLevel.Trace, this);
-        Memory = new Memory(Logger);
+        Memory = new Memory(this, Logger);
     }
 
     public byte ReadRam(int address)
@@ -75,9 +77,32 @@ public class Cpu
         return cyclesSoFar;
     }
 
+    internal void RequestInt0()
+    {
+        Interrupts |= 0b1;
+    }
+
+    internal void ServiceInterruptIfNeeded()
+    {
+        // TODO: check interrupt enable etc
+        if (Interrupts != 0)
+        {
+            // service next enabled interrupt in priority order.
+            if ((Interrupts & 0b1) != 0)
+            {
+                Memory.PushStack((byte)Pc);
+                Memory.PushStack((byte)(Pc >> 8));
+                Pc = 0x03;
+                Interrupts &= 0b1111_1111_1110;
+            }
+        }
+    }
+
     /// <returns>Number of cycles consumed by the instruction.</returns>
     internal int Step()
     {
+        ServiceInterruptIfNeeded();
+
         var inst = InstructionDecoder.Decode(CurrentROMBank, Pc);
         InstructionMap[Pc] = inst;
         Logger.LogTrace($"{inst} Acc={SFRs.Acc:X} B={SFRs.B:X} C={SFRs.C:X} R2={ReadRam(2)}");
@@ -122,6 +147,7 @@ public class Cpu
             case OperationKind.CALLF: Op_CALLF(inst); break;
             case OperationKind.CALLR: Op_CALLR(inst); break;
             case OperationKind.RET: Op_RET(inst); break;
+            case OperationKind.RETI: Op_RETI(inst); break;
             case OperationKind.CLR1: Op_CLR1(inst); break;
             case OperationKind.SET1: Op_SET1(inst); break;
             case OperationKind.NOT1: Op_NOT1(inst); break;
@@ -662,7 +688,14 @@ public class Cpu
         Pc = (ushort)(Pc15_8 << 8 | Pc7_0);
     }
 
-    // TODO: RETI
+    /// <summary>Return from interrupt</summary>
+    private void Op_RETI(Instruction inst)
+    {
+        // (PC15 to 8) <- ((SP)), (SP) <- (SP) - 1, (PC7 to 0) <- ((SP)), (SP) <- (SP) -1
+        var Pc15_8 = Memory.PopStack();
+        var Pc7_0 = Memory.PopStack();
+        Pc = (ushort)(Pc15_8 << 8 | Pc7_0);
+    }
 
     /// <summary>Clear direct bit</summary>
     private void Op_CLR1(Instruction inst)

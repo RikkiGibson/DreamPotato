@@ -12,12 +12,14 @@ class SpecialFunctionRegisters
     // TODO: Elysian docs state there are 143 SFRs, but, the memory space is only 0x80 (128 bytes).
     // Where are the extra 15?
     private readonly byte[] _rawMemory = new byte[Size];
+    private readonly Cpu _cpu;
     private readonly byte[] _workRam;
     private readonly Logger _logger;
 
-    public SpecialFunctionRegisters(byte[] workRam, Logger logger)
+    public SpecialFunctionRegisters(Cpu cpu, byte[] workRam, Logger logger)
     {
         Debug.Assert(workRam.Length == 0x200);
+        _cpu = cpu;
         _workRam = workRam;
         _logger = logger;
     }
@@ -59,6 +61,11 @@ class SpecialFunctionRegisters
             case Ids.Vtrbf:
                 writeWorkRam(value);
                 return;
+            case Ids.P7:
+                if ((value & 0b1) != 0)
+                    _cpu.RequestInt0();
+                goto default;
+
             default:
                 _rawMemory[address] = value;
                 return;
@@ -528,6 +535,15 @@ class SpecialFunctionRegisters
     {
         get => Read(Ids.P7);
         set => Write(Ids.P7, value);
+    }
+
+    /// <summary>
+    /// Dreamcast connection detection
+    /// </summary>
+    public bool P70
+    {
+        get => BitHelpers.ReadBit(P7, bit: 0);
+        set => P7 = BitHelpers.WithBit(P7, bit: 0, value);
     }
 
     /// <summary>External interrupt 0, 1 control. VMD-135</summary>
