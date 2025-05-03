@@ -67,6 +67,17 @@ class Memory
         _logger = logger;
     }
 
+    public void Reset()
+    {
+        Array.Clear(_mainRam0);
+        Array.Clear(_mainRam1);
+        SFRs.Reset();
+        Array.Clear(_xram0);
+        Array.Clear(_xram1);
+        Array.Clear(_xram2);
+        Array.Clear(_workRam);
+    }
+
     public byte Read(ushort address)
     {
         Debug.Assert(address < 0x200);
@@ -104,11 +115,13 @@ class Memory
         }
     }
 
+    public const byte StackStart = 0x90;
+
     public void PushStack(byte value)
     {
         // Stack is always bank 0, 0x90-0xff; do not use the same routines as for memory access from user code.
         // Stack also points to last element, rather than pointing past last element. So it is inc'd before writing.
-        if (SFRs.Sp + 1 is not (>= 0x90 and <= 0xff))
+        if (SFRs.Sp + 1 is not (>= StackStart and <= 0xff))
         {
             _logger.LogError($"Stack pointer (0x{SFRs.Sp:X2}) outside of expected range (0x90-0xff)!");
         }
@@ -121,7 +134,7 @@ class Memory
     {
         // Stack is always bank 0, 0x90-0xff; do not use the same routines as for memory access from user code.
         // Stack also points to last element, rather than pointing past last element. So it is dec'd after reading.
-        if (SFRs.Sp - 1 is not (>= 0x90 and <= 0xff))
+        if (SFRs.Sp - 1 is not (>= StackStart and <= 0xff))
         {
             _logger.LogError($"Stack pointer (0x{SFRs.Sp:X2}) outside of expected range (0x90-0xff)!");
         }

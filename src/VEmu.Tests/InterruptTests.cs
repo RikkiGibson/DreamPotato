@@ -8,6 +8,10 @@ public class InterruptTests
     public void INT0_P70_ConnectedToDreamcast_1()
     {
         var cpu = new Cpu();
+        cpu.Reset();
+        cpu.SFRs.Ie7_MasterInterruptEnable = true;
+        cpu.SFRs.I01Cr0_Enable0 = true;
+        // TODO: edge/level trigger settings
 
         ReadOnlySpan<byte> instructions = [
             OpcodeMask.JMPF, 0x02, 0x80,
@@ -49,10 +53,56 @@ public class InterruptTests
         Assert.Equal(1, cpu.SFRs.Acc);
     }
 
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public void INT0_InterruptDisabled(bool masterEnable, bool int0Enable)
+    {
+        var cpu = new Cpu();
+        cpu.Reset();
+        cpu.SFRs.Ie7_MasterInterruptEnable = masterEnable;
+        cpu.SFRs.I01Cr0_Enable0 = int0Enable;
+
+        ReadOnlySpan<byte> instructions = [
+            OpcodeMask.JMPF, 0x02, 0x80,
+            // INT0
+            OpcodeMask.JMPF, 0x03, 0x80,
+        ];
+
+        ReadOnlySpan<byte> inst280 = [
+            OpcodeMask.INC | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Acc,
+            OpcodeMask.INC | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Acc,
+        ];
+
+        ReadOnlySpan<byte> inst380 = [
+            OpcodeMask.INC | AddressModeMask.Direct1, SpecialFunctionRegisterIds.B,
+            OpcodeMask.RETI,
+        ];
+
+        instructions.CopyTo(cpu.ROM);
+        inst280.CopyTo(cpu.ROM.AsSpan(0x280));
+        inst380.CopyTo(cpu.ROM.AsSpan(0x380));
+
+        cpu.Step(); // JMPF 0x280
+        Assert.Equal(0x280, cpu.Pc);
+
+        cpu.ConnectDreamcast(); // trigger int0
+        cpu.Step(); // INC ACC
+        Assert.Equal(0x282, cpu.Pc);
+        Assert.Equal(1, cpu.SFRs.Acc);
+        cpu.Step(); // INC ACC
+        Assert.Equal(0x284, cpu.Pc);
+        Assert.Equal(2, cpu.SFRs.Acc);
+    }
+
     [Fact]
     public void INT0_INT1_Simultaneous_1()
     {
         var cpu = new Cpu();
+        cpu.SFRs.Ie7_MasterInterruptEnable = true;
+        cpu.SFRs.I01Cr0_Enable0 = true;
+        cpu.SFRs.I01Cr4_Enable1 = true;
 
         ReadOnlySpan<byte> instructions = [
             OpcodeMask.JMPF, 0x02, 0x80,
@@ -106,6 +156,9 @@ public class InterruptTests
         Assert.Equal(0x280, cpu.Pc);
 
         // int0 is not serviced until current service routine finishes and one ordinary instruction is executed
+        // TODO: VMD-145 states "Interrupt nesting is possible and can be up to 3 levels deep."
+        // Does that mean that higher priority interrupts can interrupt lower priority ones?
+        // Presumably lower pri ones do not interrupt higher pri ones, otherwise why have priority as a concept?
         cpu.Step(); // INC ACC
         Assert.Equal(1, cpu.SFRs.Acc);
         Assert.Equal(0x282, cpu.Pc);

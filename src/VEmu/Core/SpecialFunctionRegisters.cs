@@ -24,6 +24,24 @@ class SpecialFunctionRegisters
         _logger = logger;
     }
 
+    /// <summary>
+    /// VMD-40
+    /// </summary>
+    public void Reset()
+    {
+        Array.Clear(_rawMemory);
+        // NB: Memory owns clearing _workRam
+
+        // Manual indicates that BIOS is typically responsible for setting these values.
+        // It's nice to be able to run without a BIOS, so let's set them up here.
+        P1Fcr = 0b1011_1111;
+        P3Int = 0b1111_1101;
+        Isl = 0b1100_0000;
+        Vsel = 0b1111_1100;
+        Btcr = 0b0100_0001;
+        Sp = Memory.StackStart;
+    }
+
     public byte Read(byte address)
     {
         Debug.Assert(address < Size);
@@ -223,6 +241,33 @@ class SpecialFunctionRegisters
     {
         get => Read(Ids.Ie);
         set => Write(Ids.Ie, value);
+    }
+
+    /// <summary>Master interrupt enable control. VMD-133.</summary>
+    public bool Ie7_MasterInterruptEnable
+    {
+        get => BitHelpers.ReadBit(Ie, bit: 7);
+        set => Ie = BitHelpers.WithBit(Ie, bit: 7, value);
+    }
+
+    /// <summary>
+    /// Controls priority level of external interrupts. VMD-134.
+    /// IE1, IE0    INT1 priority   INT0 priority
+    /// 0,   0      Highest         Highest
+    /// 1,   0      Low             Highest
+    /// X,   1      Low             Low
+    /// </summary>
+    public bool Ie1
+    {
+        get => BitHelpers.ReadBit(Ie, bit: 1);
+        set => Ie = BitHelpers.WithBit(Ie, bit: 1, value);
+    }
+
+    /// <inheritdoc cref="Ie1" />
+    public bool Ie0
+    {
+        get => BitHelpers.ReadBit(Ie, bit: 0);
+        set => Ie = BitHelpers.WithBit(Ie, bit: 0, value);
     }
 
     /// <summary>Interrupt priority control register. VMD-151</summary>
@@ -556,6 +601,85 @@ class SpecialFunctionRegisters
     {
         get => Read(Ids.I01Cr);
         set => Write(Ids.I01Cr, value);
+    }
+
+    /// <summary>
+    /// INT0 enable flag.
+    /// </summary>
+    public bool I01Cr0_Enable0
+    {
+        get => BitHelpers.ReadBit(I01Cr, bit: 0);
+        set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 0, value);
+    }
+
+    /// <summary>
+    /// INT0 source flag.
+    /// </summary>
+    public bool I01Cr1_Source0
+    {
+        get => BitHelpers.ReadBit(I01Cr, bit: 1);
+        set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 1, value);
+    }
+
+    /// <summary>
+    /// INT0 detection level/edge select.
+    /// I01CR3, I01CR2      INT0 interrupt condition
+    /// 0,      0,          Detect falling edge
+    /// 0,      1,          Detect low level
+    /// 1,      0,          Detect rising edge
+    /// 1,      1,          Detect high level
+    /// </summary>
+    public bool I01Cr2_Detection0
+    {
+        get => BitHelpers.ReadBit(I01Cr, bit: 2);
+        set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 2, value);
+    }
+
+    /// <inheritdoc cref="I01Cr2_Detection0" />
+    public bool I01Cr3_Detection0
+    {
+        get => BitHelpers.ReadBit(I01Cr, bit: 3);
+        set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 3, value);
+    }
+
+
+    /// <summary>
+    /// INT1 enable flag.
+    /// </summary>
+    public bool I01Cr4_Enable1
+    {
+        get => BitHelpers.ReadBit(I01Cr, bit: 4);
+        set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 4, value);
+    }
+
+    /// <summary>
+    /// INT1 source flag.
+    /// </summary>
+    public bool I01Cr5_Source1
+    {
+        get => BitHelpers.ReadBit(I01Cr, bit: 5);
+        set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 5, value);
+    }
+
+    /// <summary>
+    /// INT1 detection level/edge select.
+    /// I01CR7, I01CR6      INT1 interrupt condition
+    /// 0,      0,          Detect falling edge
+    /// 0,      1,          Detect low level
+    /// 1,      0,          Detect rising edge
+    /// 1,      1,          Detect high level
+    /// </summary>
+    public bool I01Cr6_Detection1
+    {
+        get => BitHelpers.ReadBit(I01Cr, bit: 6);
+        set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 6, value);
+    }
+
+    /// <inheritdoc cref="I01Cr6_Detection1"/>
+    public bool I01Cr7_Detection1
+    {
+        get => BitHelpers.ReadBit(I01Cr, bit: 7);
+        set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 7, value);
     }
 
     /// <summary>External interrupt 2, 3 control. VMD-137</summary>

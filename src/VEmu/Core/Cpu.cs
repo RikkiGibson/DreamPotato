@@ -47,6 +47,16 @@ public class Cpu
         Memory = new Memory(this, Logger);
     }
 
+    public void Reset()
+    {
+        // TODO: possibly we should setup SFR initial values during construction, unless a 'noInitialize' flag is set in constructor
+        CurrentROMBank = ROM;
+        Pc = 0;
+        Interrupts = 0;
+        InterruptServicingState = InterruptServicingState.Ready;
+        Memory.Reset();
+    }
+
     public byte ReadRam(int address)
     {
         Debug.Assert(address < 0x200);
@@ -104,36 +114,33 @@ public class Cpu
         if (InterruptServicingState != InterruptServicingState.Ready)
             return;
 
+        if (!SFRs.Ie7_MasterInterruptEnable)
+            return;
+
         // TODO: check interrupt enable etc
+        // TODO: check interrupt priority bits
         if (Interrupts != 0)
         {
-            InterruptServicingState = InterruptServicingState.Servicing;
-
             // service next enabled interrupt in priority order.
-            if ((Interrupts & Interrupts.INT0) != 0)
+            if ((Interrupts & Interrupts.INT0) != 0 && SFRs.I01Cr0_Enable0)
             {
                 callServiceRoutine(InterruptVectors.INT0);
                 Interrupts &= ~Interrupts.INT0;
             }
-            else if ((Interrupts & Interrupts.INT1) != 0)
+            else if ((Interrupts & Interrupts.INT1) != 0 && SFRs.I01Cr4_Enable1)
             {
                 callServiceRoutine(InterruptVectors.INT1);
                 Interrupts &= ~Interrupts.INT1;
-            }
-            else
-            {
-                Throw();
             }
         }
 
         void callServiceRoutine(ushort routineAddress)
         {
+            InterruptServicingState = InterruptServicingState.Servicing;
             Memory.PushStack((byte)Pc);
             Memory.PushStack((byte)(Pc >> 8));
             Pc = routineAddress;
         }
-
-        void Throw() => throw new InvalidOperationException($"Unexpected Interrupts value: {Interrupts}");
     }
 
     private void AdvanceInterruptState()
