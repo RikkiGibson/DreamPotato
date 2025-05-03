@@ -11,8 +11,8 @@ public class BitManipulationTests
         var cpu = new Cpu();
 
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x00, 0x01, // MOV #001H,ACC
-            ((byte)OpcodePrefix.CLR1 | 0b1_0000 /*d8*/ | 0x0 /*b2-0*/), 0x00, // CLR1 ACC,0
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x00, 0x01, // MOV #001H,ACC
+            (OpcodeMask.CLR1 | 0b1_0000 /*d8*/ | 0x0 /*b2-0*/), 0x00, // CLR1 ACC,0
         ];
         instructions.CopyTo(cpu.ROM.AsSpan());
 
@@ -30,8 +30,8 @@ public class BitManipulationTests
         var cpu = new Cpu();
 
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct0), 0x7f, 0x01, // MOV #001H,07FH
-            ((byte)OpcodePrefix.SET1 | 0b0_0000 /*d8*/ | 0b110 /*b2-0*/), 0x7F, // SET1 07FH,6
+            OpcodeMask.MOV | AddressModeMask.Direct0, 0x7f, 0x01, // MOV #001H,07FH
+            (OpcodeMask.SET1 | 0b0_0000 /*d8*/ | 0b110 /*b2-0*/), 0x7F, // SET1 07FH,6
         ];
         instructions.CopyTo(cpu.ROM.AsSpan());
 
@@ -49,8 +49,8 @@ public class BitManipulationTests
         var cpu = new Cpu();
 
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct0), 0x7f, 0x01, // MOV #001H,07FH
-            ((byte)OpcodePrefix.NOT1 | 0b0_0000 /*d8*/ | 0b110 /*b2-0*/), 0x7F, // NOT1 07FH,6
+            OpcodeMask.MOV | AddressModeMask.Direct0, 0x7f, 0x01, // MOV #001H,07FH
+            (OpcodeMask.NOT1 | 0b0_0000 /*d8*/ | 0b110 /*b2-0*/), 0x7F, // NOT1 07FH,6
         ];
         instructions.CopyTo(cpu.ROM.AsSpan());
 
@@ -60,6 +60,4 @@ public class BitManipulationTests
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0x41, cpu.ReadRam(0x7f));
     }
-
-    // SET1, NOT1
 }

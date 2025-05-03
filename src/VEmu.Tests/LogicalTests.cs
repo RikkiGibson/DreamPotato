@@ -10,10 +10,10 @@ public class LogicalTests
         // VMC-173
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.AND.Compose(AddressingMode.Immediate), 0xfa,
-            OpcodePrefix.AND.Compose(AddressingMode.Immediate), 0xaf,
-            OpcodePrefix.AND.Compose(AddressingMode.Immediate), 0x0f,
-            OpcodePrefix.AND.Compose(AddressingMode.Immediate), 0xf0,
+            OpcodeMask.AND | AddressModeMask.Immediate, 0xfa,
+            OpcodeMask.AND | AddressModeMask.Immediate, 0xaf,
+            OpcodeMask.AND | AddressModeMask.Immediate, 0x0f,
+            OpcodeMask.AND | AddressModeMask.Immediate, 0xf0,
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -42,14 +42,14 @@ public class LogicalTests
         // VMC-173
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.AND.Compose(AddressingMode.Immediate), 0xfe,
-            OpcodePrefix.AND.Compose(AddressingMode.Immediate), 0xfd,
-            OpcodePrefix.AND.Compose(AddressingMode.Immediate), 0xfb,
-            OpcodePrefix.AND.Compose(AddressingMode.Immediate), 0xf7,
-            OpcodePrefix.AND.Compose(AddressingMode.Immediate), 0xef,
-            OpcodePrefix.AND.Compose(AddressingMode.Immediate), 0xdf,
-            OpcodePrefix.AND.Compose(AddressingMode.Immediate), 0xbf,
-            OpcodePrefix.AND.Compose(AddressingMode.Immediate), 0x7f,
+            OpcodeMask.AND | AddressModeMask.Immediate, 0xfe,
+            OpcodeMask.AND | AddressModeMask.Immediate, 0xfd,
+            OpcodeMask.AND | AddressModeMask.Immediate, 0xfb,
+            OpcodeMask.AND | AddressModeMask.Immediate, 0xf7,
+            OpcodeMask.AND | AddressModeMask.Immediate, 0xef,
+            OpcodeMask.AND | AddressModeMask.Immediate, 0xdf,
+            OpcodeMask.AND | AddressModeMask.Immediate, 0xbf,
+            OpcodeMask.AND | AddressModeMask.Immediate, 0x7f,
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -94,8 +94,8 @@ public class LogicalTests
         // VMC-173
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.OR.Compose(AddressingMode.Direct0), 0x23,
-            OpcodePrefix.OR.Compose(AddressingMode.Direct0), 0x23,
+            OpcodeMask.OR | AddressModeMask.Direct0, 0x23,
+            OpcodeMask.OR | AddressModeMask.Direct0, 0x23,
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -119,18 +119,18 @@ public class LogicalTests
         // VMC-173
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            (byte)Opcode.ROL,
-            (byte)Opcode.ROL,
-            (byte)Opcode.ROL,
-            (byte)Opcode.ROL,
-            (byte)Opcode.ROL,
-            (byte)Opcode.ROL,
-            (byte)Opcode.ROL,
-            (byte)Opcode.ROL,
-            (byte)Opcode.ROL,
-            (byte)Opcode.ROL,
-            (byte)Opcode.ROL,
-            (byte)Opcode.ROL,
+            OpcodeMask.ROL,
+            OpcodeMask.ROL,
+            OpcodeMask.ROL,
+            OpcodeMask.ROL,
+            OpcodeMask.ROL,
+            OpcodeMask.ROL,
+            OpcodeMask.ROL,
+            OpcodeMask.ROL,
+            OpcodeMask.ROL,
+            OpcodeMask.ROL,
+            OpcodeMask.ROL,
+            OpcodeMask.ROL,
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -185,20 +185,20 @@ public class LogicalTests
         // VMC-173
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            (byte)Opcode.ROLC,
-            (byte)Opcode.ROLC,
-            (byte)Opcode.ROLC,
-            (byte)Opcode.ROLC,
-            (byte)Opcode.ROLC,
-            (byte)Opcode.ROLC,
-            (byte)Opcode.ROLC,
-            (byte)Opcode.ROLC,
-            (byte)Opcode.ROLC,
-            (byte)Opcode.ROLC,
-            (byte)Opcode.ROLC,
-            (byte)Opcode.ROLC,
-            (byte)Opcode.ROLC,
-            (byte)Opcode.ROLC,
+            OpcodeMask.ROLC,
+            OpcodeMask.ROLC,
+            OpcodeMask.ROLC,
+            OpcodeMask.ROLC,
+            OpcodeMask.ROLC,
+            OpcodeMask.ROLC,
+            OpcodeMask.ROLC,
+            OpcodeMask.ROLC,
+            OpcodeMask.ROLC,
+            OpcodeMask.ROLC,
+            OpcodeMask.ROLC,
+            OpcodeMask.ROLC,
+            OpcodeMask.ROLC,
+            OpcodeMask.ROLC,
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -262,21 +262,21 @@ public class LogicalTests
         // VMC-184
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            (byte)Opcode.ROR,
-            (byte)Opcode.ROR,
-            (byte)Opcode.ROR,
-            (byte)Opcode.ROR,
-            (byte)Opcode.ROR,
-            (byte)Opcode.ROR,
-            (byte)Opcode.ROR,
-            (byte)Opcode.ROR,
-            (byte)Opcode.ROR,
-            (byte)Opcode.ROR,
+            OpcodeMask.ROR,
+            OpcodeMask.ROR,
+            OpcodeMask.ROR,
+            OpcodeMask.ROR,
+            OpcodeMask.ROR,
+            OpcodeMask.ROR,
+            OpcodeMask.ROR,
+            OpcodeMask.ROR,
+            OpcodeMask.ROR,
+            OpcodeMask.ROR,
 
-            (byte)Opcode.ROR,
-            (byte)Opcode.ROR,
-            (byte)Opcode.ROR,
-            (byte)Opcode.ROR,
+            OpcodeMask.ROR,
+            OpcodeMask.ROR,
+            OpcodeMask.ROR,
+            OpcodeMask.ROR,
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -339,19 +339,19 @@ public class LogicalTests
         // VMC-184
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            (byte)Opcode.RORC,
-            (byte)Opcode.RORC,
-            (byte)Opcode.RORC,
-            (byte)Opcode.RORC,
-            (byte)Opcode.RORC,
-            (byte)Opcode.RORC,
-            (byte)Opcode.RORC,
-            (byte)Opcode.RORC,
-            (byte)Opcode.RORC,
+            OpcodeMask.RORC,
+            OpcodeMask.RORC,
+            OpcodeMask.RORC,
+            OpcodeMask.RORC,
+            OpcodeMask.RORC,
+            OpcodeMask.RORC,
+            OpcodeMask.RORC,
+            OpcodeMask.RORC,
+            OpcodeMask.RORC,
 
-            (byte)Opcode.RORC,
-            (byte)Opcode.RORC,
-            (byte)Opcode.RORC,
+            OpcodeMask.RORC,
+            OpcodeMask.RORC,
+            OpcodeMask.RORC,
         ];
         instructions.CopyTo(cpu.ROM);
 

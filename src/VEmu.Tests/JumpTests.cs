@@ -12,15 +12,15 @@ public class JumpTests
 
         // starting at 0x0FFB
         scoped ReadOnlySpan<byte> instructions = [
-            (byte)Opcode.NOP,
-            (byte)Opcode.NOP,
+            OpcodeMask.NOP,
+            OpcodeMask.NOP,
             0b0011_1111, 0b0000_1110, // JMP to 0xF0E (0b001a_1aaa aaaa_aaaa)
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xFFB));
 
         instructions = [
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0, // acc
-            (byte)Opcode.ROR,
+            OpcodeMask.INC | AddressModeMask.Direct1, 0, // acc
+            OpcodeMask.ROR,
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xF0E));
 
@@ -49,15 +49,15 @@ public class JumpTests
 
         // starting at 0x0FFC
         scoped ReadOnlySpan<byte> instructions = [
-            (byte)Opcode.NOP,
-            (byte)Opcode.NOP,
+            OpcodeMask.NOP,
+            OpcodeMask.NOP,
             0b0011_1111, 0b0000_1110, // JMP to 0xF0E (0b001a_1aaa aaaa_aaaa). Encoding: 0x3F0E
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0x0FFC));
 
         instructions = [
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0, // acc
-            (byte)Opcode.ROR,
+            OpcodeMask.INC | AddressModeMask.Direct1, 0, // acc
+            OpcodeMask.ROR,
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0x1F0E));
 
@@ -85,15 +85,15 @@ public class JumpTests
 
         // starting at 0x0FFA
         scoped ReadOnlySpan<byte> instructions = [
-            (byte)Opcode.NOP,
-            (byte)Opcode.NOP,
-            (byte)Opcode.JMPF, 0x0f, 0x0e, // JMPF to 0x0F0E
+            OpcodeMask.NOP,
+            OpcodeMask.NOP,
+            OpcodeMask.JMPF, 0x0f, 0x0e, // JMPF to 0x0F0E
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xFFA));
 
         instructions = [
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0, // acc
-            (byte)Opcode.ROR,
+            OpcodeMask.INC | AddressModeMask.Direct1, 0, // acc
+            OpcodeMask.ROR,
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xF0E));
 
@@ -122,15 +122,15 @@ public class JumpTests
 
         // starting at 0x0FFC
         scoped ReadOnlySpan<byte> instructions = [
-            (byte)Opcode.NOP,
-            (byte)Opcode.NOP,
-            (byte)Opcode.JMPF, 0x0f, 0x0e,
+            OpcodeMask.NOP,
+            OpcodeMask.NOP,
+            OpcodeMask.JMPF, 0x0f, 0x0e,
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0x0FFC));
 
         instructions = [
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0, // acc
-            (byte)Opcode.ROR,
+            OpcodeMask.INC | AddressModeMask.Direct1, 0, // acc
+            OpcodeMask.ROR,
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xF0E));
 
@@ -159,15 +159,15 @@ public class JumpTests
 
         // starting at 0x0F1C
         scoped ReadOnlySpan<byte> instructions = [
-            (byte)Opcode.NOP,
-            (byte)Opcode.NOP,
-            (byte)Opcode.BR, 0x3f,
+            OpcodeMask.NOP,
+            OpcodeMask.NOP,
+            OpcodeMask.BR, 0x3f,
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0x0F1C));
 
         instructions = [
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0, // acc
-            (byte)Opcode.ROR,
+            OpcodeMask.INC | AddressModeMask.Direct1, 0, // acc
+            OpcodeMask.ROR,
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0x0F5F));
 
@@ -197,15 +197,15 @@ public class JumpTests
         // The example was a little unclear, but, I think the NOPs are supposed to
         // directly precede the INC, because otherwise it is unspecified how to get from the NOPs to the first INC.
         scoped ReadOnlySpan<byte> instructions = [
-            (byte)Opcode.NOP,
-            (byte)Opcode.NOP,
-            (byte)Opcode.BRF, 0x3f, 0x01,
+            OpcodeMask.NOP,
+            OpcodeMask.NOP,
+            OpcodeMask.BRF, 0x3f, 0x01,
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0x0F1C));
 
         instructions = [
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x00, // acc,
-            (byte)Opcode.ROR,
+            OpcodeMask.INC | AddressModeMask.Direct1, 0x00, // acc,
+            OpcodeMask.ROR,
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0x105F));
 
@@ -236,13 +236,13 @@ public class JumpTests
         // directly precede the INC, because otherwise it is unspecified how to get from the NOPs to the first INC.
 
         ReadOnlySpan<byte> instructions = [
-            (byte)Opcode.NOP,
-            (byte)Opcode.NOP,
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x00, // acc,
-            (byte)Opcode.ROR,
-            (byte)Opcode.NOP,
-            (byte)Opcode.NOP,
-            (byte)Opcode.BRF, 0xf8, 0xff,
+            OpcodeMask.NOP,
+            OpcodeMask.NOP,
+            OpcodeMask.INC | AddressModeMask.Direct1, 0x00, // acc,
+            OpcodeMask.ROR,
+            OpcodeMask.NOP,
+            OpcodeMask.NOP,
+            OpcodeMask.BRF, 0xf8, 0xff,
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0x1F0C));
 

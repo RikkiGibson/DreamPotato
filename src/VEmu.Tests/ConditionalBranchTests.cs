@@ -11,14 +11,14 @@ public class ConditionalBranchTests
         var cpu = new Cpu();
 
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x00, 0x00, // acc
-            (byte)Opcode.BZ, 0x3f,
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x00, 0x00, // acc
+            OpcodeMask.BZ, 0x3f,
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf1b));
 
         instructions = [
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x00, // acc
-            (byte)Opcode.ROR,
+            OpcodeMask.INC | AddressModeMask.Direct1, 0x00, // acc
+            OpcodeMask.ROR,
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf5f));
 
@@ -46,10 +46,10 @@ public class ConditionalBranchTests
         var cpu = new Cpu();
 
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x00, 0x01, // acc
-            (byte)Opcode.BZ, 0x3f,
-            OpcodePrefix.DEC.Compose(AddressingMode.Direct1), 0x00, // acc
-            (byte)Opcode.ROR,
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x00, 0x01, // acc
+            OpcodeMask.BZ, 0x3f,
+            OpcodeMask.DEC | AddressModeMask.Direct1, 0x00, // acc
+            OpcodeMask.ROR,
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf1b));
 
@@ -79,14 +79,14 @@ public class ConditionalBranchTests
         var cpu = new Cpu();
 
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x00, 0x01, // acc
-            (byte)Opcode.BNZ, 0x3f,
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x00, 0x01, // acc
+            OpcodeMask.BNZ, 0x3f,
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf1b));
 
         instructions = [
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x00, // acc
-            (byte)Opcode.ROR,
+            OpcodeMask.INC | AddressModeMask.Direct1, 0x00, // acc
+            OpcodeMask.ROR,
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf5f));
 
@@ -119,14 +119,14 @@ public class ConditionalBranchTests
         Assert.Equal(0, twoC + offset);
 
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x00, 0x01, // acc
-            (byte)Opcode.BNZ, (byte)twoC,
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x00, 0x01, // acc
+            OpcodeMask.BNZ, (byte)twoC,
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf5f));
 
         instructions = [
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x00, // acc
-            (byte)Opcode.ROR,
+            OpcodeMask.INC | AddressModeMask.Direct1, 0x00, // acc
+            OpcodeMask.ROR,
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf1f));
 
@@ -154,14 +154,14 @@ public class ConditionalBranchTests
         var cpu = new Cpu();
 
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x02, 0x01, // b
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x02, 0x01, // b
             0x78, 0x02, 0x3f, // BP B,0,LA
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf1a));
 
         instructions = [
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x02, // b
-            (byte)Opcode.NOP,
+            OpcodeMask.INC | AddressModeMask.Direct1, 0x02, // b
+            OpcodeMask.NOP,
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf5f));
 
@@ -189,14 +189,14 @@ public class ConditionalBranchTests
         var cpu = new Cpu();
 
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x02, 0x01, // b
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x02, 0x01, // b
             0x58, 0x02, 0x3f, // BPC B,0,LA
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf1a));
 
         instructions = [
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x02, // b
-            (byte)Opcode.NOP,
+            OpcodeMask.INC | AddressModeMask.Direct1, 0x02, // b
+            OpcodeMask.NOP,
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf5f));
 
@@ -225,14 +225,14 @@ public class ConditionalBranchTests
         var cpu = new Cpu();
 
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x02, 0x04, // b
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x02, 0x04, // b
             0x5a, 0x02, 0x3f, // BPC B,2,LA
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf1a));
 
         instructions = [
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x02, // b
-            (byte)Opcode.NOP,
+            OpcodeMask.INC | AddressModeMask.Direct1, 0x02, // b
+            OpcodeMask.NOP,
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf5f));
 
@@ -261,14 +261,14 @@ public class ConditionalBranchTests
         var cpu = new Cpu();
 
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x02, 0xfe, // b
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x02, 0xfe, // b
             0x98, 0x02, 0x3f, // BN B,0,LA
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf1a));
 
         instructions = [
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x02, // b
-            (byte)Opcode.NOP,
+            OpcodeMask.INC | AddressModeMask.Direct1, 0x02, // b
+            OpcodeMask.NOP,
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf5f));
 
@@ -297,15 +297,15 @@ public class ConditionalBranchTests
         var cpu = new Cpu();
 
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x02, 0x02, // b
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x02, 0x02, // b
             0x53, 0x02, 0x3f, // DBNZ B,LA
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf1a));
 
         // LA
         instructions = [
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x02, // b
-            (byte)Opcode.NOP,
+            OpcodeMask.INC | AddressModeMask.Direct1, 0x02, // b
+            OpcodeMask.NOP,
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf5f));
 
@@ -334,16 +334,16 @@ public class ConditionalBranchTests
         var cpu = new Cpu();
 
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x00, 0x01, // acc
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x00, 0x01, // acc
             0x53, 0x00, 0x3f, // DBNZ ACC,LA
-            OpcodePrefix.DEC.Compose(AddressingMode.Direct1), 0x00, // acc
-            (byte)Opcode.ROR,
+            OpcodeMask.DEC | AddressModeMask.Direct1, 0x00, // acc
+            OpcodeMask.ROR,
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf1a));
 
         // LA
         instructions = [
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x00, // acc
+            OpcodeMask.INC | AddressModeMask.Direct1, 0x00, // acc
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf5f));
 
@@ -374,16 +374,16 @@ public class ConditionalBranchTests
         var cpu = new Cpu();
 
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x02, 0x02, // b
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct0), 0x03, 0x02, // R3
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x02, 0x02, // b
+            OpcodeMask.MOV | AddressModeMask.Direct0, 0x03, 0x02, // R3
             0x57, 0x3f, // DBNZ @R3,LA
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf18));
 
         // LA
         instructions = [
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x02, // b
-            (byte)Opcode.NOP,
+            OpcodeMask.INC | AddressModeMask.Direct1, 0x02, // b
+            OpcodeMask.NOP,
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf5f));
 
@@ -429,14 +429,14 @@ public class ConditionalBranchTests
         var cpu = new Cpu();
 
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x00, 0x02, // acc
-            OpcodePrefix.BE.Compose(AddressingMode.Immediate), 0x02, 0x3f, // BE 0x02,LA
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x00, 0x02, // acc
+            OpcodeMask.BE | AddressModeMask.Immediate, 0x02, 0x3f, // BE 0x02,LA
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf1a));
 
         // LA
         instructions = [
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x00, // acc
+            OpcodeMask.INC | AddressModeMask.Direct1, 0x00, // acc
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf5f));
 
@@ -463,16 +463,16 @@ public class ConditionalBranchTests
         var cpu = new Cpu();
 
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x00, 0x03, // acc
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x02, 0xf2, // b
-            OpcodePrefix.BE.Compose(AddressingMode.Direct1), 0x02, 0x3f, // BE B,LA
-            OpcodePrefix.DEC.Compose(AddressingMode.Direct1), 0x00, // acc
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x00, 0x03, // acc
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x02, 0xf2, // b
+            OpcodeMask.BE | AddressModeMask.Direct1, 0x02, 0x3f, // BE B,LA
+            OpcodeMask.DEC | AddressModeMask.Direct1, 0x00, // acc
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf17));
 
         // LA
         instructions = [
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x00, // acc
+            OpcodeMask.INC | AddressModeMask.Direct1, 0x00, // acc
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf5f));
 
@@ -500,15 +500,15 @@ public class ConditionalBranchTests
         var cpu = new Cpu();
 
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x02, 0x05, // b
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct0), 0x03, 0x02, // r3
-            OpcodePrefix.BE.Compose(AddressingMode.Indirect3), 0x05, 0x3f, // BE @R3,#5H,LA
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x02, 0x05, // b
+            OpcodeMask.MOV | AddressModeMask.Direct0, 0x03, 0x02, // r3
+            OpcodeMask.BE | AddressModeMask.Indirect3, 0x05, 0x3f, // BE @R3,#5H,LA
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf17));
 
         // LA
         instructions = [
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x02, // b
+            OpcodeMask.INC | AddressModeMask.Direct1, 0x02, // b
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf5f));
 
@@ -536,16 +536,16 @@ public class ConditionalBranchTests
         var cpu = new Cpu();
 
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x00, 0xf2, // acc
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x02, 0xf2, // b
-            OpcodePrefix.BNE.Compose(AddressingMode.Direct1), 0x02, 0x3f, // BNE B,LA
-            OpcodePrefix.DEC.Compose(AddressingMode.Direct1), 0x00, // acc
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x00, 0xf2, // acc
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x02, 0xf2, // b
+            OpcodeMask.BNE | AddressModeMask.Direct1, 0x02, 0x3f, // BNE B,LA
+            OpcodeMask.DEC | AddressModeMask.Direct1, 0x00, // acc
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf17));
 
         // LA
         instructions = [
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x00, // acc
+            OpcodeMask.INC | AddressModeMask.Direct1, 0x00, // acc
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf5f));
 

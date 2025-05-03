@@ -10,8 +10,8 @@ public class DataTransferTests
         // VMC-186
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.LD.Compose(AddressingMode.Direct0), 0x70,
-            OpcodePrefix.LD.Compose(AddressingMode.Direct0), 0x71,
+            OpcodeMask.LD | AddressModeMask.Direct0, 0x70,
+            OpcodeMask.LD | AddressModeMask.Direct0, 0x71,
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -34,9 +34,9 @@ public class DataTransferTests
         // VMC-186
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.LD.Compose(AddressingMode.Direct1), 0x02, // B
-            OpcodePrefix.LD.Compose(AddressingMode.Direct1), 0x06, // SP
-            OpcodePrefix.LD.Compose(AddressingMode.Direct1), 0x02, // B
+            OpcodeMask.LD | AddressModeMask.Direct1, 0x02, // B
+            OpcodeMask.LD | AddressModeMask.Direct1, 0x06, // SP
+            OpcodeMask.LD | AddressModeMask.Direct1, 0x02, // B
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -63,8 +63,8 @@ public class DataTransferTests
         // VMC-187
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.LD.Compose(AddressingMode.Indirect0),
-            OpcodePrefix.LD.Compose(AddressingMode.Indirect1),
+            OpcodeMask.LD | AddressModeMask.Indirect0,
+            OpcodeMask.LD | AddressModeMask.Indirect1,
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -89,8 +89,8 @@ public class DataTransferTests
         // VMC-187
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.LD.Compose(AddressingMode.Indirect2),
-            OpcodePrefix.LD.Compose(AddressingMode.Indirect3),
+            OpcodeMask.LD | AddressModeMask.Indirect2,
+            OpcodeMask.LD | AddressModeMask.Indirect3,
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -115,8 +115,8 @@ public class DataTransferTests
         // VMC-186
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.ST.Compose(AddressingMode.Direct0), 0x70,
-            OpcodePrefix.ST.Compose(AddressingMode.Direct0), 0x71,
+            OpcodeMask.ST | AddressModeMask.Direct0, 0x70,
+            OpcodeMask.ST | AddressModeMask.Direct0, 0x71,
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -144,14 +144,14 @@ public class DataTransferTests
         // VMC-186
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct0), 0x00, 0xff,
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct0), 0x01, 0xfe,
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct0), 0x02, 0xfd,
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct0), 0x03, 0xfc,
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct0), 0x03, 0xfb,
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct0), 0x02, 0xfa,
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct0), 0x01, 0xf9,
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct0), 0x00, 0xf8,
+            OpcodeMask.MOV | AddressModeMask.Direct0, 0x00, 0xff,
+            OpcodeMask.MOV | AddressModeMask.Direct0, 0x01, 0xfe,
+            OpcodeMask.MOV | AddressModeMask.Direct0, 0x02, 0xfd,
+            OpcodeMask.MOV | AddressModeMask.Direct0, 0x03, 0xfc,
+            OpcodeMask.MOV | AddressModeMask.Direct0, 0x03, 0xfb,
+            OpcodeMask.MOV | AddressModeMask.Direct0, 0x02, 0xfa,
+            OpcodeMask.MOV | AddressModeMask.Direct0, 0x01, 0xf9,
+            OpcodeMask.MOV | AddressModeMask.Direct0, 0x00, 0xf8,
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -218,12 +218,12 @@ public class DataTransferTests
         // VMC-186
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct0), 0x02, 0x00, // ACC
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct0), 0x03, 0x02, // B
-            OpcodePrefix.MOV.Compose(AddressingMode.Indirect2), 0xfd,
-            OpcodePrefix.MOV.Compose(AddressingMode.Indirect3), 0xfc,
-            OpcodePrefix.MOV.Compose(AddressingMode.Indirect2), 0xfb,
-            OpcodePrefix.MOV.Compose(AddressingMode.Indirect3), 0xfa,
+            OpcodeMask.MOV | AddressModeMask.Direct0, 0x02, 0x00, // ACC
+            OpcodeMask.MOV | AddressModeMask.Direct0, 0x03, 0x02, // B
+            OpcodeMask.MOV | AddressModeMask.Indirect2, 0xfd,
+            OpcodeMask.MOV | AddressModeMask.Indirect3, 0xfc,
+            OpcodeMask.MOV | AddressModeMask.Indirect2, 0xfb,
+            OpcodeMask.MOV | AddressModeMask.Indirect3, 0xfa,
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -281,16 +281,16 @@ public class DataTransferTests
         // VMC-192
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x05, 0x01, // Trh
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x04, 0x23, // Trl
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x00, 0x00, // Acc
-            (byte)Opcode.LDC,
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x00, 0x01, // Acc
-            (byte)Opcode.LDC,
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x00, 0x02, // Acc
-            (byte)Opcode.LDC,
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x00, 0x03, // Acc
-            (byte)Opcode.LDC,
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x05, 0x01, // Trh
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x04, 0x23, // Trl
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x00, 0x00, // Acc
+            OpcodeMask.LDC,
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x00, 0x01, // Acc
+            OpcodeMask.LDC,
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x00, 0x02, // Acc
+            OpcodeMask.LDC,
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x00, 0x03, // Acc
+            OpcodeMask.LDC,
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -346,16 +346,17 @@ public class DataTransferTests
         // VMC-193
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x00, 0xaa, // acc
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x02, 0x55, // b
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct0), 0x00, 0x12, // r0
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x06, 0x1f, // sp
-            (byte)OpcodePrefix.PUSH | 1, 0x00, // acc
-            (byte)OpcodePrefix.PUSH | 1, 0x02, // b
-            (byte)OpcodePrefix.PUSH, 0x00,
-            (byte)OpcodePrefix.POP | 1, 0x02, // b
-            (byte)OpcodePrefix.POP | 1, 0x00, // acc
-            (byte)OpcodePrefix.POP, 0x00,
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x00, 0xaa, // acc
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x02, 0x55, // b
+            OpcodeMask.MOV | AddressModeMask.Direct0, 0x00, 0x12, // r0
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x06, 0x1f, // sp
+            // NB: PUSH/POP encoding is special, it resembles the "immediate mode" encoding of INC/DEC. But it supports only direct mode.
+            OpcodeMask.PUSH | 1, 0x00, // acc
+            OpcodeMask.PUSH | 1, 0x02, // b
+            OpcodeMask.PUSH, 0x00,
+            OpcodeMask.POP | 1, 0x02, // b
+            OpcodeMask.POP | 1, 0x00, // acc
+            OpcodeMask.POP, 0x00,
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -390,12 +391,12 @@ public class DataTransferTests
         // VMC-195
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x00, 0xff, // acc
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct0), 0x23, 0x55,
-            OpcodePrefix.XCH.Compose(AddressingMode.Direct0), 0x23,
-            OpcodePrefix.XCH.Compose(AddressingMode.Direct0), 0x23,
-            OpcodePrefix.XCH.Compose(AddressingMode.Direct0), 0x23,
-            OpcodePrefix.XCH.Compose(AddressingMode.Direct0), 0x23,
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x00, 0xff, // acc
+            OpcodeMask.MOV | AddressModeMask.Direct0, 0x23, 0x55,
+            OpcodeMask.XCH | AddressModeMask.Direct0, 0x23,
+            OpcodeMask.XCH | AddressModeMask.Direct0, 0x23,
+            OpcodeMask.XCH | AddressModeMask.Direct0, 0x23,
+            OpcodeMask.XCH | AddressModeMask.Direct0, 0x23,
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -428,12 +429,12 @@ public class DataTransferTests
         // VMC-195
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x00, 0xaa, // acc
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct0), 0x03, 0x04, // R3->Trl
-            OpcodePrefix.MOV.Compose(AddressingMode.Indirect3), 0x55,
-            OpcodePrefix.XCH.Compose(AddressingMode.Indirect3),
-            OpcodePrefix.XCH.Compose(AddressingMode.Indirect3),
-            OpcodePrefix.XCH.Compose(AddressingMode.Indirect3),
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x00, 0xaa, // acc
+            OpcodeMask.MOV | AddressModeMask.Direct0, 0x03, 0x04, // R3->Trl
+            OpcodeMask.MOV | AddressModeMask.Indirect3, 0x55,
+            OpcodeMask.XCH | AddressModeMask.Indirect3,
+            OpcodeMask.XCH | AddressModeMask.Indirect3,
+            OpcodeMask.XCH | AddressModeMask.Indirect3,
         ];
         instructions.CopyTo(cpu.ROM);
 

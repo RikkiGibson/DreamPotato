@@ -11,16 +11,16 @@ public class SubroutineTests
         var cpu = new Cpu();
 
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x06, 0x1f, // sp
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x06, 0x1f, // sp
             0x1f, 0x0e, // CALL LA
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xffa));
 
         // LA
         instructions = [
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x00, // acc
-            (byte)Opcode.RET,
-            (byte)Opcode.NOP,
+            OpcodeMask.INC | AddressModeMask.Direct1, 0x00, // acc
+            OpcodeMask.RET,
+            OpcodeMask.NOP,
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf0e));
 
@@ -47,17 +47,17 @@ public class SubroutineTests
         var cpu = new Cpu();
 
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x06, 0x1f, // sp
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x06, 0x1f, // sp
             0x20, 0x0f, 0x0e, // CALLF LA
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x00, // acc
+            OpcodeMask.INC | AddressModeMask.Direct1, 0x00, // acc
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xff9));
 
         // LA
         instructions = [
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x00, // acc
-            (byte)Opcode.RET,
-            (byte)Opcode.NOP,
+            OpcodeMask.INC | AddressModeMask.Direct1, 0x00, // acc
+            OpcodeMask.RET,
+            OpcodeMask.NOP,
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf0e));
 
@@ -89,15 +89,15 @@ public class SubroutineTests
         // I think the address math was off in the example.
 
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.MOV.Compose(AddressingMode.Direct1), 0x06, 0x1f, // sp
+            OpcodeMask.MOV | AddressModeMask.Direct1, 0x06, 0x1f, // sp
             0x10, 0x01, 0x01, // CALLR LA
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0x0FFA));
 
         instructions = [
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x00, // acc
-            (byte)Opcode.RET,
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x00, // acc
+            OpcodeMask.INC | AddressModeMask.Direct1, 0x00, // acc
+            OpcodeMask.RET,
+            OpcodeMask.INC | AddressModeMask.Direct1, 0x00, // acc
         ];
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0x01100));
 

@@ -517,11 +517,11 @@ public class ArithmeticTests
         // Based on example in VMC-159
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.ADD.Compose(AddressingMode.Immediate), 0x13,
-            OpcodePrefix.ADDC.Compose(AddressingMode.Immediate), 0x0a,
-            OpcodePrefix.ADDC.Compose(AddressingMode.Immediate), 0x0f,
-            OpcodePrefix.ADDC.Compose(AddressingMode.Immediate), 0x80,
-            OpcodePrefix.ADDC.Compose(AddressingMode.Immediate), 0x01,
+            OpcodeMask.ADD | AddressModeMask.Immediate, 0x13,
+            OpcodeMask.ADDC | AddressModeMask.Immediate, 0x0a,
+            OpcodeMask.ADDC | AddressModeMask.Immediate, 0x0f,
+            OpcodeMask.ADDC | AddressModeMask.Immediate, 0x80,
+            OpcodeMask.ADDC | AddressModeMask.Immediate, 0x01,
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -563,8 +563,8 @@ public class ArithmeticTests
     {
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.ADD.Compose(AddressingMode.Immediate), 0x08,
-            OpcodePrefix.ADDC.Compose(AddressingMode.Immediate), 0x08,
+            OpcodeMask.ADD | AddressModeMask.Immediate, 0x08,
+            OpcodeMask.ADDC | AddressModeMask.Immediate, 0x08,
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -588,8 +588,8 @@ public class ArithmeticTests
     {
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.ADD.Compose(AddressingMode.Immediate), 0x10,
-            OpcodePrefix.ADDC.Compose(AddressingMode.Immediate), 0x01,
+            OpcodeMask.ADD | AddressModeMask.Immediate, 0x10,
+            OpcodeMask.ADDC | AddressModeMask.Immediate, 0x01,
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -613,10 +613,10 @@ public class ArithmeticTests
     {
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.SUB.Compose(AddressingMode.Immediate), 0x13,
-            OpcodePrefix.SUB.Compose(AddressingMode.Immediate), 0x03,
-            OpcodePrefix.SUB.Compose(AddressingMode.Immediate), 0x3f,
-            OpcodePrefix.SUB.Compose(AddressingMode.Immediate), 0x02,
+            OpcodeMask.SUB | AddressModeMask.Immediate, 0x13,
+            OpcodeMask.SUB | AddressModeMask.Immediate, 0x03,
+            OpcodeMask.SUB | AddressModeMask.Immediate, 0x3f,
+            OpcodeMask.SUB | AddressModeMask.Immediate, 0x02,
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -653,8 +653,8 @@ public class ArithmeticTests
         // VMC-162
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.SUB.Compose(AddressingMode.Immediate), 0x02,
-            OpcodePrefix.SUB.Compose(AddressingMode.Direct1), 0x02, // B
+            OpcodeMask.SUB | AddressModeMask.Immediate, 0x02,
+            OpcodeMask.SUB | AddressModeMask.Direct1, 0x02, // B
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -680,9 +680,9 @@ public class ArithmeticTests
         // VMC-162
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.SUB.Compose(AddressingMode.Immediate), 0x02,
-            OpcodePrefix.SUBC.Compose(AddressingMode.Direct1), 0x02, // B
-            OpcodePrefix.SUBC.Compose(AddressingMode.Direct1), 0x02, // B
+            OpcodeMask.SUB | AddressModeMask.Immediate, 0x02,
+            OpcodeMask.SUBC | AddressModeMask.Direct1, 0x02, // B
+            OpcodeMask.SUBC | AddressModeMask.Direct1, 0x02, // B
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -716,9 +716,9 @@ public class ArithmeticTests
         // VMC-166
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.SUB.Compose(AddressingMode.Immediate), 0x16,
-            OpcodePrefix.SUBC.Compose(AddressingMode.Indirect0),
-            OpcodePrefix.SUBC.Compose(AddressingMode.Indirect0),
+            OpcodeMask.SUB | AddressModeMask.Immediate, 0x16,
+            OpcodeMask.SUBC | AddressModeMask.Indirect0,
+            OpcodeMask.SUBC | AddressModeMask.Indirect0,
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -751,10 +751,10 @@ public class ArithmeticTests
         // VMC-167
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x0, // ACC
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x0, // ACC
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x0, // ACC
-            OpcodePrefix.INC.Compose(AddressingMode.Direct1), 0x0, // ACC
+            OpcodeMask.INC | AddressModeMask.Direct1, 0x0, // ACC
+            OpcodeMask.INC | AddressModeMask.Direct1, 0x0, // ACC
+            OpcodeMask.INC | AddressModeMask.Direct1, 0x0, // ACC
+            OpcodeMask.INC | AddressModeMask.Direct1, 0x0, // ACC
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -783,10 +783,10 @@ public class ArithmeticTests
         // VMC-167
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.INC.Compose(AddressingMode.Direct0), 0x7f,
-            OpcodePrefix.INC.Compose(AddressingMode.Direct0), 0x7f,
-            OpcodePrefix.INC.Compose(AddressingMode.Direct0), 0x7f,
-            OpcodePrefix.INC.Compose(AddressingMode.Direct0), 0x7f,
+            OpcodeMask.INC | AddressModeMask.Direct0, 0x7f,
+            OpcodeMask.INC | AddressModeMask.Direct0, 0x7f,
+            OpcodeMask.INC | AddressModeMask.Direct0, 0x7f,
+            OpcodeMask.INC | AddressModeMask.Direct0, 0x7f,
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -815,10 +815,10 @@ public class ArithmeticTests
         // VMC-170
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            OpcodePrefix.DEC.Compose(AddressingMode.Indirect2), // DEC @R2
-            OpcodePrefix.DEC.Compose(AddressingMode.Indirect2),
-            OpcodePrefix.DEC.Compose(AddressingMode.Indirect2),
-            OpcodePrefix.DEC.Compose(AddressingMode.Indirect2),
+            OpcodeMask.DEC | AddressModeMask.Indirect2, // DEC @R2
+            OpcodeMask.DEC | AddressModeMask.Indirect2,
+            OpcodeMask.DEC | AddressModeMask.Indirect2,
+            OpcodeMask.DEC | AddressModeMask.Indirect2,
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -849,7 +849,7 @@ public class ArithmeticTests
         // VMC-171
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            (byte)Opcode.MUL
+            OpcodeMask.MUL
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -877,7 +877,7 @@ public class ArithmeticTests
         // VMC-171
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            (byte)Opcode.MUL
+            OpcodeMask.MUL
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -905,7 +905,7 @@ public class ArithmeticTests
         // VMC-171
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            (byte)Opcode.DIV
+            OpcodeMask.DIV
         ];
         instructions.CopyTo(cpu.ROM);
 
@@ -933,7 +933,7 @@ public class ArithmeticTests
         // VMC-171
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
-            (byte)Opcode.DIV
+            OpcodeMask.DIV
         ];
         instructions.CopyTo(cpu.ROM);
 
