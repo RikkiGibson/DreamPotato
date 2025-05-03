@@ -61,10 +61,6 @@ class SpecialFunctionRegisters
             case Ids.Vtrbf:
                 writeWorkRam(value);
                 return;
-            case Ids.P7:
-                if ((value & 0b1) != 0)
-                    _cpu.RequestInt0();
-                goto default;
 
             default:
                 _rawMemory[address] = value;
@@ -544,6 +540,15 @@ class SpecialFunctionRegisters
     {
         get => BitHelpers.ReadBit(P7, bit: 0);
         set => P7 = BitHelpers.WithBit(P7, bit: 0, value);
+    }
+
+    /// <summary>
+    /// Low voltage detection
+    /// </summary>
+    public bool P71
+    {
+        get => BitHelpers.ReadBit(P7, bit: 1);
+        set => P7 = BitHelpers.WithBit(P7, bit: 1, value);
     }
 
     /// <summary>External interrupt 0, 1 control. VMD-135</summary>

@@ -36,7 +36,9 @@ public class Cpu
 
     internal ushort Pc;
 
-    internal ushort Interrupts;
+    internal Interrupts Interrupts;
+
+    internal InterruptServicingState InterruptServicingState;
 
     public Cpu()
     {
@@ -47,13 +49,13 @@ public class Cpu
 
     public byte ReadRam(int address)
     {
-        Debug.Assert(address <= 0x200);
+        Debug.Assert(address < 0x200);
         return Memory.Read((ushort)address);
     }
 
     public void WriteRam(int address, byte value)
     {
-        Debug.Assert(address <= 0x200);
+        Debug.Assert(address < 0x200);
         Memory.Write((ushort)address, value);
     }
 
@@ -77,31 +79,74 @@ public class Cpu
         return cyclesSoFar;
     }
 
-    internal void RequestInt0()
+#region External interrupt triggers
+    /// <summary>
+    /// Simulate connecting the VMU to a Dreamcast
+    /// </summary>
+    internal void ConnectDreamcast()
     {
-        Interrupts |= 0b1;
+        SFRs.P70 = true;
+        Interrupts |= Interrupts.INT0;
     }
 
-    internal void ServiceInterruptIfNeeded()
+    /// <summary>
+    /// Simulate low voltage
+    /// </summary>
+    internal void ReportLowVoltage()
     {
+        SFRs.P71 = true;
+        Interrupts |= Interrupts.INT1;
+    }
+#endregion
+
+    private void ServiceInterruptIfNeeded()
+    {
+        if (InterruptServicingState != InterruptServicingState.Ready)
+            return;
+
         // TODO: check interrupt enable etc
         if (Interrupts != 0)
         {
+            InterruptServicingState = InterruptServicingState.Servicing;
+
             // service next enabled interrupt in priority order.
-            if ((Interrupts & 0b1) != 0)
+            if ((Interrupts & Interrupts.INT0) != 0)
             {
-                Memory.PushStack((byte)Pc);
-                Memory.PushStack((byte)(Pc >> 8));
-                Pc = 0x03;
-                Interrupts &= 0b1111_1111_1110;
+                callServiceRoutine(InterruptVectors.INT0);
+                Interrupts &= ~Interrupts.INT0;
+            }
+            else if ((Interrupts & Interrupts.INT1) != 0)
+            {
+                callServiceRoutine(InterruptVectors.INT1);
+                Interrupts &= ~Interrupts.INT1;
+            }
+            else
+            {
+                Throw();
             }
         }
+
+        void callServiceRoutine(ushort routineAddress)
+        {
+            Memory.PushStack((byte)Pc);
+            Memory.PushStack((byte)(Pc >> 8));
+            Pc = routineAddress;
+        }
+
+        void Throw() => throw new InvalidOperationException($"Unexpected Interrupts value: {Interrupts}");
+    }
+
+    private void AdvanceInterruptState()
+    {
+        if (InterruptServicingState == InterruptServicingState.Returned)
+            InterruptServicingState = InterruptServicingState.Ready;
     }
 
     /// <returns>Number of cycles consumed by the instruction.</returns>
     internal int Step()
     {
         ServiceInterruptIfNeeded();
+        AdvanceInterruptState();
 
         var inst = InstructionDecoder.Decode(CurrentROMBank, Pc);
         InstructionMap[Pc] = inst;
@@ -692,6 +737,10 @@ public class Cpu
     private void Op_RETI(Instruction inst)
     {
         // (PC15 to 8) <- ((SP)), (SP) <- (SP) - 1, (PC7 to 0) <- ((SP)), (SP) <- (SP) -1
+        if (InterruptServicingState != InterruptServicingState.Servicing)
+            Logger.LogDebug($"Expected 'Servicing' state when returning from interrupt, but got '{InterruptServicingState}'");
+
+        InterruptServicingState = InterruptServicingState.Returned;
         var Pc15_8 = Memory.PopStack();
         var Pc7_0 = Memory.PopStack();
         Pc = (ushort)(Pc15_8 << 8 | Pc7_0);
