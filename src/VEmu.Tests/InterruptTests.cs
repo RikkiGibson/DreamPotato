@@ -10,8 +10,9 @@ public class InterruptTests
         var cpu = new Cpu();
         cpu.Reset();
         cpu.SFRs.Ie7_MasterInterruptEnable = true;
-        cpu.SFRs.I01Cr0_Enable0 = true;
-        // TODO: edge/level trigger settings
+        cpu.SFRs.I01Cr_IsInt0Enabled = true;
+        cpu.SFRs.I01Cr_IsInt0LevelTriggered = false;
+        cpu.SFRs.I01Cr_IsInt0HighTriggered = true;
 
         ReadOnlySpan<byte> instructions = [
             OpcodeMask.JMPF, 0x02, 0x80,
@@ -62,7 +63,9 @@ public class InterruptTests
         var cpu = new Cpu();
         cpu.Reset();
         cpu.SFRs.Ie7_MasterInterruptEnable = masterEnable;
-        cpu.SFRs.I01Cr0_Enable0 = int0Enable;
+        cpu.SFRs.I01Cr_IsInt0Enabled = int0Enable;
+        cpu.SFRs.I01Cr_IsInt0LevelTriggered = false;
+        cpu.SFRs.I01Cr_IsInt0HighTriggered = true;
 
         ReadOnlySpan<byte> instructions = [
             OpcodeMask.JMPF, 0x02, 0x80,
@@ -88,6 +91,8 @@ public class InterruptTests
         Assert.Equal(0x280, cpu.Pc);
 
         cpu.ConnectDreamcast(); // trigger int0
+        Assert.True(cpu.SFRs.I01Cr_Int0Source);
+
         cpu.Step(); // INC ACC
         Assert.Equal(0x282, cpu.Pc);
         Assert.Equal(1, cpu.SFRs.Acc);
@@ -101,8 +106,12 @@ public class InterruptTests
     {
         var cpu = new Cpu();
         cpu.SFRs.Ie7_MasterInterruptEnable = true;
-        cpu.SFRs.I01Cr0_Enable0 = true;
-        cpu.SFRs.I01Cr4_Enable1 = true;
+        cpu.SFRs.I01Cr_IsInt0Enabled = true;
+        cpu.SFRs.I01Cr_IsInt1Enabled = true;
+        cpu.SFRs.I01Cr_IsInt0LevelTriggered = false;
+        cpu.SFRs.I01Cr_IsInt0HighTriggered = true;
+        cpu.SFRs.I01Cr_IsInt1LevelTriggered = false;
+        cpu.SFRs.I01Cr_IsInt1HighTriggered = true;
 
         ReadOnlySpan<byte> instructions = [
             OpcodeMask.JMPF, 0x02, 0x80,

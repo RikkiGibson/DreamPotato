@@ -606,7 +606,7 @@ class SpecialFunctionRegisters
     /// <summary>
     /// INT0 enable flag.
     /// </summary>
-    public bool I01Cr0_Enable0
+    public bool I01Cr_IsInt0Enabled
     {
         get => BitHelpers.ReadBit(I01Cr, bit: 0);
         set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 0, value);
@@ -615,7 +615,7 @@ class SpecialFunctionRegisters
     /// <summary>
     /// INT0 source flag.
     /// </summary>
-    public bool I01Cr1_Source0
+    public bool I01Cr_Int0Source
     {
         get => BitHelpers.ReadBit(I01Cr, bit: 1);
         set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 1, value);
@@ -629,14 +629,14 @@ class SpecialFunctionRegisters
     /// 1,      0,          Detect rising edge
     /// 1,      1,          Detect high level
     /// </summary>
-    public bool I01Cr2_Detection0
+    public bool I01Cr_IsInt0LevelTriggered
     {
         get => BitHelpers.ReadBit(I01Cr, bit: 2);
         set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 2, value);
     }
 
-    /// <inheritdoc cref="I01Cr2_Detection0" />
-    public bool I01Cr3_Detection0
+    /// <inheritdoc cref="I01Cr_IsInt0LevelTriggered" />
+    public bool I01Cr_IsInt0HighTriggered
     {
         get => BitHelpers.ReadBit(I01Cr, bit: 3);
         set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 3, value);
@@ -646,7 +646,7 @@ class SpecialFunctionRegisters
     /// <summary>
     /// INT1 enable flag.
     /// </summary>
-    public bool I01Cr4_Enable1
+    public bool I01Cr_IsInt1Enabled
     {
         get => BitHelpers.ReadBit(I01Cr, bit: 4);
         set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 4, value);
@@ -655,7 +655,7 @@ class SpecialFunctionRegisters
     /// <summary>
     /// INT1 source flag.
     /// </summary>
-    public bool I01Cr5_Source1
+    public bool I01Cr_Int1Source
     {
         get => BitHelpers.ReadBit(I01Cr, bit: 5);
         set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 5, value);
@@ -669,14 +669,14 @@ class SpecialFunctionRegisters
     /// 1,      0,          Detect rising edge
     /// 1,      1,          Detect high level
     /// </summary>
-    public bool I01Cr6_Detection1
+    public bool I01Cr_IsInt1LevelTriggered
     {
         get => BitHelpers.ReadBit(I01Cr, bit: 6);
         set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 6, value);
     }
 
-    /// <inheritdoc cref="I01Cr6_Detection1"/>
-    public bool I01Cr7_Detection1
+    /// <inheritdoc cref="I01Cr_IsInt1LevelTriggered"/>
+    public bool I01Cr_IsInt1HighTriggered
     {
         get => BitHelpers.ReadBit(I01Cr, bit: 7);
         set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 7, value);
