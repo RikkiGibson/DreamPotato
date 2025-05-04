@@ -2,6 +2,7 @@ using System.Diagnostics;
 
 namespace VEmu.Core;
 
+using SFRs;
 using Ids = SpecialFunctionRegisterIds;
 
 /// <summary>See VMD-40, table 2.6</summary>
@@ -292,13 +293,11 @@ class SpecialFunctionRegisters
     }
 
     /// <summary>Timer 0 control register. VMD-67</summary>
-    public byte T0Cnt
+    public T0Cnt T0Cnt
     {
         get => Read(Ids.T0Cnt);
         set => Write(Ids.T0Cnt, value);
     }
-
-    // TODO: not sure if this pattern is scaling nicely. Maybe would be better to use bit consts e.g. T0Cnt = LIE | LOVF | HIE | ...
 
     /// <summary>
     /// T0LIE. Enables interrupt for T0L overflow.

@@ -4,7 +4,7 @@ namespace VEmu.Core;
 // we could then feed this info back into reverse engineering tools
 readonly struct InstructionMap()
 {
-    private readonly Instruction[] _instructions = new Instruction[ushort.MaxValue];
+    private readonly Instruction[] _instructions = new Instruction[64 * 1024];
 
     public ReadOnlyMemory<Instruction> this[Range range] => _instructions[range];
 

@@ -165,6 +165,8 @@ public class Cpu
         if (Interrupts != 0)
         {
             // service next enabled interrupt in priority order.
+            // TODO: int enable flags should probably be checked at the point interrupts are generated not when they are serviced.
+            // some of the flags do distinguish between generation and servicing though.
             if ((Interrupts & Interrupts.INT0) != 0 && SFRs.I01Cr_Int0Enable)
             {
                 callServiceRoutine(InterruptVectors.INT0);
@@ -179,6 +181,11 @@ public class Cpu
             {
                 callServiceRoutine(InterruptVectors.INT2_T0L);
                 Interrupts &= ~Interrupts.INT1;
+            }
+            else if ((Interrupts & Interrupts.T0H) != 0)
+            {
+                callServiceRoutine(InterruptVectors.T0H);
+                Interrupts &= ~Interrupts.T0H;
             }
         }
 
@@ -265,20 +272,60 @@ public class Cpu
 
     private void TickTimers(byte cycles)
     {
-        // TODO: T0Cnt control register options
+        tickTimer0();
 
-        // Start with just 8-bit mode
-        var scale = 0xff - SFRs.T0Prr;
-        var ticks = (ushort)(cycles * scale);
-        var t0l = (byte)(SFRs.T0L + ticks);
-        if (t0l < ticks)
+        void tickTimer0()
         {
-            SFRs.T0Cnt_LowOverflowFlag = true;
-            t0l = SFRs.T0Lr;
-            // TODO: should we be checking if the interrupt is enabled here or in ServiceInterruptIfNeeded?
-            Interrupts |= Interrupts.INT2_T0L;
+            var t0cnt = SFRs.T0Cnt;
+
+            var scale = 0xff - SFRs.T0Prr;
+            var ticks = (ushort)(cycles * scale);
+
+            // tick t0l
+            bool t0lOverflow = false;
+            if (t0cnt.T0lRun)
+            {
+                var t0l = (byte)(SFRs.T0L + ticks);
+                t0lOverflow = t0l < ticks;
+                if (t0lOverflow)
+                {
+                    t0l = SFRs.T0Lr; // reload
+                    if (!t0cnt.T0Long) // track the overflow only in 8-bit mode
+                    {
+                        t0cnt.T0lOvf = true; // note: the hardware will not reset this flag. application needs to do it.
+                        // TODO: should we be checking if the interrupt is enabled here or in ServiceInterruptIfNeeded?
+                        if (t0cnt.T0lIe)
+                            Interrupts |= Interrupts.INT2_T0L;
+                    }
+                }
+
+                SFRs.T0L = t0l;
+            }
+
+            // tick t0h
+            if (t0cnt.T0hRun)
+            {
+                var hticks = (t0cnt.T0Long, t0lOverflow) switch
+                {
+                    (true, true) => 1,
+                    (true, false) => 0,
+                    _ => ticks
+                };
+                var t0h = (byte)(SFRs.T0H + hticks);
+                var t0hOverflow = t0h < hticks;
+                if (t0hOverflow)
+                {
+                    t0cnt.T0hOvf = true; // note: the hardware will not reset this flag. application needs to do it.
+                    // TODO: should we be checking if the interrupt is enabled here or in ServiceInterruptIfNeeded?
+                    if (t0cnt.T0hIe)
+                        Interrupts |= Interrupts.T0H;
+                }
+
+                SFRs.T0H = t0h;
+            }
+
+            SFRs.T0Cnt = t0cnt;
         }
-        SFRs.T0L = t0l;
     }
 
     private byte FetchOperand(Parameter param, ushort arg)
