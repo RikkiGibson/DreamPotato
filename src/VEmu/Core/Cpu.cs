@@ -105,8 +105,8 @@ public class Cpu
         var oldP70 = SFRs.P70;
         SFRs.P70 = connect;
 
-        var isLevelTriggered = SFRs.I01Cr_IsInt0LevelTriggered;
-        var isHighTriggered = SFRs.I01Cr_IsInt0HighTriggered;
+        var isLevelTriggered = SFRs.I01Cr_Int0LevelTriggered;
+        var isHighTriggered = SFRs.I01Cr_Int0HighTriggered;
 
         // level trigger: just need to be at the right level to trigger it
         if (isLevelTriggered && (isHighTriggered == connect))
@@ -132,8 +132,8 @@ public class Cpu
         var oldP71 = SFRs.P71;
         SFRs.P71 = lowVoltage;
 
-        var isLevelTriggered = SFRs.I01Cr_IsInt1LevelTriggered;
-        var isHighTriggered = SFRs.I01Cr_IsInt1HighTriggered;
+        var isLevelTriggered = SFRs.I01Cr_Int1LevelTriggered;
+        var isHighTriggered = SFRs.I01Cr_Int1HighTriggered;
 
         // level trigger: just need to be at the right level to trigger it
         if (isLevelTriggered && (isHighTriggered == lowVoltage))
@@ -153,6 +153,8 @@ public class Cpu
 
     private void ServiceInterruptIfNeeded()
     {
+        // TODO: this is wrong, interrupt servicing can be interrupted.
+        // perhaps instead record something like the priority of the interrupt currently being serviced (in a stack?)
         if (InterruptServicingState != InterruptServicingState.Ready)
             return;
 
@@ -163,14 +165,19 @@ public class Cpu
         if (Interrupts != 0)
         {
             // service next enabled interrupt in priority order.
-            if ((Interrupts & Interrupts.INT0) != 0 && SFRs.I01Cr_IsInt0Enabled)
+            if ((Interrupts & Interrupts.INT0) != 0 && SFRs.I01Cr_Int0Enable)
             {
                 callServiceRoutine(InterruptVectors.INT0);
                 Interrupts &= ~Interrupts.INT0;
             }
-            else if ((Interrupts & Interrupts.INT1) != 0 && SFRs.I01Cr_IsInt1Enabled)
+            else if ((Interrupts & Interrupts.INT1) != 0 && SFRs.I01Cr_Int1Enable)
             {
                 callServiceRoutine(InterruptVectors.INT1);
+                Interrupts &= ~Interrupts.INT1;
+            }
+            else if ((Interrupts & Interrupts.INT2_T0L) != 0 && SFRs.I23Cr_Int2Enable)
+            {
+                callServiceRoutine(InterruptVectors.INT2_T0L);
                 Interrupts &= ~Interrupts.INT1;
             }
         }
@@ -249,9 +256,29 @@ public class Cpu
             default: Throw(inst); break;
         }
 
+        TickTimers(inst.Cycles);
+
         return inst.Cycles;
 
         static void Throw(Instruction inst) => throw new InvalidOperationException($"Unknown operation '{inst}'");
+    }
+
+    private void TickTimers(byte cycles)
+    {
+        // TODO: T0Cnt control register options
+
+        // Start with just 8-bit mode
+        var scale = 0xff - SFRs.T0Prr;
+        var ticks = (ushort)(cycles * scale);
+        var t0l = (byte)(SFRs.T0L + ticks);
+        if (t0l < ticks)
+        {
+            SFRs.T0Cnt_LowOverflowFlag = true;
+            t0l = SFRs.T0Lr;
+            // TODO: should we be checking if the interrupt is enabled here or in ServiceInterruptIfNeeded?
+            Interrupts |= Interrupts.INT2_T0L;
+        }
+        SFRs.T0L = t0l;
     }
 
     private byte FetchOperand(Parameter param, ushort arg)

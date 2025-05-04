@@ -10,9 +10,9 @@ public class InterruptTests
         var cpu = new Cpu();
         cpu.Reset();
         cpu.SFRs.Ie7_MasterInterruptEnable = true;
-        cpu.SFRs.I01Cr_IsInt0Enabled = true;
-        cpu.SFRs.I01Cr_IsInt0LevelTriggered = false;
-        cpu.SFRs.I01Cr_IsInt0HighTriggered = true;
+        cpu.SFRs.I01Cr_Int0Enable = true;
+        cpu.SFRs.I01Cr_Int0LevelTriggered = false;
+        cpu.SFRs.I01Cr_Int0HighTriggered = true;
 
         ReadOnlySpan<byte> instructions = [
             OpcodeMask.JMPF, 0x02, 0x80,
@@ -63,9 +63,9 @@ public class InterruptTests
         var cpu = new Cpu();
         cpu.Reset();
         cpu.SFRs.Ie7_MasterInterruptEnable = masterEnable;
-        cpu.SFRs.I01Cr_IsInt0Enabled = int0Enable;
-        cpu.SFRs.I01Cr_IsInt0LevelTriggered = false;
-        cpu.SFRs.I01Cr_IsInt0HighTriggered = true;
+        cpu.SFRs.I01Cr_Int0Enable = int0Enable;
+        cpu.SFRs.I01Cr_Int0LevelTriggered = false;
+        cpu.SFRs.I01Cr_Int0HighTriggered = true;
 
         ReadOnlySpan<byte> instructions = [
             OpcodeMask.JMPF, 0x02, 0x80,
@@ -106,12 +106,12 @@ public class InterruptTests
     {
         var cpu = new Cpu();
         cpu.SFRs.Ie7_MasterInterruptEnable = true;
-        cpu.SFRs.I01Cr_IsInt0Enabled = true;
-        cpu.SFRs.I01Cr_IsInt1Enabled = true;
-        cpu.SFRs.I01Cr_IsInt0LevelTriggered = false;
-        cpu.SFRs.I01Cr_IsInt0HighTriggered = true;
-        cpu.SFRs.I01Cr_IsInt1LevelTriggered = false;
-        cpu.SFRs.I01Cr_IsInt1HighTriggered = true;
+        cpu.SFRs.I01Cr_Int0Enable = true;
+        cpu.SFRs.I01Cr_Int1Enable = true;
+        cpu.SFRs.I01Cr_Int0LevelTriggered = false;
+        cpu.SFRs.I01Cr_Int0HighTriggered = true;
+        cpu.SFRs.I01Cr_Int1LevelTriggered = false;
+        cpu.SFRs.I01Cr_Int1HighTriggered = true;
 
         ReadOnlySpan<byte> instructions = [
             OpcodeMask.JMPF, 0x02, 0x80,

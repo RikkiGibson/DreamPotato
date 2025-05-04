@@ -298,6 +298,80 @@ class SpecialFunctionRegisters
         set => Write(Ids.T0Cnt, value);
     }
 
+    // TODO: not sure if this pattern is scaling nicely. Maybe would be better to use bit consts e.g. T0Cnt = LIE | LOVF | HIE | ...
+
+    /// <summary>
+    /// T0LIE. Enables interrupt for T0L overflow.
+    /// </summary>
+    public bool T0Cnt_LowInterruptEnable
+    {
+        get => BitHelpers.ReadBit(T0Cnt, bit: 0);
+        set => T0Cnt = BitHelpers.WithBit(T0Cnt, bit: 0, value);
+    }
+
+    /// <summary>
+    /// T0LOVF. Set when T0L overflows.
+    /// </summary>
+    public bool T0Cnt_LowOverflowFlag
+    {
+        get => BitHelpers.ReadBit(T0Cnt, bit: 1);
+        set => T0Cnt = BitHelpers.WithBit(T0Cnt, bit: 1, value);
+    }
+
+    /// <summary>
+    /// T0HIE. Enables interrupt for T0H overflow.
+    /// </summary>
+    public bool T0Cnt_HighInterruptEnable
+    {
+        get => BitHelpers.ReadBit(T0Cnt, bit: 2);
+        set => T0Cnt = BitHelpers.WithBit(T0Cnt, bit: 2, value);
+    }
+
+    /// <summary>
+    /// T0HOVF. Set when T0H overflows.
+    /// </summary>
+    public bool T0Cnt_HighOverflowFlag
+    {
+        get => BitHelpers.ReadBit(T0Cnt, bit: 3);
+        set => T0Cnt = BitHelpers.WithBit(T0Cnt, bit: 3, value);
+    }
+
+    /// <summary>
+    /// T0LEXT. When set to 1, <see cref="T0L"/> is driven by an external signal determined by <see cref="Isl"/>.
+    /// </summary>
+    public bool T0Cnt_LowInputClockSelect
+    {
+        get => BitHelpers.ReadBit(T0Cnt, bit: 4);
+        set => T0Cnt = BitHelpers.WithBit(T0Cnt, bit: 4, value);
+    }
+
+    /// <summary>
+    /// T0LONG. When set to 1, 16-bit mode is used. Otherwise 8-bit mode is used.
+    /// </summary>
+    public bool T0Cnt_BitLengthSpecifier
+    {
+        get => BitHelpers.ReadBit(T0Cnt, bit: 5);
+        set => T0Cnt = BitHelpers.WithBit(T0Cnt, bit: 5, value);
+    }
+
+    /// <summary>
+    /// T0LRUN: When set to 1, starts the T0L counter. When reset to 0, reloads T0L with T0LR.
+    /// </summary>
+    public bool T0Cnt_LowRunFlag
+    {
+        get => BitHelpers.ReadBit(T0Cnt, bit: 6);
+        set => T0Cnt = BitHelpers.WithBit(T0Cnt, bit: 6, value);
+    }
+
+    /// <summary>
+    /// T0HRUN: When set to 1, starts the T0H counter. When reset to 0, reloads T0H with T0HR.
+    /// </summary>
+    public bool T0Cnt_HighRunFlag
+    {
+        get => BitHelpers.ReadBit(T0Cnt, bit: 7);
+        set => T0Cnt = BitHelpers.WithBit(T0Cnt, bit: 7, value);
+    }
+
     /// <summary>Timer 0 prescaler data. VMD-71</summary>
     public byte T0Prr
     {
@@ -606,7 +680,7 @@ class SpecialFunctionRegisters
     /// <summary>
     /// INT0 enable flag.
     /// </summary>
-    public bool I01Cr_IsInt0Enabled
+    public bool I01Cr_Int0Enable
     {
         get => BitHelpers.ReadBit(I01Cr, bit: 0);
         set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 0, value);
@@ -629,14 +703,14 @@ class SpecialFunctionRegisters
     /// 1,      0,          Detect rising edge
     /// 1,      1,          Detect high level
     /// </summary>
-    public bool I01Cr_IsInt0LevelTriggered
+    public bool I01Cr_Int0LevelTriggered
     {
         get => BitHelpers.ReadBit(I01Cr, bit: 2);
         set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 2, value);
     }
 
-    /// <inheritdoc cref="I01Cr_IsInt0LevelTriggered" />
-    public bool I01Cr_IsInt0HighTriggered
+    /// <inheritdoc cref="I01Cr_Int0LevelTriggered" />
+    public bool I01Cr_Int0HighTriggered
     {
         get => BitHelpers.ReadBit(I01Cr, bit: 3);
         set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 3, value);
@@ -646,7 +720,7 @@ class SpecialFunctionRegisters
     /// <summary>
     /// INT1 enable flag.
     /// </summary>
-    public bool I01Cr_IsInt1Enabled
+    public bool I01Cr_Int1Enable
     {
         get => BitHelpers.ReadBit(I01Cr, bit: 4);
         set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 4, value);
@@ -669,14 +743,14 @@ class SpecialFunctionRegisters
     /// 1,      0,          Detect rising edge
     /// 1,      1,          Detect high level
     /// </summary>
-    public bool I01Cr_IsInt1LevelTriggered
+    public bool I01Cr_Int1LevelTriggered
     {
         get => BitHelpers.ReadBit(I01Cr, bit: 6);
         set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 6, value);
     }
 
-    /// <inheritdoc cref="I01Cr_IsInt1LevelTriggered"/>
-    public bool I01Cr_IsInt1HighTriggered
+    /// <inheritdoc cref="I01Cr_Int1LevelTriggered"/>
+    public bool I01Cr_Int1HighTriggered
     {
         get => BitHelpers.ReadBit(I01Cr, bit: 7);
         set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 7, value);
@@ -687,6 +761,62 @@ class SpecialFunctionRegisters
     {
         get => Read(Ids.I23Cr);
         set => Write(Ids.I23Cr, value);
+    }
+
+    /// <summary>INT2/T0L enable flag.</summary>
+    public bool I23Cr_Int2Enable
+    {
+        get => BitHelpers.ReadBit(I01Cr, bit: 0);
+        set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 0, value);
+    }
+
+    /// <summary>INT2/T0L source flag.</summary>
+    public bool I23Cr_Int2Source
+    {
+        get => BitHelpers.ReadBit(I01Cr, bit: 1);
+        set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 1, value);
+    }
+
+    /// <summary>INT2 falling edge detection flag.</summary>
+    public bool I23Cr_Int2FallingEdgeDetection
+    {
+        get => BitHelpers.ReadBit(I01Cr, bit: 2);
+        set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 2, value);
+    }
+
+    /// <summary>INT2 rising edge detection flag.</summary>
+    public bool I23Cr_Int2RisingEdgeDetection
+    {
+        get => BitHelpers.ReadBit(I01Cr, bit: 3);
+        set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 3, value);
+    }
+
+    /// <summary>INT3/base timer enable flag.</summary>
+    public bool I23Cr_Int3Enable
+    {
+        get => BitHelpers.ReadBit(I01Cr, bit: 4);
+        set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 4, value);
+    }
+
+    /// <summary>INT3/base timer source flag.</summary>
+    public bool I23Cr_Int3Source
+    {
+        get => BitHelpers.ReadBit(I01Cr, bit: 5);
+        set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 5, value);
+    }
+
+    /// <summary>INT3 falling edge detection flag.</summary>
+    public bool I23Cr_Int3FallingEdgeDetection
+    {
+        get => BitHelpers.ReadBit(I01Cr, bit: 6);
+        set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 6, value);
+    }
+
+    /// <summary>INT3 rising edge detection flag.</summary>
+    public bool I23Cr_Int3RisingEdgeDetection
+    {
+        get => BitHelpers.ReadBit(I01Cr, bit: 7);
+        set => I01Cr = BitHelpers.WithBit(I01Cr, bit: 7, value);
     }
 
     /// <summary>Input signal select. VMD-138</summary>
