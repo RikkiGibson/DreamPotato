@@ -90,7 +90,7 @@ static class Operations
     public static Operation STF = new(OperationKind.STF, [], Size: 1, Cycles: 2);
 
     public static Operation PUSH_d9 = new(OperationKind.PUSH, [new(ParameterKind.D9)], Size: 2, Cycles: 2);
-    public static Operation POP_d9 = new(OperationKind.PUSH, [new(ParameterKind.D9)], Size: 2, Cycles: 2);
+    public static Operation POP_d9 = new(OperationKind.POP, [new(ParameterKind.D9)], Size: 2, Cycles: 2);
 
     public static Operation XCH_d9 = new(OperationKind.XCH, [new(ParameterKind.D9)], Size: 2, Cycles: 1);
     public static Operation XCH_Ri = new(OperationKind.XCH, [new(ParameterKind.Ri)], Size: 1, Cycles: 1);

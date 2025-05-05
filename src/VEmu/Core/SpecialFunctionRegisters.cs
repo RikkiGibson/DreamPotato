@@ -37,6 +37,7 @@ class SpecialFunctionRegisters
         // It's nice to be able to run without a BIOS, so let's set them up here.
         P1Fcr = 0b1011_1111;
         P3Int = 0b1111_1101;
+        P3 = 0b1111_1111;
         Isl = 0b1100_0000;
         Vsel = 0b1111_1100;
         Btcr = 0b0100_0001;

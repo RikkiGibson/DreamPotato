@@ -21,13 +21,24 @@ readonly struct InstructionMap()
             {
 
             }
-            _instructions[offset] = value;
+
+            // Ensure not overlapping with a later instruction
             var end = offset + value.Operation.Size;
             for (var i = offset + 1; i < end; i++)
             {
                 if (_instructions[i].HasValue)
                     throw new InvalidOperationException($"Cannot store instruction '{value}' because map already contains overlapping '{_instructions[i]}'");
             }
+
+            // Ensure not overlapping with an earlier instruction
+            for (var i = Math.Max(0, offset - 3); i < offset; i++)
+            {
+                var inst = _instructions[i];
+                if (inst.HasValue && i + inst.Size > offset)
+                    throw new InvalidOperationException($"Cannot store instruction '{value}' because map already contains overlapping '{_instructions[i]}'");
+            }
+
+            _instructions[offset] = value;
         }
     }
 }

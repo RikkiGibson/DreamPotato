@@ -88,6 +88,7 @@ public partial class Form1 : Form
 
     private void Form1_KeyDown(object sender, KeyEventArgs e)
     {
+        // Console.WriteLine($"{e.KeyCode} Down");
         switch (e.KeyCode)
         {
             case Keys.W: _cpu.SFRs.Up = false; break;
@@ -103,6 +104,7 @@ public partial class Form1 : Form
 
     private void Form1_KeyUp(object sender, KeyEventArgs e)
     {
+        // Console.WriteLine($"{e.KeyCode} Up");
         switch (e.KeyCode)
         {
             case Keys.W: _cpu.SFRs.Up = true; break;
