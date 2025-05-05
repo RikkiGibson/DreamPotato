@@ -23,7 +23,6 @@ public class Display(Cpu cpu)
 
         var xram1 = cpu.Memory.Direct_ReadXram1();
         Debug.Assert(xram1.Length == 0x60);
-        // Debug.Assert(index == display.Length / 2);
 
         for (int left = 0; left < 0x60; left += 0x10)
         {
