@@ -41,7 +41,7 @@ public partial class Form1 : Form
 
     private readonly byte[] _displayBits = new byte[Display.DisplaySize];
     private readonly Rectangle _srcRect = new Rectangle(0, 0, width, height);
-    private readonly Rectangle _destRect = new Rectangle(0, 0, width*scale, height*scale);
+    private readonly Rectangle _destRect = new Rectangle(0, 0, width * scale, height * scale);
     private readonly Bitmap _bitmap = new Bitmap(width, height, PixelFormat.Format32bppRgb);
 
     private Color ReadColor(byte @byte, byte bit)
@@ -84,5 +84,35 @@ public partial class Form1 : Form
 
         await Task.Delay(nextFrameTime);
         Refresh();
+    }
+
+    private void Form1_KeyDown(object sender, KeyEventArgs e)
+    {
+        switch (e.KeyCode)
+        {
+            case Keys.W: _cpu.SFRs.Up = false; break;
+            case Keys.S: _cpu.SFRs.Down = false; break;
+            case Keys.A: _cpu.SFRs.Left = false; break;
+            case Keys.D: _cpu.SFRs.Right = false; break;
+            case Keys.K: _cpu.SFRs.ButtonA = false; break;
+            case Keys.L: _cpu.SFRs.ButtonB = false; break;
+            case Keys.J: _cpu.SFRs.ButtonMode = false; break;
+            case Keys.I: _cpu.SFRs.ButtonSleep = false; break;
+        }
+    }
+
+    private void Form1_KeyUp(object sender, KeyEventArgs e)
+    {
+        switch (e.KeyCode)
+        {
+            case Keys.W: _cpu.SFRs.Up = true; break;
+            case Keys.S: _cpu.SFRs.Down = true; break;
+            case Keys.A: _cpu.SFRs.Left = true; break;
+            case Keys.D: _cpu.SFRs.Right = true; break;
+            case Keys.K: _cpu.SFRs.ButtonA = true; break;
+            case Keys.L: _cpu.SFRs.ButtonB = true; break;
+            case Keys.J: _cpu.SFRs.ButtonMode = true; break;
+            case Keys.I: _cpu.SFRs.ButtonSleep = true; break;
+        }
     }
 }

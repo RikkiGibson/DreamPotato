@@ -17,6 +17,10 @@ readonly struct InstructionMap()
         }
         set
         {
+            if (offset == 1)
+            {
+
+            }
             _instructions[offset] = value;
             var end = offset + value.Operation.Size;
             for (var i = offset + 1; i < end; i++)

@@ -51,6 +51,8 @@ partial class Form1
         Name = "Form1";
         Text = "Form1";
         Paint += Form1_Paint;
+        KeyDown += Form1_KeyDown;
+        KeyUp += Form1_KeyUp;
         ((System.ComponentModel.ISupportInitialize)ScreenBox).EndInit();
         ResumeLayout(false);
     }
