@@ -4,13 +4,15 @@ namespace VEmu.Core;
 
 public class Cpu
 {
-    // TODO: bring in a logger type with configurable severity etc
-    // perhaps with a rolling buffer
     internal Logger Logger { get; }
 
-    // VMU-2: standalone instruction cycle time 183us (microseconds).
-    // Compare with 1us when connected to console.
-
+    // VME-12, figure 1.7: "System clock table"
+    // Ceramic (CF) oscillator: 6 MHz / 1.0us cycle time
+    //     - used when connected to console
+    // Internal (RC) oscillator: 600 kHz / 10.0us cycle time
+    //     - used when accessing flash memory in standalone mode
+    // Quartz (X'TAL) oscillator: 32 kHz / 183.0us cycle time
+    //     - used most of the time in standalone mode
     // VMD-35: Accumulator and all registers are mapped to RAM.
 
     // VMD-38: Memory

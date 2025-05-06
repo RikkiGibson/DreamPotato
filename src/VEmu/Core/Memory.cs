@@ -43,14 +43,16 @@ class Memory
     internal readonly SpecialFunctionRegisters SFRs;
 
     /// <summary>
-    /// Video memory. Bank 0, 0x180-0x1df.
+    /// Video memory. Bank 0, 0x180-0x1ff.
+    /// Note that 0x20 of the bytes are "dead", only 0x60 of the space is usable.
     /// </summary>
-    private readonly byte[] _xram0 = new byte[0x60];
+    private readonly byte[] _xram0 = new byte[0x80];
 
     /// <summary>
-    /// Video memory. Bank 1, 0x180-0x1df.
+    /// Video memory. Bank 1, 0x180-0x1ff.
+    /// Note that 0x20 of the bytes are "dead", only 0x60 of the space is usable.
     /// </summary>
-    private readonly byte[] _xram1 = new byte[0x60];
+    private readonly byte[] _xram1 = new byte[0x80];
 
     /// <summary>
     /// Video memory. Bank 2, 0x180-0x18f.
@@ -87,7 +89,7 @@ class Memory
                 return ReadMainMemory(address);
             case >= 0x100 and < 0x180:
                 return SFRs.Read((byte)(address - 0x100));
-            case >= 0x180 and < 0x1E0:
+            case >= 0x180 and < 0x200:
                 return ReadXram((byte)(address - 0x180));
             default:
                 _logger.LogDebug($"Read out of range: 0x{address:X}");
@@ -106,7 +108,7 @@ class Memory
             case >= 0x100 and < 0x180:
                 SFRs.Write((byte)(address - 0x100), value);
                 return;
-            case >= 0x180 and < 0x1E0:
+            case >= 0x180 and < 0x200:
                 WriteXram((byte)(address - 0x180), value);
                 return;
             default:
