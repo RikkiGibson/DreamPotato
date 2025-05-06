@@ -107,22 +107,27 @@ public class Cpu
         var oldP70 = SFRs.P70;
         SFRs.P70 = connect;
 
-        var isLevelTriggered = SFRs.I01Cr_Int0LevelTriggered;
-        var isHighTriggered = SFRs.I01Cr_Int0HighTriggered;
+        var i01cr = SFRs.I01Cr;
+        var isLevelTriggered = i01cr.Int0LevelTriggered;
+        var isHighTriggered = i01cr.Int0HighTriggered;
 
         // level trigger: just need to be at the right level to trigger it
         if (isLevelTriggered && (isHighTriggered == connect))
         {
-            SFRs.I01Cr_Int0Source = true;
-            Interrupts |= Interrupts.INT0;
+            i01cr.Int0Source = true;
+            if (i01cr.Int0Enable)
+                Interrupts |= Interrupts.INT0;
         }
 
         // edge trigger: need to transition to the desired level to trigger it
         if (!isLevelTriggered && (oldP70 != connect) && (isHighTriggered == connect))
         {
-            SFRs.I01Cr_Int0Source = true;
-            Interrupts |= Interrupts.INT0;
+            i01cr.Int0Source = true;
+            if (i01cr.Int0Enable)
+                Interrupts |= Interrupts.INT0;
         }
+
+        SFRs.I01Cr = i01cr;
     }
 
     /// <summary>
@@ -134,21 +139,24 @@ public class Cpu
         var oldP71 = SFRs.P71;
         SFRs.P71 = lowVoltage;
 
-        var isLevelTriggered = SFRs.I01Cr_Int1LevelTriggered;
-        var isHighTriggered = SFRs.I01Cr_Int1HighTriggered;
+        var i01cr = SFRs.I01Cr;
+        var isLevelTriggered = i01cr.Int1LevelTriggered;
+        var isHighTriggered = i01cr.Int1HighTriggered;
 
         // level trigger: just need to be at the right level to trigger it
         if (isLevelTriggered && (isHighTriggered == lowVoltage))
         {
-            SFRs.I01Cr_Int1Source = true;
-            Interrupts |= Interrupts.INT1;
+            i01cr.Int1Source = true;
+            if (i01cr.Int1Enable)
+                Interrupts |= Interrupts.INT1;
         }
 
         // edge trigger: need to transition to the desired level to trigger it
         if (!isLevelTriggered && (oldP71 != lowVoltage) && (isHighTriggered == lowVoltage))
         {
-            SFRs.I01Cr_Int1Source = true;
-            Interrupts |= Interrupts.INT1;
+            i01cr.Int1Source = true;
+            if (i01cr.Int1Enable)
+                Interrupts |= Interrupts.INT1;
         }
     }
 #endregion
@@ -169,12 +177,12 @@ public class Cpu
             // service next enabled interrupt in priority order.
             // TODO: int enable flags should probably be checked at the point interrupts are generated not when they are serviced.
             // some of the flags do distinguish between generation and servicing though.
-            if ((Interrupts & Interrupts.INT0) != 0 && SFRs.I01Cr_Int0Enable)
+            if ((Interrupts & Interrupts.INT0) != 0 && SFRs.I01Cr.Int0Enable)
             {
                 callServiceRoutine(InterruptVectors.INT0);
                 Interrupts &= ~Interrupts.INT0;
             }
-            else if ((Interrupts & Interrupts.INT1) != 0 && SFRs.I01Cr_Int1Enable)
+            else if ((Interrupts & Interrupts.INT1) != 0 && SFRs.I01Cr.Int1Enable)
             {
                 callServiceRoutine(InterruptVectors.INT1);
                 Interrupts &= ~Interrupts.INT1;

@@ -1,15 +1,87 @@
 namespace VEmu.Core.SFRs;
 
-/// <summary>Timer 0 Control Register.</summary>
+/// <summary>External interrupt 0, 1 control. VMD-135</summary>
+struct I01Cr
+{
+    private byte _value;
+
+    public I01Cr(byte value) => _value = value;
+    public static explicit operator byte(I01Cr value) => value._value;
+
+    /// <summary>
+    /// INT1 detection level/edge select.
+    /// I01CR7, I01CR6      INT1 interrupt condition
+    /// 0,      0,          Detect falling edge
+    /// 0,      1,          Detect low level
+    /// 1,      0,          Detect rising edge
+    /// 1,      1,          Detect high level
+    /// </summary>
+    public bool Int1HighTriggered
+    {
+        get => BitHelpers.ReadBit(_value, bit: 7);
+        set => BitHelpers.WriteBit(ref _value, bit: 7, value);
+    }
+
+    /// <inheritdoc cref="Int1HighTriggered"/>
+    public bool Int1LevelTriggered
+    {
+        get => BitHelpers.ReadBit(_value, bit: 6);
+        set => BitHelpers.WriteBit(ref _value, bit: 6, value);
+    }
+
+    public bool Int1Source
+    {
+        get => BitHelpers.ReadBit(_value, bit: 5);
+        set => BitHelpers.WriteBit(ref _value, bit: 5, value);
+    }
+
+    public bool Int1Enable
+    {
+        get => BitHelpers.ReadBit(_value, bit: 4);
+        set => BitHelpers.WriteBit(ref _value, bit: 4, value);
+    }
+
+    /// <summary>
+    /// INT0 detection level/edge select.
+    /// I01CR3, I01CR2      INT0 interrupt condition
+    /// 0,      0,          Detect falling edge
+    /// 0,      1,          Detect low level
+    /// 1,      0,          Detect rising edge
+    /// 1,      1,          Detect high level
+    /// </summary>
+    public bool Int0HighTriggered
+    {
+        get => BitHelpers.ReadBit(_value, bit: 3);
+        set => BitHelpers.WriteBit(ref _value, bit: 3, value);
+    }
+
+    /// <inheritdoc cref="Int0HighTriggered" />
+    public bool Int0LevelTriggered
+    {
+        get => BitHelpers.ReadBit(_value, bit: 2);
+        set => BitHelpers.WriteBit(ref _value, bit: 2, value);
+    }
+
+    public bool Int0Source
+    {
+        get => BitHelpers.ReadBit(_value, bit: 1);
+        set => BitHelpers.WriteBit(ref _value, bit: 1, value);
+    }
+
+    public bool Int0Enable
+    {
+        get => BitHelpers.ReadBit(_value, bit: 0);
+        set => BitHelpers.WriteBit(ref _value, bit: 0, value);
+    }
+}
+
+/// <summary>Timer 0 control register. VMD-67</summary>
 struct T0Cnt
 {
     private byte _value;
 
     public T0Cnt(byte value) => _value = value;
-
-    // TODO: it may be better to use .Value or some such instead of implicit conv to byte
-    public static implicit operator byte(T0Cnt register) => register._value;
-    public static implicit operator T0Cnt(byte value) => new T0Cnt(value);
+    public static explicit operator byte(T0Cnt value) => value._value;
 
     /// <summary>
     /// When set to 1, starts the T0H counter. When reset to 0, reloads T0H with T0HR.

@@ -10,9 +10,7 @@ public class InterruptTests
         var cpu = new Cpu();
         cpu.Reset();
         cpu.SFRs.Ie7_MasterInterruptEnable = true;
-        cpu.SFRs.I01Cr_Int0Enable = true;
-        cpu.SFRs.I01Cr_Int0LevelTriggered = false;
-        cpu.SFRs.I01Cr_Int0HighTriggered = true;
+        cpu.SFRs.I01Cr = new() { Int0Enable = true, Int0LevelTriggered = false, Int0HighTriggered = true };
 
         ReadOnlySpan<byte> instructions = [
             OpcodeMask.JMPF, 0x02, 0x80,
@@ -63,9 +61,7 @@ public class InterruptTests
         var cpu = new Cpu();
         cpu.Reset();
         cpu.SFRs.Ie7_MasterInterruptEnable = masterEnable;
-        cpu.SFRs.I01Cr_Int0Enable = int0Enable;
-        cpu.SFRs.I01Cr_Int0LevelTriggered = false;
-        cpu.SFRs.I01Cr_Int0HighTriggered = true;
+        cpu.SFRs.I01Cr = new() { Int0Enable = int0Enable, Int0LevelTriggered = false, Int0HighTriggered = true };
 
         ReadOnlySpan<byte> instructions = [
             OpcodeMask.JMPF, 0x02, 0x80,
@@ -91,7 +87,7 @@ public class InterruptTests
         Assert.Equal(0x280, cpu.Pc);
 
         cpu.ConnectDreamcast(); // trigger int0
-        Assert.True(cpu.SFRs.I01Cr_Int0Source);
+        Assert.True(cpu.SFRs.I01Cr.Int0Source);
 
         cpu.Step(); // INC ACC
         Assert.Equal(0x282, cpu.Pc);
@@ -106,12 +102,15 @@ public class InterruptTests
     {
         var cpu = new Cpu();
         cpu.SFRs.Ie7_MasterInterruptEnable = true;
-        cpu.SFRs.I01Cr_Int0Enable = true;
-        cpu.SFRs.I01Cr_Int1Enable = true;
-        cpu.SFRs.I01Cr_Int0LevelTriggered = false;
-        cpu.SFRs.I01Cr_Int0HighTriggered = true;
-        cpu.SFRs.I01Cr_Int1LevelTriggered = false;
-        cpu.SFRs.I01Cr_Int1HighTriggered = true;
+        cpu.SFRs.I01Cr = new()
+        {
+            Int0Enable = true,
+            Int1Enable = true,
+            Int0LevelTriggered = false,
+            Int0HighTriggered = true,
+            Int1LevelTriggered = false,
+            Int1HighTriggered = true
+        };
 
         ReadOnlySpan<byte> instructions = [
             OpcodeMask.JMPF, 0x02, 0x80,
