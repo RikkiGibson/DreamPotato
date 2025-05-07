@@ -91,14 +91,14 @@ public partial class Form1 : Form
         // Console.WriteLine($"{e.KeyCode} Down");
         switch (e.KeyCode)
         {
-            case Keys.W: _cpu.SFRs.Up = false; break;
-            case Keys.S: _cpu.SFRs.Down = false; break;
-            case Keys.A: _cpu.SFRs.Left = false; break;
-            case Keys.D: _cpu.SFRs.Right = false; break;
-            case Keys.K: _cpu.SFRs.ButtonA = false; break;
-            case Keys.L: _cpu.SFRs.ButtonB = false; break;
-            case Keys.J: _cpu.SFRs.ButtonMode = false; break;
-            case Keys.I: _cpu.SFRs.ButtonSleep = false; break;
+            case Keys.W: _cpu.SFRs.P3 = _cpu.SFRs.P3 with { Up = false }; break;
+            case Keys.S: _cpu.SFRs.P3 = _cpu.SFRs.P3 with { Down = false }; break;
+            case Keys.A: _cpu.SFRs.P3 = _cpu.SFRs.P3 with { Left = false }; break;
+            case Keys.D: _cpu.SFRs.P3 = _cpu.SFRs.P3 with { Right = false }; break;
+            case Keys.K: _cpu.SFRs.P3 = _cpu.SFRs.P3 with { ButtonA = false }; break;
+            case Keys.L: _cpu.SFRs.P3 = _cpu.SFRs.P3 with { ButtonB = false }; break;
+            case Keys.J: _cpu.SFRs.P3 = _cpu.SFRs.P3 with { ButtonMode = false }; break;
+            case Keys.I: _cpu.SFRs.P3 = _cpu.SFRs.P3 with { ButtonSleep = false }; break;
         }
     }
 
@@ -107,14 +107,14 @@ public partial class Form1 : Form
         // Console.WriteLine($"{e.KeyCode} Up");
         switch (e.KeyCode)
         {
-            case Keys.W: _cpu.SFRs.Up = true; break;
-            case Keys.S: _cpu.SFRs.Down = true; break;
-            case Keys.A: _cpu.SFRs.Left = true; break;
-            case Keys.D: _cpu.SFRs.Right = true; break;
-            case Keys.K: _cpu.SFRs.ButtonA = true; break;
-            case Keys.L: _cpu.SFRs.ButtonB = true; break;
-            case Keys.J: _cpu.SFRs.ButtonMode = true; break;
-            case Keys.I: _cpu.SFRs.ButtonSleep = true; break;
+            case Keys.W: _cpu.SFRs.P3 = _cpu.SFRs.P3 with { Up = true }; break;
+            case Keys.S: _cpu.SFRs.P3 = _cpu.SFRs.P3 with { Down = true }; break;
+            case Keys.A: _cpu.SFRs.P3 = _cpu.SFRs.P3 with { Left = true }; break;
+            case Keys.D: _cpu.SFRs.P3 = _cpu.SFRs.P3 with { Right = true }; break;
+            case Keys.K: _cpu.SFRs.P3 = _cpu.SFRs.P3 with { ButtonA = true }; break;
+            case Keys.L: _cpu.SFRs.P3 = _cpu.SFRs.P3 with { ButtonB = true }; break;
+            case Keys.J: _cpu.SFRs.P3 = _cpu.SFRs.P3 with { ButtonMode = true }; break;
+            case Keys.I: _cpu.SFRs.P3 = _cpu.SFRs.P3 with { ButtonSleep = true }; break;
         }
     }
 }

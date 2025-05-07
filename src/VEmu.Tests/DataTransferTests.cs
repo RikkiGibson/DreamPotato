@@ -21,11 +21,11 @@ public class DataTransferTests
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0x55, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0xaa, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
     }
 
     [Fact]
@@ -46,15 +46,15 @@ public class DataTransferTests
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0xf0, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0x0f, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0xf0, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
     }
 
     [Fact]
@@ -76,11 +76,11 @@ public class DataTransferTests
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0xf0, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0x0f, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
     }
 
     [Fact]
@@ -102,11 +102,11 @@ public class DataTransferTests
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0xaa, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0x55, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
     }
 
     [Fact]
@@ -128,14 +128,14 @@ public class DataTransferTests
         Assert.Equal(0xff, cpu.SFRs.Acc);
         Assert.Equal(0xff, cpu.Memory.Read(0x70));
         Assert.Equal(0xaa, cpu.Memory.Read(0x71));
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         cpu.SFRs.Acc = 0x00;
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0x00, cpu.SFRs.Acc);
         Assert.Equal(0xff, cpu.Memory.Read(0x70));
         Assert.Equal(0x00, cpu.Memory.Read(0x71));
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
     }
 
     [Fact]
@@ -160,56 +160,56 @@ public class DataTransferTests
         Assert.Equal(0x00, cpu.Memory.Read(1));
         Assert.Equal(0x00, cpu.Memory.Read(2));
         Assert.Equal(0x00, cpu.Memory.Read(3));
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(2, cpu.Step());
         Assert.Equal(0xff, cpu.Memory.Read(0));
         Assert.Equal(0xfe, cpu.Memory.Read(1));
         Assert.Equal(0x00, cpu.Memory.Read(2));
         Assert.Equal(0x00, cpu.Memory.Read(3));
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(2, cpu.Step());
         Assert.Equal(0xff, cpu.Memory.Read(0));
         Assert.Equal(0xfe, cpu.Memory.Read(1));
         Assert.Equal(0xfd, cpu.Memory.Read(2));
         Assert.Equal(0x00, cpu.Memory.Read(3));
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(2, cpu.Step());
         Assert.Equal(0xff, cpu.Memory.Read(0));
         Assert.Equal(0xfe, cpu.Memory.Read(1));
         Assert.Equal(0xfd, cpu.Memory.Read(2));
         Assert.Equal(0xfc, cpu.Memory.Read(3));
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(2, cpu.Step());
         Assert.Equal(0xff, cpu.Memory.Read(0));
         Assert.Equal(0xfe, cpu.Memory.Read(1));
         Assert.Equal(0xfd, cpu.Memory.Read(2));
         Assert.Equal(0xfb, cpu.Memory.Read(3));
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(2, cpu.Step());
         Assert.Equal(0xff, cpu.Memory.Read(0));
         Assert.Equal(0xfe, cpu.Memory.Read(1));
         Assert.Equal(0xfa, cpu.Memory.Read(2));
         Assert.Equal(0xfb, cpu.Memory.Read(3));
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(2, cpu.Step());
         Assert.Equal(0xff, cpu.Memory.Read(0));
         Assert.Equal(0xf9, cpu.Memory.Read(1));
         Assert.Equal(0xfa, cpu.Memory.Read(2));
         Assert.Equal(0xfb, cpu.Memory.Read(3));
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(2, cpu.Step());
         Assert.Equal(0xf8, cpu.Memory.Read(0));
         Assert.Equal(0xf9, cpu.Memory.Read(1));
         Assert.Equal(0xfa, cpu.Memory.Read(2));
         Assert.Equal(0xfb, cpu.Memory.Read(3));
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
     }
 
     [Fact]
@@ -237,42 +237,42 @@ public class DataTransferTests
         Assert.Equal(0xff, cpu.Memory.Read(3));
         Assert.Equal(0xff, cpu.SFRs.Acc);
         Assert.Equal(0xff, cpu.SFRs.B);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(2, cpu.Step());
         Assert.Equal(0x00, cpu.Memory.Read(2));
         Assert.Equal(0x02, cpu.Memory.Read(3));
         Assert.Equal(0xff, cpu.SFRs.Acc);
         Assert.Equal(0xff, cpu.SFRs.B);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0x00, cpu.Memory.Read(2));
         Assert.Equal(0x02, cpu.Memory.Read(3));
         Assert.Equal(0xfd, cpu.SFRs.Acc);
         Assert.Equal(0xff, cpu.SFRs.B);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0x00, cpu.Memory.Read(2));
         Assert.Equal(0x02, cpu.Memory.Read(3));
         Assert.Equal(0xfd, cpu.SFRs.Acc);
         Assert.Equal(0xfc, cpu.SFRs.B);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0x00, cpu.Memory.Read(2));
         Assert.Equal(0x02, cpu.Memory.Read(3));
         Assert.Equal(0xfb, cpu.SFRs.Acc);
         Assert.Equal(0xfc, cpu.SFRs.B);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0x00, cpu.Memory.Read(2));
         Assert.Equal(0x02, cpu.Memory.Read(3));
         Assert.Equal(0xfb, cpu.SFRs.Acc);
         Assert.Equal(0xfa, cpu.SFRs.B);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
     }
 
     [Fact]
@@ -304,7 +304,7 @@ public class DataTransferTests
         Assert.Equal(0x01, cpu.SFRs.Trh);
         Assert.Equal(0, cpu.SFRs.Trl);
         Assert.Equal(0xff, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(2, cpu.Step());
         Assert.Equal(0x01, cpu.SFRs.Trh);
@@ -329,15 +329,15 @@ public class DataTransferTests
 
         Assert.Equal(2, cpu.Step());
         Assert.Equal(0x57, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(2, cpu.Step());
         Assert.Equal(0x03, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(2, cpu.Step());
         Assert.Equal(0xea, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
     }
 
     [Fact]

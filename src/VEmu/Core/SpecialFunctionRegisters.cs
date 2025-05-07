@@ -37,9 +37,9 @@ class SpecialFunctionRegisters
         // It's nice to be able to run without a BIOS, so let's set them up here.
         P1Fcr = 0b1011_1111;
         P3Int = 0b1111_1101;
-        P3 = 0b1111_1111;
+        P3 = new(0b1111_1111);
         Isl = 0b1100_0000;
-        Vsel = 0b1111_1100;
+        Vsel = new(0b1111_1100);
         Btcr = 0b0100_0001;
         Sp = Memory.StackStart;
     }
@@ -61,7 +61,7 @@ class SpecialFunctionRegisters
         {
             var address = (BitHelpers.ReadBit(Vrmad2, bit: 0) ? 0x100 : 0) | Vrmad1;
             var memory = _workRam[address];
-            if (Vsel4_Ince)
+            if (Vsel.Ince)
             {
                 address++;
                 Vrmad1 = (byte)address;
@@ -92,7 +92,7 @@ class SpecialFunctionRegisters
             var address = (BitHelpers.ReadBit(Vrmad2, bit: 0) ? 0x100 : 0) | Vrmad1;
             _workRam[address] = value;
 
-            if (Vsel4_Ince)
+            if (Vsel.Ince)
             {
                 address++;
                 Vrmad1 = (byte)address;
@@ -109,92 +109,10 @@ class SpecialFunctionRegisters
     }
 
     /// <summary>Program status word. VMD-52</summary>
-    public byte Psw
+    public Psw Psw
     {
-        get => Read(Ids.Psw);
-        set => Write(Ids.Psw, value);
-    }
-
-    /// <summary>
-    /// Carry flag. VMD-45.
-    /// </summary>
-    /// <remarks>
-    /// For arithmetic operations, carry can be thought of as "unsigned overflow".
-    /// If an addition result exceeds 0xff, or a subtraction is less than 0, the carry flag is set.
-    /// </remarks>
-    public bool Cy
-    {
-        get => BitHelpers.ReadBit(Psw, bit: 7);
-        set => Psw = BitHelpers.WithBit(Psw, bit: 7, value);
-    }
-
-    /// <summary>
-    /// Auxiliary carry flag. VMD-45.
-    /// </summary>
-    /// <remarks>
-    /// This flag considers only the lower 4 bits of the operands. i.e. those bits which are retained by (value & 0xf).
-    /// When an addition of the lower 4 bits of all operands exceeds 0xf, or a subtraction of the same is less than 0, the auxiliary carry flag is set.
-    /// </remarks>
-    public bool Ac
-    {
-        get => BitHelpers.ReadBit(Psw, bit: 6);
-        set => Psw = BitHelpers.WithBit(Psw, bit: 6, value);
-    }
-
-    /// <summary>Indirect address register bank flag 1. VMD-45</summary>
-    public bool Irbk1
-    {
-        get => BitHelpers.ReadBit(Psw, bit: 4);
-        set => Psw = BitHelpers.WithBit(Psw, bit: 4, value);
-    }
-
-    /// <summary>Indirect address register bank flag 0. VMD-45</summary>
-    public bool Irbk0
-    {
-        get => BitHelpers.ReadBit(Psw, bit: 3);
-        set => Psw = BitHelpers.WithBit(Psw, bit: 3, value);
-    }
-
-    /// <summary>
-    /// Overflow flag. VMD-45.
-    /// </summary>
-    /// <remarks>
-    /// This flag indicates whether "signed overflow" occurred in an arithmetic operation.
-    /// (Keep in mind that whether operands between 128 and 255 are signed, i.e. are really between -1 and -128, depends on caller's interpretation.)
-    /// It is set when the operation causes the accumulator to "travel across" from 127 to -128 of the signed range, in either direction.
-    ///
-    /// For example, imagine the operation as occurring on a number line, where A (accumulator) initially has value 127, and op has value 3.
-    /// The result A1, if viewed as a signed number, has value -126. "Signed overflow" has occurred, so Ov is set.
-    /// The same can occur for subtraction. for example if A is -128 and op is 1, then the result is 127, so Ov is set.
-    ///  ... 127  -128  -127  -126 ...
-    /// <-    -     -     -     -   ->
-    ///       A                A1
-    ///       op -------------->
-    ///
-    ///       A1    A
-    ///       <---- op
-    ///
-    /// The same can occur when one or both operands are negative, e.g.
-    /// for (-128) + (-1) = 127, or, for 126 - (-2) = -128.
-    /// </remarks>
-    public bool Ov
-    {
-        get => BitHelpers.ReadBit(Psw, bit: 2);
-        set => Psw = BitHelpers.WithBit(Psw, bit: 2, value);
-    }
-
-    /// <summary>When true, main memory access uses bank 1, otherwise it uses bank 0. RAM bank flag. VMD-45</summary>
-    public bool Rambk0
-    {
-        get => BitHelpers.ReadBit(Psw, bit: 1);
-        set => Psw = BitHelpers.WithBit(Psw, bit: 1, value);
-    }
-
-    /// <summary>Accumulator (ACC) parity flag. VMD-45</summary>
-    public bool P
-    {
-        get => BitHelpers.ReadBit(Psw, bit: 0);
-        set => Psw = BitHelpers.WithBit(Psw, bit: 0, value);
+        get => new(Read(Ids.Psw));
+        set => Write(Ids.Psw, (byte)value);
     }
 
     /// <summary>B register. VMD-51</summary>
@@ -239,37 +157,10 @@ class SpecialFunctionRegisters
     }
 
     /// <summary>Master interrupt enable control register. VMD-138</summary>
-    public byte Ie
+    public Ie Ie
     {
-        get => Read(Ids.Ie);
-        set => Write(Ids.Ie, value);
-    }
-
-    /// <summary>Master interrupt enable control. VMD-133.</summary>
-    public bool Ie7_MasterInterruptEnable
-    {
-        get => BitHelpers.ReadBit(Ie, bit: 7);
-        set => Ie = BitHelpers.WithBit(Ie, bit: 7, value);
-    }
-
-    /// <summary>
-    /// Controls priority level of external interrupts. VMD-134.
-    /// IE1, IE0    INT1 priority   INT0 priority
-    /// 0,   0      Highest         Highest
-    /// 1,   0      Low             Highest
-    /// X,   1      Low             Low
-    /// </summary>
-    public bool Ie1
-    {
-        get => BitHelpers.ReadBit(Ie, bit: 1);
-        set => Ie = BitHelpers.WithBit(Ie, bit: 1, value);
-    }
-
-    /// <inheritdoc cref="Ie1" />
-    public bool Ie0
-    {
-        get => BitHelpers.ReadBit(Ie, bit: 0);
-        set => Ie = BitHelpers.WithBit(Ie, bit: 0, value);
+        get => new(Read(Ids.Ie));
+        set => Write(Ids.Ie, (byte)value);
     }
 
     /// <summary>Interrupt priority control register. VMD-151</summary>
@@ -483,59 +374,10 @@ class SpecialFunctionRegisters
     }
 
     /// <summary>Port 3 latch. Buttons SLEEP, MODE, B, A, directions. VMD-54</summary>
-    public byte P3
+    public P3 P3
     {
-        get => Read(Ids.P3);
-        set => Write(Ids.P3, value);
-    }
-
-    // NB: application must set a button value to 1. When it is pressed, the bit is reset to 0.
-    public bool ButtonSleep
-    {
-        get => BitHelpers.ReadBit(P3, bit: 7);
-        set => P3 = BitHelpers.WithBit(P3, bit: 7, value);
-    }
-
-    public bool ButtonMode
-    {
-        get => BitHelpers.ReadBit(P3, bit: 6);
-        set => P3 = BitHelpers.WithBit(P3, bit: 6, value);
-    }
-
-    public bool ButtonB
-    {
-        get => BitHelpers.ReadBit(P3, bit: 5);
-        set => P3 = BitHelpers.WithBit(P3, bit: 5, value);
-    }
-
-    public bool ButtonA
-    {
-        get => BitHelpers.ReadBit(P3, bit: 4);
-        set => P3 = BitHelpers.WithBit(P3, bit: 4, value);
-    }
-
-    public bool Right
-    {
-        get => BitHelpers.ReadBit(P3, bit: 3);
-        set => P3 = BitHelpers.WithBit(P3, bit: 3, value);
-    }
-
-    public bool Left
-    {
-        get => BitHelpers.ReadBit(P3, bit: 2);
-        set => P3 = BitHelpers.WithBit(P3, bit: 2, value);
-    }
-
-    public bool Down
-    {
-        get => BitHelpers.ReadBit(P3, bit: 1);
-        set => P3 = BitHelpers.WithBit(P3, bit: 1, value);
-    }
-
-    public bool Up
-    {
-        get => BitHelpers.ReadBit(P3, bit: 0);
-        set => P3 = BitHelpers.WithBit(P3, bit: 0, value);
+        get => new(Read(Ids.P3));
+        set => Write(Ids.P3, (byte)value);
     }
 
     /// <summary>Port 3 data direction register. VMD-62</summary>
@@ -553,49 +395,17 @@ class SpecialFunctionRegisters
     }
 
     /// <summary>Flash Program Register. Undocumented.</summary>
-    public byte FPR
+    public FPR FPR
     {
-        get => Read(Ids.FPR);
-        set => Write(Ids.FPR, value);
-    }
-
-    /// <summary>Flash Address Bank. Used as the upper bit of the address for flash access, i.e. whether flash bank 0 or 1 is used.</summary>
-    public bool FPR0
-    {
-        get => BitHelpers.ReadBit(FPR, bit: 0);
-        set => FPR = BitHelpers.WithBit(FPR, bit: 0, value);
-    }
-
-    /// <summary>Flash Write Unlock</summary>
-    public bool FPR1
-    {
-        get => BitHelpers.ReadBit(FPR, bit: 1);
-        set => FPR = BitHelpers.WithBit(FPR, bit: 1, value);
+        get => new(Read(Ids.FPR));
+        set => Write(Ids.FPR, (byte)value);
     }
 
     /// <summary>Port 7 latch. VMD-64</summary>
-    public byte P7
+    public P7 P7
     {
-        get => Read(Ids.P7);
-        set => Write(Ids.P7, value);
-    }
-
-    /// <summary>
-    /// Dreamcast connection detection
-    /// </summary>
-    public bool P70
-    {
-        get => BitHelpers.ReadBit(P7, bit: 0);
-        set => P7 = BitHelpers.WithBit(P7, bit: 0, value);
-    }
-
-    /// <summary>
-    /// Low voltage detection
-    /// </summary>
-    public bool P71
-    {
-        get => BitHelpers.ReadBit(P7, bit: 1);
-        set => P7 = BitHelpers.WithBit(P7, bit: 1, value);
+        get => new(Read(Ids.P7));
+        set => Write(Ids.P7, (byte)value);
     }
 
     /// <summary>External interrupt 0, 1 control. VMD-135</summary>
@@ -606,66 +416,10 @@ class SpecialFunctionRegisters
     }
 
     /// <summary>External interrupt 2, 3 control. VMD-137</summary>
-    public byte I23Cr
+    public I23Cr I23Cr
     {
-        get => Read(Ids.I23Cr);
-        set => Write(Ids.I23Cr, value);
-    }
-
-    /// <summary>INT2/T0L enable flag.</summary>
-    public bool I23Cr_Int2Enable
-    {
-        get => BitHelpers.ReadBit(I23Cr, bit: 0);
-        set => I23Cr = BitHelpers.WithBit(I23Cr, bit: 0, value);
-    }
-
-    /// <summary>INT2/T0L source flag.</summary>
-    public bool I23Cr_Int2Source
-    {
-        get => BitHelpers.ReadBit(I23Cr, bit: 1);
-        set => I23Cr = BitHelpers.WithBit(I23Cr, bit: 1, value);
-    }
-
-    /// <summary>INT2 falling edge detection flag.</summary>
-    public bool I23Cr_Int2FallingEdgeDetection
-    {
-        get => BitHelpers.ReadBit(I23Cr, bit: 2);
-        set => I23Cr = BitHelpers.WithBit(I23Cr, bit: 2, value);
-    }
-
-    /// <summary>INT2 rising edge detection flag.</summary>
-    public bool I23Cr_Int2RisingEdgeDetection
-    {
-        get => BitHelpers.ReadBit(I23Cr, bit: 3);
-        set => I23Cr = BitHelpers.WithBit(I23Cr, bit: 3, value);
-    }
-
-    /// <summary>INT3/base timer enable flag.</summary>
-    public bool I23Cr_Int3Enable
-    {
-        get => BitHelpers.ReadBit(I23Cr, bit: 4);
-        set => I23Cr = BitHelpers.WithBit(I23Cr, bit: 4, value);
-    }
-
-    /// <summary>INT3/base timer source flag.</summary>
-    public bool I23Cr_Int3Source
-    {
-        get => BitHelpers.ReadBit(I23Cr, bit: 5);
-        set => I23Cr = BitHelpers.WithBit(I23Cr, bit: 5, value);
-    }
-
-    /// <summary>INT3 falling edge detection flag.</summary>
-    public bool I23Cr_Int3FallingEdgeDetection
-    {
-        get => BitHelpers.ReadBit(I23Cr, bit: 6);
-        set => I23Cr = BitHelpers.WithBit(I23Cr, bit: 6, value);
-    }
-
-    /// <summary>INT3 rising edge detection flag.</summary>
-    public bool I23Cr_Int3RisingEdgeDetection
-    {
-        get => BitHelpers.ReadBit(I23Cr, bit: 7);
-        set => I23Cr = BitHelpers.WithBit(I23Cr, bit: 7, value);
+        get => new(Read(Ids.I23Cr));
+        set => Write(Ids.I23Cr, (byte)value);
     }
 
     /// <summary>Input signal select. VMD-138</summary>
@@ -678,17 +432,10 @@ class SpecialFunctionRegisters
 #region Work RAM
     /// <summary>Control register. VMD-143</summary>
     /// TODO: the application is only supposed to be able to alter bit 4.
-    public byte Vsel
+    public Vsel Vsel
     {
-        get => Read(Ids.Vsel);
-        set => Write(Ids.Vsel, value);
-    }
-
-    /// <summary>If set, increments Vramad (pair of Vramad1 and Vram</summary>
-    public bool Vsel4_Ince
-    {
-        get => BitHelpers.ReadBit(Vsel, bit: 4);
-        set => Vsel = BitHelpers.WithBit(Vsel, bit: 4, value);
+        get => new(Read(Ids.Vsel));
+        set => Write(Ids.Vsel, (byte)value);
     }
 
     /// <summary>Bits 0-7 of Vramad (work RAM address). VMD-144</summary>
@@ -705,7 +452,7 @@ class SpecialFunctionRegisters
         set => Write(Ids.Vrmad2, value);
     }
 
-    /// <summary>Send/receive buffer. VMD-144</summary>
+    /// <summary>Work RAM value. (determined by <see cref="Vrmad1"/> and <see cref="Vrmad2"/>). VMD-144</summary>
     public byte Vtrbf
     {
         get => Read(Ids.Vtrbf);

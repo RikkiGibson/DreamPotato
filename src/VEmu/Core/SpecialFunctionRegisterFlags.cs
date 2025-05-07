@@ -1,5 +1,249 @@
 namespace VEmu.Core.SFRs;
 
+/// <summary>Program status word. VMD-52</summary>
+struct Psw
+{
+    private byte _value;
+
+    public Psw(byte value) => _value = value;
+    public static explicit operator byte(Psw value) => value._value;
+
+    /// <summary>
+    /// Carry flag. VMD-45.
+    /// </summary>
+    /// <remarks>
+    /// For arithmetic operations, carry can be thought of as "unsigned overflow".
+    /// If an addition result exceeds 0xff, or a subtraction is less than 0, the carry flag is set.
+    /// </remarks>
+    public bool Cy
+    {
+        get => BitHelpers.ReadBit(_value, bit: 7);
+        set => BitHelpers.WriteBit(ref _value, bit: 7, value);
+    }
+
+    /// <summary>
+    /// Auxiliary carry flag. VMD-45.
+    /// </summary>
+    /// <remarks>
+    /// This flag considers only the lower 4 bits of the operands. i.e. those bits which are retained by (value & 0xf).
+    /// When an addition of the lower 4 bits of all operands exceeds 0xf, or a subtraction of the same is less than 0, the auxiliary carry flag is set.
+    /// </remarks>
+    public bool Ac
+    {
+        get => BitHelpers.ReadBit(_value, bit: 6);
+        set => BitHelpers.WriteBit(ref _value, bit: 6, value);
+    }
+
+    /// <summary>Indirect address register bank flag 1. VMD-45</summary>
+    public bool Irbk1
+    {
+        get => BitHelpers.ReadBit(_value, bit: 4);
+        set => BitHelpers.WriteBit(ref _value, bit: 4, value);
+    }
+
+    /// <summary>Indirect address register bank flag 0. VMD-45</summary>
+    public bool Irbk0
+    {
+        get => BitHelpers.ReadBit(_value, bit: 3);
+        set => BitHelpers.WriteBit(ref _value, bit: 3, value);
+    }
+
+    /// <summary>
+    /// Overflow flag. VMD-45.
+    /// </summary>
+    /// <remarks>
+    /// This flag indicates whether "signed overflow" occurred in an arithmetic operation.
+    /// (Keep in mind that whether operands between 128 and 255 are signed, i.e. are really between -1 and -128, depends on caller's interpretation.)
+    /// It is set when the operation causes the accumulator to "travel across" from 127 to -128 of the signed range, in either direction.
+    ///
+    /// For example, imagine the operation as occurring on a number line, where A (accumulator) initially has value 127, and op has value 3.
+    /// The result A1, if viewed as a signed number, has value -126. "Signed overflow" has occurred, so Ov is set.
+    /// The same can occur for subtraction. for example if A is -128 and op is 1, then the result is 127, so Ov is set.
+    ///  ... 127  -128  -127  -126 ...
+    /// <-    -     -     -     -   ->
+    ///       A                A1
+    ///       op -------------->
+    ///
+    ///       A1    A
+    ///       <---- op
+    ///
+    /// The same can occur when one or both operands are negative, e.g.
+    /// for (-128) + (-1) = 127, or, for 126 - (-2) = -128.
+    /// </remarks>
+    public bool Ov
+    {
+        get => BitHelpers.ReadBit(_value, bit: 2);
+        set => BitHelpers.WriteBit(ref _value, bit: 2, value);
+    }
+
+    /// <summary>When true, main memory access uses bank 1, otherwise it uses bank 0. RAM bank flag. VMD-45</summary>
+    public bool Rambk0
+    {
+        get => BitHelpers.ReadBit(_value, bit: 1);
+        set => BitHelpers.WriteBit(ref _value, bit: 1, value);
+    }
+
+    /// <summary>Accumulator (ACC) parity flag. VMD-45</summary>
+    public bool P
+    {
+        get => BitHelpers.ReadBit(_value, bit: 0);
+        set => BitHelpers.WriteBit(ref _value, bit: 0, value);
+    }
+}
+
+/// <summary>Master interrupt enable control register. VMD-138</summary>
+struct Ie
+{
+    private byte _value;
+
+    public Ie(byte value) => _value = value;
+    public static explicit operator byte(Ie value) => value._value;
+
+    public bool MasterInterruptEnable
+    {
+        get => BitHelpers.ReadBit(_value, bit: 7);
+        set => BitHelpers.WriteBit(ref _value, bit: 7, value);
+    }
+
+    /// <summary>
+    /// Controls priority level of external interrupts. VMD-134.
+    /// IE1, IE0    INT1 priority   INT0 priority
+    /// 0,   0      Highest         Highest
+    /// 1,   0      Low             Highest
+    /// X,   1      Low             Low
+    /// </summary>
+    public bool PriorityControl1
+    {
+        get => BitHelpers.ReadBit(_value, bit: 1);
+        set => BitHelpers.WriteBit(ref _value, bit: 1, value);
+    }
+
+    /// <inheritdoc cref="PriorityControl1">
+    public bool PriorityControl0
+    {
+        get => BitHelpers.ReadBit(_value, bit: 0);
+        set => BitHelpers.WriteBit(ref _value, bit: 0, value);
+    }
+}
+
+/// <summary>Port 3 latch. Buttons SLEEP, MODE, B, A, directions. VMD-54</summary>
+struct P3
+{
+    private byte _value;
+
+    public P3(byte value) => _value = value;
+    public static explicit operator byte(P3 value) => value._value;
+
+    // NB: application must set a button value to 1. When it is pressed, the bit is reset to 0.
+    public bool ButtonSleep
+    {
+        get => BitHelpers.ReadBit(_value, bit: 7);
+        set => BitHelpers.WriteBit(ref _value, bit: 7, value);
+    }
+
+    public bool ButtonMode
+    {
+        get => BitHelpers.ReadBit(_value, bit: 6);
+        set => BitHelpers.WriteBit(ref _value, bit: 6, value);
+    }
+
+    public bool ButtonB
+    {
+        get => BitHelpers.ReadBit(_value, bit: 5);
+        set => BitHelpers.WriteBit(ref _value, bit: 5, value);
+    }
+
+    public bool ButtonA
+    {
+        get => BitHelpers.ReadBit(_value, bit: 4);
+        set => BitHelpers.WriteBit(ref _value, bit: 4, value);
+    }
+
+    public bool Right
+    {
+        get => BitHelpers.ReadBit(_value, bit: 3);
+        set => BitHelpers.WriteBit(ref _value, bit: 3, value);
+    }
+
+    public bool Left
+    {
+        get => BitHelpers.ReadBit(_value, bit: 2);
+        set => BitHelpers.WriteBit(ref _value, bit: 2, value);
+    }
+
+    public bool Down
+    {
+        get => BitHelpers.ReadBit(_value, bit: 1);
+        set => BitHelpers.WriteBit(ref _value, bit: 1, value);
+    }
+
+    public bool Up
+    {
+        get => BitHelpers.ReadBit(_value, bit: 0);
+        set => BitHelpers.WriteBit(ref _value, bit: 0, value);
+    }
+}
+
+/// <summary>Port 7 latch. VMD-64</summary>
+struct P7
+{
+    private byte _value;
+
+    public P7(byte value) => _value = value;
+    public static explicit operator byte(P7 value) => value._value;
+
+    /// <summary>External input pin 1</summary>
+    public bool IP1
+    {
+        get => BitHelpers.ReadBit(_value, bit: 3);
+        set => BitHelpers.WriteBit(ref _value, bit: 3, value);
+    }
+
+    /// <summary>External input pin 0</summary>
+    public bool IP0
+    {
+        get => BitHelpers.ReadBit(_value, bit: 2);
+        set => BitHelpers.WriteBit(ref _value, bit: 2, value);
+    }
+
+    /// <summary>Low voltage detection</summary>
+    public bool LowVoltage
+    {
+        get => BitHelpers.ReadBit(_value, bit: 1);
+        set => BitHelpers.WriteBit(ref _value, bit: 1, value);
+    }
+
+    /// <summary>Dreamcast connection detection</summary>
+    public bool DreamcastConnected
+    {
+        get => BitHelpers.ReadBit(_value, bit: 0);
+        set => BitHelpers.WriteBit(ref _value, bit: 0, value);
+    }
+}
+
+/// <summary>Flash Program Register. Undocumented.</summary>
+public struct FPR
+{
+    private byte _value;
+
+    public FPR(byte value) => _value = value;
+    public static explicit operator byte(FPR value) => value._value;
+
+    /// <summary>Flash Address Bank. Used as the upper bit of the address for flash access, i.e. whether flash bank 0 or 1 is used.</summary>
+    public bool FPR0
+    {
+        get => BitHelpers.ReadBit(_value, bit: 0);
+        set => BitHelpers.WriteBit(ref _value, bit: 0, value);
+    }
+
+    /// <summary>Flash Write Unlock</summary>
+    public bool FPR1
+    {
+        get => BitHelpers.ReadBit(_value, bit: 1);
+        set => BitHelpers.WriteBit(ref _value, bit: 1, value);
+    }
+}
+
 /// <summary>External interrupt 0, 1 control. VMD-135</summary>
 struct I01Cr
 {
@@ -72,6 +316,71 @@ struct I01Cr
     {
         get => BitHelpers.ReadBit(_value, bit: 0);
         set => BitHelpers.WriteBit(ref _value, bit: 0, value);
+    }
+}
+
+/// <summary>External interrupt 2, 3 control. VMD-137</summary>
+public struct I23Cr
+{
+    private byte _value;
+
+    public I23Cr(byte value) => _value = value;
+    public static explicit operator byte(I23Cr value) => value._value;
+
+    /// <summary>INT2/T0L enable flag.</summary>
+    public bool Int2Enable
+    {
+        get => BitHelpers.ReadBit(_value, bit: 0);
+        set => BitHelpers.WriteBit(ref _value, bit: 0, value);
+    }
+
+    /// <summary>INT2/T0L source flag.</summary>
+    public bool Int2Source
+    {
+        get => BitHelpers.ReadBit(_value, bit: 1);
+        set => BitHelpers.WriteBit(ref _value, bit: 1, value);
+    }
+
+    /// <summary>INT2 falling edge detection flag.</summary>
+    public bool Int2FallingEdgeDetection
+    {
+        get => BitHelpers.ReadBit(_value, bit: 2);
+        set => BitHelpers.WriteBit(ref _value, bit: 2, value);
+    }
+
+    /// <summary>INT2 rising edge detection flag.</summary>
+    public bool Int2RisingEdgeDetection
+    {
+        get => BitHelpers.ReadBit(_value, bit: 3);
+        set => BitHelpers.WriteBit(ref _value, bit: 3, value);
+    }
+
+    /// <summary>INT3/base timer enable flag.</summary>
+    public bool Int3Enable
+    {
+        get => BitHelpers.ReadBit(_value, bit: 4);
+        set => BitHelpers.WriteBit(ref _value, bit: 4, value);
+    }
+
+    /// <summary>INT3/base timer source flag.</summary>
+    public bool Int3Source
+    {
+        get => BitHelpers.ReadBit(_value, bit: 5);
+        set => BitHelpers.WriteBit(ref _value, bit: 5, value);
+    }
+
+    /// <summary>INT3 falling edge detection flag.</summary>
+    public bool Int3FallingEdgeDetection
+    {
+        get => BitHelpers.ReadBit(_value, bit: 6);
+        set => BitHelpers.WriteBit(ref _value, bit: 6, value);
+    }
+
+    /// <summary>INT3 rising edge detection flag.</summary>
+    public bool Int3RisingEdgeDetection
+    {
+        get => BitHelpers.ReadBit(_value, bit: 7);
+        set => BitHelpers.WriteBit(ref _value, bit: 7, value);
     }
 }
 
@@ -153,5 +462,21 @@ struct T0Cnt
     {
         get => BitHelpers.ReadBit(_value, bit: 0);
         set => BitHelpers.WriteBit(ref _value, bit: 0, value);
+    }
+}
+
+/// <summary>Control register. VMD-143</summary>
+struct Vsel
+{
+    private byte _value;
+
+    public Vsel(byte value) => _value = value;
+    public static explicit operator byte(Vsel value) => value._value;
+
+    /// <summary>If set, increments Vramad when <see cref="SpecialFunctionRegisters.Vtrbf"/> is accessed.</summary>
+    public bool Ince
+    {
+        get => BitHelpers.ReadBit(_value, bit: 4);
+        set => _value = BitHelpers.WithBit(_value, bit: 4, value);
     }
 }

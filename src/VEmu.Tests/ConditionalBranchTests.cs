@@ -441,14 +441,14 @@ public class ConditionalBranchTests
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf5f));
 
         cpu.Pc = 0xf1a;
-        cpu.SFRs.Cy = true;
+        cpu.SFRs.Psw = new() { Cy = true };
 
         Assert.Equal(2, cpu.Step());
         Assert.Equal(0x02, cpu.SFRs.Acc);
         Assert.Equal(0xf1d, cpu.Pc);
 
         Assert.Equal(2, cpu.Step());
-        Assert.False(cpu.SFRs.Cy);
+        Assert.False(cpu.SFRs.Psw.Cy);
         Assert.Equal(0xf5f, cpu.Pc);
 
         Assert.Equal(1, cpu.Step());
@@ -477,7 +477,7 @@ public class ConditionalBranchTests
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf5f));
 
         cpu.Pc = 0xf17;
-        cpu.SFRs.Cy = false;
+        cpu.SFRs.Psw = new() { Cy = false };
 
         Assert.Equal(2, cpu.Step());
         Assert.Equal(2, cpu.Step());
@@ -485,7 +485,7 @@ public class ConditionalBranchTests
         Assert.Equal(0xf2, cpu.SFRs.B);
 
         Assert.Equal(2, cpu.Step());
-        Assert.True(cpu.SFRs.Cy);
+        Assert.True(cpu.SFRs.Psw.Cy);
         Assert.Equal(0xf20, cpu.Pc);
 
         Assert.Equal(1, cpu.Step());
@@ -513,7 +513,7 @@ public class ConditionalBranchTests
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf5f));
 
         cpu.Pc = 0xf17;
-        cpu.SFRs.Cy = true;
+        cpu.SFRs.Psw = new() { Cy = true };
 
         Assert.Equal(2, cpu.Step());
         Assert.Equal(2, cpu.Step());
@@ -521,7 +521,7 @@ public class ConditionalBranchTests
         Assert.Equal(0x02, cpu.Memory.Read(3));
 
         Assert.Equal(2, cpu.Step());
-        Assert.False(cpu.SFRs.Cy);
+        Assert.False(cpu.SFRs.Psw.Cy);
         Assert.Equal(0xf5f, cpu.Pc);
 
         Assert.Equal(1, cpu.Step());
@@ -550,7 +550,7 @@ public class ConditionalBranchTests
         instructions.CopyTo(cpu.ROM.AsSpan(startIndex: 0xf5f));
 
         cpu.Pc = 0xf17;
-        cpu.SFRs.Cy = true;
+        cpu.SFRs.Psw = new() { Cy = true };
 
         Assert.Equal(2, cpu.Step());
         Assert.Equal(2, cpu.Step());
@@ -559,7 +559,7 @@ public class ConditionalBranchTests
 
         // branch not taken
         Assert.Equal(2, cpu.Step());
-        Assert.False(cpu.SFRs.Cy);
+        Assert.False(cpu.SFRs.Psw.Cy);
         Assert.Equal(0xf20, cpu.Pc);
 
         Assert.Equal(1, cpu.Step());

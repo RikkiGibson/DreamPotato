@@ -13,7 +13,7 @@ public class TimerTests
         var cpu = new Cpu();
         cpu.Reset();
 
-        cpu.SFRs.Ie7_MasterInterruptEnable = true;
+        cpu.SFRs.Ie = new() { MasterInterruptEnable = true };
         // Note that INT2 and T0L really are different interrupts. One is internal and other is external. They just happen to use the same interrupt vector address.
         cpu.SFRs.T0Cnt = new() { T0lRun = true, T0lOvf = false, T0lIe = true };
         cpu.SFRs.T0Prr = 0xfe;
@@ -41,7 +41,7 @@ public class TimerTests
         cpu.Reset();
         // Note that the program here consists entirely of NOPs.
 
-        cpu.SFRs.Ie7_MasterInterruptEnable = true;
+        cpu.SFRs.Ie = new() { MasterInterruptEnable = true };
         cpu.SFRs.T0Cnt = new T0Cnt() { T0lRun = true, T0lIe = true, T0Long = true, T0hRun = true, T0hIe = true };
         cpu.SFRs.T0Prr = 0xfe;
         cpu.SFRs.T0Lr = 0;

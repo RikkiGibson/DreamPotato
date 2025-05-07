@@ -9,7 +9,7 @@ public class InterruptTests
     {
         var cpu = new Cpu();
         cpu.Reset();
-        cpu.SFRs.Ie7_MasterInterruptEnable = true;
+        cpu.SFRs.Ie = new() { MasterInterruptEnable = true };
         cpu.SFRs.I01Cr = new() { Int0Enable = true, Int0LevelTriggered = false, Int0HighTriggered = true };
 
         ReadOnlySpan<byte> instructions = [
@@ -60,7 +60,7 @@ public class InterruptTests
     {
         var cpu = new Cpu();
         cpu.Reset();
-        cpu.SFRs.Ie7_MasterInterruptEnable = masterEnable;
+        cpu.SFRs.Ie = new() { MasterInterruptEnable = masterEnable };
         cpu.SFRs.I01Cr = new() { Int0Enable = int0Enable, Int0LevelTriggered = false, Int0HighTriggered = true };
 
         ReadOnlySpan<byte> instructions = [
@@ -101,7 +101,7 @@ public class InterruptTests
     public void INT0_INT1_Simultaneous_1()
     {
         var cpu = new Cpu();
-        cpu.SFRs.Ie7_MasterInterruptEnable = true;
+        cpu.SFRs.Ie = new() { MasterInterruptEnable = true };
         cpu.SFRs.I01Cr = new()
         {
             Int0Enable = true,

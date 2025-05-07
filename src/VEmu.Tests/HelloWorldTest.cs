@@ -1,4 +1,5 @@
 using VEmu.Core;
+using VEmu.Core.SFRs;
 
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ public class HelloWorldTest(ITestOutputHelper outputHelper)
         cpu.CurrentROMBank = cpu.FlashBank0;
 
         // It seems like this code is relying on the bios initializing stack and pulling-up P3
-        cpu.SFRs.P3 = 0xff;
+        cpu.SFRs.P3 = new(0xff);
         cpu.SFRs.Sp = 0x90;
 
         try

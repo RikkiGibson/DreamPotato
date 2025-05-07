@@ -17,7 +17,7 @@ public class ArithmeticTests
 
         Assert.Equal(2, cpu.Pc);
         Assert.Equal(42, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
     }
 
     [Fact]
@@ -33,18 +33,18 @@ public class ArithmeticTests
 
         Assert.Equal(2, cpu.Pc);
         Assert.Equal(200, cpu.SFRs.Acc);
-        Assert.False(cpu.SFRs.Cy);
-        Assert.False(cpu.SFRs.Ac);
-        Assert.False(cpu.SFRs.Ov);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.False(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         cpu.Step();
         Assert.Equal(4, cpu.Pc);
         Assert.Equal(144, cpu.SFRs.Acc);
-        Assert.True(cpu.SFRs.Cy);
-        Assert.True(cpu.SFRs.Ac);
-        Assert.False(cpu.SFRs.Ov);
-        Assert.Equal(0b1100_0000, cpu.SFRs.Psw);
+        Assert.True(cpu.SFRs.Psw.Cy);
+        Assert.True(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
+        Assert.Equal(0b1100_0000, (byte)cpu.SFRs.Psw);
     }
 
     [Fact]
@@ -60,18 +60,18 @@ public class ArithmeticTests
 
         Assert.Equal(2, cpu.Pc);
         Assert.Equal(unchecked((byte)-127), cpu.SFRs.Acc);
-        Assert.False(cpu.SFRs.Cy);
-        Assert.False(cpu.SFRs.Ac);
-        Assert.False(cpu.SFRs.Ov);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.False(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         cpu.Step();
         Assert.Equal(4, cpu.Pc);
         Assert.Equal(unchecked((byte)-254), cpu.SFRs.Acc);
-        Assert.True(cpu.SFRs.Cy);
-        Assert.False(cpu.SFRs.Ac);
-        Assert.True(cpu.SFRs.Ov);
-        Assert.Equal(0b1000_0100, cpu.SFRs.Psw);
+        Assert.True(cpu.SFRs.Psw.Cy);
+        Assert.False(cpu.SFRs.Psw.Ac);
+        Assert.True(cpu.SFRs.Psw.Ov);
+        Assert.Equal(0b1000_0100, (byte)cpu.SFRs.Psw);
     }
 
     [Fact]
@@ -89,7 +89,7 @@ public class ArithmeticTests
         cpu.Step();
         Assert.Equal(2, cpu.Pc);
         Assert.Equal(42, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
     }
 
     [Fact]
@@ -99,17 +99,17 @@ public class ArithmeticTests
         ReadOnlySpan<byte> instructions = [0b1000_0010, 0b1000];
         instructions.CopyTo(cpu.ROM);
 
-        cpu.SFRs.Rambk0 = true;
+        cpu.SFRs.Psw = new() { Rambk0 = true };
         cpu.Memory.Write(0b1000, 42);
 
         Assert.Equal(0, cpu.Pc);
         Assert.Equal(0, cpu.SFRs.Acc);
-        Assert.Equal(0b10, cpu.SFRs.Psw);
+        Assert.Equal(0b10, (byte)cpu.SFRs.Psw);
 
         cpu.Step();
         Assert.Equal(2, cpu.Pc);
         Assert.Equal(42, cpu.SFRs.Acc);
-        Assert.Equal(0b10, cpu.SFRs.Psw);
+        Assert.Equal(0b10, (byte)cpu.SFRs.Psw);
     }
 
     [Fact]
@@ -125,12 +125,12 @@ public class ArithmeticTests
 
         Assert.Equal(0, cpu.Pc);
         Assert.Equal(0, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         cpu.Step();
         Assert.Equal(1, cpu.Pc);
         Assert.Equal(42, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
     }
 
     [Fact]
@@ -146,12 +146,12 @@ public class ArithmeticTests
 
         Assert.Equal(0, cpu.Pc);
         Assert.Equal(0, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         cpu.Step();
         Assert.Equal(1, cpu.Pc);
         Assert.Equal(42, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
     }
 
     [Fact]
@@ -170,12 +170,12 @@ public class ArithmeticTests
 
         Assert.Equal(0, cpu.Pc);
         Assert.Equal(0, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         cpu.Step();
         Assert.Equal(1, cpu.Pc);
         Assert.Equal(42, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
     }
 
     [Fact]
@@ -194,12 +194,12 @@ public class ArithmeticTests
 
         Assert.Equal(0, cpu.Pc);
         Assert.Equal(0, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         cpu.Step();
         Assert.Equal(1, cpu.Pc);
         Assert.Equal(42, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
     }
 
     [Fact]
@@ -210,24 +210,24 @@ public class ArithmeticTests
         ReadOnlySpan<byte> instructions = [0b1000_0100, 0b1000_0100];
         instructions.CopyTo(cpu.ROM);
 
-        cpu.SFRs.Irbk0 = true;
+        cpu.SFRs.Psw = new() { Irbk0 = true };
         cpu.Memory.Write(4, 0b1000);
         cpu.Memory.Write(0b1000, 42);
 
         Assert.Equal(0, cpu.Pc);
         Assert.Equal(0, cpu.SFRs.Acc);
-        Assert.Equal(0b1000, cpu.SFRs.Psw);
+        Assert.Equal(0b1000, (byte)cpu.SFRs.Psw);
 
         cpu.Step();
         Assert.Equal(1, cpu.Pc);
         Assert.Equal(42, cpu.SFRs.Acc);
-        Assert.Equal(0b1000, cpu.SFRs.Psw);
+        Assert.Equal(0b1000, (byte)cpu.SFRs.Psw);
 
         cpu.Step();
         Assert.Equal(2, cpu.Pc);
         Assert.Equal(84, cpu.SFRs.Acc);
-        Assert.True(cpu.SFRs.Ac);
-        Assert.Equal(0b1001000, cpu.SFRs.Psw);
+        Assert.True(cpu.SFRs.Psw.Ac);
+        Assert.Equal(0b1001000, (byte)cpu.SFRs.Psw);
     }
 
     [Fact]
@@ -238,24 +238,24 @@ public class ArithmeticTests
         ReadOnlySpan<byte> instructions = [0b1000_0101, 0b1000_0101];
         instructions.CopyTo(cpu.ROM);
 
-        cpu.SFRs.Irbk0 = true;
+        cpu.SFRs.Psw = new() { Irbk0 = true };
         cpu.Memory.Write(5, 0b1000);
         cpu.Memory.Write(0b1000, 42);
 
         Assert.Equal(0, cpu.Pc);
         Assert.Equal(0, cpu.SFRs.Acc);
-        Assert.Equal(0b1000, cpu.SFRs.Psw);
+        Assert.Equal(0b1000, (byte)cpu.SFRs.Psw);
 
         cpu.Step();
         Assert.Equal(1, cpu.Pc);
         Assert.Equal(42, cpu.SFRs.Acc);
-        Assert.Equal(0b1000, cpu.SFRs.Psw);
+        Assert.Equal(0b1000, (byte)cpu.SFRs.Psw);
 
         cpu.Step();
         Assert.Equal(2, cpu.Pc);
         Assert.Equal(84, cpu.SFRs.Acc);
-        Assert.True(cpu.SFRs.Ac);
-        Assert.Equal(0b1001000, cpu.SFRs.Psw);
+        Assert.True(cpu.SFRs.Psw.Ac);
+        Assert.Equal(0b1001000, (byte)cpu.SFRs.Psw);
     }
 
     [Fact]
@@ -266,24 +266,24 @@ public class ArithmeticTests
         ReadOnlySpan<byte> instructions = [0b1000_0110, 0b1000_0110];
         instructions.CopyTo(cpu.ROM);
 
-        cpu.SFRs.Irbk0 = true;
+        cpu.SFRs.Psw = new() { Irbk0 = true };
         cpu.Memory.Write(6, 0x84);
         cpu.Memory.Write(0x184, 42);
 
         Assert.Equal(0, cpu.Pc);
         Assert.Equal(0, cpu.SFRs.Acc);
-        Assert.Equal(0b1000, cpu.SFRs.Psw);
+        Assert.Equal(0b1000, (byte)cpu.SFRs.Psw);
 
         cpu.Step();
         Assert.Equal(1, cpu.Pc);
         Assert.Equal(42, cpu.SFRs.Acc);
-        Assert.Equal(0b1000, cpu.SFRs.Psw);
+        Assert.Equal(0b1000, (byte)cpu.SFRs.Psw);
 
         cpu.Step();
         Assert.Equal(2, cpu.Pc);
         Assert.Equal(84, cpu.SFRs.Acc);
-        Assert.True(cpu.SFRs.Ac);
-        Assert.Equal(0b1001000, cpu.SFRs.Psw);
+        Assert.True(cpu.SFRs.Psw.Ac);
+        Assert.Equal(0b1001000, (byte)cpu.SFRs.Psw);
     }
 
     [Fact]
@@ -297,24 +297,24 @@ public class ArithmeticTests
         ];
         instructions.CopyTo(cpu.ROM);
 
-        cpu.SFRs.Irbk1 = true;
+        cpu.SFRs.Psw = new() { Irbk1 = true };
         cpu.Memory.Write(8, 0xf);
         cpu.Memory.Write(0xf, 42);
 
         Assert.Equal(0, cpu.Pc);
         Assert.Equal(0, cpu.SFRs.Acc);
-        Assert.Equal(0b1_0000, cpu.SFRs.Psw);
+        Assert.Equal(0b1_0000, (byte)cpu.SFRs.Psw);
 
         cpu.Step();
         Assert.Equal(1, cpu.Pc);
         Assert.Equal(42, cpu.SFRs.Acc);
-        Assert.Equal(0b1_0000, cpu.SFRs.Psw);
+        Assert.Equal(0b1_0000, (byte)cpu.SFRs.Psw);
 
         cpu.Step();
         Assert.Equal(2, cpu.Pc);
         Assert.Equal(84, cpu.SFRs.Acc);
-        Assert.True(cpu.SFRs.Ac);
-        Assert.Equal(0b101_0000, cpu.SFRs.Psw);
+        Assert.True(cpu.SFRs.Psw.Ac);
+        Assert.Equal(0b101_0000, (byte)cpu.SFRs.Psw);
     }
 
     [Fact]
@@ -328,25 +328,24 @@ public class ArithmeticTests
         ];
         instructions.CopyTo(cpu.ROM);
 
-        cpu.SFRs.Irbk0 = true;
-        cpu.SFRs.Irbk1 = true;
+        cpu.SFRs.Psw = new() { Irbk0 = true, Irbk1 = true };
         cpu.Memory.Write(12, 0xf);
         cpu.Memory.Write(0xf, 42);
 
         Assert.Equal(0, cpu.Pc);
         Assert.Equal(0, cpu.SFRs.Acc);
-        Assert.Equal(0b1_1000, cpu.SFRs.Psw);
+        Assert.Equal(0b1_1000, (byte)cpu.SFRs.Psw);
 
         cpu.Step();
         Assert.Equal(1, cpu.Pc);
         Assert.Equal(42, cpu.SFRs.Acc);
-        Assert.Equal(0b1_1000, cpu.SFRs.Psw);
+        Assert.Equal(0b1_1000, (byte)cpu.SFRs.Psw);
 
         cpu.Step();
         Assert.Equal(2, cpu.Pc);
         Assert.Equal(84, cpu.SFRs.Acc);
-        Assert.True(cpu.SFRs.Ac);
-        Assert.Equal(0b101_1000, cpu.SFRs.Psw);
+        Assert.True(cpu.SFRs.Psw.Ac);
+        Assert.Equal(0b101_1000, (byte)cpu.SFRs.Psw);
     }
 
     [Fact]
@@ -366,27 +365,27 @@ public class ArithmeticTests
 
         cpu.Step();
         Assert.Equal(0x68, cpu.SFRs.Acc);
-        Assert.False(cpu.SFRs.Cy);
-        Assert.False(cpu.SFRs.Ac);
-        Assert.False(cpu.SFRs.Ov);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.False(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
 
         cpu.Step();
         Assert.Equal(0x72, cpu.SFRs.Acc);
-        Assert.False(cpu.SFRs.Cy);
-        Assert.True(cpu.SFRs.Ac);
-        Assert.False(cpu.SFRs.Ov);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.True(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
 
         cpu.Step();
         Assert.Equal(0x81, cpu.SFRs.Acc);
-        Assert.False(cpu.SFRs.Cy);
-        Assert.True(cpu.SFRs.Ac);
-        Assert.True(cpu.SFRs.Ov);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.True(cpu.SFRs.Psw.Ac);
+        Assert.True(cpu.SFRs.Psw.Ov);
 
         cpu.Step();
         Assert.Equal(0x01, cpu.SFRs.Acc);
-        Assert.True(cpu.SFRs.Cy);
-        Assert.False(cpu.SFRs.Ac);
-        Assert.True(cpu.SFRs.Ov);
+        Assert.True(cpu.SFRs.Psw.Cy);
+        Assert.False(cpu.SFRs.Psw.Ac);
+        Assert.True(cpu.SFRs.Psw.Ov);
     }
 
     [Fact]
@@ -406,16 +405,16 @@ public class ArithmeticTests
         cpu.Step();
         Assert.Equal(0x61, cpu.SFRs.Acc);
         Assert.Equal(0x68, cpu.Memory.Read(0x023));
-        Assert.False(cpu.SFRs.Cy);
-        Assert.True(cpu.SFRs.Ac);
-        Assert.False(cpu.SFRs.Ov);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.True(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
 
         cpu.Step();
         Assert.Equal(0xc9, cpu.SFRs.Acc);
         Assert.Equal(0x68, cpu.Memory.Read(0x023));
-        Assert.False(cpu.SFRs.Cy);
-        Assert.False(cpu.SFRs.Ac);
-        Assert.True(cpu.SFRs.Ov);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.False(cpu.SFRs.Psw.Ac);
+        Assert.True(cpu.SFRs.Psw.Ov);
     }
 
     [Fact]
@@ -435,16 +434,16 @@ public class ArithmeticTests
         cpu.Step();
         Assert.Equal(0x72, cpu.SFRs.Acc);
         Assert.Equal(0x95, cpu.SFRs.B);
-        Assert.False(cpu.SFRs.Cy);
-        Assert.False(cpu.SFRs.Ac);
-        Assert.False(cpu.SFRs.Ov);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.False(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
 
         cpu.Step();
         Assert.Equal(0x07, cpu.SFRs.Acc);
         Assert.Equal(0x95, cpu.SFRs.B);
-        Assert.True(cpu.SFRs.Cy);
-        Assert.False(cpu.SFRs.Ac);
-        Assert.False(cpu.SFRs.Ov);
+        Assert.True(cpu.SFRs.Psw.Cy);
+        Assert.False(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
     }
 
     [Fact]
@@ -466,17 +465,17 @@ public class ArithmeticTests
         Assert.Equal(0x6a, cpu.SFRs.Acc);
         Assert.Equal(0x68, cpu.Memory.Read(0));
         Assert.Equal(0x10, cpu.Memory.Read(0x68));
-        Assert.False(cpu.SFRs.Cy);
-        Assert.False(cpu.SFRs.Ac);
-        Assert.False(cpu.SFRs.Ov);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.False(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0x7a, cpu.SFRs.Acc);
         Assert.Equal(0x68, cpu.Memory.Read(0));
         Assert.Equal(0x10, cpu.Memory.Read(0x68));
-        Assert.False(cpu.SFRs.Cy);
-        Assert.False(cpu.SFRs.Ac);
-        Assert.False(cpu.SFRs.Ov);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.False(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
     }
 
     [Fact]
@@ -498,17 +497,17 @@ public class ArithmeticTests
         Assert.Equal(0xab, cpu.SFRs.Acc);
         Assert.Equal(0x04, cpu.Memory.Read(2));
         Assert.Equal(0x55, cpu.Memory.Read(0x104));
-        Assert.False(cpu.SFRs.Cy);
-        Assert.False(cpu.SFRs.Ac);
-        Assert.False(cpu.SFRs.Ov);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.False(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
 
         cpu.Step();
         Assert.Equal(0x00, cpu.SFRs.Acc);
         Assert.Equal(0x04, cpu.Memory.Read(2));
         Assert.Equal(0x55, cpu.Memory.Read(0x104));
-        Assert.True(cpu.SFRs.Cy);
-        Assert.True(cpu.SFRs.Ac);
-        Assert.False(cpu.SFRs.Ov);
+        Assert.True(cpu.SFRs.Psw.Cy);
+        Assert.True(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
     }
 
     [Fact]
@@ -529,33 +528,33 @@ public class ArithmeticTests
 
         cpu.Step();
         Assert.Equal(0x68, cpu.SFRs.Acc);
-        Assert.False(cpu.SFRs.Cy);
-        Assert.False(cpu.SFRs.Ac);
-        Assert.False(cpu.SFRs.Ov);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.False(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
 
         cpu.Step();
         Assert.Equal(0x72, cpu.SFRs.Acc);
-        Assert.False(cpu.SFRs.Cy);
-        Assert.True(cpu.SFRs.Ac);
-        Assert.False(cpu.SFRs.Ov);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.True(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
 
         cpu.Step();
         Assert.Equal(0x81, cpu.SFRs.Acc);
-        Assert.False(cpu.SFRs.Cy);
-        Assert.True(cpu.SFRs.Ac);
-        Assert.True(cpu.SFRs.Ov);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.True(cpu.SFRs.Psw.Ac);
+        Assert.True(cpu.SFRs.Psw.Ov);
 
         cpu.Step();
         Assert.Equal(0x01, cpu.SFRs.Acc);
-        Assert.True(cpu.SFRs.Cy);
-        Assert.False(cpu.SFRs.Ac);
-        Assert.True(cpu.SFRs.Ov);
+        Assert.True(cpu.SFRs.Psw.Cy);
+        Assert.False(cpu.SFRs.Psw.Ac);
+        Assert.True(cpu.SFRs.Psw.Ov);
 
         cpu.Step();
         Assert.Equal(0x03, cpu.SFRs.Acc);
-        Assert.False(cpu.SFRs.Cy);
-        Assert.False(cpu.SFRs.Ac);
-        Assert.False(cpu.SFRs.Ov);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.False(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
     }
 
     [Fact]
@@ -572,15 +571,15 @@ public class ArithmeticTests
 
         cpu.Step();
         Assert.Equal(0x7, cpu.SFRs.Acc);
-        Assert.True(cpu.SFRs.Cy);
-        Assert.True(cpu.SFRs.Ac);
-        Assert.False(cpu.SFRs.Ov);
+        Assert.True(cpu.SFRs.Psw.Cy);
+        Assert.True(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
 
         cpu.Step();
         Assert.Equal(0x10, cpu.SFRs.Acc);
-        Assert.False(cpu.SFRs.Cy);
-        Assert.True(cpu.SFRs.Ac);
-        Assert.False(cpu.SFRs.Ov);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.True(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
     }
 
     [Fact]
@@ -597,15 +596,15 @@ public class ArithmeticTests
 
         cpu.Step();
         Assert.Equal(0x0f, cpu.SFRs.Acc);
-        Assert.True(cpu.SFRs.Cy);
-        Assert.False(cpu.SFRs.Ac);
-        Assert.False(cpu.SFRs.Ov);
+        Assert.True(cpu.SFRs.Psw.Cy);
+        Assert.False(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
 
         cpu.Step();
         Assert.Equal(0x11, cpu.SFRs.Acc);
-        Assert.False(cpu.SFRs.Cy);
-        Assert.True(cpu.SFRs.Ac);
-        Assert.False(cpu.SFRs.Ov);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.True(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
     }
 
     [Fact]
@@ -624,27 +623,27 @@ public class ArithmeticTests
 
         cpu.Step();
         Assert.Equal(0x42, cpu.SFRs.Acc);
-        Assert.False(cpu.SFRs.Cy);
-        Assert.False(cpu.SFRs.Ac);
-        Assert.False(cpu.SFRs.Ov);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.False(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
 
         cpu.Step();
         Assert.Equal(0x3f, cpu.SFRs.Acc);
-        Assert.False(cpu.SFRs.Cy);
-        Assert.True(cpu.SFRs.Ac);
-        Assert.False(cpu.SFRs.Ov);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.True(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
 
         cpu.Step();
         Assert.Equal(0, cpu.SFRs.Acc);
-        Assert.False(cpu.SFRs.Cy);
-        Assert.False(cpu.SFRs.Ac);
-        Assert.False(cpu.SFRs.Ov);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.False(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
 
         cpu.Step();
         Assert.Equal(0xfe, cpu.SFRs.Acc);
-        Assert.True(cpu.SFRs.Cy);
-        Assert.True(cpu.SFRs.Ac);
-        Assert.False(cpu.SFRs.Ov);
+        Assert.True(cpu.SFRs.Psw.Cy);
+        Assert.True(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
     }
 
     [Fact]
@@ -663,15 +662,15 @@ public class ArithmeticTests
 
         cpu.Step();
         Assert.Equal(0x7e, cpu.SFRs.Acc);
-        Assert.False(cpu.SFRs.Cy);
-        Assert.True(cpu.SFRs.Ac);
-        Assert.True(cpu.SFRs.Ov);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.True(cpu.SFRs.Psw.Ac);
+        Assert.True(cpu.SFRs.Psw.Ov);
 
         cpu.Step();
         Assert.Equal(0xe9, cpu.SFRs.Acc);
-        Assert.True(cpu.SFRs.Cy);
-        Assert.False(cpu.SFRs.Ac);
-        Assert.True(cpu.SFRs.Ov);
+        Assert.True(cpu.SFRs.Psw.Cy);
+        Assert.False(cpu.SFRs.Psw.Ac);
+        Assert.True(cpu.SFRs.Psw.Ov);
     }
 
     [Fact]
@@ -691,23 +690,23 @@ public class ArithmeticTests
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0x7e, cpu.SFRs.Acc);
-        Assert.False(cpu.SFRs.Cy);
-        Assert.True(cpu.SFRs.Ac);
-        Assert.True(cpu.SFRs.Ov);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.True(cpu.SFRs.Psw.Ac);
+        Assert.True(cpu.SFRs.Psw.Ov);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0xe9, cpu.SFRs.Acc);
-        Assert.True(cpu.SFRs.Cy);
-        Assert.False(cpu.SFRs.Ac);
-        Assert.True(cpu.SFRs.Ov);
+        Assert.True(cpu.SFRs.Psw.Cy);
+        Assert.False(cpu.SFRs.Psw.Ac);
+        Assert.True(cpu.SFRs.Psw.Ov);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0x53, cpu.SFRs.Acc);
-        Assert.False(cpu.SFRs.Cy);
-        Assert.False(cpu.SFRs.Ac);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.False(cpu.SFRs.Psw.Ac);
         // VMC says this should be True, but we are effectively doing (decimal) (-23)-(-107)=83.
         // Doesn't seem like an overflow. Could be a misprint.
-        Assert.False(cpu.SFRs.Ov);
+        Assert.False(cpu.SFRs.Psw.Ov);
     }
 
     [Fact]
@@ -728,21 +727,21 @@ public class ArithmeticTests
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0x3f, cpu.SFRs.Acc);
-        Assert.False(cpu.SFRs.Cy);
-        Assert.True(cpu.SFRs.Ac);
-        Assert.False(cpu.SFRs.Ov);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.True(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0xff, cpu.SFRs.Acc);
-        Assert.True(cpu.SFRs.Cy);
-        Assert.False(cpu.SFRs.Ac);
-        Assert.False(cpu.SFRs.Ov);
+        Assert.True(cpu.SFRs.Psw.Cy);
+        Assert.False(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0xbe, cpu.SFRs.Acc);
-        Assert.False(cpu.SFRs.Cy);
-        Assert.False(cpu.SFRs.Ac);
-        Assert.False(cpu.SFRs.Ov);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.False(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
     }
 
     [Fact]
@@ -762,19 +761,19 @@ public class ArithmeticTests
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0xfe, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0xff, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0x00, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0x01, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
     }
 
     [Fact]
@@ -794,19 +793,19 @@ public class ArithmeticTests
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0xfe, cpu.Memory.Read(0x7f));
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0xff, cpu.Memory.Read(0x7f));
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0x00, cpu.Memory.Read(0x7f));
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0x01, cpu.Memory.Read(0x7f));
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
     }
 
     [Fact]
@@ -828,19 +827,19 @@ public class ArithmeticTests
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(1, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(0, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(255, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
 
         Assert.Equal(1, cpu.Step());
         Assert.Equal(254, cpu.SFRs.Acc);
-        Assert.Equal(0, cpu.SFRs.Psw);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
     }
 
     [Fact]
@@ -853,9 +852,7 @@ public class ArithmeticTests
         ];
         instructions.CopyTo(cpu.ROM);
 
-        cpu.SFRs.Cy = true;
-        cpu.SFRs.Ac = true;
-        cpu.SFRs.Ov = true;
+        cpu.SFRs.Psw = new() { Cy = true, Ac = true, Ov = true };
 
         // 0x1123 * 0x52 = 0x057D36
         cpu.SFRs.Acc = 0x11;
@@ -866,9 +863,9 @@ public class ArithmeticTests
         Assert.Equal(0x05, cpu.SFRs.B);
         Assert.Equal(0x7D, cpu.SFRs.Acc);
         Assert.Equal(0x36, cpu.SFRs.C);
-        Assert.False(cpu.SFRs.Cy);
-        Assert.True(cpu.SFRs.Ac);
-        Assert.True(cpu.SFRs.Ov);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.True(cpu.SFRs.Psw.Ac);
+        Assert.True(cpu.SFRs.Psw.Ov);
     }
 
     [Fact]
@@ -881,9 +878,7 @@ public class ArithmeticTests
         ];
         instructions.CopyTo(cpu.ROM);
 
-        cpu.SFRs.Cy = true;
-        cpu.SFRs.Ac = true;
-        cpu.SFRs.Ov = true;
+        cpu.SFRs.Psw = new() { Cy = true, Ac = true, Ov = true };
 
         // 0x0705 * 0x10 = 0x007050
         cpu.SFRs.Acc = 0x07;
@@ -894,9 +889,9 @@ public class ArithmeticTests
         Assert.Equal(0x00, cpu.SFRs.B);
         Assert.Equal(0x70, cpu.SFRs.Acc);
         Assert.Equal(0x50, cpu.SFRs.C);
-        Assert.False(cpu.SFRs.Cy);
-        Assert.True(cpu.SFRs.Ac);
-        Assert.False(cpu.SFRs.Ov);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.True(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
     }
 
     [Fact]
@@ -909,9 +904,7 @@ public class ArithmeticTests
         ];
         instructions.CopyTo(cpu.ROM);
 
-        cpu.SFRs.Cy = true;
-        cpu.SFRs.Ac = true;
-        cpu.SFRs.Ov = true;
+        cpu.SFRs.Psw = new() { Cy = true, Ac = true, Ov = true };
 
         // 0x0705 * 0x10 = 0x007050
         cpu.SFRs.Acc = 0x79;
@@ -922,9 +915,9 @@ public class ArithmeticTests
         Assert.Equal(0x06, cpu.SFRs.B);
         Assert.Equal(0x11, cpu.SFRs.Acc);
         Assert.Equal(0x49, cpu.SFRs.C);
-        Assert.False(cpu.SFRs.Cy);
-        Assert.True(cpu.SFRs.Ac);
-        Assert.False(cpu.SFRs.Ov);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.True(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
     }
 
     [Fact]
@@ -937,9 +930,7 @@ public class ArithmeticTests
         ];
         instructions.CopyTo(cpu.ROM);
 
-        cpu.SFRs.Cy = true;
-        cpu.SFRs.Ac = true;
-        cpu.SFRs.Ov = true;
+        cpu.SFRs.Psw = new() { Cy = true, Ac = true, Ov = true };
 
         // 0x0705 * 0x10 = 0x007050
         cpu.SFRs.Acc = 0x07;
@@ -950,9 +941,9 @@ public class ArithmeticTests
         Assert.Equal(0x00, cpu.SFRs.B);
         Assert.Equal(0xFF, cpu.SFRs.Acc);
         Assert.Equal(0x10, cpu.SFRs.C);
-        Assert.False(cpu.SFRs.Cy);
-        Assert.True(cpu.SFRs.Ac);
-        Assert.True(cpu.SFRs.Ov);
+        Assert.False(cpu.SFRs.Psw.Cy);
+        Assert.True(cpu.SFRs.Psw.Ac);
+        Assert.True(cpu.SFRs.Psw.Ov);
     }
 
     // TODO: test inc indirect

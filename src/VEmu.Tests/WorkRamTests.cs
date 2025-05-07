@@ -84,7 +84,7 @@ public class WorkRamTests
         cpu.Memory.Direct_WriteWorkRam(0x111, 0x40);
         cpu.SFRs.Vrmad1 = 0x10;
         cpu.SFRs.Vrmad2 = 1;
-        cpu.SFRs.Vsel4_Ince = true;
+        cpu.SFRs.Vsel = cpu.SFRs.Vsel with { Ince = true };
 
         ReadOnlySpan<byte> instructions = [
             OpcodeMask.LD | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Vtrbf,

@@ -167,7 +167,7 @@ class Memory
         // - bit 1: j1 (regId, from instruction data)
         // - bit 0: j0 (regId, from instruction data)
 
-        var irbk = SFRs.Psw & 0b11000; // Mask out IRBK1, IRBK0 bits (VMD-44).
+        var irbk = (byte)SFRs.Psw & 0b11000; // Mask out IRBK1, IRBK0 bits (VMD-44).
         var registerAddress = (ushort)((irbk >> 1) | regId); // compose (IRBK1, IRBK0, j1, j0)
         Debug.Assert(registerAddress is >= 0 and < 16);
 
@@ -203,7 +203,7 @@ class Memory
     private byte ReadMainMemory(ushort address)
     {
         Debug.Assert(address < 0x100);
-        var bank = SFRs.Rambk0 ? _mainRam1 : _mainRam0;
+        var bank = SFRs.Psw.Rambk0 ? _mainRam1 : _mainRam0;
         return bank[address];
     }
 
@@ -256,7 +256,7 @@ class Memory
     private void WriteMainMemory(ushort address, byte value)
     {
         Debug.Assert(address < 0x100);
-        var bank = SFRs.Rambk0 ? _mainRam1 : _mainRam0;
+        var bank = SFRs.Psw.Rambk0 ? _mainRam1 : _mainRam0;
         bank[address] = value;
     }
 
