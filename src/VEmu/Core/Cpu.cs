@@ -81,11 +81,6 @@ public class Cpu
         int cyclesSoFar = 0;
         while (cyclesSoFar < cyclesToRun)
         {
-            if (BitHelpers.ReadBit(SFRs.Pcon, bit: 0))
-            {
-                Logger.LogDebug("---HALT---");
-            }
-
             cyclesSoFar += Step();
         }
         return cyclesSoFar;
@@ -175,19 +170,17 @@ public class Cpu
         if (Interrupts != 0)
         {
             // service next enabled interrupt in priority order.
-            // TODO: int enable flags should probably be checked at the point interrupts are generated not when they are serviced.
-            // some of the flags do distinguish between generation and servicing though.
-            if ((Interrupts & Interrupts.INT0) != 0 && SFRs.I01Cr.Int0Enable)
+            if ((Interrupts & Interrupts.INT0) != 0)
             {
                 callServiceRoutine(InterruptVectors.INT0);
                 Interrupts &= ~Interrupts.INT0;
             }
-            else if ((Interrupts & Interrupts.INT1) != 0 && SFRs.I01Cr.Int1Enable)
+            else if ((Interrupts & Interrupts.INT1) != 0)
             {
                 callServiceRoutine(InterruptVectors.INT1);
                 Interrupts &= ~Interrupts.INT1;
             }
-            else if ((Interrupts & Interrupts.INT2_T0L) != 0 && SFRs.I23Cr.Int2Enable)
+            else if ((Interrupts & Interrupts.INT2_T0L) != 0)
             {
                 callServiceRoutine(InterruptVectors.INT2_T0L);
                 Interrupts &= ~Interrupts.INT1;
@@ -197,6 +190,13 @@ public class Cpu
                 callServiceRoutine(InterruptVectors.T0H);
                 Interrupts &= ~Interrupts.T0H;
             }
+            else if ((Interrupts & Interrupts.T1) != 0)
+            {
+                callServiceRoutine(InterruptVectors.T1);
+                Interrupts &= ~Interrupts.T1;
+            }
+
+            SFRs.Pcon = SFRs.Pcon with { HaltMode = false };
         }
 
         void callServiceRoutine(ushort routineAddress)
@@ -224,58 +224,67 @@ public class Cpu
         InstructionMap[Pc] = inst;
         Logger.LogTrace($"{inst} Acc={SFRs.Acc:X} B={SFRs.B:X} C={SFRs.C:X} R2={ReadRam(2)}");
 
-        switch (inst.Kind)
+        // TODO: hold mode doesn't even tick timers. only external interrupts wake the VMU.
+        if (SFRs.Pcon.HaltMode)
         {
-            case OperationKind.ADD: Op_ADD(inst); break;
-            case OperationKind.ADDC: Op_ADDC(inst); break;
-            case OperationKind.SUB: Op_SUB(inst); break;
-            case OperationKind.SUBC: Op_SUBC(inst); break;
-            case OperationKind.INC: Op_INC(inst); break;
-            case OperationKind.DEC: Op_DEC(inst); break;
-            case OperationKind.MUL: Op_MUL(inst); break;
-            case OperationKind.DIV: Op_DIV(inst); break;
-            case OperationKind.AND: Op_AND(inst); break;
-            case OperationKind.OR: Op_OR(inst); break;
-            case OperationKind.XOR: Op_XOR(inst); break;
-            case OperationKind.ROL: Op_ROL(inst); break;
-            case OperationKind.ROLC: Op_ROLC(inst); break;
-            case OperationKind.ROR: Op_ROR(inst); break;
-            case OperationKind.RORC: Op_RORC(inst); break;
-            case OperationKind.LD: Op_LD(inst); break;
-            case OperationKind.ST: Op_ST(inst); break;
-            case OperationKind.MOV: Op_MOV(inst); break;
-            case OperationKind.LDC: Op_LDC(inst); break;
-            case OperationKind.PUSH: Op_PUSH(inst); break;
-            case OperationKind.POP: Op_POP(inst); break;
-            case OperationKind.XCH: Op_XCH(inst); break;
-            case OperationKind.JMP: Op_JMP(inst); break;
-            case OperationKind.JMPF: Op_JMPF(inst); break;
-            case OperationKind.BR: Op_BR(inst); break;
-            case OperationKind.BRF: Op_BRF(inst); break;
-            case OperationKind.BZ: Op_BZ(inst); break;
-            case OperationKind.BNZ: Op_BNZ(inst); break;
-            case OperationKind.BP: Op_BP(inst); break;
-            case OperationKind.BPC: Op_BPC(inst); break;
-            case OperationKind.BN: Op_BN(inst); break;
-            case OperationKind.DBNZ: Op_DBNZ(inst); break;
-            case OperationKind.BE: Op_BE(inst); break;
-            case OperationKind.BNE: Op_BNE(inst); break;
-            case OperationKind.CALL: Op_CALL(inst); break;
-            case OperationKind.CALLF: Op_CALLF(inst); break;
-            case OperationKind.CALLR: Op_CALLR(inst); break;
-            case OperationKind.RET: Op_RET(inst); break;
-            case OperationKind.RETI: Op_RETI(inst); break;
-            case OperationKind.CLR1: Op_CLR1(inst); break;
-            case OperationKind.SET1: Op_SET1(inst); break;
-            case OperationKind.NOT1: Op_NOT1(inst); break;
-            case OperationKind.LDF: Op_LDF(inst); break;
-            case OperationKind.NOP: Op_NOP(inst); break;
-            default: Throw(inst); break;
+            TickTimers(1);
+            return 1;
         }
+        else
+        {
+            switch (inst.Kind)
+            {
+                case OperationKind.ADD: Op_ADD(inst); break;
+                case OperationKind.ADDC: Op_ADDC(inst); break;
+                case OperationKind.SUB: Op_SUB(inst); break;
+                case OperationKind.SUBC: Op_SUBC(inst); break;
+                case OperationKind.INC: Op_INC(inst); break;
+                case OperationKind.DEC: Op_DEC(inst); break;
+                case OperationKind.MUL: Op_MUL(inst); break;
+                case OperationKind.DIV: Op_DIV(inst); break;
+                case OperationKind.AND: Op_AND(inst); break;
+                case OperationKind.OR: Op_OR(inst); break;
+                case OperationKind.XOR: Op_XOR(inst); break;
+                case OperationKind.ROL: Op_ROL(inst); break;
+                case OperationKind.ROLC: Op_ROLC(inst); break;
+                case OperationKind.ROR: Op_ROR(inst); break;
+                case OperationKind.RORC: Op_RORC(inst); break;
+                case OperationKind.LD: Op_LD(inst); break;
+                case OperationKind.ST: Op_ST(inst); break;
+                case OperationKind.MOV: Op_MOV(inst); break;
+                case OperationKind.LDC: Op_LDC(inst); break;
+                case OperationKind.PUSH: Op_PUSH(inst); break;
+                case OperationKind.POP: Op_POP(inst); break;
+                case OperationKind.XCH: Op_XCH(inst); break;
+                case OperationKind.JMP: Op_JMP(inst); break;
+                case OperationKind.JMPF: Op_JMPF(inst); break;
+                case OperationKind.BR: Op_BR(inst); break;
+                case OperationKind.BRF: Op_BRF(inst); break;
+                case OperationKind.BZ: Op_BZ(inst); break;
+                case OperationKind.BNZ: Op_BNZ(inst); break;
+                case OperationKind.BP: Op_BP(inst); break;
+                case OperationKind.BPC: Op_BPC(inst); break;
+                case OperationKind.BN: Op_BN(inst); break;
+                case OperationKind.DBNZ: Op_DBNZ(inst); break;
+                case OperationKind.BE: Op_BE(inst); break;
+                case OperationKind.BNE: Op_BNE(inst); break;
+                case OperationKind.CALL: Op_CALL(inst); break;
+                case OperationKind.CALLF: Op_CALLF(inst); break;
+                case OperationKind.CALLR: Op_CALLR(inst); break;
+                case OperationKind.RET: Op_RET(inst); break;
+                case OperationKind.RETI: Op_RETI(inst); break;
+                case OperationKind.CLR1: Op_CLR1(inst); break;
+                case OperationKind.SET1: Op_SET1(inst); break;
+                case OperationKind.NOT1: Op_NOT1(inst); break;
+                case OperationKind.LDF: Op_LDF(inst); break;
+                case OperationKind.NOP: Op_NOP(inst); break;
+                default: Throw(inst); break;
+            }
 
-        TickTimers(inst.Cycles);
+            TickTimers(inst.Cycles);
 
-        return inst.Cycles;
+            return inst.Cycles;
+        }
 
         static void Throw(Instruction inst) => throw new InvalidOperationException($"Unknown operation '{inst}'");
     }
@@ -283,6 +292,7 @@ public class Cpu
     private void TickTimers(byte cycles)
     {
         tickTimer0();
+        tickTimer1();
 
         void tickTimer0()
         {
@@ -299,11 +309,13 @@ public class Cpu
                 t0lOverflow = t0l < ticks;
                 if (t0lOverflow)
                 {
+                    // TODO: I think we care about the remainder from the overflow
+                    // but accounting for both that remainder and the reload data is not straightforward
+                    // e.g. for a long instruction like mul we could probably end up reloading multiple times
                     t0l = SFRs.T0Lr; // reload
                     if (!t0cnt.T0Long) // track the overflow only in 8-bit mode
                     {
                         t0cnt.T0lOvf = true; // note: the hardware will not reset this flag. application needs to do it.
-                        // TODO: should we be checking if the interrupt is enabled here or in ServiceInterruptIfNeeded?
                         if (t0cnt.T0lIe)
                             Interrupts |= Interrupts.INT2_T0L;
                     }
@@ -325,8 +337,8 @@ public class Cpu
                 var t0hOverflow = t0h < hticks;
                 if (t0hOverflow)
                 {
+                    t0h = SFRs.T0Hr;
                     t0cnt.T0hOvf = true; // note: the hardware will not reset this flag. application needs to do it.
-                    // TODO: should we be checking if the interrupt is enabled here or in ServiceInterruptIfNeeded?
                     if (t0cnt.T0hIe)
                         Interrupts |= Interrupts.T0H;
                 }
@@ -335,6 +347,57 @@ public class Cpu
             }
 
             SFRs.T0Cnt = t0cnt;
+        }
+
+        void tickTimer1()
+        {
+            var t1cnt = SFRs.T1Cnt;
+            var ticks = cycles; // TODO: how to tick at half the cycle clock accurately? break out a remainder bit?
+
+            bool t1lOverflow = false;
+            if (t1cnt.T1lRun)
+            {
+                var t1l = (byte)(SFRs.T1L + ticks);
+                t1lOverflow = t1l < ticks;
+                if (t1lOverflow)
+                {
+                    t1l = SFRs.T1Lr;
+                    t1cnt.T1lOvf = true;
+                    if (t1cnt.T1lIe)
+                        Interrupts |= Interrupts.T1;
+                }
+
+                if (t1cnt.ELDT1C)
+                {
+                    // TODO: update pulse generator?
+                    // because we run the cycles in bursts for each frame we want to display,
+                    // not really at the rate of original hardware, we likely can't/shouldn't emulate sound this way.
+                    // we need to instead inspect the comparison and timer setup data and just fill in a PWM buffer or something.
+                }
+
+                SFRs.T1L = t1l;
+            }
+
+            if (t1cnt.T1hRun)
+            {
+                var hticks = (t1cnt.T1Long, t1lOverflow) switch
+                {
+                    (true, true) => 1,
+                    (true, false) => 0,
+                    _ => ticks
+                };
+                var t1h = (byte)(SFRs.T1H + hticks);
+                var t1hOverflow = t1h < hticks;
+                if (t1hOverflow)
+                {
+                    t1h = SFRs.T1Hr;
+                    t1cnt.T1hOvf = true; // note: the hardware will not reset this flag. application needs to do it.
+                    if (t1cnt.T1hIe)
+                        Interrupts |= Interrupts.T1;
+                }
+
+                SFRs.T1H = t1h;
+            }
         }
     }
 

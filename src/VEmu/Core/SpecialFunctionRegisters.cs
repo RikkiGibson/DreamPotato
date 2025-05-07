@@ -36,7 +36,7 @@ class SpecialFunctionRegisters
         // Manual indicates that BIOS is typically responsible for setting these values.
         // It's nice to be able to run without a BIOS, so let's set them up here.
         P1Fcr = 0b1011_1111;
-        P3Int = 0b1111_1101;
+        P3Int = new(0b1111_1101);
         P3 = new(0b1111_1111);
         Isl = 0b1100_0000;
         Vsel = new(0b1111_1100);
@@ -81,6 +81,22 @@ class SpecialFunctionRegisters
             case Ids.Vtrbf:
                 writeWorkRam(value);
                 return;
+
+            case Ids.P3:
+                var p3int = P3Int;
+                if (p3int.Enable)
+                {
+                    var p3 = P3;
+                    // TODO: continuous mode
+                    if ((byte)p3 != 0xff)
+                    {
+                        p3int.Source = true;
+                        _cpu.Interrupts |= Interrupts.P3;
+                    }
+                    P3Int = p3int;
+                }
+
+                goto default;
 
             default:
                 _rawMemory[address] = value;
@@ -150,10 +166,10 @@ class SpecialFunctionRegisters
     }
 
     /// <summary>Power control register. VMD-158</summary>
-    public byte Pcon
+    public Pcon Pcon
     {
-        get => Read(Ids.Pcon);
-        set => Write(Ids.Pcon, value);
+        get => new(Read(Ids.Pcon));
+        set => Write(Ids.Pcon, (byte)value);
     }
 
     /// <summary>Master interrupt enable control register. VMD-138</summary>
@@ -227,10 +243,10 @@ class SpecialFunctionRegisters
     }
 
     /// <summary>Timer 1 control register. VMD-83</summary>
-    public byte T1Cnt
+    public T1Cnt T1Cnt
     {
-        get => Read(Ids.T1Cnt);
-        set => Write(Ids.T1Cnt, value);
+        get => new(Read(Ids.T1Cnt));
+        set => Write(Ids.T1Cnt, (byte)value);
     }
 
     /// <summary>Timer 1 low comparison data. VMD-86</summary>
@@ -388,10 +404,10 @@ class SpecialFunctionRegisters
     }
 
     /// <summary>Port 3 interrupt function control register. VMD-62</summary>
-    public byte P3Int
+    public P3Int P3Int
     {
-        get => Read(Ids.P3Int);
-        set => Write(Ids.P3Int, value);
+        get => new(Read(Ids.P3Int));
+        set => Write(Ids.P3Int, (byte)value);
     }
 
     /// <summary>Flash Program Register. Undocumented.</summary>

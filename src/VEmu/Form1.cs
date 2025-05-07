@@ -23,6 +23,7 @@ public partial class Form1 : Form
 
         _cpu = new Cpu();
         _cpu.Reset();
+        _cpu.SFRs.Ie = new() { MasterInterruptEnable = true };
 
         _display = new Display(_cpu);
 

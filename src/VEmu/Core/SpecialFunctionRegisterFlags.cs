@@ -91,6 +91,27 @@ struct Psw
     }
 }
 
+/// <summary>Power control register. VMD-158</summary>
+struct Pcon
+{
+    private byte _value;
+
+    public Pcon(byte value) => _value = value;
+    public static explicit operator byte(Pcon value) => value._value;
+
+    public bool HoldMode
+    {
+        get => BitHelpers.ReadBit(_value, bit: 1);
+        set => BitHelpers.WriteBit(ref _value, bit: 1, value);
+    }
+
+    public bool HaltMode
+    {
+        get => BitHelpers.ReadBit(_value, bit: 0);
+        set => BitHelpers.WriteBit(ref _value, bit: 0, value);
+    }
+}
+
 /// <summary>Master interrupt enable control register. VMD-138</summary>
 struct Ie
 {
@@ -215,6 +236,36 @@ struct P7
 
     /// <summary>Dreamcast connection detection</summary>
     public bool DreamcastConnected
+    {
+        get => BitHelpers.ReadBit(_value, bit: 0);
+        set => BitHelpers.WriteBit(ref _value, bit: 0, value);
+    }
+}
+
+/// <summary>Port 3 interrupt function control register. VMD-62</summary>
+public struct P3Int
+{
+    private byte _value;
+
+    public P3Int(byte value) => _value = value;
+    public static explicit operator byte(P3Int value) => value._value;
+
+    /// <summary>P32INT. Port 3 Interrupt Control Flag.</summary>
+    public bool Continuous
+    {
+        get => BitHelpers.ReadBit(_value, bit: 2);
+        set => BitHelpers.WriteBit(ref _value, bit: 2, value);
+    }
+
+    /// <summary>P31INT. Port 3 Interrupt Source Flag.</summary>
+    public bool Source
+    {
+        get => BitHelpers.ReadBit(_value, bit: 1);
+        set => BitHelpers.WriteBit(ref _value, bit: 1, value);
+    }
+
+    /// <summary>P30INT. Port 3 Interrupt Request Enable Control.</summary>
+    public bool Enable
     {
         get => BitHelpers.ReadBit(_value, bit: 0);
         set => BitHelpers.WriteBit(ref _value, bit: 0, value);
@@ -459,6 +510,87 @@ struct T0Cnt
     /// Enables interrupt for T0L overflow.
     /// </summary>
     public bool T0lIe
+    {
+        get => BitHelpers.ReadBit(_value, bit: 0);
+        set => BitHelpers.WriteBit(ref _value, bit: 0, value);
+    }
+}
+
+/// <summary>Timer 1 control register. VMD-83</summary>
+struct T1Cnt
+{
+    private byte _value;
+
+    public T1Cnt(byte value) => _value = value;
+    public static explicit operator byte(T1Cnt value) => value._value;
+
+    /// <summary>
+    /// When set to 1, starts the T1H counter. When reset to 0, reloads T1H with T1HR.
+    /// </summary>
+    public bool T1hRun
+    {
+        get => BitHelpers.ReadBit(_value, bit: 7);
+        set => BitHelpers.WriteBit(ref _value, bit: 7, value);
+    }
+
+    /// <summary>
+    /// When set to 1, starts the T1L counter. When reset to 0, reloads T1L with T1LR.
+    /// </summary>
+    public bool T1lRun
+    {
+        get => BitHelpers.ReadBit(_value, bit: 6);
+        set => BitHelpers.WriteBit(ref _value, bit: 6, value);
+    }
+
+    /// <summary>
+    /// When set to 1, 16-bit mode is used. Otherwise 8-bit mode is used.
+    /// </summary>
+    public bool T1Long
+    {
+        get => BitHelpers.ReadBit(_value, bit: 5);
+        set => BitHelpers.WriteBit(ref _value, bit: 5, value);
+    }
+
+    /// <summary>
+    /// TODO: this does something with pulse generation.
+    /// </summary>
+    public bool ELDT1C
+    {
+        get => BitHelpers.ReadBit(_value, bit: 4);
+        set => BitHelpers.WriteBit(ref _value, bit: 4, value);
+    }
+
+    /// <summary>
+    /// Set when T1H overflows.
+    /// </summary>
+    public bool T1hOvf
+    {
+        get => BitHelpers.ReadBit(_value, bit: 3);
+        set => BitHelpers.WriteBit(ref _value, bit: 3, value);
+    }
+
+    /// <summary>
+    /// Enables interrupt for T1H overflow.
+    /// </summary>
+    public bool T1hIe
+    {
+        get => BitHelpers.ReadBit(_value, bit: 2);
+        set => BitHelpers.WriteBit(ref _value, bit: 2, value);
+    }
+
+    /// <summary>
+    /// Set when T1L overflows.
+    /// </summary>
+    public bool T1lOvf
+    {
+        get => BitHelpers.ReadBit(_value, bit: 1);
+        set => BitHelpers.WriteBit(ref _value, bit: 1, value);
+    }
+
+    /// <summary>
+    /// Enables interrupt for T1L overflow.
+    /// </summary>
+    public bool T1lIe
     {
         get => BitHelpers.ReadBit(_value, bit: 0);
         set => BitHelpers.WriteBit(ref _value, bit: 0, value);
