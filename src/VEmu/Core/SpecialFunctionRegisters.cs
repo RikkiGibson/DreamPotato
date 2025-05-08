@@ -41,13 +41,13 @@ class SpecialFunctionRegisters
 
         // Manual indicates that BIOS is typically responsible for setting these values.
         // It's nice to be able to run without a BIOS, so let's set them up here.
-        P1Fcr = 0b1011_1111;
-        P3Int = new(0b1111_1101);
-        P3 = new(0b1111_1111);
-        Isl = 0b1100_0000;
-        Vsel = new(0b1111_1100);
-        Btcr = 0b0100_0001;
-        Sp = Memory.StackStart;
+        Write(Ids.P1Fcr, 0b1011_1111);
+        Write(Ids.P3Int, 0b1111_1101);
+        Write(Ids.P3, 0b1111_1111);
+        Write(Ids.Isl, 0b1100_0000);
+        Write(Ids.Vsel, 0b1111_1100);
+        Write(Ids.Btcr, 0b0100_0001);
+        Write(Ids.Sp, Memory.StackStart);
     }
 
     public byte Read(byte address)
@@ -88,22 +88,6 @@ class SpecialFunctionRegisters
                 writeWorkRam(value);
                 return;
 
-            case Ids.P3:
-                var p3int = P3Int;
-                if (p3int.Enable)
-                {
-                    var p3 = P3;
-                    // TODO: continuous mode
-                    if ((byte)p3 != 0xff)
-                    {
-                        p3int.Source = true;
-                        _cpu.Interrupts |= Interrupts.P3;
-                    }
-                    P3Int = p3int;
-                }
-
-                goto default;
-
             case Ids.T1L:
                 // A write to T1L from user code sets the reload value
                 _t1lr = value;
@@ -113,9 +97,6 @@ class SpecialFunctionRegisters
                 // A write to T1H from user code sets the reload value
                 _t1hr = value;
                 return;
-
-            case Ids.T1Cnt:
-                goto default;
 
             default:
                 _rawMemory[address] = value;
@@ -425,13 +406,30 @@ class SpecialFunctionRegisters
         set => Write(Ids.P1Fcr, value);
     }
 
-    /// <summary>Port 3 latch. Buttons SLEEP, MODE, B, A, directions. VMD-54</summary>
-    // TODO: the P3 interrupt should probably only occur when the setter is called here, not the core Write,
-    // to reflect an actual change in signal causing the interrupt rather than a write to a latch
+    /// <summary>
+    /// Port 3. Buttons SLEEP, MODE, B, A, directions. VMD-54.
+    /// When this property is written, it indicates a change in an external signal, and may generate <see cref="Interrupts.P3"/>.
+    /// When 'Write(Ids.P3, value)' is called, it is simply a write to the latch.
+    /// </summary>
     public P3 P3
     {
         get => new(Read(Ids.P3));
-        set => Write(Ids.P3, (byte)value);
+        set
+        {
+            var valueRaw = (byte)value;
+            var p3int = P3Int;
+            if (p3int.Enable)
+            {
+                var p3Raw = (byte)P3;
+                if ((p3int.Continuous && valueRaw != 0xff) || ((byte)P3 & valueRaw) != p3Raw)
+                {
+                    p3int.Source = true;
+                    _cpu.Interrupts |= Interrupts.P3;
+                }
+                P3Int = p3int;
+            }
+            Write(Ids.P3, valueRaw);
+        }
     }
 
     /// <summary>Port 3 data direction register. VMD-62</summary>

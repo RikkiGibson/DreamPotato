@@ -187,6 +187,11 @@ public class Cpu
                 callServiceRoutine(InterruptVectors.T1);
                 Interrupts &= ~Interrupts.T1;
             }
+            else if ((Interrupts & Interrupts.P3) != 0)
+            {
+                callServiceRoutine(InterruptVectors.P3);
+                Interrupts &= ~Interrupts.P3;
+            }
 
             SFRs.Pcon = SFRs.Pcon with { HaltMode = false };
         }
