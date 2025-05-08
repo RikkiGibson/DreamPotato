@@ -68,14 +68,14 @@ public class Cpu
 
     // TODO: I believe this needs to be in terms of 'ticksToRun' or something like that.
     // The reason is that the clock speed can change whenever OCR is modified.
-    internal int Run(int cyclesToRun)
+    internal long Run(long ticksToRun)
     {
-        int cyclesSoFar = 0;
-        while (cyclesSoFar < cyclesToRun)
+        long ticksSoFar = 0;
+        while (ticksSoFar < ticksToRun)
         {
-            cyclesSoFar += Step();
+            ticksSoFar += StepTicks();
         }
-        return cyclesSoFar;
+        return ticksSoFar;
     }
 
 #region External interrupt triggers
@@ -206,7 +206,25 @@ public class Cpu
             InterruptServicingState = InterruptServicingState.Ready;
     }
 
-    /// <returns>Number of cycles consumed by the instruction.</returns>
+    internal long StepTicks()
+    {
+        var ocr = SFRs.Ocr;
+        var dividend = ocr.ClockGeneratorControl ? 6 : 12;
+
+        // OCR5    OCR4    System clock
+        // 0       0       RC oscillator
+        // 0       1       CF oscillator
+        // 1       0       Quartz oscillator
+        // 1       1       CF oscillator
+        var systemClockTicks = ocr.SystemClockTicks;
+
+        // Note that any instruction which modifies OCR, etc, is presumed to only affect the speed starting on the next instruction.
+        var cpuCycles = Step();
+        var ticks = systemClockTicks * cpuCycles / dividend;
+        return ticks;
+    }
+
+    /// <returns>Number of CPU cycles consumed by the instruction.</returns>
     internal int Step()
     {
         ServiceInterruptIfNeeded();

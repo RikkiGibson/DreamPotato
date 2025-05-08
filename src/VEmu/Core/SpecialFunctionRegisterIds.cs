@@ -68,17 +68,11 @@ static class SpecialFunctionRegisterIds
     /// <summary>When read: Timer 1 low. When written: Timer 1 low reload data. VMD-85</summary>
     public const byte T1L = 0x1b;
 
-    /// <summary>Timer 1 low reload data. VMD-85</summary>
-    public const byte T1Lr = T1L;
-
     /// <summary>Timer 1 high comparison data. VMD-87</summary>
     public const byte T1Hc = 0x1c;
 
-    /// <summary>When read: Timer 1 high. When written: Timer 1 high reload data. VMD-86</summary>
+    /// <summary>When read: Timer 1 high. When written: Timer 1 high reload data (T1Hr). VMD-86</summary>
     public const byte T1H = 0x1d;
-
-    /// <summary>Timer 1 high reload data. VMD-86</summary>
-    public const byte T1Hr = T1H;
 
     /// <summary>Mode control register. VMD-127</summary>
     public const byte Mcr = 0x20;

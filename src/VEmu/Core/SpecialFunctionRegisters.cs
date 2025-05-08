@@ -12,6 +12,12 @@ class SpecialFunctionRegisters
 
     // TODO: Elysian docs state there are 143 SFRs, but, the memory space is only 0x80 (128 bytes).
     // Where are the extra 15?
+
+    /// <summary>
+    /// Reload data for <see cref="T1H"/> and <see cref="T1L"/>.
+    /// </summary>
+    private byte _t1hr, _t1lr;
+
     private readonly byte[] _rawMemory = new byte[Size];
     private readonly Cpu _cpu;
     private readonly byte[] _workRam;
@@ -96,6 +102,19 @@ class SpecialFunctionRegisters
                     P3Int = p3int;
                 }
 
+                goto default;
+
+            case Ids.T1L:
+                // A write to T1L from user code sets the reload value
+                _t1lr = value;
+                return;
+
+            case Ids.T1H:
+                // A write to T1H from user code sets the reload value
+                _t1hr = value;
+                return;
+
+            case Ids.T1Cnt:
                 goto default;
 
             default:
@@ -257,18 +276,26 @@ class SpecialFunctionRegisters
         set => Write(Ids.T1Lc, value);
     }
 
-    /// <summary>Timer 1 low. VMD-85</summary>
+    /// <summary>
+    /// Timer 1 low. VMD-85.
+    /// Note that ordinarily, user code can only read this register.
+    /// Since user code does not use this property, setting this causes the raw timer value to be updated.
+    /// </summary>
     public byte T1L
     {
         get => Read(Ids.T1L);
-        set => Write(Ids.T1L, value);
+        set => _rawMemory[Ids.T1L] = value;
     }
 
-    /// <summary>Timer 1 low reload data. VMD-85</summary>
+    /// <summary>
+    /// Timer 1 low reload data. VMD-85.
+    /// Note that ordinarily, user code can only write this register.
+    /// Since user code does not use this property, reading this returns the raw reload value, not the timer value.
+    /// </summary>
     public byte T1Lr
     {
-        get => Read(Ids.T1Lr);
-        set => Write(Ids.T1Lr, value);
+        get => _t1lr;
+        set => Write(Ids.T1L, value);
     }
 
     /// <summary>Timer 1 high comparison data. VMD-87</summary>
@@ -278,18 +305,25 @@ class SpecialFunctionRegisters
         set => Write(Ids.T1Hc, value);
     }
 
-    /// <summary>Timer 1 high. VMD-86</summary>
+    /// <summary>
+    /// Timer 1 high. VMD-86.
+    /// Since user code does not use this property, setting this causes the raw timer value to be updated.
+    /// </summary>
     public byte T1H
     {
         get => Read(Ids.T1H);
-        set => Write(Ids.T1H, value);
+        set => _rawMemory[Ids.T1H] = value;
     }
 
-    /// <summary>Timer 1 high reload data. VMD-86</summary>
+    /// <summary>
+    /// Timer 1 high reload data. VMD-86.
+    /// Note that ordinarily, user code can only write this register.
+    /// Since user code does not use this property, reading this returns the raw reload value, not the timer value.
+    /// </summary>
     public byte T1Hr
     {
-        get => Read(Ids.T1Hr);
-        set => Write(Ids.T1Hr, value);
+        get => _t1hr;
+        set => Write(Ids.T1H, value);
     }
 
     /// <summary>Mode control register. VMD-127</summary>

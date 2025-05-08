@@ -50,7 +50,7 @@ public partial class Form1 : Form
 
     private async void ScreenBox_Paint(object sender, PaintEventArgs e)
     {
-        _cpu.Run(100);
+        _cpu.Run(targetFramerateTicks);
 
         _display.Draw(_displayBits);
 

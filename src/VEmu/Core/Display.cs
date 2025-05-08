@@ -17,6 +17,7 @@ public class Display(Cpu cpu)
         int index = 0;
         for (int left = 0; left < 0x80; left += 0x10)
         {
+            // skip 4 dead display bytes
             for (int right = 0; right < 0xc; right++, index++)
                 display[index] = xram0[left | right];
         }
