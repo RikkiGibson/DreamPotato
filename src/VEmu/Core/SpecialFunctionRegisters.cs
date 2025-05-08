@@ -125,6 +125,7 @@ class SpecialFunctionRegisters
     }
 
     /// <summary>Program status word. VMD-52</summary>
+    // TODO: operations which modify Acc are supposed to set or reset P accordingly.
     public Psw Psw
     {
         get => new(Read(Ids.Psw));
@@ -194,10 +195,10 @@ class SpecialFunctionRegisters
     }
 
     /// <summary>Oscillation control register. VMD-156</summary>
-    public byte Ocr
+    public Ocr Ocr
     {
-        get => Read(Ids.Ocr);
-        set => Write(Ids.Ocr, value);
+        get => new(Read(Ids.Ocr));
+        set => Write(Ids.Ocr, (byte)value);
     }
 
     /// <summary>Timer 0 control register. VMD-67</summary>
@@ -305,14 +306,14 @@ class SpecialFunctionRegisters
         set => Write(Ids.Stad, value);
     }
 
-    /// <summary>Character count register. VMD-130</summary>
+    /// <summary>Character count register. Affects operation of the LCD. Not intended to be used by applications. VMD-130</summary>
     public byte Cnr
     {
         get => Read(Ids.Cnr);
         set => Write(Ids.Cnr, value);
     }
 
-    /// <summary>Time division register. VMD-130</summary>
+    /// <summary>Time division register. Affects operation of the LCD. Not intended to be used by applications. VMD-130</summary>
     public byte Tdr
     {
         get => Read(Ids.Tdr);
@@ -327,6 +328,7 @@ class SpecialFunctionRegisters
     }
 
     /// <summary>LCD contrast control register. VMD-131</summary>
+    // TODO: this is used to turn the LCD off. It is also supposed to be write-only.
     public byte Vccr
     {
         get => Read(Ids.Vccr);
@@ -390,6 +392,8 @@ class SpecialFunctionRegisters
     }
 
     /// <summary>Port 3 latch. Buttons SLEEP, MODE, B, A, directions. VMD-54</summary>
+    // TODO: the P3 interrupt should probably only occur when the setter is called here, not the core Write,
+    // to reflect an actual change in signal causing the interrupt rather than a write to a latch
     public P3 P3
     {
         get => new(Read(Ids.P3));

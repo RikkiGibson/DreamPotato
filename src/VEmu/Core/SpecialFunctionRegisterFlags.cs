@@ -435,6 +435,77 @@ public struct I23Cr
     }
 }
 
+/// <summary>
+/// Oscillation control register. VMD-156.
+/// </summary>
+/// <remarks>
+/// VME-12, figure 1.7: "System clock table"
+/// Ceramic (CF) oscillator: 6 MHz / 1.0us cycle time
+///     - used when connected to console
+/// Internal (RC) oscillator: 600 kHz / 10.0us cycle time
+///     - used when accessing flash memory in standalone mode
+/// Quartz (X'TAL) oscillator: 32 kHz / 183.0us cycle time
+///     - used most of the time in standalone mode
+/// </remarks>
+struct Ocr
+{
+    private byte _value;
+
+    public Ocr(byte value) => _value = value;
+    public static explicit operator byte(Ocr value) => value._value;
+
+    /// <summary>
+    /// When set to 1, the cycle clock is 1/6 of the clock source.
+    /// When reset to 0, the cycle clock is 1/12 of the clock source.
+    /// The following combinations of settings are permitted:
+    /// System clock        OCR7
+    /// RC oscillator       0 or 1
+    /// Quartz oscillator   1
+    /// </summary>
+    public bool ClockGeneratorControl
+    {
+        get => BitHelpers.ReadBit(_value, bit: 7);
+        set => BitHelpers.WriteBit(ref _value, bit: 7, value);
+    }
+
+    /// <summary>
+    /// OCR5    OCR4    System clock
+    /// 0       0       RC oscillator
+    /// 0       1       CF oscillator
+    /// 1       0       Quartz oscillator
+    /// 1       1       CF oscillator
+    /// </summary>
+    public bool SystemClockSelector5
+    {
+        get => BitHelpers.ReadBit(_value, bit: 5);
+        set => BitHelpers.WriteBit(ref _value, bit: 5, value);
+    }
+
+    /// <inheritdoc cref="SystemClockSelector5"/>
+    public bool SystemClockSelector4
+    {
+        get => BitHelpers.ReadBit(_value, bit: 4);
+        set => BitHelpers.WriteBit(ref _value, bit: 4, value);
+    }
+
+    /// <summary>When set to 1, the RC oscillator is stopped. When reset to 0, the RC oscillator operates.</summary>
+    public bool RCOscillatorControl
+    {
+        get => BitHelpers.ReadBit(_value, bit: 1);
+        set => BitHelpers.WriteBit(ref _value, bit: 1, value);
+    }
+
+    /// <summary>
+    /// When set to 1, the CF oscillator is stopped. When reset to 0, the CF oscillator operates.
+    /// Note that use of the CF oscillator is only recommended when the VMU is docked in the controller due to high power consumption.
+    /// </summary>
+    public bool CFOscillatorControl
+    {
+        get => BitHelpers.ReadBit(_value, bit: 0);
+        set => BitHelpers.WriteBit(ref _value, bit: 0, value);
+    }
+}
+
 /// <summary>Timer 0 control register. VMD-67</summary>
 struct T0Cnt
 {

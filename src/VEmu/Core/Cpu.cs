@@ -6,13 +6,6 @@ public class Cpu
 {
     internal Logger Logger { get; }
 
-    // VME-12, figure 1.7: "System clock table"
-    // Ceramic (CF) oscillator: 6 MHz / 1.0us cycle time
-    //     - used when connected to console
-    // Internal (RC) oscillator: 600 kHz / 10.0us cycle time
-    //     - used when accessing flash memory in standalone mode
-    // Quartz (X'TAL) oscillator: 32 kHz / 183.0us cycle time
-    //     - used most of the time in standalone mode
     // VMD-35: Accumulator and all registers are mapped to RAM.
 
     // VMD-38: Memory
@@ -73,11 +66,10 @@ public class Cpu
 
     internal SpecialFunctionRegisters SFRs => Memory.SFRs;
 
+    // TODO: I believe this needs to be in terms of 'ticksToRun' or something like that.
+    // The reason is that the clock speed can change whenever OCR is modified.
     internal int Run(int cyclesToRun)
     {
-        // TODO: each step, we need to check for halt mode, tick timers, and check for interrupts
-        // I think setting some SFR values needs to be able to trigger interrupts as well
-
         int cyclesSoFar = 0;
         while (cyclesSoFar < cyclesToRun)
         {
