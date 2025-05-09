@@ -420,8 +420,8 @@ class SpecialFunctionRegisters
             var p3int = P3Int;
             if (p3int.Enable)
             {
-                var p3Raw = (byte)P3;
-                if ((p3int.Continuous && valueRaw != 0xff) || ((byte)P3 & valueRaw) != p3Raw)
+                var p3Raw = Read(Ids.P3);
+                if ((p3int.Continuous && valueRaw != 0xff) || (p3Raw & valueRaw) != p3Raw)
                 {
                     p3int.Source = true;
                     _cpu.Interrupts |= Interrupts.P3;
