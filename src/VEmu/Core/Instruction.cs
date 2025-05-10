@@ -49,29 +49,42 @@ record struct Instruction(ushort Offset, Operation Operation, ushort Arg0 = defa
         var parameters = Parameters;
         for (var i = 0; i < parameters.Length; i++)
         {
-            var param = parameters[i];
-            var prefix = param.Kind switch
-            {
-                ParameterKind.I8 => "#",
-                ParameterKind.Ri => "@R",
-                _ => ""
-            };
-            builder.Append(prefix);
-
-            var arg = GetArgument(i);
-            var displayValue = param.Kind switch
-            {
-                ParameterKind.R8 => Offset + Operation.Size + (sbyte)arg,
-                ParameterKind.R16 => Offset + arg,
-                _ => arg
-            };
-            builder.Append($"{displayValue:X}");
-            if (displayValue > 9)
-                builder.Append("H");
+            DisplayArgument(builder, parameters[i], GetArgument(i));
 
             if (i != parameters.Length - 1)
                 builder.Append(", ");
         }
         return builder.ToString();
+    }
+
+    private void DisplayArgument(StringBuilder builder, Parameter param, ushort arg)
+    {
+        if (param.Kind == ParameterKind.D9 && (arg & 0x100) != 0)
+        {
+            var registerName = SpecialFunctionRegisterIds.GetSpecialFunctionRegisterName((byte)arg);
+            if (registerName is not null)
+            {
+                builder.Append(registerName);
+                return;
+            }
+        }
+
+        var prefix = param.Kind switch
+        {
+            ParameterKind.I8 => "#",
+            ParameterKind.Ri => "@R",
+            _ => ""
+        };
+        builder.Append(prefix);
+
+        var displayValue = param.Kind switch
+        {
+            ParameterKind.R8 => Offset + Operation.Size + (sbyte)arg,
+            ParameterKind.R16 => Offset + arg,
+            _ => arg
+        };
+        builder.Append($"{displayValue:X}");
+        if (displayValue > 9)
+            builder.Append("H");
     }
 }

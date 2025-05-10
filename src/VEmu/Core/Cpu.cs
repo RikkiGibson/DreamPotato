@@ -66,8 +66,6 @@ public class Cpu
 
     internal SpecialFunctionRegisters SFRs => Memory.SFRs;
 
-    // TODO: I believe this needs to be in terms of 'ticksToRun' or something like that.
-    // The reason is that the clock speed can change whenever OCR is modified.
     internal long Run(long ticksToRun)
     {
         long ticksSoFar = 0;
@@ -573,9 +571,6 @@ public class Cpu
 
     private void Op_MUL(Instruction inst)
     {
-        // TODO: interrupts enabled on the 7th cycle.
-        // Have to consider when implementing interrupts.
-
         // (B) (ACC) (C) <- (ACC) (C) * (B)
         int result = (SFRs.Acc << 0x8 | SFRs.C) * SFRs.B;
         SFRs.B = (byte)(result >> 0x10); // Casting to byte just takes the 8 least significant bits of the expression

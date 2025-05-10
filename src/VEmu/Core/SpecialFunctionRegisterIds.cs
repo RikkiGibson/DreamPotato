@@ -154,4 +154,62 @@ static class SpecialFunctionRegisterIds
 
     /// <summary>Base timer control. VMD-101</summary>
     public const byte Btcr = 0x7F;
+
+    public static string? GetSpecialFunctionRegisterName(byte registerId)
+    {
+        switch (registerId)
+        {
+            case 0x00: return nameof(Acc);
+            case 0x01: return nameof(Psw);
+            case 0x02: return nameof(B);
+            case 0x03: return nameof(C);
+            case 0x04: return nameof(Trl);
+            case 0x05: return nameof(Trh);
+            case 0x06: return nameof(Sp);
+            case 0x07: return nameof(Pcon);
+            case 0x08: return nameof(Ie);
+            case 0x09: return nameof(Ip);
+            case 0x0d: return nameof(Ext);
+            case 0x0e: return nameof(Ocr);
+            case 0x10: return nameof(T0Cnt);
+            case 0x11: return nameof(T0Prr);
+            case 0x12: return nameof(T0L);
+            case 0x13: return nameof(T0Lr);
+            case 0x14: return nameof(T0H);
+            case 0x15: return nameof(T0Hr);
+            case 0x18: return nameof(T1Cnt);
+            case 0x1a: return nameof(T1Lc);
+            case 0x1b: return nameof(T1L);
+            case 0x1c: return nameof(T1Hc);
+            case 0x1d: return nameof(T1H);
+            case 0x20: return nameof(Mcr);
+            case 0x22: return nameof(Stad);
+            case 0x23: return nameof(Cnr);
+            case 0x24: return nameof(Tdr);
+            case 0x25: return nameof(Xbnk);
+            case 0x27: return nameof(Vccr);
+            case 0x30: return nameof(Scon0);
+            case 0x31: return nameof(Sbuf0);
+            case 0x32: return nameof(Sbr);
+            case 0x34: return nameof(Scon1);
+            case 0x35: return nameof(Sbuf1);
+            case 0x44: return nameof(P1);
+            case 0x45: return nameof(P1Ddr);
+            case 0x46: return nameof(P1Fcr);
+            case 0x4C: return nameof(P3);
+            case 0x4D: return nameof(P3Ddr);
+            case 0x4E: return nameof(P3Int);
+            case 0x54: return nameof(FPR);
+            case 0x5C: return nameof(P7);
+            case 0x5D: return nameof(I01Cr);
+            case 0x5E: return nameof(I23Cr);
+            case 0x5F: return nameof(Isl);
+            case 0x63: return nameof(Vsel);
+            case 0x64: return nameof(Vrmad1);
+            case 0x65: return nameof(Vrmad2);
+            case 0x66: return nameof(Vtrbf);
+            case 0x7F: return nameof(Btcr);
+            default: return null;
+        }
+    }
 }
