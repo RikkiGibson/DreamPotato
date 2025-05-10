@@ -33,6 +33,12 @@ class Logger(LogLevel _minimumLogLevel, Cpu _cpu)
         if (level < _minimumLogLevel)
             return;
 
+        if (level == LogLevel.Debug)
+            Console.WriteLine(s);
+
+        if (level == LogLevel.Error)
+            Console.Error.WriteLine(s);
+
         var index = _nextMessageIndex % _messages.Length;
         _messages[index] = $"[{_cpu.Pc:X4}]: [{level}] {s}";
         _nextMessageIndex = index + 1;
