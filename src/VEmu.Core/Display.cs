@@ -2,9 +2,23 @@ using System.Diagnostics;
 
 namespace VEmu.Core;
 
+/// <summary>
+/// Provides VMU display data in 1-bit-per-pixel format.
+/// </summary>
 public class Display(Cpu cpu)
 {
-    public const int DisplaySize = 48 * 32 / 8;
+    public const int ScreenWidth = 48;
+    public const int ScreenHeight = 32;
+    public const int DisplaySize = ScreenWidth * ScreenHeight / 8;
+    private readonly byte[] _bytes = new byte[DisplaySize];
+
+    public ReadOnlySpan<byte> GetBytes()
+    {
+        Draw(_bytes);
+        return _bytes;
+    }
+
+    // TODO: make private, operate only on _bytes
     public void Draw(byte[] display)
     {
         // 48x32 1bpp

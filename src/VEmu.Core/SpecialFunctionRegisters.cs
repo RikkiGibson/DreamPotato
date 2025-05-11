@@ -41,6 +41,7 @@ public class SpecialFunctionRegisters
 
         // Manual indicates that BIOS is typically responsible for setting these values.
         // It's nice to be able to run without a BIOS, so let's set them up here.
+        Write(Ids.Ie, 0b1000_0000);
         Write(Ids.P1Fcr, 0b1011_1111);
         Write(Ids.P3Int, 0b1111_1101);
         Write(Ids.P3, 0b1111_1111);
