@@ -105,8 +105,6 @@ public class Game1 : Game
         _spriteBatch.Draw(_vmuScreenTexture, new Rectangle(Point.Zero, new Point(x: ScaledWidth, y: ScaledHeight)), color: Color.White);
         _spriteBatch.End();
 
-        // TODO: Add your drawing code here
-
         base.Draw(gameTime);
 
         static Color ReadColor(byte b, byte bitAddress)
