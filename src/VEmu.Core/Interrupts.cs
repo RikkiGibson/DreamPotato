@@ -1,6 +1,8 @@
 
 using System.Diagnostics;
 
+namespace VEmu.Core;
+
 enum InterruptServicingState : byte
 {
     Ready,

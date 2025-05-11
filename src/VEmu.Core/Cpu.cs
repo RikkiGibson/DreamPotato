@@ -4,7 +4,7 @@ namespace VEmu.Core;
 
 public class Cpu
 {
-    internal Logger Logger { get; }
+    public Logger Logger { get; }
 
     // VMD-35: Accumulator and all registers are mapped to RAM.
 
@@ -12,9 +12,9 @@ public class Cpu
     //
 
     /// <summary>Read-only memory space.</summary>
-    internal readonly byte[] ROM = new byte[64 * 1024];
-    internal readonly byte[] FlashBank0 = new byte[64 * 1024];
-    internal readonly byte[] FlashBank1 = new byte[64 * 1024];
+    public readonly byte[] ROM = new byte[64 * 1024];
+    public readonly byte[] FlashBank0 = new byte[64 * 1024];
+    public readonly byte[] FlashBank1 = new byte[64 * 1024];
 
     internal readonly InstructionMap InstructionMap = new();
 
@@ -25,9 +25,9 @@ public class Cpu
     /// Note that we need an extra bit of state here. We can't just look at the value of <see cref="SpecialFunctionRegisters.Ext"/>.
     /// The bank is only actually switched when using a jmpf instruction.
     /// </remarks>
-    internal byte[] CurrentROMBank;
+    public byte[] CurrentROMBank;
 
-    internal readonly Memory Memory;
+    public readonly Memory Memory;
 
     internal ushort Pc;
 
@@ -64,9 +64,9 @@ public class Cpu
         Memory.Write((ushort)address, value);
     }
 
-    internal SpecialFunctionRegisters SFRs => Memory.SFRs;
+    public SpecialFunctionRegisters SFRs => Memory.SFRs;
 
-    internal long Run(long ticksToRun)
+    public long Run(long ticksToRun)
     {
         long ticksSoFar = 0;
         while (ticksSoFar < ticksToRun)

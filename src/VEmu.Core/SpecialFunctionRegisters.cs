@@ -6,7 +6,7 @@ using SFRs;
 using Ids = SpecialFunctionRegisterIds;
 
 /// <summary>See VMD-40, table 2.6</summary>
-class SpecialFunctionRegisters
+public class SpecialFunctionRegisters
 {
     public const int Size = 0x80;
 

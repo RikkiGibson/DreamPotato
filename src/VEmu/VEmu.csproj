@@ -11,6 +11,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="VEMu.Tests" />
+    <ProjectReference Include="..\VEmu.Core\VEmu.Core.csproj" />
   </ItemGroup>
 </Project>

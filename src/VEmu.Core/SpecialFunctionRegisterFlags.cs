@@ -1,7 +1,7 @@
 namespace VEmu.Core.SFRs;
 
 /// <summary>Program status word. VMD-52</summary>
-struct Psw
+public struct Psw
 {
     private byte _value;
 
@@ -92,7 +92,7 @@ struct Psw
 }
 
 /// <summary>Power control register. VMD-158</summary>
-struct Pcon
+public struct Pcon
 {
     private byte _value;
 
@@ -113,7 +113,7 @@ struct Pcon
 }
 
 /// <summary>Master interrupt enable control register. VMD-138</summary>
-struct Ie
+public struct Ie
 {
     private byte _value;
 
@@ -148,7 +148,7 @@ struct Ie
 }
 
 /// <summary>Port 3 latch. Buttons SLEEP, MODE, B, A, directions. VMD-54</summary>
-struct P3
+public struct P3
 {
     private byte _value;
 
@@ -206,7 +206,7 @@ struct P3
 }
 
 /// <summary>Port 7 latch. VMD-64</summary>
-struct P7
+public struct P7
 {
     private byte _value;
 
@@ -296,7 +296,7 @@ public struct FPR
 }
 
 /// <summary>External interrupt 0, 1 control. VMD-135</summary>
-struct I01Cr
+public struct I01Cr
 {
     private byte _value;
 
@@ -435,7 +435,7 @@ public struct I23Cr
     }
 }
 
-enum Oscillator
+public enum Oscillator
 {
     /// <summary>
     /// Internal (RC) oscillator: 600 kHz / 10.0us cycle time.
@@ -459,7 +459,7 @@ enum Oscillator
 /// <summary>
 /// Oscillation control register. VMD-156.
 /// </summary>
-struct Ocr
+public struct Ocr
 {
     private byte _value;
 
@@ -538,7 +538,7 @@ struct Ocr
 }
 
 /// <summary>Timer 0 control register. VMD-67</summary>
-struct T0Cnt
+public struct T0Cnt
 {
     private byte _value;
 
@@ -619,7 +619,7 @@ struct T0Cnt
 }
 
 /// <summary>Timer 1 control register. VMD-83</summary>
-struct T1Cnt
+public struct T1Cnt
 {
     private byte _value;
 
@@ -700,7 +700,7 @@ struct T1Cnt
 }
 
 /// <summary>Control register. VMD-143</summary>
-struct Vsel
+public struct Vsel
 {
     private byte _value;
 

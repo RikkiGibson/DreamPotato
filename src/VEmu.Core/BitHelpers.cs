@@ -1,6 +1,8 @@
 using System.Diagnostics;
 
-static class BitHelpers
+namespace VEmu.Core;
+
+public static class BitHelpers
 {
     public static bool ReadBit(byte operand, byte bit)
     {

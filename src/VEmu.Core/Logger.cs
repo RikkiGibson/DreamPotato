@@ -2,14 +2,14 @@ using System.Diagnostics;
 
 namespace VEmu.Core;
 
-enum LogLevel
+public enum LogLevel
 {
     Trace,
     Debug,
     Error,
 }
 
-class Logger(LogLevel _minimumLogLevel, Cpu _cpu)
+public class Logger(LogLevel _minimumLogLevel, Cpu _cpu)
 {
     private readonly LogLevel _minimumLogLevel = _minimumLogLevel;
     private readonly Cpu _cpu = _cpu;

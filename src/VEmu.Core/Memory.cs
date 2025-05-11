@@ -7,7 +7,7 @@ namespace VEmu.Core;
 /// Manages main RAM, SFRs, XRAM and Work RAM.
 /// Doesn't manage ROM/flash.
 /// </summary>
-class Memory
+public class Memory
 {
     // Memory map:
     // - Bank 0
