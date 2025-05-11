@@ -31,9 +31,17 @@ public class Cpu
 
     internal ushort Pc;
 
-    internal Interrupts Interrupts;
+    internal Interrupts RequestedInterrupts;
+    private InterruptServicingState _interruptServicingState;
 
-    internal InterruptServicingState InterruptServicingState;
+    /// <summary>
+    /// Maximum number of interrupts which can be consecutively serviced.
+    /// When this limit is reached, further interrupts are not serviced
+    /// until returning from the current interrupt service routine.
+    /// </summary>
+    private const int InterruptsCountMax = 3;
+    private readonly Interrupts[] _servicingInterrupts = new Interrupts[3];
+    private int _interruptsCount;
 
     public Cpu()
     {
@@ -47,8 +55,10 @@ public class Cpu
         // TODO: possibly we should setup SFR initial values during construction, unless a 'zeroInitialize' flag is set in constructor
         CurrentROMBank = ROM;
         Pc = 0;
-        Interrupts = 0;
-        InterruptServicingState = InterruptServicingState.Ready;
+        RequestedInterrupts = 0;
+        Array.Clear(_servicingInterrupts);
+        _interruptsCount = 0;
+        _interruptServicingState = InterruptServicingState.Ready;
         Memory.Reset();
     }
 
@@ -101,7 +111,7 @@ public class Cpu
         {
             i01cr.Int0Source = true;
             if (i01cr.Int0Enable)
-                Interrupts |= Interrupts.INT0;
+                RequestedInterrupts |= Interrupts.INT0;
         }
 
         // edge trigger: need to transition to the desired level to trigger it
@@ -109,7 +119,7 @@ public class Cpu
         {
             i01cr.Int0Source = true;
             if (i01cr.Int0Enable)
-                Interrupts |= Interrupts.INT0;
+                RequestedInterrupts |= Interrupts.INT0;
         }
 
         SFRs.I01Cr = i01cr;
@@ -133,7 +143,7 @@ public class Cpu
         {
             i01cr.Int1Source = true;
             if (i01cr.Int1Enable)
-                Interrupts |= Interrupts.INT1;
+                RequestedInterrupts |= Interrupts.INT1;
         }
 
         // edge trigger: need to transition to the desired level to trigger it
@@ -141,62 +151,157 @@ public class Cpu
         {
             i01cr.Int1Source = true;
             if (i01cr.Int1Enable)
-                Interrupts |= Interrupts.INT1;
+                RequestedInterrupts |= Interrupts.INT1;
         }
     }
 #endregion
 
     private void ServiceInterruptIfNeeded()
     {
-        // TODO: this is wrong, interrupt servicing can be interrupted.
-        // perhaps instead record something like the priority of the interrupt currently being serviced (in a stack?)
-        if (InterruptServicingState != InterruptServicingState.Ready)
+        if (RequestedInterrupts == Interrupts.None)
             return;
 
-        if (!SFRs.Ie.MasterInterruptEnable)
+        if (_interruptServicingState != InterruptServicingState.Ready)
             return;
 
-        // TODO: check interrupt priority bits
-        if (Interrupts != 0)
+        if (_interruptsCount >= InterruptsCountMax)
+            return;
+
+        var ie = SFRs.Ie;
+        if (!ie.MasterInterruptEnable)
+            return;
+
+        var currentInterrupt = _interruptsCount == 0 ? Interrupts.None : _servicingInterrupts[_interruptsCount - 1];
+        Debug.Assert(BitHelpers.IsPowerOfTwo((int)currentInterrupt));
+
+        // Highest Priority
+        if (ie.Int0Priority && shouldServiceInterrupt(Interrupts.INT0))
         {
-            // service next enabled interrupt in priority order.
-            if ((Interrupts & Interrupts.INT0) != 0)
-            {
-                callServiceRoutine(InterruptVectors.INT0);
-                Interrupts &= ~Interrupts.INT0;
-            }
-            else if ((Interrupts & Interrupts.INT1) != 0)
-            {
-                callServiceRoutine(InterruptVectors.INT1);
-                Interrupts &= ~Interrupts.INT1;
-            }
-            else if ((Interrupts & Interrupts.INT2_T0L) != 0)
-            {
-                callServiceRoutine(InterruptVectors.INT2_T0L);
-                Interrupts &= ~Interrupts.INT1;
-            }
-            else if ((Interrupts & Interrupts.T0H) != 0)
-            {
-                callServiceRoutine(InterruptVectors.T0H);
-                Interrupts &= ~Interrupts.T0H;
-            }
-            else if ((Interrupts & Interrupts.T1) != 0)
-            {
-                callServiceRoutine(InterruptVectors.T1);
-                Interrupts &= ~Interrupts.T1;
-            }
-            else if ((Interrupts & Interrupts.P3) != 0)
-            {
-                callServiceRoutine(InterruptVectors.P3);
-                Interrupts &= ~Interrupts.P3;
-            }
-
-            SFRs.Pcon = SFRs.Pcon with { HaltMode = false };
+            serviceInterrupt(Interrupts.INT0, InterruptVectors.INT0);
+            return;
+        }
+        if (ie.Int1Priority && shouldServiceInterrupt(Interrupts.INT1))
+        {
+            serviceInterrupt(Interrupts.INT1, InterruptVectors.INT1);
+            return;
         }
 
-        void callServiceRoutine(ushort routineAddress)
+        // High Priority
+        var interruptPriority = SFRs.Ip;
+        if (interruptPriority.Int2_T0L && shouldServiceInterrupt(Interrupts.INT2_T0L))
         {
-            InterruptServicingState = InterruptServicingState.Servicing;
+            serviceInterrupt(Interrupts.INT2_T0L, InterruptVectors.INT2_T0L);
+            return;
+        }
+
+        if (interruptPriority.Int3_BaseTimer && shouldServiceInterrupt(Interrupts.INT3_BT))
+        {
+            serviceInterrupt(Interrupts.INT3_BT, InterruptVectors.INT3_BT);
+            return;
+        }
+
+        if (interruptPriority.T0H && shouldServiceInterrupt(Interrupts.T0H))
+        {
+            serviceInterrupt(Interrupts.T0H, InterruptVectors.T0H);
+            return;
+        }
+
+        if (interruptPriority.T1 && shouldServiceInterrupt(Interrupts.T1))
+        {
+            serviceInterrupt(Interrupts.T1, InterruptVectors.T1);
+            return;
+        }
+
+        if (interruptPriority.Sio0 && shouldServiceInterrupt(Interrupts.SIO0))
+        {
+            serviceInterrupt(Interrupts.SIO0, InterruptVectors.SIO0);
+            return;
+        }
+
+        if (interruptPriority.Sio1 && shouldServiceInterrupt(Interrupts.SIO1))
+        {
+            serviceInterrupt(Interrupts.SIO1, InterruptVectors.SIO1);
+            return;
+        }
+
+        if (interruptPriority.Maple && shouldServiceInterrupt(Interrupts.Maple))
+        {
+            serviceInterrupt(Interrupts.Maple, InterruptVectors.Maple);
+            return;
+        }
+
+        if (interruptPriority.Port3 && shouldServiceInterrupt(Interrupts.P3))
+        {
+            serviceInterrupt(Interrupts.P3, InterruptVectors.P3);
+            return;
+        }
+
+        // Low Priority
+        if (shouldServiceInterrupt(Interrupts.INT2_T0L))
+        {
+            serviceInterrupt(Interrupts.INT2_T0L, InterruptVectors.INT2_T0L);
+            return;
+        }
+
+        if (shouldServiceInterrupt(Interrupts.INT3_BT))
+        {
+            serviceInterrupt(Interrupts.INT3_BT, InterruptVectors.INT3_BT);
+            return;
+        }
+
+        if (shouldServiceInterrupt(Interrupts.T0H))
+        {
+            serviceInterrupt(Interrupts.T0H, InterruptVectors.T0H);
+            return;
+        }
+
+        if (shouldServiceInterrupt(Interrupts.T1))
+        {
+            serviceInterrupt(Interrupts.T1, InterruptVectors.T1);
+            return;
+        }
+
+        if (shouldServiceInterrupt(Interrupts.SIO0))
+        {
+            serviceInterrupt(Interrupts.SIO0, InterruptVectors.SIO0);
+            return;
+        }
+
+        if (shouldServiceInterrupt(Interrupts.SIO1))
+        {
+            serviceInterrupt(Interrupts.SIO1, InterruptVectors.SIO1);
+            return;
+        }
+
+        if (shouldServiceInterrupt(Interrupts.Maple))
+        {
+            serviceInterrupt(Interrupts.Maple, InterruptVectors.Maple);
+            return;
+        }
+
+        if (shouldServiceInterrupt(Interrupts.P3))
+        {
+            serviceInterrupt(Interrupts.P3, InterruptVectors.P3);
+            return;
+        }
+
+        bool shouldServiceInterrupt(Interrupts candidateInterrupt)
+        {
+            Debug.Assert(BitHelpers.IsPowerOfTwo((int)candidateInterrupt));
+            return (RequestedInterrupts & candidateInterrupt) != 0
+                && candidateInterrupt > currentInterrupt;
+        }
+
+        void serviceInterrupt(Interrupts interrupt, ushort routineAddress)
+        {
+            Debug.Assert(BitHelpers.IsPowerOfTwo((int)interrupt));
+
+            _servicingInterrupts[_interruptsCount] = interrupt;
+            _interruptsCount++;
+            Logger.LogTrace($"Servicing interrupt '{interrupt}'. Count: '{_interruptsCount}'.");
+            RequestedInterrupts &= ~interrupt;
+            SFRs.Pcon = SFRs.Pcon with { HaltMode = false };
+
             Memory.PushStack((byte)Pc);
             Memory.PushStack((byte)(Pc >> 8));
             Pc = routineAddress;
@@ -205,8 +310,8 @@ public class Cpu
 
     private void AdvanceInterruptState()
     {
-        if (InterruptServicingState == InterruptServicingState.Returned)
-            InterruptServicingState = InterruptServicingState.Ready;
+        if (_interruptServicingState == InterruptServicingState.ReturnedFromInterrupt)
+            _interruptServicingState = InterruptServicingState.Ready;
     }
 
     internal long StepTicks()
@@ -306,6 +411,7 @@ public class Cpu
     {
         tickTimer0();
         tickTimer1();
+        tickBaseTimer();
 
         void tickTimer0()
         {
@@ -330,7 +436,7 @@ public class Cpu
                     {
                         t0cnt.T0lOvf = true; // note: the hardware will not reset this flag. application needs to do it.
                         if (t0cnt.T0lIe)
-                            Interrupts |= Interrupts.INT2_T0L;
+                            RequestedInterrupts |= Interrupts.INT2_T0L;
                     }
                 }
 
@@ -353,7 +459,7 @@ public class Cpu
                     t0h = SFRs.T0Hr;
                     t0cnt.T0hOvf = true; // note: the hardware will not reset this flag. application needs to do it.
                     if (t0cnt.T0hIe)
-                        Interrupts |= Interrupts.T0H;
+                        RequestedInterrupts |= Interrupts.T0H;
                 }
 
                 SFRs.T0H = t0h;
@@ -377,7 +483,7 @@ public class Cpu
                     t1l = SFRs.T1Lr;
                     t1cnt.T1lOvf = true;
                     if (t1cnt.T1lIe)
-                        Interrupts |= Interrupts.T1;
+                        RequestedInterrupts |= Interrupts.T1;
                 }
 
                 if (t1cnt.ELDT1C)
@@ -406,11 +512,22 @@ public class Cpu
                     t1h = SFRs.T1Hr;
                     t1cnt.T1hOvf = true; // note: the hardware will not reset this flag. application needs to do it.
                     if (t1cnt.T1hIe)
-                        Interrupts |= Interrupts.T1;
+                        RequestedInterrupts |= Interrupts.T1;
                 }
 
                 SFRs.T1H = t1h;
             }
+        }
+
+        // Base timer is 14 bits. Its value is not accessible in the data memory space.
+        // It seems to have a 6-bit fast forward mode. I doubt this is used.
+        // It looks like the The quartz oscillator is always used to tick the base timer.
+        void tickBaseTimer()
+        {
+            var btcr = SFRs.Btcr;
+            // SFRs.Btcr
+            // note: there are two sources here, but only one target interrupt.
+            // if (btcr.CountEnable)
         }
     }
 
@@ -955,10 +1072,12 @@ public class Cpu
     private void Op_RETI(Instruction inst)
     {
         // (PC15 to 8) <- ((SP)), (SP) <- (SP) - 1, (PC7 to 0) <- ((SP)), (SP) <- (SP) -1
-        if (InterruptServicingState != InterruptServicingState.Servicing)
-            Logger.LogDebug($"Expected 'Servicing' state when returning from interrupt, but got '{InterruptServicingState}'");
+        _interruptServicingState = InterruptServicingState.ReturnedFromInterrupt;
+        if (_interruptsCount > 0)
+            _interruptsCount--;
+        else
+            Logger.LogError($"Returning from interrupt, but no interrupt was being serviced!");
 
-        InterruptServicingState = InterruptServicingState.Returned;
         var Pc15_8 = Memory.PopStack();
         var Pc7_0 = Memory.PopStack();
         Pc = (ushort)(Pc15_8 << 8 | Pc7_0);

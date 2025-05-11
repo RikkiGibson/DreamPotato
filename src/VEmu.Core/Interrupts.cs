@@ -5,13 +5,22 @@ namespace VEmu.Core;
 
 enum InterruptServicingState : byte
 {
+    /// <summary>
+    /// Ready to service an interrupt.
+    /// </summary>
     Ready,
-    Servicing,
-    Returned,
+
+    /// <summary>
+    /// Returned from an interrupt in the previous instruction.
+    /// Not ready to service again until another instruction is executed.
+    /// </summary>
+    ReturnedFromInterrupt,
 }
 
 /// <summary>
-/// VMD-144
+/// VMD-144.
+/// Flags enumeration of all interrupts which can be requested.
+/// Note that higher-priority interrupts have smaller values in this scheme.
 /// </summary>
 enum Interrupts : ushort
 {

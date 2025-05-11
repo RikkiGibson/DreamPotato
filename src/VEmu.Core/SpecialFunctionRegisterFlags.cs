@@ -145,6 +145,93 @@ public struct Ie
         get => BitHelpers.ReadBit(_value, bit: 0);
         set => BitHelpers.WriteBit(ref _value, bit: 0, value);
     }
+
+    /// <summary>
+    /// "Highest" priority if true, low priority if false.
+    /// </summary>
+    public bool Int1Priority
+    {
+        get
+        {
+            return (PriorityControl1, PriorityControl0) switch
+            {
+                (false, false) => true,
+                _ => false
+            };
+        }
+    }
+
+    /// <summary>
+    /// "Highest" priority if true, low priority if false.
+    /// </summary>
+    public bool Int0Priority
+    {
+        get
+        {
+            return (PriorityControl1, PriorityControl0) switch
+            {
+                (_, false) => true,
+                _ => false
+            };
+        }
+    }
+}
+
+/// <summary>Interrupt priority control register. Set bits indicate high priority; cleared bits indicate low priority. VMD-148</summary>
+public struct Ip
+{
+    private byte _value;
+
+    public Ip(byte value) => _value = value;
+    public static explicit operator byte(Ip value) => value._value;
+
+    public bool Port3
+    {
+        get => BitHelpers.ReadBit(_value, bit: 7);
+        set => BitHelpers.WriteBit(ref _value, bit: 7, value);
+    }
+
+    public bool Maple
+    {
+        get => BitHelpers.ReadBit(_value, bit: 6);
+        set => BitHelpers.WriteBit(ref _value, bit: 6, value);
+    }
+
+    public bool Sio1
+    {
+        get => BitHelpers.ReadBit(_value, bit: 5);
+        set => BitHelpers.WriteBit(ref _value, bit: 5, value);
+    }
+
+    public bool Sio0
+    {
+        get => BitHelpers.ReadBit(_value, bit: 4);
+        set => BitHelpers.WriteBit(ref _value, bit: 4, value);
+    }
+
+    public bool T1
+    {
+        get => BitHelpers.ReadBit(_value, bit: 3);
+        set => BitHelpers.WriteBit(ref _value, bit: 3, value);
+    }
+
+    public bool T0H
+    {
+        get => BitHelpers.ReadBit(_value, bit: 2);
+        set => BitHelpers.WriteBit(ref _value, bit: 2, value);
+    }
+
+    public bool Int3_BaseTimer
+    {
+        get => BitHelpers.ReadBit(_value, bit: 1);
+        set => BitHelpers.WriteBit(ref _value, bit: 1, value);
+    }
+
+    public bool Int2_T0L
+    {
+        get => BitHelpers.ReadBit(_value, bit: 0);
+        set => BitHelpers.WriteBit(ref _value, bit: 0, value);
+    }
 }
 
 /// <summary>Port 3 latch. Buttons SLEEP, MODE, B, A, directions. VMD-54</summary>
@@ -712,5 +799,75 @@ public struct Vsel
     {
         get => BitHelpers.ReadBit(_value, bit: 4);
         set => _value = BitHelpers.WithBit(_value, bit: 4, value);
+    }
+}
+
+/// <summary>Base timer control register. VMD-96</summary>
+public struct Btcr
+{
+    private byte _value;
+
+    public Btcr(byte value) => _value = value;
+    public static explicit operator byte(Btcr value) => value._value;
+
+    /// <summary>
+    /// When set to 1: 16384/fBST. When reset to 0: 64/fBST.
+    /// This should always be set to 1 to ensure correct BIOS clock operation.
+    /// TODO: figure out how this is supposed to affect timer operation.
+    /// </summary>
+    public bool Int0CycleControl
+    {
+        get => BitHelpers.ReadBit(_value, bit: 7);
+        set => _value = BitHelpers.WithBit(_value, bit: 7, value);
+    }
+
+    /// <summary>
+    /// When set to 1, count operation starts. When reset to 0, count operation stops, and the 14-bit counter is cleared.
+    /// This should always be set to 1 to ensure correct BIOS clock operation.
+    /// </summary>
+    public bool CountEnable
+    {
+        get => BitHelpers.ReadBit(_value, bit: 6);
+        set => _value = BitHelpers.WithBit(_value, bit: 6, value);
+    }
+
+    public bool Int1CycleControl5
+    {
+        get => BitHelpers.ReadBit(_value, bit: 5);
+        set => _value = BitHelpers.WithBit(_value, bit: 5, value);
+    }
+
+    public bool Int1CycleControl4
+    {
+        get => BitHelpers.ReadBit(_value, bit: 4);
+        set => _value = BitHelpers.WithBit(_value, bit: 4, value);
+    }
+
+    public bool Int1Source
+    {
+        get => BitHelpers.ReadBit(_value, bit: 3);
+        set => _value = BitHelpers.WithBit(_value, bit: 3, value);
+    }
+
+    public bool Int1Enable
+    {
+        get => BitHelpers.ReadBit(_value, bit: 2);
+        set => _value = BitHelpers.WithBit(_value, bit: 2, value);
+    }
+
+    public bool Int0Source
+    {
+        get => BitHelpers.ReadBit(_value, bit: 1);
+        set => _value = BitHelpers.WithBit(_value, bit: 1, value);
+    }
+
+    /// <summary>
+    /// Enables base timer interrupt 0 generation.
+    /// This should always be set to ensure correct BIOS clock operation.
+    /// </summary>
+    public bool Int0Enable
+    {
+        get => BitHelpers.ReadBit(_value, bit: 0);
+        set => _value = BitHelpers.WithBit(_value, bit: 0, value);
     }
 }

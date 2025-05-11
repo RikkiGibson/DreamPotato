@@ -182,10 +182,10 @@ public class SpecialFunctionRegisters
     }
 
     /// <summary>Interrupt priority control register. VMD-151</summary>
-    public byte Ip
+    public Ip Ip
     {
-        get => Read(Ids.Ip);
-        set => Write(Ids.Ip, value);
+        get => new(Read(Ids.Ip));
+        set => Write(Ids.Ip, (byte)value);
     }
 
     /// <summary>External memory control register. No VMD page</summary>
@@ -425,7 +425,7 @@ public class SpecialFunctionRegisters
                 if ((p3int.Continuous && valueRaw != 0xff) || (p3Raw & valueRaw) != p3Raw)
                 {
                     p3int.Source = true;
-                    _cpu.Interrupts |= Interrupts.P3;
+                    _cpu.RequestedInterrupts |= Interrupts.P3;
                 }
                 P3Int = p3int;
             }
@@ -513,9 +513,9 @@ public class SpecialFunctionRegisters
     }
 #endregion
     /// <summary>Base timer control. VMD-101</summary>
-    public byte Btcr
+    public Btcr Btcr
     {
-        get => Read(Ids.Btcr);
-        set => Write(Ids.Btcr, value);
+        get => new(Read(Ids.Btcr));
+        set => Write(Ids.Btcr, (byte)value);
     }
 }

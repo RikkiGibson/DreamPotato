@@ -24,4 +24,9 @@ public static class BitHelpers
         WriteBit(ref operand, bit, value);
         return operand;
     }
+
+    public static bool IsPowerOfTwo(int value)
+    {
+        return (value & (value - 1)) == 0;
+    }
 }

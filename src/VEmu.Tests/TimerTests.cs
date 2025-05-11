@@ -55,7 +55,7 @@ public class TimerTests
         Assert.Equal(0, cpu.SFRs.T0H);
         Assert.False(cpu.SFRs.T0Cnt.T0lOvf);
         Assert.False(cpu.SFRs.T0Cnt.T0hOvf);
-        Assert.Equal(Interrupts.None, cpu.Interrupts);
+        Assert.Equal(Interrupts.None, cpu.RequestedInterrupts);
 
         for (int i = 0; i < 0x80; i++)
         {
@@ -65,7 +65,7 @@ public class TimerTests
         Assert.Equal(1, cpu.SFRs.T0H);
         Assert.False(cpu.SFRs.T0Cnt.T0lOvf); // NB: T0lOvf is not used in 16-bit mode
         Assert.False(cpu.SFRs.T0Cnt.T0hOvf);
-        Assert.Equal(Interrupts.None, cpu.Interrupts); // TODO: it is unclear to me if T0L interrupt should be generated in 16-bit mode.
+        Assert.Equal(Interrupts.None, cpu.RequestedInterrupts); // TODO: it is unclear to me if T0L interrupt should be generated in 16-bit mode.
 
         for (int i = 0; i < 0xff00; i++)
         {
@@ -76,12 +76,12 @@ public class TimerTests
         Assert.Equal(0, cpu.SFRs.T0H);
         Assert.False(cpu.SFRs.T0Cnt.T0lOvf);
         Assert.True(cpu.SFRs.T0Cnt.T0hOvf);
-        Assert.Equal(Interrupts.T0H, cpu.Interrupts);
+        Assert.Equal(Interrupts.T0H, cpu.RequestedInterrupts);
 
         // TODO: note that interrupt servicing sets PC right before executing next instruction.
         // So there isn't a point we can externally observe Pc being exactly the same value as the interrupt vector.
         cpu.Step();
         Assert.Equal(InterruptVectors.T0H+1, cpu.Pc);
-        Assert.Equal(Interrupts.None, cpu.Interrupts);
+        Assert.Equal(Interrupts.None, cpu.RequestedInterrupts);
     }
 }
