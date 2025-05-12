@@ -22,6 +22,7 @@ enum InterruptServicingState : byte
 /// Flags enumeration of all interrupts which can be requested.
 /// Note that higher-priority interrupts have smaller values in this scheme.
 /// </summary>
+// TODO: DebuggerDisplay
 enum Interrupts : ushort
 {
     None = 0,

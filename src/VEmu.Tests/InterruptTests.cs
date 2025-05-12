@@ -100,6 +100,7 @@ public class InterruptTests
     [Fact]
     public void INT0_INT1_Simultaneous_1()
     {
+        // TODO: fix test. base timer interrupt needs to be disabled possibly?
         var cpu = new Cpu();
         cpu.SFRs.Ie = new() { MasterInterruptEnable = true };
         cpu.SFRs.I01Cr = new()

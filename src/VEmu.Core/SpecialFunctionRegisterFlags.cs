@@ -234,6 +234,52 @@ public struct Ip
     }
 }
 
+public enum InstructionBank
+{
+    ROM,
+    FlashBank0,
+    FlashBank1,
+}
+
+/// <summary>External memory control register. Undocumented.</summary>
+public struct Ext
+{
+    private byte _value;
+
+    public Ext(byte value) => _value = value;
+    public static explicit operator byte(Ext value) => value._value;
+
+    public InstructionBank InstructionBank
+    {
+        get
+        {
+            return (Ext0, Ext3) switch
+            {
+                (true, _) => InstructionBank.FlashBank0,
+                (false, true) => InstructionBank.ROM,
+                // TODO: I don't think there's a valid/supported reason for applications to do this.
+                (false, false) => InstructionBank.FlashBank1,
+            };
+        }
+    }
+
+    public bool Ext3
+    {
+        get => BitHelpers.ReadBit(_value, bit: 3);
+        set => BitHelpers.WriteBit(ref _value, bit: 3, value);
+    }
+
+    /// <summary>
+    /// Controls whether to execute instructions from ROM or from flash bank 0.
+    /// Applications expect to be able to switch back to ROM by flipping this bit.
+    /// </summary>
+    public bool Ext0
+    {
+        get => BitHelpers.ReadBit(_value, bit: 0);
+        set => BitHelpers.WriteBit(ref _value, bit: 0, value);
+    }
+}
+
 /// <summary>Port 3 latch. Buttons SLEEP, MODE, B, A, directions. VMD-54</summary>
 public struct P3
 {

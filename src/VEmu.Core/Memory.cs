@@ -117,7 +117,7 @@ public class Memory
         }
     }
 
-    public const byte StackStart = 0x90;
+    public const byte StackStart = 0x80;
 
     public void PushStack(byte value)
     {
@@ -125,7 +125,7 @@ public class Memory
         // Stack also points to last element, rather than pointing past last element. So it is inc'd before writing.
         if (SFRs.Sp + 1 is not (>= StackStart and <= 0xff))
         {
-            _logger.LogError($"Stack pointer (0x{SFRs.Sp:X2}) outside of expected range (0x90-0xff)!");
+            _logger.LogError($"Stack pointer (0x{SFRs.Sp:X2}) outside of expected range (0x80-0xff)!");
         }
 
         SFRs.Sp++;
@@ -136,9 +136,9 @@ public class Memory
     {
         // Stack is always bank 0, 0x90-0xff; do not use the same routines as for memory access from user code.
         // Stack also points to last element, rather than pointing past last element. So it is dec'd after reading.
-        if (SFRs.Sp - 1 is not (>= StackStart and <= 0xff))
+        if (SFRs.Sp is not (>= StackStart and <= 0xff))
         {
-            _logger.LogError($"Stack pointer (0x{SFRs.Sp:X2}) outside of expected range (0x90-0xff)!");
+            _logger.LogError($"Stack pointer (0x{SFRs.Sp:X2}) outside of expected range (0x80-0xff)!");
         }
 
         var value = _mainRam0[SFRs.Sp];

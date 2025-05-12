@@ -52,9 +52,14 @@ public class Game1 : Game
     protected override void LoadContent()
     {
         // TODO: UI for picking a vmu file
-        var memopad = File.ReadAllBytes(@"C:\Users\rikki\src\VMU-MISC-CODE\memopad.vms");
-        memopad.AsSpan().CopyTo(_cpu.FlashBank0);
-        _cpu.CurrentROMBank = _cpu.FlashBank0;
+        // var game = File.ReadAllBytes(@"C:\Users\rikki\src\VMU-MISC-CODE\memopad.vms");
+        var game = File.ReadAllBytes(@"C:\Users\rikki\src\ghidra-pinta\SkiesOfArcadiaPinataQuest.vms");
+        game.AsSpan().CopyTo(_cpu.FlashBank0);
+
+        var bios = File.ReadAllBytes(@"C:\Users\rikki\OneDrive\vmu reverse engineering\dmitry-vmu\vmu\ROMs\american_v1.05.bin");
+        bios.AsSpan().CopyTo(_cpu.ROM);
+        _cpu.InstructionBank = Core.SFRs.InstructionBank.ROM;
+        // _cpu.InstructionBank = Core.SFRs.InstructionBank.FlashBank0;
     }
 
     protected override void Update(GameTime gameTime)

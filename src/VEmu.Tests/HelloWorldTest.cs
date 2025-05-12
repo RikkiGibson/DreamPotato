@@ -11,14 +11,11 @@ public class HelloWorldTest(ITestOutputHelper outputHelper)
     public void HelloWorld()
     {
         // Execute the assembled version of 'helloworld.s'
-        var cpu = new Cpu() { };
+        var cpu = new Cpu();
+        cpu.Reset();
 
         s_instructions.CopyTo(cpu.FlashBank0.AsSpan());
-        cpu.CurrentROMBank = cpu.FlashBank0;
-
-        // It seems like this code is relying on the bios initializing stack and pulling-up P3
-        cpu.SFRs.P3 = new(0xff);
-        cpu.SFRs.Sp = 0x90;
+        cpu.InstructionBank = InstructionBank.FlashBank0;
 
         try
         {

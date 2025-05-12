@@ -42,18 +42,25 @@ public class SpecialFunctionRegisters
         // Manual indicates that BIOS is typically responsible for setting these values.
         // It's nice to be able to run without a BIOS, so let's set them up here.
         Write(Ids.Ie, 0b1000_0000);
+        Write(Ids.Ext, (byte)new Ext() { Ext3 = true, Ext0 = false });
         Write(Ids.P1Fcr, 0b1011_1111);
         Write(Ids.P3Int, 0b1111_1101);
         Write(Ids.P3, 0b1111_1111);
         Write(Ids.Isl, 0b1100_0000);
         Write(Ids.Vsel, 0b1111_1100);
         Write(Ids.Btcr, 0b0100_0001);
-        Write(Ids.Sp, Memory.StackStart);
+
+        // Stack points to last element, so, when it is empty, it points to before the start of the stack space.
+        Write(Ids.Sp, Memory.StackStart - 1);
     }
 
     public byte Read(byte address)
     {
         Debug.Assert(address < Size);
+
+        if (address == Ids.P7 && _rawMemory[address] != 0)
+        {
+        }
 
         // TODO: there are many more special cases for reading/writing SFRs than this.
         switch (address)
@@ -118,6 +125,16 @@ public class SpecialFunctionRegisters
                 if (ocr is { ClockGeneratorControl: false, SystemClockSelector: Oscillator.Quartz })
                     _logger.LogDebug($"Setting unsupported Ocr configuration: 0b{value:b8}");
 
+                goto default;
+
+            case Ids.P7:
+                { // breakpoint holder
+                }
+                goto default;
+
+            case Ids.Sp:
+                { // breakpoint holder
+                }
                 goto default;
 
             default:
@@ -209,11 +226,11 @@ public class SpecialFunctionRegisters
         set => Write(Ids.Ip, (byte)value);
     }
 
-    /// <summary>External memory control register. No VMD page</summary>
-    public byte Ext
+    /// <summary>External memory control register. Undocumented.</summary>
+    public Ext Ext
     {
-        get => Read(Ids.Ext);
-        set => Write(Ids.Ext, value);
+        get => new(Read(Ids.Ext));
+        set => Write(Ids.Ext, (byte)value);
     }
 
     /// <summary>Oscillation control register. VMD-156</summary>

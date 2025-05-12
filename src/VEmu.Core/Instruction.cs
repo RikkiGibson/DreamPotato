@@ -61,7 +61,7 @@ record struct Instruction(ushort Offset, Operation Operation, ushort Arg0 = defa
     {
         if (param.Kind == ParameterKind.D9 && (arg & 0x100) != 0)
         {
-            var registerName = SpecialFunctionRegisterIds.GetSpecialFunctionRegisterName((byte)arg);
+            var registerName = SpecialFunctionRegisterIds.GetName((byte)arg);
             if (registerName is not null)
             {
                 builder.Append(registerName);

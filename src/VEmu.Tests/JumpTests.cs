@@ -82,6 +82,7 @@ public class JumpTests
     {
         // VMC-198
         var cpu = new Cpu();
+        cpu.Reset();
 
         // starting at 0x0FFA
         scoped ReadOnlySpan<byte> instructions = [
@@ -119,6 +120,7 @@ public class JumpTests
     {
         // VMC-198
         var cpu = new Cpu();
+        cpu.Reset();
 
         // starting at 0x0FFC
         scoped ReadOnlySpan<byte> instructions = [

@@ -8,7 +8,7 @@
         "name": "C#: VEmu.MonoGame Debug",
         "type": "dotnet",
         "request": "launch",
-        "projectPath": "${workspaceFolder}/VEmu.MonoGame.csproj"
+        "projectPath": "${workspaceFolder}/src/VEmu.MonoGame/VEmu.MonoGame.csproj"
       }
     ],
   }

@@ -155,7 +155,7 @@ static class SpecialFunctionRegisterIds
     /// <summary>Base timer control. VMD-101</summary>
     public const byte Btcr = 0x7F;
 
-    public static string? GetSpecialFunctionRegisterName(byte registerId)
+    public static string? GetName(byte registerId)
     {
         switch (registerId)
         {

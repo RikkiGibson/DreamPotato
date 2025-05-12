@@ -1,5 +1,7 @@
 using System.Diagnostics;
 
+using VEmu.Core.SFRs;
+
 namespace VEmu.Core;
 
 public class Cpu
@@ -16,6 +18,7 @@ public class Cpu
     public readonly byte[] FlashBank0 = new byte[64 * 1024];
     public readonly byte[] FlashBank1 = new byte[64 * 1024];
 
+    // TODO: a separate instruction map is needed per bank, and it needs to be cleared when a given bank changes.
     internal readonly InstructionMap InstructionMap = new();
 
     /// <summary>
@@ -25,7 +28,19 @@ public class Cpu
     /// Note that we need an extra bit of state here. We can't just look at the value of <see cref="SpecialFunctionRegisters.Ext"/>.
     /// The bank is only actually switched when using a jmpf instruction.
     /// </remarks>
-    public byte[] CurrentROMBank;
+    public byte[] CurrentROMBank => InstructionBank switch
+    {
+        InstructionBank.ROM => ROM,
+        InstructionBank.FlashBank0 => FlashBank0,
+        InstructionBank.FlashBank1 => FlashBank1,
+        _ => throw new InvalidOperationException()
+    };
+
+    /// <summary>
+    /// Returns the ID of the bank we are currently executing instructions from.
+    /// This is distinct from <see cref="Ext.InstructionBank"/> because the actual switching does not occur until JMPF is executed.
+    /// </summary>
+    public InstructionBank InstructionBank;
 
     public readonly Memory Memory;
 
@@ -33,8 +48,8 @@ public class Cpu
 
     /// <summary>
     /// 14-bit base timer.
-    /// Overflow of the lower 8 bits sets <see cref="SFRs.Btcr.Int1Source"/>.
-    /// Overflow of the upper 6 bits sets <see cref="SFRs.Btcr.Int0Source"/> and <see cref="SFRs.Btcr.Int1Source"/>.
+    /// Overflow of the lower 8 bits sets <see cref="Btcr.Int1Source"/>.
+    /// Overflow of the upper 6 bits sets <see cref="Btcr.Int0Source"/> and <see cref="Btcr.Int1Source"/>.
     /// </summary>
     internal ushort BaseTimer;
 
@@ -52,7 +67,7 @@ public class Cpu
 
     public Cpu()
     {
-        CurrentROMBank = ROM;
+        InstructionBank = InstructionBank.ROM;
         Logger = new Logger(LogLevel.Trace, this);
         Memory = new Memory(this, Logger);
     }
@@ -60,7 +75,7 @@ public class Cpu
     public void Reset()
     {
         // TODO: possibly we should setup SFR initial values during construction, unless a 'zeroInitialize' flag is set in constructor
-        CurrentROMBank = ROM;
+        InstructionBank = InstructionBank.ROM;
         Pc = 0;
         RequestedInterrupts = 0;
         Array.Clear(_servicingInterrupts);
@@ -93,7 +108,7 @@ public class Cpu
         return ticksSoFar;
     }
 
-#region External interrupt triggers
+    #region External interrupt triggers
     /// <summary>
     /// Simulate INT0 (connecting VMU to Dreamcast)
     /// </summary>
@@ -161,7 +176,7 @@ public class Cpu
                 RequestedInterrupts |= Interrupts.INT1;
         }
     }
-#endregion
+    #endregion
 
     private void ServiceInterruptIfNeeded()
     {
@@ -338,71 +353,68 @@ public class Cpu
         ServiceInterruptIfNeeded();
         AdvanceInterruptState();
 
-        var inst = InstructionDecoder.Decode(CurrentROMBank, Pc);
-        InstructionMap[Pc] = inst;
-        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X} B={SFRs.B:X} C={SFRs.C:X} R2={ReadRam(2)}");
-
         // TODO: hold mode doesn't even tick timers. only external interrupts wake the VMU.
         if (SFRs.Pcon.HaltMode)
         {
             TickTimers(1);
             return 1;
         }
-        else
+
+        var inst = InstructionDecoder.Decode(CurrentROMBank, Pc);
+        InstructionMap[Pc] = inst;
+        // TODO: log when we enter or exit halt mode.
+        Logger.LogTrace($"{InstructionBank}@{inst} Acc={SFRs.Acc:X} B={SFRs.B:X} C={SFRs.C:X} R2={ReadRam(2)}");
+        switch (inst.Kind)
         {
-            switch (inst.Kind)
-            {
-                case OperationKind.ADD: Op_ADD(inst); break;
-                case OperationKind.ADDC: Op_ADDC(inst); break;
-                case OperationKind.SUB: Op_SUB(inst); break;
-                case OperationKind.SUBC: Op_SUBC(inst); break;
-                case OperationKind.INC: Op_INC(inst); break;
-                case OperationKind.DEC: Op_DEC(inst); break;
-                case OperationKind.MUL: Op_MUL(inst); break;
-                case OperationKind.DIV: Op_DIV(inst); break;
-                case OperationKind.AND: Op_AND(inst); break;
-                case OperationKind.OR: Op_OR(inst); break;
-                case OperationKind.XOR: Op_XOR(inst); break;
-                case OperationKind.ROL: Op_ROL(inst); break;
-                case OperationKind.ROLC: Op_ROLC(inst); break;
-                case OperationKind.ROR: Op_ROR(inst); break;
-                case OperationKind.RORC: Op_RORC(inst); break;
-                case OperationKind.LD: Op_LD(inst); break;
-                case OperationKind.ST: Op_ST(inst); break;
-                case OperationKind.MOV: Op_MOV(inst); break;
-                case OperationKind.LDC: Op_LDC(inst); break;
-                case OperationKind.PUSH: Op_PUSH(inst); break;
-                case OperationKind.POP: Op_POP(inst); break;
-                case OperationKind.XCH: Op_XCH(inst); break;
-                case OperationKind.JMP: Op_JMP(inst); break;
-                case OperationKind.JMPF: Op_JMPF(inst); break;
-                case OperationKind.BR: Op_BR(inst); break;
-                case OperationKind.BRF: Op_BRF(inst); break;
-                case OperationKind.BZ: Op_BZ(inst); break;
-                case OperationKind.BNZ: Op_BNZ(inst); break;
-                case OperationKind.BP: Op_BP(inst); break;
-                case OperationKind.BPC: Op_BPC(inst); break;
-                case OperationKind.BN: Op_BN(inst); break;
-                case OperationKind.DBNZ: Op_DBNZ(inst); break;
-                case OperationKind.BE: Op_BE(inst); break;
-                case OperationKind.BNE: Op_BNE(inst); break;
-                case OperationKind.CALL: Op_CALL(inst); break;
-                case OperationKind.CALLF: Op_CALLF(inst); break;
-                case OperationKind.CALLR: Op_CALLR(inst); break;
-                case OperationKind.RET: Op_RET(inst); break;
-                case OperationKind.RETI: Op_RETI(inst); break;
-                case OperationKind.CLR1: Op_CLR1(inst); break;
-                case OperationKind.SET1: Op_SET1(inst); break;
-                case OperationKind.NOT1: Op_NOT1(inst); break;
-                case OperationKind.LDF: Op_LDF(inst); break;
-                case OperationKind.NOP: Op_NOP(inst); break;
-                default: Throw(inst); break;
-            }
-
-            TickTimers(inst.Cycles);
-
-            return inst.Cycles;
+            case OperationKind.ADD: Op_ADD(inst); break;
+            case OperationKind.ADDC: Op_ADDC(inst); break;
+            case OperationKind.SUB: Op_SUB(inst); break;
+            case OperationKind.SUBC: Op_SUBC(inst); break;
+            case OperationKind.INC: Op_INC(inst); break;
+            case OperationKind.DEC: Op_DEC(inst); break;
+            case OperationKind.MUL: Op_MUL(inst); break;
+            case OperationKind.DIV: Op_DIV(inst); break;
+            case OperationKind.AND: Op_AND(inst); break;
+            case OperationKind.OR: Op_OR(inst); break;
+            case OperationKind.XOR: Op_XOR(inst); break;
+            case OperationKind.ROL: Op_ROL(inst); break;
+            case OperationKind.ROLC: Op_ROLC(inst); break;
+            case OperationKind.ROR: Op_ROR(inst); break;
+            case OperationKind.RORC: Op_RORC(inst); break;
+            case OperationKind.LD: Op_LD(inst); break;
+            case OperationKind.ST: Op_ST(inst); break;
+            case OperationKind.MOV: Op_MOV(inst); break;
+            case OperationKind.LDC: Op_LDC(inst); break;
+            case OperationKind.PUSH: Op_PUSH(inst); break;
+            case OperationKind.POP: Op_POP(inst); break;
+            case OperationKind.XCH: Op_XCH(inst); break;
+            case OperationKind.JMP: Op_JMP(inst); break;
+            case OperationKind.JMPF: Op_JMPF(inst); break;
+            case OperationKind.BR: Op_BR(inst); break;
+            case OperationKind.BRF: Op_BRF(inst); break;
+            case OperationKind.BZ: Op_BZ(inst); break;
+            case OperationKind.BNZ: Op_BNZ(inst); break;
+            case OperationKind.BP: Op_BP(inst); break;
+            case OperationKind.BPC: Op_BPC(inst); break;
+            case OperationKind.BN: Op_BN(inst); break;
+            case OperationKind.DBNZ: Op_DBNZ(inst); break;
+            case OperationKind.BE: Op_BE(inst); break;
+            case OperationKind.BNE: Op_BNE(inst); break;
+            case OperationKind.CALL: Op_CALL(inst); break;
+            case OperationKind.CALLF: Op_CALLF(inst); break;
+            case OperationKind.CALLR: Op_CALLR(inst); break;
+            case OperationKind.RET: Op_RET(inst); break;
+            case OperationKind.RETI: Op_RETI(inst); break;
+            case OperationKind.CLR1: Op_CLR1(inst); break;
+            case OperationKind.SET1: Op_SET1(inst); break;
+            case OperationKind.NOT1: Op_NOT1(inst); break;
+            case OperationKind.LDF: Op_LDF(inst); break;
+            case OperationKind.NOP: Op_NOP(inst); break;
+            default: Throw(inst); break;
         }
+
+        TickTimers(inst.Cycles);
+        return inst.Cycles;
 
         static void Throw(Instruction inst) => throw new InvalidOperationException($"Unknown operation '{inst}'");
     }
@@ -895,6 +907,9 @@ public class Cpu
     {
         // (PC) <- a16
         Pc = inst.Arg0;
+
+        // Now update the instruction bank for real, which may have been initiated by a previous instruction
+        InstructionBank = SFRs.Ext.InstructionBank;
     }
 
     /// <summary>Branch near relative address</summary>
