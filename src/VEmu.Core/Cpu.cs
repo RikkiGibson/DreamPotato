@@ -31,6 +31,13 @@ public class Cpu
 
     internal ushort Pc;
 
+    /// <summary>
+    /// 14-bit base timer.
+    /// Overflow of the lower 8 bits sets <see cref="SFRs.Btcr.Int1Source"/>.
+    /// Overflow of the upper 6 bits sets <see cref="SFRs.Btcr.Int0Source"/> and <see cref="SFRs.Btcr.Int1Source"/>.
+    /// </summary>
+    internal ushort BaseTimer;
+
     internal Interrupts RequestedInterrupts;
     private InterruptServicingState _interruptServicingState;
 
@@ -520,14 +527,41 @@ public class Cpu
         }
 
         // Base timer is 14 bits. Its value is not accessible in the data memory space.
-        // It seems to have a 6-bit fast forward mode. I doubt this is used.
-        // It looks like the The quartz oscillator is always used to tick the base timer.
+        // Doc seems to imply that the top 6-bits can be driven from something besides 8-bit counter overflow.
+        // However, it's not clear how to do that.
+        // TODO: the base timer is not linked to the CPU clock. For now we are assuming it is.
         void tickBaseTimer()
         {
             var btcr = SFRs.Btcr;
-            // SFRs.Btcr
-            // note: there are two sources here, but only one target interrupt.
-            // if (btcr.CountEnable)
+            var currentBaseTimer = BaseTimer;
+            var newBaseTimer = (ushort)(currentBaseTimer + cycles);
+
+            // If bit 7 went from set to cleared, then the lower byte overflowed.
+            // Base timer interrupt 1 is generated.
+            if ((currentBaseTimer & (1 << 7)) != 0 && (newBaseTimer & (1 << 7)) == 0)
+            {
+                btcr.Int1Source = true;
+                if (btcr.Int1Enable)
+                    RequestedInterrupts |= Interrupts.INT3_BT;
+            }
+
+            // If bit 13 went from set to cleared, then the upper 6-bits overflowed.
+            // Base timer interrupt 0 *and* interrupt 1 are generated.
+            if ((currentBaseTimer & (1 << 13)) != 0 && (newBaseTimer & (1 << 13)) == 0)
+            {
+                newBaseTimer = 0;
+
+                btcr.Int0Source = true;
+                if (btcr.Int0Enable)
+                    RequestedInterrupts |= Interrupts.INT3_BT;
+
+                btcr.Int1Source = true;
+                if (btcr.Int1Enable)
+                    RequestedInterrupts |= Interrupts.INT3_BT;
+            }
+
+            BaseTimer = newBaseTimer;
+            SFRs.Btcr = btcr;
         }
     }
 

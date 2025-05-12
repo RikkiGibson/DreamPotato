@@ -522,6 +522,74 @@ public struct I23Cr
     }
 }
 
+// TODO: expose property on Isl indicating which one of these is being used for the clock.
+public enum BaseTimerClock
+{
+    T0,
+    Prescaler,
+    Cycle,
+    Quartz,
+}
+
+/// <summary>Input signal select. VMD-138</summary>
+public struct Isl
+{
+    private byte _value;
+
+    public Isl(byte value) => _value = value;
+    public static explicit operator byte(Isl value) => value._value;
+
+    /// <summary>
+    /// Applications should reset ISL5, ISL4 to 0, 0 to ensure the quartz oscillator is used as the input clock.
+    /// ISL5,   ISL4    Base timer clock
+    /// 1       1       Timer/counter T0
+    /// 0       1       prescaler
+    /// X       0       Cycle clock
+    ///                 quartz oscillator
+    /// </summary>
+    public bool BaseTimerClockSelect5
+    {
+        get => BitHelpers.ReadBit(_value, bit: 5);
+        set => BitHelpers.WriteBit(ref _value, bit: 5, value);
+    }
+
+    /// <inheritdoc cref="BaseTimerClockSelect5">
+    public bool BaseTimerClockSelect4
+    {
+        get => BitHelpers.ReadBit(_value, bit: 4);
+        set => BitHelpers.WriteBit(ref _value, bit: 4, value);
+    }
+
+    /// <summary>
+    /// Selects the time constant of the noise filter.
+    /// ISL2,   ISL1    Time Constant
+    /// 1       1       16 * Tcyc
+    /// 0       1       64 * Tcyc
+    /// X       0       1 * Tcyc
+    /// </summary>
+    public bool NoiseFilterTimeConstant2
+    {
+        get => BitHelpers.ReadBit(_value, bit: 2);
+        set => BitHelpers.WriteBit(ref _value, bit: 2, value);
+    }
+
+    /// <inheritdoc cref="NoiseFilterTimeConstant2"/>
+    public bool NoiseFilterTimeConstant1
+    {
+        get => BitHelpers.ReadBit(_value, bit: 1);
+        set => BitHelpers.WriteBit(ref _value, bit: 1, value);
+    }
+
+    /// <summary>
+    /// When reset to 0, the clock source is P72/INT2/T0IN. When set to 1, the source is P73/INT3/T0IN.
+    /// </summary>
+    public bool T0ClockInputPin
+    {
+        get => BitHelpers.ReadBit(_value, bit: 0);
+        set => BitHelpers.WriteBit(ref _value, bit: 0, value);
+    }
+}
+
 public enum Oscillator
 {
     /// <summary>

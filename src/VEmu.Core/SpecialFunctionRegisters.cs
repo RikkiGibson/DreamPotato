@@ -99,6 +99,20 @@ public class SpecialFunctionRegisters
                 _t1hr = value;
                 return;
 
+            case Ids.Btcr:
+                var btcr = new Btcr(value);
+                if (!btcr.CountEnable)
+                    _cpu.BaseTimer = 0;
+
+                goto default;
+
+            case Ids.Isl:
+                var isl = new Isl(value);
+                if (isl is not { BaseTimerClockSelect5: false, BaseTimerClockSelect4: false })
+                    _logger.LogDebug($"Setting unsupported Isl configuration: 0b{value:b8}");
+
+                goto default;
+
             default:
                 _rawMemory[address] = value;
                 return;

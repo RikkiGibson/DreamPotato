@@ -63,6 +63,8 @@ public class Game1 : Game
         if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || keyboard.IsKeyDown(Keys.Escape))
             Exit();
 
+        // TODO: there really should be some top-level type in the Core layer which exposes the stuff a front-end wants.
+        // UpdatePlayerInput, Reset, Save/load state, GetDisplayBytes, ...
         _cpu.SFRs.P3 = new()
         {
             Up =            !keyboard.IsKeyDown(Keys.W),
