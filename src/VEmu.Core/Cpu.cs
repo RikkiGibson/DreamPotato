@@ -323,19 +323,12 @@ public class Cpu
 
     internal long StepTicks()
     {
-        var ocr = SFRs.Ocr;
-        var dividend = ocr.ClockGeneratorControl ? 6 : 12;
-
-        // OCR5    OCR4    System clock
-        // 0       0       RC oscillator
-        // 0       1       CF oscillator
-        // 1       0       Quartz oscillator
-        // 1       1       CF oscillator
-        var systemClockTicks = ocr.SystemClockTicks;
-
         // Note that any instruction which modifies OCR, etc, is presumed to only affect the speed starting on the next instruction.
+        var cpuClockHz = SFRs.Ocr.CpuClockHz;
+
         var cpuCycles = Step();
-        var ticks = systemClockTicks * cpuCycles / dividend;
+        // ticks = cycles / (cycles per second) * (ticks per second)
+        var ticks = cpuCycles * TimeSpan.TicksPerSecond / cpuClockHz;
         return ticks;
     }
 

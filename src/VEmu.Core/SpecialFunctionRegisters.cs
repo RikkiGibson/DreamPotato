@@ -113,6 +113,13 @@ public class SpecialFunctionRegisters
 
                 goto default;
 
+            case Ids.Ocr:
+                var ocr = new Ocr(value);
+                if (ocr is { ClockGeneratorControl: false, SystemClockSelector: Oscillator.Quartz })
+                    _logger.LogDebug($"Setting unsupported Ocr configuration: 0b{value:b8}");
+
+                goto default;
+
             default:
                 _rawMemory[address] = value;
                 return;

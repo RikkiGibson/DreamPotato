@@ -635,17 +635,25 @@ public struct Ocr
         set => BitHelpers.WriteBit(ref _value, bit: 7, value);
     }
 
-    public long SystemClockTicks
+    /// <summary>
+    /// Number of cycles the CPU executes in 1 second with the current settings.
+    /// </summary>
+    public int CpuClockHz
     {
         get
         {
-            return SystemClockSelector switch
+            int divisor = ClockGeneratorControl ? 6 : 12;
+            int oscillatorFrequency = SystemClockSelector switch
             {
-                Oscillator.Cf => 1 * TimeSpan.TicksPerMicrosecond,
-                Oscillator.Rc => 10 * TimeSpan.TicksPerMicrosecond,
-                Oscillator.Quartz => 183 * TimeSpan.TicksPerMicrosecond,
+                Oscillator.Cf => 6_000_000,
+                Oscillator.Rc => 600_000,
+                // From the data sheet:
+                // Oscillator.Rc => 879_236,
+                Oscillator.Quartz => 32_768,
                 _ => throw new InvalidOperationException()
             };
+
+            return oscillatorFrequency / divisor;
         }
     }
 
