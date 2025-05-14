@@ -42,7 +42,7 @@ public class SpecialFunctionRegisters
         // Manual indicates that BIOS is typically responsible for setting these values.
         // It's nice to be able to run without a BIOS, so let's set them up here.
         Write(Ids.Ie, 0b1000_0000);
-        Write(Ids.Ext, (byte)new Ext() { Ext3 = true, Ext0 = false });
+        Write(Ids.Ext, (byte)new Ext() { InstructionBank = InstructionBank.ROM });
         Write(Ids.P1Fcr, 0b1011_1111);
         Write(Ids.P3Int, 0b1111_1101);
         Write(Ids.P3, 0b1111_1111);
@@ -58,15 +58,22 @@ public class SpecialFunctionRegisters
     {
         Debug.Assert(address < Size);
 
-        if (address == Ids.P7 && _rawMemory[address] != 0)
-        {
-        }
-
         // TODO: there are many more special cases for reading/writing SFRs than this.
         switch (address)
         {
             case Ids.Vtrbf:
                 return readWorkRam();
+
+            case Ids.P7:
+                { // breakpoint holder
+                }
+                goto default;
+
+            case Ids.P3:
+                { // breakpoint holder
+                }
+                goto default;
+
             default:
                 return _rawMemory[address];
         }
@@ -124,6 +131,25 @@ public class SpecialFunctionRegisters
                 var ocr = new Ocr(value);
                 if (ocr is { ClockGeneratorControl: false, SystemClockSelector: Oscillator.Quartz })
                     _logger.LogDebug($"Setting unsupported Ocr configuration: 0b{value:b8}");
+
+                goto default;
+
+            case Ids.Ext:
+                var ext = new Ext(value);
+                if (ext is { Ext3: false })
+                    _logger.LogDebug($"Setting unexpected Ext value. Ext3 should be 1, but was 0, in 0b{value:b8}");
+
+                goto default;
+
+            case Ids.Pcon:
+                var oldPcon = new Pcon(_rawMemory[address]);
+                var newPcon = new Pcon(value);
+
+                if (!oldPcon.HaltMode && newPcon.HaltMode)
+                    _logger.LogTrace("Entering halt mode");
+
+                if (oldPcon.HaltMode && !newPcon.HaltMode)
+                    _logger.LogTrace("Exiting halt mode");
 
                 goto default;
 

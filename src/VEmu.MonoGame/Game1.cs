@@ -52,14 +52,13 @@ public class Game1 : Game
     protected override void LoadContent()
     {
         // TODO: UI for picking a vmu file
-        // var game = File.ReadAllBytes(@"C:\Users\rikki\src\VMU-MISC-CODE\memopad.vms");
-        var game = File.ReadAllBytes(@"C:\Users\rikki\src\ghidra-pinta\SkiesOfArcadiaPinataQuest.vms");
+        var game = File.ReadAllBytes(@"C:\Users\rikki\src\VMU-MISC-CODE\memopad.vms");
+        // var game = File.ReadAllBytes(@"C:\Users\rikki\src\ghidra-pinta\SkiesOfArcadiaPinataQuest.vms");
         game.AsSpan().CopyTo(_cpu.FlashBank0);
 
         var bios = File.ReadAllBytes(@"C:\Users\rikki\OneDrive\vmu reverse engineering\dmitry-vmu\vmu\ROMs\american_v1.05.bin");
         bios.AsSpan().CopyTo(_cpu.ROM);
-        _cpu.InstructionBank = Core.SFRs.InstructionBank.ROM;
-        // _cpu.InstructionBank = Core.SFRs.InstructionBank.FlashBank0;
+        _cpu.SetInstructionBank(Core.SFRs.InstructionBank.ROM);
     }
 
     protected override void Update(GameTime gameTime)
@@ -70,17 +69,23 @@ public class Game1 : Game
 
         // TODO: there really should be some top-level type in the Core layer which exposes the stuff a front-end wants.
         // UpdatePlayerInput, Reset, Save/load state, GetDisplayBytes, ...
-        _cpu.SFRs.P3 = new()
+        var p3 = _cpu.SFRs.P3;
+        var newP3 = new Core.SFRs.P3()
         {
-            Up =            !keyboard.IsKeyDown(Keys.W),
-            Down =          !keyboard.IsKeyDown(Keys.S),
-            Left =          !keyboard.IsKeyDown(Keys.A),
-            Right =         !keyboard.IsKeyDown(Keys.D),
-            ButtonA =       !keyboard.IsKeyDown(Keys.K),
-            ButtonB =       !keyboard.IsKeyDown(Keys.L),
-            ButtonSleep =   !keyboard.IsKeyDown(Keys.J),
-            ButtonMode =    !keyboard.IsKeyDown(Keys.I),
+            Up =            keyboard.IsKeyUp(Keys.W),
+            Down =          keyboard.IsKeyUp(Keys.S),
+            Left =          keyboard.IsKeyUp(Keys.A),
+            Right =         keyboard.IsKeyUp(Keys.D),
+            ButtonA =       keyboard.IsKeyUp(Keys.K),
+            ButtonB =       keyboard.IsKeyUp(Keys.L),
+            ButtonSleep =   keyboard.IsKeyUp(Keys.J),
+            ButtonMode =    keyboard.IsKeyUp(Keys.I),
         };
+
+        if ((byte)p3 != (byte)newP3)
+            _cpu.Logger.LogDebug($"New P3 value: {(byte)newP3:B8}");
+
+        _cpu.SFRs.P3 = newP3;
 
         _cpu.Run(gameTime.ElapsedGameTime.Ticks);
 

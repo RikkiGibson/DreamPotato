@@ -15,11 +15,12 @@ public class HelloWorldTest(ITestOutputHelper outputHelper)
         cpu.Reset();
 
         s_instructions.CopyTo(cpu.FlashBank0.AsSpan());
-        cpu.InstructionBank = InstructionBank.FlashBank0;
+        cpu.SetInstructionBank(InstructionBank.FlashBank0);
 
         try
         {
-            Assert.Equal(4500, cpu.Run(4500));
+            var ticks = 100 * TimeSpan.TicksPerMillisecond;
+            Assert.Equal(ticks, cpu.Run(ticks));
             var display = new Display(cpu);
             var bytes = new byte[Display.DisplaySize];
             display.Draw(bytes);

@@ -1,3 +1,7 @@
+// This file defines a bunch of structs to expose a structured view of certain SFRs.
+// Note that we expect this kind of representation to add little/no overhead because
+// the .NET runtime is good at treating structs with a single field as equivalent to the underlying value.
+
 namespace VEmu.Core.SFRs;
 
 /// <summary>Program status word. VMD-52</summary>
@@ -236,9 +240,9 @@ public struct Ip
 
 public enum InstructionBank
 {
-    ROM,
-    FlashBank0,
-    FlashBank1,
+    ROM = 0,
+    FlashBank0 = 1,
+    FlashBank1 = 2,
 }
 
 /// <summary>External memory control register. Undocumented.</summary>
@@ -253,12 +257,23 @@ public struct Ext
     {
         get
         {
-            return (Ext0, Ext3) switch
+            // Generally Ext3 is expected to be true, i.e. FlashBank1 is not used.
+            // Applications will 'not1 EXT,0' then 'jmpf ...' to switch between FlashBank0 and ROM.
+            return (Ext3, Ext0) switch
             {
-                (true, _) => InstructionBank.FlashBank0,
-                (false, true) => InstructionBank.ROM,
-                // TODO: I don't think there's a valid/supported reason for applications to do this.
+                (_, true) => InstructionBank.FlashBank0,
+                (true, false) => InstructionBank.ROM,
                 (false, false) => InstructionBank.FlashBank1,
+            };
+        }
+        set
+        {
+            (Ext3, Ext0) = value switch
+            {
+                InstructionBank.FlashBank0 => (true, true),
+                InstructionBank.ROM => (true, false),
+                InstructionBank.FlashBank1 => (false, false),
+                _ => throw new ArgumentException(nameof(value))
             };
         }
     }

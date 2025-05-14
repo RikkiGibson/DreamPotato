@@ -44,7 +44,7 @@ record struct Instruction(ushort Offset, Operation Operation, ushort Arg0 = defa
         // We can include not only symbols, but, we can also include the values which are being modified, as well as whether branches are taken.
         // In other words logging the execution of the program in quite useful detail.
         var builder = new StringBuilder();
-        builder.Append($"[{Offset:X4}] {Operation.Kind} ");
+        builder.Append($"{Operation.Kind} ");
 
         var parameters = Parameters;
         for (var i = 0; i < parameters.Length; i++)
@@ -81,6 +81,8 @@ record struct Instruction(ushort Offset, Operation Operation, ushort Arg0 = defa
         {
             ParameterKind.R8 => Offset + Operation.Size + (sbyte)arg,
             ParameterKind.R16 => Offset + arg,
+            ParameterKind.A8 => (Offset & 0xff00) | arg,
+            ParameterKind.A12 => (Offset & 0xf000) | arg,
             _ => arg
         };
         builder.Append($"{displayValue:X}");

@@ -33,17 +33,20 @@ public class Logger(LogLevel _minimumLogLevel, Cpu _cpu)
         if (level < _minimumLogLevel)
             return;
 
+        var message = $"{_cpu.InstructionBank}@[{_cpu.Pc:X4}]: [{level}] {s}";
+
         if (level == LogLevel.Debug)
-            Console.WriteLine(s);
+            Console.WriteLine(message);
 
         if (level == LogLevel.Error)
-            Console.Error.WriteLine(s);
+            Console.Error.WriteLine(message);
 
         var index = _nextMessageIndex % _messages.Length;
-        _messages[index] = $"[{_cpu.Pc:X4}]: [{level}] {s}";
+        _messages[index] = message;
         _nextMessageIndex = index + 1;
     }
 
+    // TODO: this could be some enumerable struct instead
     public List<string> GetLogs(int recentCount)
     {
         List<string> result = [];

@@ -36,11 +36,29 @@ public class Cpu
         _ => throw new InvalidOperationException()
     };
 
+    internal InstructionBank InstructionBank { get; private set; }
+
     /// <summary>
-    /// Returns the ID of the bank we are currently executing instructions from.
-    /// This is distinct from <see cref="Ext.InstructionBank"/> because the actual switching does not occur until JMPF is executed.
+    /// Updates <see cref="InstructionBank"/> to match <see cref="Ext.InstructionBank"/>.
     /// </summary>
-    public InstructionBank InstructionBank;
+    private void SyncInstructionBank()
+    {
+        var newBank = SFRs.Ext.InstructionBank;
+        if (InstructionBank != newBank)
+            Logger.LogDebug($"Changing to instruction bank {newBank}");
+
+        InstructionBank = newBank;
+    }
+
+    /// <summary>
+    /// Sets the current instruction bank both in the CPU itself and in <see cref="Ext.InstructionBank"/>.
+    /// </summary>
+    /// <param name="bank"></param>
+    public void SetInstructionBank(InstructionBank bank)
+    {
+        SFRs.Ext = SFRs.Ext with { InstructionBank = bank };
+        InstructionBank = bank;
+    }
 
     public readonly Memory Memory;
 
@@ -67,21 +85,21 @@ public class Cpu
 
     public Cpu()
     {
-        InstructionBank = InstructionBank.ROM;
         Logger = new Logger(LogLevel.Trace, this);
         Memory = new Memory(this, Logger);
+        SetInstructionBank(InstructionBank.ROM);
     }
 
     public void Reset()
     {
         // TODO: possibly we should setup SFR initial values during construction, unless a 'zeroInitialize' flag is set in constructor
-        InstructionBank = InstructionBank.ROM;
         Pc = 0;
         RequestedInterrupts = 0;
         Array.Clear(_servicingInterrupts);
         _interruptsCount = 0;
         _interruptServicingState = InterruptServicingState.Ready;
         Memory.Reset();
+        SyncInstructionBank();
     }
 
     public byte ReadRam(int address)
@@ -361,9 +379,8 @@ public class Cpu
         }
 
         var inst = InstructionDecoder.Decode(CurrentROMBank, Pc);
-        InstructionMap[Pc] = inst;
-        // TODO: log when we enter or exit halt mode.
-        Logger.LogTrace($"{InstructionBank}@{inst} Acc={SFRs.Acc:X} B={SFRs.B:X} C={SFRs.C:X} R2={ReadRam(2)}");
+        InstructionMap[InstructionBank, Pc] = inst;
+        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X} B={SFRs.B:X} C={SFRs.C:X} R2={ReadRam(2)}");
         switch (inst.Kind)
         {
             case OperationKind.ADD: Op_ADD(inst); break;
@@ -909,7 +926,7 @@ public class Cpu
         Pc = inst.Arg0;
 
         // Now update the instruction bank for real, which may have been initiated by a previous instruction
-        InstructionBank = SFRs.Ext.InstructionBank;
+        SyncInstructionBank();
     }
 
     /// <summary>Branch near relative address</summary>
