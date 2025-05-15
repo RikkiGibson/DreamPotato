@@ -295,6 +295,31 @@ public struct Ext
     }
 }
 
+/// <summary>LCD contrast control register. VMD-131</summary>
+public struct Vccr
+{
+    private byte _value;
+
+    public Vccr(byte value) => _value = value;
+    public static explicit operator byte(Vccr value) => value._value;
+
+    /// <summary>When set to 1, power to the display is activated. When reset to 0, the display is shut off.</summary>
+    public bool DisplayControl
+    {
+        get => BitHelpers.ReadBit(_value, bit: 7);
+        set => BitHelpers.WriteBit(ref _value, bit: 7, value);
+    }
+
+    /// <summary>When set to 1, XRAM memory access is disabled (read and write). When reset to 0, XRAM memory access is enabled.</summary>
+    // TODO: actually block user code from updating XRAM under these conditions, or at least log the problem.
+    // TODO: log if XRAM is written while quartz oscillator is used for system clock. The real hardware requires the RC or CF oscillators be used instead.
+    public bool XramAccessControl
+    {
+        get => BitHelpers.ReadBit(_value, bit: 6);
+        set => BitHelpers.WriteBit(ref _value, bit: 6, value);
+    }
+}
+
 /// <summary>Port 3 latch. Buttons SLEEP, MODE, B, A, directions. VMD-54</summary>
 public struct P3
 {

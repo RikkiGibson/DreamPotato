@@ -23,7 +23,16 @@ public class Display(Cpu cpu)
     {
         // 48x32 1bpp
         Debug.Assert(display.Length == DisplaySize);
-        // cpu.ToString();
+
+        if (!cpu.SFRs.Vccr.DisplayControl)
+        {
+            // LCD is shut off, so just draw a blank.
+            // TODO: this is generally used to implement "sleep" mode.
+            // when we start showing icons etc, it would be good to indicate that we are just sleeping, the game has not crashed.
+            // Same, perhaps, with halt mode.
+            Array.Clear(display);
+            return;
+        }
 
         var xram0 = cpu.Memory.Direct_ReadXram0();
         Debug.Assert(xram0.Length == 0x80);

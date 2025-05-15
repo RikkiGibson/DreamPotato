@@ -409,11 +409,10 @@ public class SpecialFunctionRegisters
     }
 
     /// <summary>LCD contrast control register. VMD-131</summary>
-    // TODO: this is used to turn the LCD off. It is also supposed to be write-only.
-    public byte Vccr
+    public Vccr Vccr
     {
-        get => Read(Ids.Vccr);
-        set => Write(Ids.Vccr, value);
+        get => new(Read(Ids.Vccr));
+        set => Write(Ids.Vccr, (byte)value);
     }
 
     /// <summary>SIO0 control register. VMD-108</summary>
