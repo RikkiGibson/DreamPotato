@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace VEmu.Core;
 
@@ -18,23 +19,31 @@ public class Logger(LogLevel _minimumLogLevel, Cpu _cpu)
     private readonly string?[] _messages = new string[1000];
     private int _nextMessageIndex = 0;
 
-    // TODO: InterpolatedStringHandler
     public void LogTrace(string s)
-        => LogCore(LogLevel.Trace, s);
+        => LogCore(LogLevel.Trace, $"{s}");
+
+    public void LogTrace(DefaultInterpolatedStringHandler handler)
+        => LogCore(LogLevel.Trace, handler);
 
     public void LogDebug(string s)
-        => LogCore(LogLevel.Debug, s);
+        => LogCore(LogLevel.Debug, $"{s}");
+
+    public void LogDebug(DefaultInterpolatedStringHandler handler)
+        => LogCore(LogLevel.Debug, handler);
 
     public void LogError(string s)
-        => LogCore(LogLevel.Error, s);
+        => LogCore(LogLevel.Error, $"{s}");
 
-    private void LogCore(LogLevel level, string s)
+    public void LogError(DefaultInterpolatedStringHandler handler)
+        => LogCore(LogLevel.Error, handler);
+
+    // TODO: do we need ISpanFormattable impl to avoid work on Instruction.ToString() etc?
+    private void LogCore(LogLevel level, DefaultInterpolatedStringHandler handler)
     {
         if (level < _minimumLogLevel)
             return;
 
-        var message = $"{_cpu.InstructionBank}@[{_cpu.Pc:X4}]: [{level}] {s}";
-
+        string message = $"{_cpu.InstructionBank}@[{_cpu.Pc:X4}]: [{level}] {handler.ToStringAndClear()}";
         if (level == LogLevel.Debug)
             Console.WriteLine(message);
 

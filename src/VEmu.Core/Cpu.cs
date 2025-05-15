@@ -83,9 +83,10 @@ public class Cpu
     private readonly Interrupts[] _servicingInterrupts = new Interrupts[3];
     private int _interruptsCount;
 
-    public Cpu()
+    // TODO: LoggerOptions type? Logger can't really be passed in since it needs to hold 'this'.
+    public Cpu(LogLevel logLevel = LogLevel.Trace)
     {
-        Logger = new Logger(LogLevel.Trace, this);
+        Logger = new Logger(logLevel, this);
         Memory = new Memory(this, Logger);
         SetInstructionBank(InstructionBank.ROM);
     }
