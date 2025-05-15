@@ -375,7 +375,7 @@ public struct P7
         set => BitHelpers.WriteBit(ref _value, bit: 2, value);
     }
 
-    /// <summary>Low voltage detection</summary>
+    /// <summary>Low voltage detection. When user code raises this to 1, a low voltage reading lowers it to 0 and generates an interrupt.</summary>
     public bool LowVoltage
     {
         get => BitHelpers.ReadBit(_value, bit: 1);

@@ -556,7 +556,7 @@ public class Cpu
         {
             var btcr = SFRs.Btcr;
             var currentBaseTimer = BaseTimer;
-            var newBaseTimer = (ushort)(currentBaseTimer + cycles);
+            var newBaseTimer = (ushort)(currentBaseTimer + cycles * 6 /* HACK */);
 
             // If bit 7 went from set to cleared, then the lower byte overflowed.
             // Base timer interrupt 1 is generated.
