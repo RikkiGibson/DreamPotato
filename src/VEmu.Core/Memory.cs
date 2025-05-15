@@ -55,10 +55,10 @@ public class Memory
     private readonly byte[] _xram1 = new byte[0x80];
 
     /// <summary>
-    /// Video memory. Bank 2, 0x180-0x18f.
+    /// Video memory. Bank 2, 0x180-0x186.
     /// Icons, only modifiable by system.
     /// </summary>
-    private readonly byte[] _xram2 = new byte[0x10];
+    private readonly byte[] _xram2 = new byte[6];
 
     private readonly byte[] _workRam = new byte[0x200];
 
@@ -184,7 +184,7 @@ public class Memory
     /// <summary>
     /// Use only to initialize work RAM state for testing
     /// </summary>
-    public void Direct_WriteWorkRam(int address, byte value)
+    internal void Direct_WriteWorkRam(int address, byte value)
     {
         Debug.Assert(address < 0x200);
         _workRam[address] = value;
@@ -193,12 +193,17 @@ public class Memory
     /// <summary>
     /// Use for front-end rendering.
     /// </summary>
-    public ReadOnlySpan<byte> Direct_ReadXram0() => _xram0;
+    internal ReadOnlySpan<byte> Direct_ReadXram0() => _xram0;
 
     /// <summary>
     /// Use for front-end rendering.
     /// </summary>
-    public ReadOnlySpan<byte> Direct_ReadXram1() => _xram1;
+    internal ReadOnlySpan<byte> Direct_ReadXram1() => _xram1;
+
+    /// <summary>
+    /// Use for front-end rendering.
+    /// </summary>
+    internal ReadOnlySpan<byte> Direct_ReadXram2() => _xram2;
 
     private byte ReadMainMemory(ushort address)
     {
@@ -292,16 +297,11 @@ public class Memory
 
         void writeIconXram(byte[] bank, ushort address, byte value)
         {
-            if (address > 0xf)
+            if (address is not (>= 0 and <= 5))
             {
                 _logger.LogDebug($"Write out of range of icon XRAM {SFRs.Xbnk}! Address: 0x{address:X}");
                 // There is weird undocumented behavior around what this range does.
-                return;
-            }
-
-            if ((address & 0xf) is >= 0xc and <= 0xf)
-            {
-                _logger.LogDebug($"Writing skipped XRAM {SFRs.Xbnk}: 0x{address:X}!");
+                // Strictly, we should probably enable free reads and writes wherever they work on real hardware.
                 return;
             }
 

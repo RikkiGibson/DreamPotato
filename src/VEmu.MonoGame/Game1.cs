@@ -16,13 +16,26 @@ public class Game1 : Game
     private readonly Cpu _cpu;
     private readonly Display _display;
 
+    // TODO: eventually, there should be UI to permit a non-constant scale.
     private const int VmuScale = 6;
     private const int ScaledWidth = Display.ScreenWidth * VmuScale;
     private const int ScaledHeight = Display.ScreenHeight * VmuScale;
 
+    private const int TopMargin = VmuScale * 2;
+    private const int SideMargin = VmuScale * 3;
+    private const int BottomMargin = VmuScale * 12;
+
+    private const int TotalScreenWidth = ScaledWidth + SideMargin * 2;
+    private const int TotalScreenHeight = ScaledHeight + TopMargin + BottomMargin;
+
     // Set in Initialize()
     private SpriteBatch _spriteBatch = null!;
     private Texture2D _vmuScreenTexture = null!;
+    private Texture2D _iconsTexture = null!;
+
+    // Set in LoadContent()
+    private SpriteFont _font1 = null!;
+
 
     public Game1()
     {
@@ -39,12 +52,15 @@ public class Game1 : Game
 
     protected override void Initialize()
     {
-        _graphics.PreferredBackBufferWidth = ScaledWidth;
-        _graphics.PreferredBackBufferHeight = ScaledHeight;
+        _graphics.PreferredBackBufferWidth = TotalScreenWidth;
+        _graphics.PreferredBackBufferHeight = TotalScreenHeight;
         _graphics.ApplyChanges();
 
         _spriteBatch = new SpriteBatch(GraphicsDevice);
         _vmuScreenTexture = new Texture2D(_graphics.GraphicsDevice, Display.ScreenWidth, Display.ScreenHeight);
+
+        // TODO: how should icons handle scaling? should there be a minimum scale to keep things from looking bad?
+        _iconsTexture = new Texture2D(_graphics.GraphicsDevice, ScaledWidth, BottomMargin);
 
         base.Initialize();
     }
@@ -59,6 +75,8 @@ public class Game1 : Game
         var bios = File.ReadAllBytes(@"C:\Users\rikki\OneDrive\vmu reverse engineering\dmitry-vmu\vmu\ROMs\american_v1.05.bin");
         bios.AsSpan().CopyTo(_cpu.ROM);
         _cpu.SetInstructionBank(Core.SFRs.InstructionBank.ROM);
+
+        _font1 = Content.Load<SpriteFont>("MyMenuFont");
     }
 
     protected override void Update(GameTime gameTime)
@@ -114,7 +132,17 @@ public class Game1 : Game
         // Use nearest neighbor scaling
         _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
-        _spriteBatch.Draw(_vmuScreenTexture, new Rectangle(Point.Zero, new Point(x: ScaledWidth, y: ScaledHeight)), color: Color.White);
+        _spriteBatch.Draw(_vmuScreenTexture, new Rectangle(new Point(x: SideMargin, y: TopMargin), new Point(x: ScaledWidth, y: ScaledHeight)), color: Color.White);
+
+        // Draw icons
+        var icons = _display.GetIcons();
+        var fileIcon = (icons & Icons.File) != 0 ? "File " : "  ";
+        var gameIcon = (icons & Icons.Game) != 0 ? "Game " : " ";
+        var clockIcon = (icons & Icons.Clock) != 0 ? "Clock " : " ";
+        var flashIcon = (icons & Icons.Flash) != 0 ? "Flash " : "  ";
+        var iconString = $"{fileIcon}{gameIcon}{clockIcon}{flashIcon}";
+        _spriteBatch.DrawString(_font1, iconString, new Vector2(x: SideMargin, y: TopMargin + ScaledHeight), Color.Black);
+
         _spriteBatch.End();
 
         base.Draw(gameTime);

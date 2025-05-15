@@ -2,6 +2,16 @@ using System.Diagnostics;
 
 namespace VEmu.Core;
 
+[Flags]
+public enum Icons : byte
+{
+    None = 0,
+    File = 1 << 6,
+    Game = 1 << 4,
+    Clock = 1 << 2,
+    Flash = 1 << 0,
+}
+
 /// <summary>
 /// Provides VMU display data in 1-bit-per-pixel format.
 /// </summary>
@@ -16,6 +26,20 @@ public class Display(Cpu cpu)
     {
         Draw(_bytes);
         return _bytes;
+    }
+
+    public Icons GetIcons()
+    {
+        // LCD is shut off
+        if (!cpu.SFRs.Vccr.DisplayControl)
+            return Icons.None;
+
+        var xram2 = cpu.Memory.Direct_ReadXram2();
+        var icons = ((Icons)xram2[1] & Icons.File)
+            | ((Icons)xram2[2] & Icons.Game)
+            | ((Icons)xram2[3] & Icons.Clock)
+            | ((Icons)xram2[4] & Icons.Flash);
+        return icons;
     }
 
     // TODO: make private, operate only on _bytes
