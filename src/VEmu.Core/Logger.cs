@@ -7,6 +7,7 @@ public enum LogLevel
 {
     Trace,
     Debug,
+    Warning,
     Error,
 }
 
@@ -30,6 +31,12 @@ public class Logger(LogLevel _minimumLogLevel, Cpu _cpu)
 
     public void LogDebug(DefaultInterpolatedStringHandler handler)
         => LogCore(LogLevel.Debug, handler);
+
+    public void LogWarning(string s)
+        => LogCore(LogLevel.Warning, $"{s}");
+
+    public void LogWarning(DefaultInterpolatedStringHandler handler)
+        => LogCore(LogLevel.Warning, handler);
 
     public void LogError(string s)
         => LogCore(LogLevel.Error, $"{s}");

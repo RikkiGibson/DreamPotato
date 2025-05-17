@@ -23,6 +23,7 @@ class FileSystem(byte[] flashBank0, byte[] flashBank1)
     internal const byte DirectoryLastBlockId = BlocksCount - 3;
 
     internal const int DirectoryEntrySize = 0x20; // 32
+
     private const int DirectoryTableSizeBlocks = 13;
 
     private const byte DirectoryFileTypeNone = 0;
@@ -32,7 +33,7 @@ class FileSystem(byte[] flashBank0, byte[] flashBank1)
     private const byte DirectoryEntryCopyProtected = 0xff;
     private const byte DirectoryEntryNotCopyProtected = 0;
 
-    private const int DirectoryFileNameLength = 12;
+    internal const int DirectoryEntryFileNameLength = 12;
 
     private const int Magic = 0x55;
 
@@ -176,7 +177,7 @@ class FileSystem(byte[] flashBank0, byte[] flashBank1)
     {
         Debug.Assert(gameFileData.Length > 0);
         Debug.Assert(gameFileData.Length <= Cpu.InstructionBankSize);
-        Debug.Assert(filename.Length <= DirectoryFileNameLength);
+        Debug.Assert(filename.Length <= DirectoryEntryFileNameLength);
 
         // Game data itself must be written to start of bank 0
         gameFileData.CopyTo(flashBank0);

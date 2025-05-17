@@ -458,4 +458,155 @@ public class DataTransferTests
         Assert.Equal(0x55, cpu.SFRs.Acc);
         Assert.Equal(0xaa, cpu.SFRs.Trl);
     }
+
+    /// <summary><seealso cref="LDC_Example"/></summary>
+    [Fact]
+    public void LDF_Example()
+    {
+        // VMC-192
+        var cpu = new Cpu();
+
+        ReadOnlySpan<byte> instructions = [
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Trh, 0x01, // Trh
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Trl, 0x23, // Trl
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Acc, 0x00, // Acc
+            OpcodeMask.LDF,
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Acc, 0x01, // Acc
+            OpcodeMask.LDF,
+            OpcodeMask.INC | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Trl,
+            OpcodeMask.LDF,
+            OpcodeMask.INC | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Trl,
+            OpcodeMask.LDF,
+            OpcodeMask.INC | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Trl,
+            OpcodeMask.LDF,
+        ];
+        instructions.CopyTo(cpu.FlashBank0);
+        cpu.FlashBank0[0x123] = 0x30;
+        cpu.FlashBank0[0x124] = 0xff;
+        cpu.FlashBank0[0x125] = 0x57;
+        cpu.FlashBank0[0x126] = 0xea;
+
+        cpu.Reset();
+        cpu.SetInstructionBank(Core.SFRs.InstructionBank.FlashBank0);
+        cpu.SFRs.Acc = 0xff;
+
+        // TODO: if Step returned the instruction that was executed, testing would probably be easier
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0x01, cpu.SFRs.Trh);
+        Assert.Equal(0, cpu.SFRs.Trl);
+        Assert.Equal(0xff, cpu.SFRs.Acc);
+        Assert.Equal(0, (byte)cpu.SFRs.Psw);
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0x01, cpu.SFRs.Trh);
+        Assert.Equal(0x23, cpu.SFRs.Trl);
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0x01, cpu.SFRs.Trh);
+        Assert.Equal(0x23, cpu.SFRs.Trl);
+        Assert.Equal(0, cpu.SFRs.Acc);
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0x30, cpu.SFRs.Acc);
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0x1, cpu.SFRs.Acc);
+
+        // LDF just uses TRL | TRH, it doesn't add ACC
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0x30, cpu.SFRs.Acc);
+
+        Assert.Equal(1, cpu.Step());
+        Assert.Equal(0x24, cpu.SFRs.Trl);
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0xff, cpu.SFRs.Acc);
+
+        Assert.Equal(1, cpu.Step());
+        Assert.Equal(0x25, cpu.SFRs.Trl);
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0x57, cpu.SFRs.Acc);
+
+        Assert.Equal(1, cpu.Step());
+        Assert.Equal(0x26, cpu.SFRs.Trl);
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0xea, cpu.SFRs.Acc);
+    }
+
+    [Fact]
+    public void STF_FlashBank0()
+    {
+        // VMC-192
+        var cpu = new Cpu();
+
+        ReadOnlySpan<byte> instructions = [
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Trh, 0x01, // Trh
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Trl, 0x23, // Trl
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Acc, 0xaa, // Acc
+            OpcodeMask.STF,
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Acc, 0x00, // Acc
+            OpcodeMask.LDF,
+        ];
+        instructions.CopyTo(cpu.FlashBank0);
+
+        cpu.Reset();
+        cpu.SetInstructionBank(Core.SFRs.InstructionBank.FlashBank0);
+
+        cpu.Step();
+        cpu.Step();
+        cpu.Step();
+
+        Assert.Equal(0x01, cpu.SFRs.Trh);
+        Assert.Equal(0x23, cpu.SFRs.Trl);
+        Assert.Equal(0xaa, cpu.SFRs.Acc);
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0xaa, cpu.FlashBank0[0x123]);
+        Assert.Equal(0, cpu.SFRs.Acc);
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0xaa, cpu.SFRs.Acc);
+    }
+
+    [Fact]
+    public void STF_FlashBank1()
+    {
+        // VMC-192
+        var cpu = new Cpu();
+
+        ReadOnlySpan<byte> instructions = [
+            OpcodeMask.SET1 | AddressModeMask.D8 | /* bit address */ 0, SpecialFunctionRegisterIds.FPR,
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Trh, 0x01, // Trh
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Trl, 0x23, // Trl
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Acc, 0xaa, // Acc
+            OpcodeMask.STF,
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Acc, 0x00, // Acc
+            OpcodeMask.LDF,
+        ];
+        instructions.CopyTo(cpu.FlashBank0);
+
+        cpu.Reset();
+        cpu.SetInstructionBank(Core.SFRs.InstructionBank.FlashBank0);
+
+        cpu.Step();
+        cpu.Step();
+        cpu.Step();
+        cpu.Step();
+
+        Assert.Equal(0x01, (byte)cpu.SFRs.FPR);
+        Assert.Equal(0x01, cpu.SFRs.Trh);
+        Assert.Equal(0x23, cpu.SFRs.Trl);
+        Assert.Equal(0xaa, cpu.SFRs.Acc);
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0xaa, cpu.FlashBank1[0x123]);
+        Assert.Equal(0, cpu.SFRs.Acc);
+
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0xaa, cpu.SFRs.Acc);
+    }
 }

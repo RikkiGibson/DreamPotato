@@ -13,7 +13,7 @@ public class Game1 : Game
 {
     private readonly GraphicsDeviceManager _graphics;
     private readonly Color[] _vmuScreenData;
-    private readonly Cpu _cpu;
+    private readonly Vmu _vmu;
     private readonly Display _display;
 
     // TODO: eventually, there should be UI to permit a non-constant scale.
@@ -43,10 +43,9 @@ public class Game1 : Game
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
 
-        _cpu = new Cpu();
-        _cpu.Reset();
+        _vmu = new Vmu();
 
-        _display = new Display(_cpu);
+        _display = new Display(_vmu._cpu);
         _vmuScreenData = new Color[Display.ScreenWidth * Display.ScreenHeight];
     }
 
@@ -68,13 +67,12 @@ public class Game1 : Game
     protected override void LoadContent()
     {
         // TODO: UI for picking a vmu file
-        var game = File.ReadAllBytes(@"C:\Users\rikki\src\VMU-MISC-CODE\memopad.vms");
-        // var game = File.ReadAllBytes(@"C:\Users\rikki\src\ghidra-pinta\SkiesOfArcadiaPinataQuest.vms");
-        game.AsSpan().CopyTo(_cpu.FlashBank0);
+        // _vmu.LoadGameVms(@"C:\Users\rikki\src\VMU-MISC-CODE\memopad.vms");
+        _vmu.LoadGameVms(@"C:\Users\rikki\src\ghidra-pinta\SkiesOfArcadiaPinataQuest.vms");
 
         var bios = File.ReadAllBytes(@"C:\Users\rikki\OneDrive\vmu reverse engineering\dmitry-vmu\vmu\ROMs\american_v1.05.bin");
-        bios.AsSpan().CopyTo(_cpu.ROM);
-        _cpu.SetInstructionBank(Core.SFRs.InstructionBank.ROM);
+        bios.AsSpan().CopyTo(_vmu._cpu.ROM);
+        _vmu._cpu.SetInstructionBank(Core.SFRs.InstructionBank.ROM);
 
         _font1 = Content.Load<SpriteFont>("MyMenuFont");
     }
@@ -87,7 +85,7 @@ public class Game1 : Game
 
         // TODO: there really should be some top-level type in the Core layer which exposes the stuff a front-end wants.
         // UpdatePlayerInput, Reset, Save/load state, GetDisplayBytes, ...
-        _cpu.SFRs.P3 = new Core.SFRs.P3()
+        _vmu._cpu.SFRs.P3 = new Core.SFRs.P3()
         {
             Up = keyboard.IsKeyUp(Keys.W),
             Down = keyboard.IsKeyUp(Keys.S),
@@ -99,7 +97,7 @@ public class Game1 : Game
             ButtonMode = keyboard.IsKeyUp(Keys.I),
         };
 
-        _cpu.Run(gameTime.ElapsedGameTime.Ticks);
+        _vmu._cpu.Run(gameTime.ElapsedGameTime.Ticks);
 
         base.Update(gameTime);
     }

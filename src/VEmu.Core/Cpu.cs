@@ -429,6 +429,7 @@ public class Cpu
             case OperationKind.SET1: Op_SET1(inst); break;
             case OperationKind.NOT1: Op_NOT1(inst); break;
             case OperationKind.LDF: Op_LDF(inst); break;
+            case OperationKind.STF: Op_STF(inst); break;
             case OperationKind.NOP: Op_NOP(inst); break;
             default: Throw(inst); break;
         }
@@ -1188,6 +1189,19 @@ public class Cpu
         var a16 = SFRs.Trl | (SFRs.Trh << 8);
         var bank = SFRs.FPR.FPR0 ? FlashBank1 : FlashBank0;
         SFRs.Acc = bank[a16];
+        Pc += inst.Size;
+    }
+
+    /// <summary>Store the accumulator to flash memory. Intended for use only by BIOS. Undocumented.</summary>
+    private void Op_STF(Instruction inst)
+    {
+        // TODO: emulate hardware unlock sequence
+        if (InstructionBank != InstructionBank.ROM)
+            Logger.LogWarning("Executing STF outside of ROM!");
+
+        var a16 = SFRs.Trl | (SFRs.Trh << 8);
+        var bank = SFRs.FPR.FPR0 ? FlashBank1 : FlashBank0;
+        bank[a16] = SFRs.Acc;
         Pc += inst.Size;
     }
 
