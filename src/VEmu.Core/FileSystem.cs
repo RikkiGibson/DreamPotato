@@ -37,6 +37,14 @@ class FileSystem(byte[] flashBank0, byte[] flashBank1)
 
     private const int Magic = 0x55;
 
+    // 0xfffc: Unallocated space
+    const int FAT_UnallocatedLsb = 0xfc;
+    const int FAT_UnallocatedMsb = 0xff;
+
+    // 0xfffa: Last in File
+    const int FAT_LastInFileLsb = 0xfa;
+    const int FAT_LastInFileMsb = 0xff;
+
     public void InitializeFileSystem(DateTimeOffset date)
     {
         // Note that multi-byte values are little-endian encoded!
@@ -112,14 +120,6 @@ class FileSystem(byte[] flashBank0, byte[] flashBank1)
 
         void initializeFAT()
         {
-            // 0xfffc: Unallocated space
-            const int FAT_UnallocatedLsb = 0xfc;
-            const int FAT_UnallocatedMsb = 0xff;
-
-            // 0xfffa: Last in File
-            const int FAT_LastInFileLsb = 0xfa;
-            const int FAT_LastInFileMsb = 0xff;
-
             var fatBlock = GetBlock(FATBlockId);
 
             // mark all blocks unused to start
@@ -182,6 +182,18 @@ class FileSystem(byte[] flashBank0, byte[] flashBank1)
         // Game data itself must be written to start of bank 0
         gameFileData.CopyTo(flashBank0);
 
+        // Update FAT table indicating the game data starts at block 0 and grows toward the end
+        var fatBlock = GetBlock(FATBlockId);
+        var lastBlockId = (gameFileData.Length + BlockSize - 1) / BlockSize - 1;
+        for (int i = 0; i < lastBlockId; i++)
+        {
+            fatBlock[i * 2] = (byte)(i + 1);
+            fatBlock[i * 2 + 1] = 0;
+        }
+
+        fatBlock[lastBlockId * 2] = FAT_LastInFileLsb;
+        fatBlock[lastBlockId * 2 + 1] = FAT_LastInFileMsb;
+
         // Create a directory entry
         var directoryLastBlock = GetBlock(DirectoryLastBlockId);
         directoryLastBlock[0x00] = DirectoryFileTypeGame;
@@ -205,7 +217,7 @@ class FileSystem(byte[] flashBank0, byte[] flashBank1)
         directoryLastBlock[0x18] = (byte)sizeInBlocks; // Size in blocks
         directoryLastBlock[0x19] = 0;
 
-        directoryLastBlock[0x1a] = 1; // location of the VMS header within the file. Ignored for game files. TODO: is this in blocks or in bytes?
+        directoryLastBlock[0x1a] = 1; // Location of the VMS header within the file. (Ignored for game files?) TODO: is this in blocks or in bytes?
         directoryLastBlock[0x1b] = 0;
 
         directoryLastBlock.Slice(0x1c, length: 4).Clear();
