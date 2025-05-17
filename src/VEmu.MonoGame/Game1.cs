@@ -87,23 +87,17 @@ public class Game1 : Game
 
         // TODO: there really should be some top-level type in the Core layer which exposes the stuff a front-end wants.
         // UpdatePlayerInput, Reset, Save/load state, GetDisplayBytes, ...
-        var p3 = _cpu.SFRs.P3;
-        var newP3 = new Core.SFRs.P3()
+        _cpu.SFRs.P3 = new Core.SFRs.P3()
         {
-            Up =            keyboard.IsKeyUp(Keys.W),
-            Down =          keyboard.IsKeyUp(Keys.S),
-            Left =          keyboard.IsKeyUp(Keys.A),
-            Right =         keyboard.IsKeyUp(Keys.D),
-            ButtonA =       keyboard.IsKeyUp(Keys.K),
-            ButtonB =       keyboard.IsKeyUp(Keys.L),
-            ButtonSleep =   keyboard.IsKeyUp(Keys.J),
-            ButtonMode =    keyboard.IsKeyUp(Keys.I),
+            Up = keyboard.IsKeyUp(Keys.W),
+            Down = keyboard.IsKeyUp(Keys.S),
+            Left = keyboard.IsKeyUp(Keys.A),
+            Right = keyboard.IsKeyUp(Keys.D),
+            ButtonA = keyboard.IsKeyUp(Keys.K),
+            ButtonB = keyboard.IsKeyUp(Keys.L),
+            ButtonSleep = keyboard.IsKeyUp(Keys.J),
+            ButtonMode = keyboard.IsKeyUp(Keys.I),
         };
-
-        if ((byte)p3 != (byte)newP3)
-            _cpu.Logger.LogDebug($"New P3 value: {(byte)newP3:B8}");
-
-        _cpu.SFRs.P3 = newP3;
 
         _cpu.Run(gameTime.ElapsedGameTime.Ticks);
 
