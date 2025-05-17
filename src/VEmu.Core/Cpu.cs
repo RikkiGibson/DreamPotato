@@ -13,10 +13,12 @@ public class Cpu
     // VMD-38: Memory
     //
 
+    internal const int InstructionBankSize = 64 * 1024;
+
     /// <summary>Read-only memory space.</summary>
-    public readonly byte[] ROM = new byte[64 * 1024];
-    public readonly byte[] FlashBank0 = new byte[64 * 1024];
-    public readonly byte[] FlashBank1 = new byte[64 * 1024];
+    public readonly byte[] ROM = new byte[InstructionBankSize];
+    public readonly byte[] FlashBank0 = new byte[InstructionBankSize];
+    public readonly byte[] FlashBank1 = new byte[InstructionBankSize];
 
     // TODO: a separate instruction map is needed per bank, and it needs to be cleared when a given bank changes.
     internal readonly InstructionMap InstructionMap = new();

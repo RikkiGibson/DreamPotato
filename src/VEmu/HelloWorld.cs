@@ -11,7 +11,7 @@ public class HelloWorld
         var cpu = new Cpu() { };
 
         s_instructions.CopyTo(cpu.FlashBank0.AsSpan());
-        cpu.CurrentROMBank = cpu.FlashBank0;
+        cpu.SetInstructionBank(Core.SFRs.InstructionBank.FlashBank0);
         cpu.SFRs.Sp = 0x90;
 
         try

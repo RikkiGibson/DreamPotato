@@ -31,7 +31,7 @@ public partial class Form1 : Form
         var dir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
         var memopad = File.ReadAllBytes(Path.Join(dir, "memopad.vms"));
         memopad.CopyTo(_cpu.FlashBank0);
-        _cpu.CurrentROMBank = _cpu.FlashBank0;
+        _cpu.SetInstructionBank(Core.SFRs.InstructionBank.FlashBank0);;
 
         _ticks = Stopwatch.GetTimestamp();
     }
