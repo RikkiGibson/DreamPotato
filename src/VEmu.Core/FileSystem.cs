@@ -3,7 +3,7 @@ using System.Text;
 
 namespace VEmu.Core;
 
-class FileSystem(byte[] flashBank0, byte[] flashBank1)
+internal class FileSystem(byte[] flashBank0, byte[] flashBank1)
 {
     private const int VolumeSizeBytes = 128 * 1024; // 128kb
 
@@ -175,9 +175,14 @@ class FileSystem(byte[] flashBank0, byte[] flashBank1)
     // At that point though why not just expose it as a .vms/.vmi folder a la Dolphin's .gci folder.
     public void WriteGameFile(ReadOnlySpan<byte> gameFileData, string filename, DateTimeOffset date)
     {
-        Debug.Assert(gameFileData.Length > 0);
-        Debug.Assert(gameFileData.Length <= Cpu.InstructionBankSize);
-        Debug.Assert(filename.Length <= DirectoryEntryFileNameLength);
+        if (gameFileData.Length == 0)
+            throw new ArgumentException(nameof(gameFileData));
+
+        if (gameFileData.Length > Cpu.InstructionBankSize)
+            throw new ArgumentException(nameof(gameFileData));
+
+        if (filename.Length > DirectoryEntryFileNameLength)
+            throw new ArgumentException(nameof(filename));
 
         // Game data itself must be written to start of bank 0
         gameFileData.CopyTo(flashBank0);

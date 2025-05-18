@@ -123,22 +123,22 @@ public class SpecialFunctionRegisters
 
             case Ids.Isl:
                 var isl = new Isl(value);
-                if (isl is not { BaseTimerClockSelect5: false, BaseTimerClockSelect4: false })
-                    _logger.LogDebug($"Setting unsupported Isl configuration: 0b{value:b8}");
+                if (isl is not { BaseTimerClock: BaseTimerClock.QuartzOscillator })
+                    _logger.LogWarning($"Setting unsupported Isl configuration: 0b{value:b8}");
 
                 goto default;
 
             case Ids.Ocr:
                 var ocr = new Ocr(value);
                 if (ocr is { ClockGeneratorControl: false, SystemClockSelector: Oscillator.Quartz })
-                    _logger.LogDebug($"Setting unsupported Ocr configuration: 0b{value:b8}");
+                    _logger.LogWarning($"Setting unsupported Ocr configuration: 0b{value:b8}");
 
                 goto default;
 
             case Ids.Ext:
                 var ext = new Ext(value);
                 if (ext is { Ext3: false })
-                    _logger.LogDebug($"Setting unexpected Ext value. Ext3 should be 1, but was 0, in 0b{value:b8}");
+                    _logger.LogWarning($"Setting unexpected Ext value. Ext3 should be 1, but was 0, in 0b{value:b8}");
 
                 goto default;
 
@@ -540,10 +540,10 @@ public class SpecialFunctionRegisters
     }
 
     /// <summary>Input signal select. VMD-138</summary>
-    public byte Isl
+    public Isl Isl
     {
-        get => Read(Ids.Isl);
-        set => Write(Ids.Isl, value);
+        get => new(Read(Ids.Isl));
+        set => Write(Ids.Isl, (byte)value);
     }
 
 #region Work RAM

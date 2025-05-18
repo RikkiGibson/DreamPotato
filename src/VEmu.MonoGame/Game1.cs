@@ -72,7 +72,10 @@ public class Game1 : Game
 
         var bios = File.ReadAllBytes(@"C:\Users\rikki\OneDrive\vmu reverse engineering\dmitry-vmu\vmu\ROMs\american_v1.05.bin");
         bios.AsSpan().CopyTo(_vmu._cpu.ROM);
-        _vmu._cpu.SetInstructionBank(Core.SFRs.InstructionBank.ROM);
+        _vmu._cpu.SetInstructionBank(Core.SFRs.InstructionBank.FlashBank0);
+
+        // TODO: it would be good to setup the bios time automatically.
+        // Possibly the host system time could be used. Dunno if the DC system time could be used implicitly, without user running the memory card clock update function in system menu.
 
         _font1 = Content.Load<SpriteFont>("MyMenuFont");
     }

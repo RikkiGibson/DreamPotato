@@ -611,10 +611,9 @@ public struct I23Cr
 // TODO: expose property on Isl indicating which one of these is being used for the clock.
 public enum BaseTimerClock
 {
-    T0,
-    Prescaler,
-    Cycle,
-    Quartz,
+    T0Prescaler,
+    CycleClock,
+    QuartzOscillator,
 }
 
 /// <summary>Input signal select. VMD-138</summary>
@@ -625,13 +624,35 @@ public struct Isl
     public Isl(byte value) => _value = value;
     public static explicit operator byte(Isl value) => value._value;
 
+    public BaseTimerClock BaseTimerClock
+    {
+        get
+        {
+            return (BaseTimerClockSelect5, BaseTimerClockSelect4) switch
+            {
+                (true, true) => BaseTimerClock.T0Prescaler,
+                (false, true) => BaseTimerClock.CycleClock,
+                (_, false) => BaseTimerClock.QuartzOscillator
+            };
+        }
+        set
+        {
+            (BaseTimerClockSelect5, BaseTimerClockSelect4) = value switch
+            {
+                BaseTimerClock.T0Prescaler => (true, true),
+                BaseTimerClock.CycleClock => (false, true),
+                BaseTimerClock.QuartzOscillator => (false, false),
+                _ => throw new ArgumentException(nameof(value))
+            };
+        }
+    }
+
     /// <summary>
     /// Applications should reset ISL5, ISL4 to 0, 0 to ensure the quartz oscillator is used as the input clock.
     /// ISL5,   ISL4    Base timer clock
-    /// 1       1       Timer/counter T0
-    /// 0       1       prescaler
-    /// X       0       Cycle clock
-    ///                 quartz oscillator
+    /// 1       1       Timer/counter T0 prescaler
+    /// 0       1       Cycle clock
+    /// X       0       Quartz oscillator
     /// </summary>
     public bool BaseTimerClockSelect5
     {
@@ -697,6 +718,16 @@ public enum Oscillator
     Quartz,
 }
 
+public static class OscillatorHz
+{
+    public const int Cf = 6_000_000;
+    public const int Rc = 600_000;
+    // From the data sheet:
+    // public const int Rc = 879_236;
+
+    public const int Quartz = 32_768;
+}
+
 /// <summary>
 /// Oscillation control register. VMD-156.
 /// </summary>
@@ -731,11 +762,9 @@ public struct Ocr
             int divisor = ClockGeneratorControl ? 6 : 12;
             int oscillatorFrequency = SystemClockSelector switch
             {
-                Oscillator.Cf => 6_000_000,
-                Oscillator.Rc => 600_000,
-                // From the data sheet:
-                // Oscillator.Rc => 879_236,
-                Oscillator.Quartz => 32_768,
+                Oscillator.Cf => OscillatorHz.Cf,
+                Oscillator.Rc => OscillatorHz.Rc,
+                Oscillator.Quartz => OscillatorHz.Quartz,
                 _ => throw new InvalidOperationException()
             };
 
@@ -973,15 +1002,18 @@ public struct Btcr
     public static explicit operator byte(Btcr value) => value._value;
 
     /// <summary>
-    /// When set to 1: 16384/fBST. When reset to 0: 64/fBST.
+    /// When set to 1: 16384/fBST (0x4000 hex). When reset to 0: 64/fBST (0x40 hex).
+    /// fBST = base timer clock frequency.
+    /// Since the quartz oscillator clocked at 32Khz is supposed to be used for base timer, setting 1 here ensures an interrupt is generated every 0.5 seconds.
     /// This should always be set to 1 to ensure correct BIOS clock operation.
-    /// TODO: figure out how this is supposed to affect timer operation.
     /// </summary>
     public bool Int0CycleControl
     {
         get => BitHelpers.ReadBit(_value, bit: 7);
         set => _value = BitHelpers.WithBit(_value, bit: 7, value);
     }
+
+    public int Int0CycleRate => Int0CycleControl ? 16384 : 64;
 
     /// <summary>
     /// When set to 1, count operation starts. When reset to 0, count operation stops, and the 14-bit counter is cleared.
@@ -993,12 +1025,28 @@ public struct Btcr
         set => _value = BitHelpers.WithBit(_value, bit: 6, value);
     }
 
+    public int Int1CycleRate => (Int0CycleControl, Int1CycleControl5, Int1CycleControl4) switch
+    {
+        (_, false, false) => 32,
+        (_, false, true) => 128,
+        (false, true, false) => 512,
+        (false, true, true) => 2048,
+        // The hardware manual doesn't define what the cycle rate is in this case.
+        _ => throw new InvalidOperationException()
+    };
+
+    /// <summary>
+    /// Affects Base Timer Interrupt 1 source generation.
+    /// </summary>
     public bool Int1CycleControl5
     {
         get => BitHelpers.ReadBit(_value, bit: 5);
         set => _value = BitHelpers.WithBit(_value, bit: 5, value);
     }
 
+    /// <summary>
+    /// Affects Base Timer Interrupt 1 source generation.
+    /// </summary>
     public bool Int1CycleControl4
     {
         get => BitHelpers.ReadBit(_value, bit: 4);

@@ -364,8 +364,70 @@ public class Cpu
 
         var cpuCycles = Step();
         // ticks = cycles / (cycles per second) * (ticks per second)
-        var ticks = cpuCycles * TimeSpan.TicksPerSecond / cpuClockHz;
-        return ticks;
+        var emulatedTicksElapsed = cpuCycles * TimeSpan.TicksPerSecond / cpuClockHz;
+        tickBaseTimer();
+
+        return emulatedTicksElapsed;
+
+        // Base timer is 14 bits. Its value is not accessible in the data memory space.
+        // Doc seems to imply that the top 6-bits can be driven from something besides 8-bit counter overflow.
+        // However, it's not clear how to do that.
+        void tickBaseTimer()
+        {
+            var btcr = SFRs.Btcr;
+            var isl = SFRs.Isl;
+
+            var cyclesPerSecond = isl.BaseTimerClock switch
+            {
+                BaseTimerClock.QuartzOscillator => OscillatorHz.Quartz,
+                // TODO: not supported right now. Possibly never; well formed software should not use the below modes.
+                BaseTimerClock.T0Prescaler => OscillatorHz.Quartz,
+                BaseTimerClock.CycleClock => cpuClockHz,
+                _ => throw new InvalidOperationException()
+            };
+
+            var ticksPerCycle = TimeSpan.TicksPerSecond / cyclesPerSecond;
+            var timerCyclesElapsed = emulatedTicksElapsed / ticksPerCycle;
+            // TODO: this method of timing is very inaccurate.
+            // In all these cases where we are making a division of ticks and advancing a timer,
+            // we need to stash the remainder of the division and incorporate it into the next CPU step.
+            // This is because, for example, the RC oscillator will finish running an instruction in a short enough period of time
+            // that the base timer does not tick at all. It is about halfway to its next tick.
+            // If we don't carry the remainder over, it will never tick while the RC is being used.
+            // We also can't extract the timer to Run(long ticks) or similar, because we need to check at each instruction if a timer interrupt was generated.
+            // so we need a field which is something like "timerCyclesConsumed", which we stash the remainder of our division ops into.
+            Debug.Assert(timerCyclesElapsed > 0);
+
+            var currentBtTicks = BaseTimer;
+            var newBtTicks = (ushort)(currentBtTicks + timerCyclesElapsed);
+
+            // If bit 7 went from set to cleared, then the lower byte overflowed.
+            // Base timer interrupt 1 is generated.
+            if ((currentBtTicks & (1 << 7)) != 0 && (newBtTicks & (1 << 7)) == 0)
+            {
+                btcr.Int1Source = true;
+                if (btcr.Int1Enable)
+                    RequestedInterrupts |= Interrupts.INT3_BT;
+            }
+
+            // If bit 13 went from set to cleared, then the upper 6-bits overflowed.
+            // Base timer interrupt 0 *and* interrupt 1 are generated.
+            if ((currentBtTicks & (1 << 13)) != 0 && (newBtTicks & (1 << 13)) == 0)
+            {
+                newBtTicks = 0;
+
+                btcr.Int0Source = true;
+                if (btcr.Int0Enable)
+                    RequestedInterrupts |= Interrupts.INT3_BT;
+
+                btcr.Int1Source = true;
+                if (btcr.Int1Enable)
+                    RequestedInterrupts |= Interrupts.INT3_BT;
+            }
+
+            BaseTimer = newBtTicks;
+            SFRs.Btcr = btcr;
+        }
     }
 
     /// <returns>Number of CPU cycles consumed by the instruction.</returns>
@@ -377,7 +439,7 @@ public class Cpu
         // TODO: hold mode doesn't even tick timers. only external interrupts wake the VMU.
         if (SFRs.Pcon.HaltMode)
         {
-            TickTimers(1);
+            tickCpuClockedTimers(1);
             return 1;
         }
 
@@ -434,160 +496,122 @@ public class Cpu
             default: Throw(inst); break;
         }
 
-        TickTimers(inst.Cycles);
+        tickCpuClockedTimers(inst.Cycles);
         return inst.Cycles;
 
         static void Throw(Instruction inst) => throw new InvalidOperationException($"Unknown operation '{inst}'");
-    }
 
-    private void TickTimers(byte cycles)
-    {
-        tickTimer0();
-        tickTimer1();
-        tickBaseTimer();
 
-        void tickTimer0()
+        void tickCpuClockedTimers(byte cycles)
         {
-            var t0cnt = SFRs.T0Cnt;
+            tickTimer0();
+            tickTimer1();
 
-            var scale = 0xff - SFRs.T0Prr;
-            var ticks = (ushort)(cycles * scale);
-
-            // tick t0l
-            bool t0lOverflow = false;
-            if (t0cnt.T0lRun)
+            void tickTimer0()
             {
-                var t0l = (byte)(SFRs.T0L + ticks);
-                t0lOverflow = t0l < ticks;
-                if (t0lOverflow)
+                var t0cnt = SFRs.T0Cnt;
+
+                var scale = 0xff - SFRs.T0Prr;
+                var ticks = (ushort)(cycles * scale);
+
+                // tick t0l
+                bool t0lOverflow = false;
+                if (t0cnt.T0lRun)
                 {
-                    // TODO: I think we care about the remainder from the overflow
-                    // but accounting for both that remainder and the reload data is not straightforward
-                    // e.g. for a long instruction like mul we could probably end up reloading multiple times
-                    t0l = SFRs.T0Lr; // reload
-                    if (!t0cnt.T0Long) // track the overflow only in 8-bit mode
+                    var t0l = (byte)(SFRs.T0L + ticks);
+                    t0lOverflow = t0l < ticks;
+                    if (t0lOverflow)
                     {
-                        t0cnt.T0lOvf = true; // note: the hardware will not reset this flag. application needs to do it.
-                        if (t0cnt.T0lIe)
-                            RequestedInterrupts |= Interrupts.INT2_T0L;
+                        // TODO: I think we care about the remainder from the overflow
+                        // but accounting for both that remainder and the reload data is not straightforward
+                        // e.g. for a long instruction like mul we could probably end up reloading multiple times
+                        t0l = SFRs.T0Lr; // reload
+                        if (!t0cnt.T0Long) // track the overflow only in 8-bit mode
+                        {
+                            t0cnt.T0lOvf = true; // note: the hardware will not reset this flag. application needs to do it.
+                            if (t0cnt.T0lIe)
+                                RequestedInterrupts |= Interrupts.INT2_T0L;
+                        }
                     }
+
+                    SFRs.T0L = t0l;
                 }
 
-                SFRs.T0L = t0l;
-            }
+                // tick t0h
+                if (t0cnt.T0hRun)
+                {
+                    var hticks = (t0cnt.T0Long, t0lOverflow) switch
+                    {
+                        (true, true) => 1,
+                        (true, false) => 0,
+                        _ => ticks
+                    };
+                    var t0h = (byte)(SFRs.T0H + hticks);
+                    var t0hOverflow = t0h < hticks;
+                    if (t0hOverflow)
+                    {
+                        t0h = SFRs.T0Hr;
+                        t0cnt.T0hOvf = true; // note: the hardware will not reset this flag. application needs to do it.
+                        if (t0cnt.T0hIe)
+                            RequestedInterrupts |= Interrupts.T0H;
+                    }
 
-            // tick t0h
-            if (t0cnt.T0hRun)
-            {
-                var hticks = (t0cnt.T0Long, t0lOverflow) switch
-                {
-                    (true, true) => 1,
-                    (true, false) => 0,
-                    _ => ticks
-                };
-                var t0h = (byte)(SFRs.T0H + hticks);
-                var t0hOverflow = t0h < hticks;
-                if (t0hOverflow)
-                {
-                    t0h = SFRs.T0Hr;
-                    t0cnt.T0hOvf = true; // note: the hardware will not reset this flag. application needs to do it.
-                    if (t0cnt.T0hIe)
-                        RequestedInterrupts |= Interrupts.T0H;
+                    SFRs.T0H = t0h;
                 }
 
-                SFRs.T0H = t0h;
+                SFRs.T0Cnt = t0cnt;
             }
 
-            SFRs.T0Cnt = t0cnt;
-        }
-
-        void tickTimer1()
-        {
-            var t1cnt = SFRs.T1Cnt;
-            var ticks = cycles; // TODO: how to tick at half the cycle clock accurately? break out a remainder bit?
-
-            bool t1lOverflow = false;
-            if (t1cnt.T1lRun)
+            void tickTimer1()
             {
-                var t1l = (byte)(SFRs.T1L + ticks);
-                t1lOverflow = t1l < ticks;
-                if (t1lOverflow)
+                var t1cnt = SFRs.T1Cnt;
+                var ticks = cycles; // TODO: how to tick at half the cycle clock accurately? break out a remainder bit?
+
+                bool t1lOverflow = false;
+                if (t1cnt.T1lRun)
                 {
-                    t1l = SFRs.T1Lr;
-                    t1cnt.T1lOvf = true;
-                    if (t1cnt.T1lIe)
-                        RequestedInterrupts |= Interrupts.T1;
+                    var t1l = (byte)(SFRs.T1L + ticks);
+                    t1lOverflow = t1l < ticks;
+                    if (t1lOverflow)
+                    {
+                        t1l = SFRs.T1Lr;
+                        t1cnt.T1lOvf = true;
+                        if (t1cnt.T1lIe)
+                            RequestedInterrupts |= Interrupts.T1;
+                    }
+
+                    if (t1cnt.ELDT1C)
+                    {
+                        // TODO: update pulse generator?
+                        // because we run the cycles in bursts for each frame we want to display,
+                        // not really at the rate of original hardware, we likely can't/shouldn't emulate sound this way.
+                        // we need to instead inspect the comparison and timer setup data and just fill in a PWM buffer or something.
+                    }
+
+                    SFRs.T1L = t1l;
                 }
 
-                if (t1cnt.ELDT1C)
+                if (t1cnt.T1hRun)
                 {
-                    // TODO: update pulse generator?
-                    // because we run the cycles in bursts for each frame we want to display,
-                    // not really at the rate of original hardware, we likely can't/shouldn't emulate sound this way.
-                    // we need to instead inspect the comparison and timer setup data and just fill in a PWM buffer or something.
+                    var hticks = (t1cnt.T1Long, t1lOverflow) switch
+                    {
+                        (true, true) => 1,
+                        (true, false) => 0,
+                        _ => ticks
+                    };
+                    var t1h = (byte)(SFRs.T1H + hticks);
+                    var t1hOverflow = t1h < hticks;
+                    if (t1hOverflow)
+                    {
+                        t1h = SFRs.T1Hr;
+                        t1cnt.T1hOvf = true; // note: the hardware will not reset this flag. application needs to do it.
+                        if (t1cnt.T1hIe)
+                            RequestedInterrupts |= Interrupts.T1;
+                    }
+
+                    SFRs.T1H = t1h;
                 }
-
-                SFRs.T1L = t1l;
             }
-
-            if (t1cnt.T1hRun)
-            {
-                var hticks = (t1cnt.T1Long, t1lOverflow) switch
-                {
-                    (true, true) => 1,
-                    (true, false) => 0,
-                    _ => ticks
-                };
-                var t1h = (byte)(SFRs.T1H + hticks);
-                var t1hOverflow = t1h < hticks;
-                if (t1hOverflow)
-                {
-                    t1h = SFRs.T1Hr;
-                    t1cnt.T1hOvf = true; // note: the hardware will not reset this flag. application needs to do it.
-                    if (t1cnt.T1hIe)
-                        RequestedInterrupts |= Interrupts.T1;
-                }
-
-                SFRs.T1H = t1h;
-            }
-        }
-
-        // Base timer is 14 bits. Its value is not accessible in the data memory space.
-        // Doc seems to imply that the top 6-bits can be driven from something besides 8-bit counter overflow.
-        // However, it's not clear how to do that.
-        // TODO: the base timer is not linked to the CPU clock. For now we are assuming it is.
-        void tickBaseTimer()
-        {
-            var btcr = SFRs.Btcr;
-            var currentBaseTimer = BaseTimer;
-            var newBaseTimer = (ushort)(currentBaseTimer + cycles * 6 /* HACK */);
-
-            // If bit 7 went from set to cleared, then the lower byte overflowed.
-            // Base timer interrupt 1 is generated.
-            if ((currentBaseTimer & (1 << 7)) != 0 && (newBaseTimer & (1 << 7)) == 0)
-            {
-                btcr.Int1Source = true;
-                if (btcr.Int1Enable)
-                    RequestedInterrupts |= Interrupts.INT3_BT;
-            }
-
-            // If bit 13 went from set to cleared, then the upper 6-bits overflowed.
-            // Base timer interrupt 0 *and* interrupt 1 are generated.
-            if ((currentBaseTimer & (1 << 13)) != 0 && (newBaseTimer & (1 << 13)) == 0)
-            {
-                newBaseTimer = 0;
-
-                btcr.Int0Source = true;
-                if (btcr.Int0Enable)
-                    RequestedInterrupts |= Interrupts.INT3_BT;
-
-                btcr.Int1Source = true;
-                if (btcr.Int1Enable)
-                    RequestedInterrupts |= Interrupts.INT3_BT;
-            }
-
-            BaseTimer = newBaseTimer;
-            SFRs.Btcr = btcr;
         }
     }
 
