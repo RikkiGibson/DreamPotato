@@ -46,12 +46,11 @@ public class Cpu
     private void SyncInstructionBank()
     {
         var newBank = SFRs.Ext.InstructionBank;
-        // TODO: allow logging for use of various BIOS functions
-        // 0x100 write flash
-        // 0x110 verify flash
-        // 0x1f0 exit program
-        // 0x120 read flash
-        // 0x130 tick bios base timer
+        if (Pc == BuiltInCodeSymbols.BIOSClockTick)
+        {
+            Logger.LogTrace($"Calling {nameof(BuiltInCodeSymbols.BIOSClockTick)}");
+        }
+
         InstructionBank = newBank;
     }
 
@@ -76,6 +75,7 @@ public class Cpu
     /// Overflow of the upper 6 bits sets <see cref="Btcr.Int0Source"/> and <see cref="Btcr.Int1Source"/>.
     /// </summary>
     internal ushort BaseTimer;
+    internal const ushort BaseTimerMax = 1 << 14;
     internal long BaseTimerTicksRemaining;
 
     internal Interrupts RequestedInterrupts;
@@ -242,101 +242,62 @@ public class Cpu
 
         // High Priority
         var interruptPriority = SFRs.Ip;
-        if (interruptPriority.Int2_T0L && shouldServiceInterrupt(Interrupts.INT2_T0L))
-        {
-            serviceInterrupt(Interrupts.INT2_T0L, InterruptVectors.INT2_T0L);
+        if (tryServiceOneInterrupt(highPriority: true))
             return;
-        }
 
-        if (interruptPriority.Int3_BaseTimer && shouldServiceInterrupt(Interrupts.INT3_BT))
-        {
-            serviceInterrupt(Interrupts.INT3_BT, InterruptVectors.INT3_BT);
-            return;
-        }
+        tryServiceOneInterrupt(highPriority: false);
 
-        if (interruptPriority.T0H && shouldServiceInterrupt(Interrupts.T0H))
+        bool tryServiceOneInterrupt(bool highPriority)
         {
-            serviceInterrupt(Interrupts.T0H, InterruptVectors.T0H);
-            return;
-        }
+            if ((!highPriority || interruptPriority.Int2_T0L) && shouldServiceInterrupt(Interrupts.INT2_T0L))
+            {
+                serviceInterrupt(Interrupts.INT2_T0L, InterruptVectors.INT2_T0L);
+                return true;
+            }
 
-        if (interruptPriority.T1 && shouldServiceInterrupt(Interrupts.T1))
-        {
-            serviceInterrupt(Interrupts.T1, InterruptVectors.T1);
-            return;
-        }
+            if ((!highPriority || interruptPriority.Int3_BaseTimer) && shouldServiceInterrupt(Interrupts.INT3_BT))
+            {
+                serviceInterrupt(Interrupts.INT3_BT, InterruptVectors.INT3_BT);
+                return true;
+            }
 
-        if (interruptPriority.Sio0 && shouldServiceInterrupt(Interrupts.SIO0))
-        {
-            serviceInterrupt(Interrupts.SIO0, InterruptVectors.SIO0);
-            return;
-        }
+            if ((!highPriority || interruptPriority.T0H) && shouldServiceInterrupt(Interrupts.T0H))
+            {
+                serviceInterrupt(Interrupts.T0H, InterruptVectors.T0H);
+                return true;
+            }
 
-        if (interruptPriority.Sio1 && shouldServiceInterrupt(Interrupts.SIO1))
-        {
-            serviceInterrupt(Interrupts.SIO1, InterruptVectors.SIO1);
-            return;
-        }
+            if ((!highPriority || interruptPriority.T1) && shouldServiceInterrupt(Interrupts.T1))
+            {
+                serviceInterrupt(Interrupts.T1, InterruptVectors.T1);
+                return true;
+            }
 
-        if (interruptPriority.Maple && shouldServiceInterrupt(Interrupts.Maple))
-        {
-            serviceInterrupt(Interrupts.Maple, InterruptVectors.Maple);
-            return;
-        }
+            if ((!highPriority || interruptPriority.Sio0) && shouldServiceInterrupt(Interrupts.SIO0))
+            {
+                serviceInterrupt(Interrupts.SIO0, InterruptVectors.SIO0);
+                return true;
+            }
 
-        if (interruptPriority.Port3 && shouldServiceInterrupt(Interrupts.P3))
-        {
-            serviceInterrupt(Interrupts.P3, InterruptVectors.P3);
-            return;
-        }
+            if ((!highPriority || interruptPriority.Sio1) && shouldServiceInterrupt(Interrupts.SIO1))
+            {
+                serviceInterrupt(Interrupts.SIO1, InterruptVectors.SIO1);
+                return true;
+            }
 
-        // Low Priority
-        if (shouldServiceInterrupt(Interrupts.INT2_T0L))
-        {
-            serviceInterrupt(Interrupts.INT2_T0L, InterruptVectors.INT2_T0L);
-            return;
-        }
+            if ((!highPriority || interruptPriority.Maple) && shouldServiceInterrupt(Interrupts.Maple))
+            {
+                serviceInterrupt(Interrupts.Maple, InterruptVectors.Maple);
+                return true;
+            }
 
-        if (shouldServiceInterrupt(Interrupts.INT3_BT))
-        {
-            serviceInterrupt(Interrupts.INT3_BT, InterruptVectors.INT3_BT);
-            return;
-        }
+            if ((!highPriority || interruptPriority.Port3) && shouldServiceInterrupt(Interrupts.P3))
+            {
+                serviceInterrupt(Interrupts.P3, InterruptVectors.P3);
+                return true;
+            }
 
-        if (shouldServiceInterrupt(Interrupts.T0H))
-        {
-            serviceInterrupt(Interrupts.T0H, InterruptVectors.T0H);
-            return;
-        }
-
-        if (shouldServiceInterrupt(Interrupts.T1))
-        {
-            serviceInterrupt(Interrupts.T1, InterruptVectors.T1);
-            return;
-        }
-
-        if (shouldServiceInterrupt(Interrupts.SIO0))
-        {
-            serviceInterrupt(Interrupts.SIO0, InterruptVectors.SIO0);
-            return;
-        }
-
-        if (shouldServiceInterrupt(Interrupts.SIO1))
-        {
-            serviceInterrupt(Interrupts.SIO1, InterruptVectors.SIO1);
-            return;
-        }
-
-        if (shouldServiceInterrupt(Interrupts.Maple))
-        {
-            serviceInterrupt(Interrupts.Maple, InterruptVectors.Maple);
-            return;
-        }
-
-        if (shouldServiceInterrupt(Interrupts.P3))
-        {
-            serviceInterrupt(Interrupts.P3, InterruptVectors.P3);
-            return;
+            return false;
         }
 
         bool shouldServiceInterrupt(Interrupts candidateInterrupt)
@@ -393,6 +354,7 @@ public class Cpu
             {
                 BaseTimerClock.QuartzOscillator => OscillatorHz.Quartz,
                 // TODO: not supported right now. Possibly never; well formed software should not use the below modes.
+                // though, all software really needs to do is ensure the bios tick function is called every 0.5s. there are probably different ways to accomplish that. So who knows.
                 BaseTimerClock.T0Prescaler => OscillatorHz.Quartz,
                 BaseTimerClock.CycleClock => cpuClockHz,
                 _ => throw new InvalidOperationException()
@@ -406,31 +368,33 @@ public class Cpu
             var currentBtTicks = BaseTimer;
             var newBtTicks = (ushort)(currentBtTicks + timerCyclesElapsed);
 
-            // If bit 7 went from set to cleared, then the lower byte overflowed.
-            // Base timer interrupt 1 is generated.
-            if ((currentBtTicks & (1 << 7)) != 0 && (newBtTicks & (1 << 7)) == 0)
+            var int1Rate = btcr.Int1CycleRate;
+            Debug.Assert(BitHelpers.IsPowerOfTwo(int1Rate));
+
+            // If the new ticks caused us to divide int1Rate an additional time, Int1 is generated (if enabled).
+            // TODO: dividing all the time seems like a funky way to do this.
+            if ((currentBtTicks / int1Rate) < (newBtTicks / int1Rate))
             {
                 btcr.Int1Source = true;
                 if (btcr.Int1Enable)
                     RequestedInterrupts |= Interrupts.INT3_BT;
             }
 
-            // If bit 13 went from set to cleared, then the upper 6-bits overflowed.
-            // Base timer interrupt 0 *and* interrupt 1 are generated.
-            if ((currentBtTicks & (1 << 13)) != 0 && (newBtTicks & (1 << 13)) == 0)
+            var int0Rate = btcr.Int0CycleRate;
+            Debug.Assert(BitHelpers.IsPowerOfTwo(int0Rate));
+            // If the new ticks caused us to divide int0Rate an additional time, Int0 is generated (if enabled).
+            if ((currentBtTicks / int0Rate) < (newBtTicks / int0Rate))
             {
-                newBtTicks = 0;
-
                 btcr.Int0Source = true;
                 if (btcr.Int0Enable)
                     RequestedInterrupts |= Interrupts.INT3_BT;
 
-                btcr.Int1Source = true;
-                if (btcr.Int1Enable)
-                    RequestedInterrupts |= Interrupts.INT3_BT;
+                // Hardware manual mentions that both Int0 and Int1 are generated in this case.
+                // This might just be because int0Rate is evenly divisible by int1Rate.
+                // so, it seems like we shouldn't have to generate Int1 here.
             }
 
-            BaseTimer = newBtTicks;
+            BaseTimer = (ushort)(newBtTicks % BaseTimerMax);
             SFRs.Btcr = btcr;
         }
     }

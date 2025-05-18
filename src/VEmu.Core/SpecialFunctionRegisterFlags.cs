@@ -608,7 +608,6 @@ public struct I23Cr
     }
 }
 
-// TODO: expose property on Isl indicating which one of these is being used for the clock.
 public enum BaseTimerClock
 {
     T0Prescaler,
@@ -648,7 +647,7 @@ public struct Isl
     }
 
     /// <summary>
-    /// Applications should reset ISL5, ISL4 to 0, 0 to ensure the quartz oscillator is used as the input clock.
+    /// VMD-133. Applications should reset ISL5, ISL4 to 0, 0 to ensure the quartz oscillator is used as the input clock.
     /// ISL5,   ISL4    Base timer clock
     /// 1       1       Timer/counter T0 prescaler
     /// 0       1       Cycle clock
@@ -701,7 +700,7 @@ public enum Oscillator
 {
     /// <summary>
     /// Internal (RC) oscillator: 600 kHz / 10.0us cycle time.
-    /// Used when accessing flash memory in standalone mode.
+    /// Used when accessing XRAM or flash memory in standalone mode.
     /// </summary>
     Rc,
 
@@ -1002,10 +1001,11 @@ public struct Btcr
     public static explicit operator byte(Btcr value) => value._value;
 
     /// <summary>
-    /// When set to 1: 16384/fBST (0x4000 hex). When reset to 0: 64/fBST (0x40 hex).
+    /// When set to 1: 64/fBST (0x40 hex). When reset to 0: 16384/fBST (0x4000 hex).
     /// fBST = base timer clock frequency.
     /// Since the quartz oscillator clocked at 32Khz is supposed to be used for base timer, setting 1 here ensures an interrupt is generated every 0.5 seconds.
-    /// This should always be set to 1 to ensure correct BIOS clock operation.
+    /// If this value is changed, the application needs to take care that the BIOS tick function is still called every 0.5 seconds.
+    /// Note that interrupt 0 controls ticking the BIOS clock while interrupt 1 is free for other uses.
     /// </summary>
     public bool Int0CycleControl
     {
@@ -1013,7 +1013,8 @@ public struct Btcr
         set => _value = BitHelpers.WithBit(_value, bit: 7, value);
     }
 
-    public int Int0CycleRate => Int0CycleControl ? 16384 : 64;
+    /// <summary><see cref="Int0CycleControl"/></summary>
+    public int Int0CycleRate => Int0CycleControl ? 0x40 : 0x4000;
 
     /// <summary>
     /// When set to 1, count operation starts. When reset to 0, count operation stops, and the 14-bit counter is cleared.
@@ -1025,12 +1026,19 @@ public struct Btcr
         set => _value = BitHelpers.WithBit(_value, bit: 6, value);
     }
 
+    /// <summary>
+    /// BTCR7   BTCR5   BTCR4   Base Timer Interrupt 1 Cycle
+    /// X       0       0       32/fBST (0x20 hex)
+    /// X       0       1       128/fBST (0x80 hex)
+    /// 0       1       0       512/fBST (0x200 hex)
+    /// 0       1       1       2048/fBST (0x800 hex)
+    /// </summary>
     public int Int1CycleRate => (Int0CycleControl, Int1CycleControl5, Int1CycleControl4) switch
     {
-        (_, false, false) => 32,
-        (_, false, true) => 128,
-        (false, true, false) => 512,
-        (false, true, true) => 2048,
+        (_, false, false) => 0x20,
+        (_, false, true) => 0x80,
+        (false, true, false) => 0x200,
+        (false, true, true) => 0x800,
         // The hardware manual doesn't define what the cycle rate is in this case.
         _ => throw new InvalidOperationException()
     };

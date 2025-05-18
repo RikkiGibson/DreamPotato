@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 
 using Microsoft.Xna.Framework;
@@ -55,6 +56,12 @@ public class Game1 : Game
         _graphics.PreferredBackBufferHeight = TotalScreenHeight;
         _graphics.ApplyChanges();
 
+        if (Debugger.IsAttached)
+        {
+            // create window out of the way
+            Window.Position = new Point(x: 2200, y: 600);
+        }
+
         _spriteBatch = new SpriteBatch(GraphicsDevice);
         _vmuScreenTexture = new Texture2D(_graphics.GraphicsDevice, Display.ScreenWidth, Display.ScreenHeight);
 
@@ -72,7 +79,8 @@ public class Game1 : Game
 
         var bios = File.ReadAllBytes(@"C:\Users\rikki\OneDrive\vmu reverse engineering\dmitry-vmu\vmu\ROMs\american_v1.05.bin");
         bios.AsSpan().CopyTo(_vmu._cpu.ROM);
-        _vmu._cpu.SetInstructionBank(Core.SFRs.InstructionBank.FlashBank0);
+        // _vmu._cpu.SetInstructionBank(Core.SFRs.InstructionBank.FlashBank0);
+        _vmu._cpu.SetInstructionBank(Core.SFRs.InstructionBank.ROM);
 
         // TODO: it would be good to setup the bios time automatically.
         // Possibly the host system time could be used. Dunno if the DC system time could be used implicitly, without user running the memory card clock update function in system menu.

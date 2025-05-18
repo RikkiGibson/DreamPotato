@@ -116,8 +116,16 @@ public class SpecialFunctionRegisters
 
             case Ids.Btcr:
                 var btcr = new Btcr(value);
+
+                if (btcr.Int0CycleControl)
+                    _logger.LogWarning($"Setting unsupported Btcr configuration: 0b{value:b8}");
+
+                var oldBtcr = new Btcr(_rawMemory[address]);
+                if (oldBtcr.Int1CycleRate != btcr.Int1CycleRate)
+                    _logger.LogDebug($"Changing cycle rate to 0x{btcr.Int1CycleRate:X}");
+
                 if (!btcr.CountEnable)
-                    _cpu.BaseTimer = 0;
+                        _cpu.BaseTimer = 0;
 
                 goto default;
 
