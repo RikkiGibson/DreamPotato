@@ -46,9 +46,12 @@ public class Cpu
     private void SyncInstructionBank()
     {
         var newBank = SFRs.Ext.InstructionBank;
-        if (InstructionBank != newBank)
-            Logger.LogDebug($"Changing to instruction bank {newBank}");
-
+        // TODO: allow logging for use of various BIOS functions
+        // 0x100 write flash
+        // 0x110 verify flash
+        // 0x1f0 exit program
+        // 0x120 read flash
+        // 0x130 tick bios base timer
         InstructionBank = newBank;
     }
 
@@ -65,6 +68,7 @@ public class Cpu
     public readonly Memory Memory;
 
     internal ushort Pc;
+    internal long TicksOverrun;
 
     /// <summary>
     /// 14-bit base timer.
@@ -72,6 +76,7 @@ public class Cpu
     /// Overflow of the upper 6 bits sets <see cref="Btcr.Int0Source"/> and <see cref="Btcr.Int1Source"/>.
     /// </summary>
     internal ushort BaseTimer;
+    internal long BaseTimerTicksRemaining;
 
     internal Interrupts RequestedInterrupts;
     private InterruptServicingState _interruptServicingState;
@@ -121,11 +126,17 @@ public class Cpu
 
     public long Run(long ticksToRun)
     {
+        // Reduce the number of ticks we were asked to run, by the amount we overran last frame.
+        ticksToRun -= TicksOverrun;
+
         long ticksSoFar = 0;
         while (ticksSoFar < ticksToRun)
         {
             ticksSoFar += StepTicks();
         }
+        TicksOverrun = ticksSoFar - ticksToRun;
+
+        // TODO: store remainder
         return ticksSoFar;
     }
 
@@ -364,10 +375,11 @@ public class Cpu
 
         var cpuCycles = Step();
         // ticks = cycles / (cycles per second) * (ticks per second)
-        var emulatedTicksElapsed = cpuCycles * TimeSpan.TicksPerSecond / cpuClockHz;
+        var currentStepTicksElapsed = cpuCycles * TimeSpan.TicksPerSecond / cpuClockHz;
+        // TODO: store remainder? This would essentially be tracking sub-ticks.
         tickBaseTimer();
 
-        return emulatedTicksElapsed;
+        return currentStepTicksElapsed;
 
         // Base timer is 14 bits. Its value is not accessible in the data memory space.
         // Doc seems to imply that the top 6-bits can be driven from something besides 8-bit counter overflow.
@@ -386,17 +398,10 @@ public class Cpu
                 _ => throw new InvalidOperationException()
             };
 
+            BaseTimerTicksRemaining += currentStepTicksElapsed;
             var ticksPerCycle = TimeSpan.TicksPerSecond / cyclesPerSecond;
-            var timerCyclesElapsed = emulatedTicksElapsed / ticksPerCycle;
-            // TODO: this method of timing is very inaccurate.
-            // In all these cases where we are making a division of ticks and advancing a timer,
-            // we need to stash the remainder of the division and incorporate it into the next CPU step.
-            // This is because, for example, the RC oscillator will finish running an instruction in a short enough period of time
-            // that the base timer does not tick at all. It is about halfway to its next tick.
-            // If we don't carry the remainder over, it will never tick while the RC is being used.
-            // We also can't extract the timer to Run(long ticks) or similar, because we need to check at each instruction if a timer interrupt was generated.
-            // so we need a field which is something like "timerCyclesConsumed", which we stash the remainder of our division ops into.
-            Debug.Assert(timerCyclesElapsed > 0);
+            var timerCyclesElapsed = BaseTimerTicksRemaining / ticksPerCycle;
+            BaseTimerTicksRemaining = BaseTimerTicksRemaining % ticksPerCycle;
 
             var currentBtTicks = BaseTimer;
             var newBtTicks = (ushort)(currentBtTicks + timerCyclesElapsed);
