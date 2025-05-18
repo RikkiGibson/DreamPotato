@@ -80,10 +80,14 @@ enum Interrupts : ushort
 
 static class InterruptsExtensions
 {
-    public static bool HasFlag(this Interrupts interrupts, Interrupts flag)
+    public static bool IsHigherPriorityThan(this Interrupts @this, Interrupts other)
     {
-        Debug.Assert(Enum.GetValues<Interrupts>().Contains(flag));
-        return (interrupts & flag) == flag;
+        // TODO: this may need to factor in SFRs that control priority
+        Debug.Assert(BitHelpers.IsPowerOfTwo((int)@this));
+        Debug.Assert(BitHelpers.IsPowerOfTwo((int)other));
+        return @this == Interrupts.None ? false :
+            other == Interrupts.None ? true :
+            @this < other;
     }
 }
 

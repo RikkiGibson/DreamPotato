@@ -1,4 +1,5 @@
 ﻿using VEmu.Core;
+using VEmu.Core.SFRs;
 
 namespace VEmu.Tests;
 
@@ -186,5 +187,28 @@ public class InterruptTests
         cpu.Step(); // INC ACC
         Assert.Equal(2, cpu.SFRs.Acc);
         Assert.Equal(0x284, cpu.Pc);
+    }
+
+    [Fact]
+    public void P3Continuous_1()
+    {
+        var cpu = new Cpu();
+        cpu.Reset();
+        Assert.True(cpu.SFRs.Ie.MasterInterruptEnable);
+        Assert.True(cpu.SFRs.P3Int.Continuous);
+        Assert.True(cpu.SFRs.P3Int.Enable);
+
+        // TODO: finish writing this test
+        // TODO: write several more interrupts tests showing how they stack or not
+        cpu.SFRs.P3 = new P3(0b1111_0111);
+
+        Assert.Equal(Interrupts.P3, cpu.RequestedInterrupts);
+        Assert.Equal(0, cpu._interruptsCount);
+
+        cpu.Step();
+        Assert.Equal(Interrupts.None, cpu.RequestedInterrupts);
+        Assert.Equal(1, cpu._interruptsCount);
+
+        cpu.SFRs.P3 = new P3(0b1111_0111);
     }
 }

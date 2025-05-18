@@ -11,6 +11,16 @@ public enum LogLevel
     Error,
 }
 
+// TODO: need a better point of control here. not just swapping LogLevels around in code to view desired logs.
+public enum LogTypes
+{
+    None = 0,
+    Instructions = 1 << 0,
+    Interrupts = 1 << 1,
+    Timers = 1 << 2,
+    Modes = 1 << 3,
+}
+
 public class Logger(LogLevel _minimumLogLevel, Cpu _cpu)
 {
     private readonly LogLevel _minimumLogLevel = _minimumLogLevel;
@@ -50,7 +60,8 @@ public class Logger(LogLevel _minimumLogLevel, Cpu _cpu)
         if (level < _minimumLogLevel)
             return;
 
-        string message = $"{_cpu.InstructionBank}@[{_cpu.Pc:X4}]: [{level}] {handler.ToStringAndClear()}";
+        var timestamp = DateTimeOffset.Now;
+        string message = $"{timestamp.TimeOfDay} {_cpu.InstructionBank}@[{_cpu.Pc:X4}]: [{level}] {handler.ToStringAndClear()}";
         if (level == LogLevel.Debug)
             Console.WriteLine(message);
 

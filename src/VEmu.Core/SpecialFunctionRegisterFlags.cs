@@ -720,9 +720,9 @@ public enum Oscillator
 public static class OscillatorHz
 {
     public const int Cf = 6_000_000;
-    public const int Rc = 600_000;
+    // public const int Rc = 600_000;
     // From the data sheet:
-    // public const int Rc = 879_236;
+    public const int Rc = 879_236;
 
     public const int Quartz = 32_768;
 }

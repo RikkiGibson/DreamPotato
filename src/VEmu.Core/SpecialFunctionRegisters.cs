@@ -50,6 +50,7 @@ public class SpecialFunctionRegisters
         Write(Ids.Isl, 0b1100_0000);
         Write(Ids.Vsel, 0b1111_1100);
         Write(Ids.Btcr, 0b0100_0001);
+        Write(Ids.Vccr, (byte)new Vccr() { DisplayControl = true });
 
         // Stack points to last element, so, when it is empty, it points to before the start of the stack space.
         Write(Ids.Sp, Memory.StackStart - 1);
@@ -170,6 +171,12 @@ public class SpecialFunctionRegisters
             case Ids.Sp:
                 { // breakpoint holder
                 }
+                goto default;
+
+            case Ids.P3Int:
+                if (_rawMemory[address] != value)
+                    _logger.LogTrace($"P3Int changed: Old=0b{_rawMemory[address]:b} New=0b{value:b}");
+
                 goto default;
 
             default:
@@ -494,8 +501,10 @@ public class SpecialFunctionRegisters
             if (p3int.Enable)
             {
                 var p3Raw = Read(Ids.P3);
-                if ((p3int.Continuous && valueRaw != 0xff) || (p3Raw & valueRaw) != p3Raw)
+                // NB: Continuous interrupts are generated in Cpu.Step
+                if (!p3int.Continuous && (p3Raw & valueRaw) != p3Raw)
                 {
+                    _logger.LogDebug($"Requesting interrupt P3 Continuous={p3int.Continuous} Before=0b{p3Raw:b} After=0b{valueRaw:b}");
                     p3int.Source = true;
                     _cpu.RequestedInterrupts |= Interrupts.P3;
                 }

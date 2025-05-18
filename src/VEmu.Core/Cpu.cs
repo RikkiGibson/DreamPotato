@@ -46,9 +46,12 @@ public class Cpu
     private void SyncInstructionBank()
     {
         var newBank = SFRs.Ext.InstructionBank;
-        if (Pc == BuiltInCodeSymbols.BIOSClockTick)
+        if (newBank == InstructionBank.ROM)
         {
-            Logger.LogTrace($"Calling {nameof(BuiltInCodeSymbols.BIOSClockTick)}");
+            if (Pc == BuiltInCodeSymbols.BIOSClockTick)
+            {
+                Logger.LogTrace($"Calling {nameof(BuiltInCodeSymbols.BIOSClockTick)}");
+            }
         }
 
         InstructionBank = newBank;
@@ -87,8 +90,8 @@ public class Cpu
     /// until returning from the current interrupt service routine.
     /// </summary>
     private const int InterruptsCountMax = 3;
-    private readonly Interrupts[] _servicingInterrupts = new Interrupts[3];
-    private int _interruptsCount;
+    internal readonly Interrupts[] _servicingInterrupts = new Interrupts[3];
+    internal int _interruptsCount;
 
     // TODO: LoggerOptions type? Logger can't really be passed in since it needs to hold 'this'.
     public Cpu(LogLevel logLevel = LogLevel.Trace)
@@ -303,8 +306,12 @@ public class Cpu
         bool shouldServiceInterrupt(Interrupts candidateInterrupt)
         {
             Debug.Assert(BitHelpers.IsPowerOfTwo((int)candidateInterrupt));
+
+            // TODO: does priority factor in at all when interrupting one interrupt with another?
+            // It feels like if so, the "priority bits" in the interrupt control registers need to factor in.
+            // return (RequestedInterrupts & candidateInterrupt) != 0;
             return (RequestedInterrupts & candidateInterrupt) != 0
-                && candidateInterrupt > currentInterrupt;
+                && candidateInterrupt.IsHigherPriorityThan(currentInterrupt);
         }
 
         void serviceInterrupt(Interrupts interrupt, ushort routineAddress)
@@ -314,6 +321,9 @@ public class Cpu
             _servicingInterrupts[_interruptsCount] = interrupt;
             _interruptsCount++;
             Logger.LogTrace($"Servicing interrupt '{interrupt}'. Count: '{_interruptsCount}'.");
+            if (_interruptsCount > 1)
+            { // breakpoint holder
+            }
             RequestedInterrupts &= ~interrupt;
             SFRs.Pcon = SFRs.Pcon with { HaltMode = false };
 
@@ -377,7 +387,10 @@ public class Cpu
             {
                 btcr.Int1Source = true;
                 if (btcr.Int1Enable)
+                {
+                    Logger.LogTrace("Requesting BTInt1");
                     RequestedInterrupts |= Interrupts.INT3_BT;
+                }
             }
 
             var int0Rate = btcr.Int0CycleRate;
@@ -387,7 +400,10 @@ public class Cpu
             {
                 btcr.Int0Source = true;
                 if (btcr.Int0Enable)
+                {
+                    Logger.LogTrace("Requesting BTInt0");
                     RequestedInterrupts |= Interrupts.INT3_BT;
+                }
 
                 // Hardware manual mentions that both Int0 and Int1 are generated in this case.
                 // This might just be because int0Rate is evenly divisible by int1Rate.
@@ -409,6 +425,7 @@ public class Cpu
         if (SFRs.Pcon.HaltMode)
         {
             tickCpuClockedTimers(1);
+            checkContinuousSignals();
             return 1;
         }
 
@@ -466,6 +483,7 @@ public class Cpu
         }
 
         tickCpuClockedTimers(inst.Cycles);
+        checkContinuousSignals();
         return inst.Cycles;
 
         static void Throw(Instruction inst) => throw new InvalidOperationException($"Unknown operation '{inst}'");
@@ -580,6 +598,23 @@ public class Cpu
 
                     SFRs.T1H = t1h;
                 }
+            }
+        }
+
+        void checkContinuousSignals()
+        {
+            var p3int = SFRs.P3Int;
+            // NB: non-continuous interrupts are generated in SFRs.P3.set (i.e. only when P3 changes)
+            if (p3int.Enable && p3int.Continuous)
+            {
+                var p3Raw = (byte)SFRs.P3;
+                if (p3Raw != 0xff)
+                {
+                    Logger.LogTrace($"Requesting interrupt P3 Continuous={p3int.Continuous} Value=0b{p3Raw:b}");
+                    p3int.Source = true;
+                    RequestedInterrupts |= Interrupts.P3;
+                }
+                SFRs.P3Int = p3int;
             }
         }
     }

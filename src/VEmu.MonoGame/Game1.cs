@@ -79,8 +79,8 @@ public class Game1 : Game
 
         var bios = File.ReadAllBytes(@"C:\Users\rikki\OneDrive\vmu reverse engineering\dmitry-vmu\vmu\ROMs\american_v1.05.bin");
         bios.AsSpan().CopyTo(_vmu._cpu.ROM);
-        // _vmu._cpu.SetInstructionBank(Core.SFRs.InstructionBank.FlashBank0);
-        _vmu._cpu.SetInstructionBank(Core.SFRs.InstructionBank.ROM);
+        _vmu._cpu.SetInstructionBank(Core.SFRs.InstructionBank.FlashBank0);
+        // _vmu._cpu.SetInstructionBank(Core.SFRs.InstructionBank.ROM);
 
         // TODO: it would be good to setup the bios time automatically.
         // Possibly the host system time could be used. Dunno if the DC system time could be used implicitly, without user running the memory card clock update function in system menu.
@@ -88,11 +88,17 @@ public class Game1 : Game
         _font1 = Content.Load<SpriteFont>("MyMenuFont");
     }
 
+    private KeyboardState _previousKeys;
+    private bool _paused;
+
     protected override void Update(GameTime gameTime)
     {
         var keyboard = Keyboard.GetState();
         if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || keyboard.IsKeyDown(Keys.Escape))
             Exit();
+
+        if (_previousKeys.IsKeyUp(Keys.F10) && keyboard.IsKeyDown(Keys.F10))
+            _paused = !_paused;
 
         // TODO: there really should be some top-level type in the Core layer which exposes the stuff a front-end wants.
         // UpdatePlayerInput, Reset, Save/load state, GetDisplayBytes, ...
@@ -108,7 +114,9 @@ public class Game1 : Game
             ButtonMode = keyboard.IsKeyUp(Keys.I),
         };
 
-        _vmu._cpu.Run(gameTime.ElapsedGameTime.Ticks);
+        _vmu._cpu.Run(_paused ? 0 : gameTime.ElapsedGameTime.Ticks);
+
+        _previousKeys = keyboard;
 
         base.Update(gameTime);
     }
@@ -143,7 +151,9 @@ public class Game1 : Game
         var gameIcon = (icons & Icons.Game) != 0 ? "Game " : " ";
         var clockIcon = (icons & Icons.Clock) != 0 ? "Clock " : " ";
         var flashIcon = (icons & Icons.Flash) != 0 ? "Flash " : "  ";
-        var iconString = $"{fileIcon}{gameIcon}{clockIcon}{flashIcon}";
+        var sleeping = _vmu._cpu.SFRs.Vccr.DisplayControl ? " " : "(sleep) ";
+        var paused = _paused ? "(paused) " : " ";
+        var iconString = $"{fileIcon}{gameIcon}{clockIcon}{flashIcon}{sleeping}{paused}";
         _spriteBatch.DrawString(_font1, iconString, new Vector2(x: SideMargin, y: TopMargin + ScaledHeight), Color.Black);
 
         _spriteBatch.End();
