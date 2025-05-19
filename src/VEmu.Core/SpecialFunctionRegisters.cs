@@ -119,11 +119,11 @@ public class SpecialFunctionRegisters
                 var btcr = new Btcr(value);
 
                 if (btcr.Int0CycleControl)
-                    _logger.LogWarning($"Setting unsupported Btcr configuration: 0b{value:b8}");
+                    _logger.LogWarning($"Setting unsupported Btcr configuration: 0b{value:b8}", LogCategories.Timers);
 
                 var oldBtcr = new Btcr(_rawMemory[address]);
                 if (oldBtcr.Int1CycleRate != btcr.Int1CycleRate)
-                    _logger.LogDebug($"Changing cycle rate to 0x{btcr.Int1CycleRate:X}");
+                    _logger.LogDebug($"Changing base timer cycle rate to 0x{btcr.Int1CycleRate:X}", LogCategories.Timers);
 
                 if (!btcr.CountEnable)
                         _cpu.BaseTimer = 0;
@@ -133,14 +133,18 @@ public class SpecialFunctionRegisters
             case Ids.Isl:
                 var isl = new Isl(value);
                 if (isl is not { BaseTimerClock: BaseTimerClock.QuartzOscillator })
-                    _logger.LogWarning($"Setting unsupported Isl configuration: 0b{value:b8}");
+                    _logger.LogWarning($"Setting unsupported Isl configuration: 0b{value:b8}", LogCategories.Timers);
 
                 goto default;
 
             case Ids.Ocr:
                 var ocr = new Ocr(value);
                 if (ocr is { ClockGeneratorControl: false, SystemClockSelector: Oscillator.Quartz })
-                    _logger.LogWarning($"Setting unsupported Ocr configuration: 0b{value:b8}");
+                    _logger.LogWarning($"Setting unsupported Ocr configuration: 0b{value:b8}", LogCategories.SystemClock);
+
+                var oldOcr = new Ocr(_rawMemory[address]);
+                if (oldOcr.SystemClockSelector != ocr.SystemClockSelector)
+                    _logger.LogTrace($"System clock changed from {oldOcr.SystemClockSelector} to {ocr.SystemClockSelector}", LogCategories.SystemClock);
 
                 goto default;
 
@@ -156,10 +160,10 @@ public class SpecialFunctionRegisters
                 var newPcon = new Pcon(value);
 
                 if (!oldPcon.HaltMode && newPcon.HaltMode)
-                    _logger.LogTrace("Entering halt mode");
+                    _logger.LogTrace("Entering halt mode", LogCategories.Halt);
 
                 if (oldPcon.HaltMode && !newPcon.HaltMode)
-                    _logger.LogTrace("Exiting halt mode");
+                    _logger.LogTrace("Exiting halt mode", LogCategories.Halt);
 
                 goto default;
 

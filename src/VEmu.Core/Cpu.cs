@@ -50,7 +50,7 @@ public class Cpu
         {
             if (Pc == BuiltInCodeSymbols.BIOSClockTick)
             {
-                Logger.LogTrace($"Calling {nameof(BuiltInCodeSymbols.BIOSClockTick)}");
+                Logger.LogTrace($"Calling {nameof(BuiltInCodeSymbols.BIOSClockTick)}", LogCategories.Timers);
             }
         }
 
@@ -70,7 +70,17 @@ public class Cpu
     public readonly Memory Memory;
 
     internal ushort Pc;
+
+    /// <summary>
+    /// After <see cref="Run(long)"/> is called, stores how many more ticks were run than requested,
+    /// to reduce the duration of the next frame execution.
+    /// </summary>
     internal long TicksOverrun;
+
+    /// <summary>
+    /// After <see cref="StepTicks()"/> is called, stores the remainder of a tick, which elapsed partially during execution of a single instruction.
+    /// </summary>
+    internal long StepCycleTicksPerSecondRemainder;
 
     /// <summary>
     /// 14-bit base timer.
@@ -96,7 +106,8 @@ public class Cpu
     // TODO: LoggerOptions type? Logger can't really be passed in since it needs to hold 'this'.
     public Cpu(LogLevel logLevel = LogLevel.Trace)
     {
-        Logger = new Logger(logLevel, this);
+        var categories = LogCategories.General | LogCategories.Interrupts | LogCategories.Timers | LogCategories.Halt | LogCategories.SystemClock;
+        Logger = new Logger(logLevel, categories, this);
         Memory = new Memory(this, Logger);
         SetInstructionBank(InstructionBank.ROM);
     }
@@ -139,7 +150,6 @@ public class Cpu
         }
         TicksOverrun = ticksSoFar - ticksToRun;
 
-        // TODO: store remainder
         return ticksSoFar;
     }
 
@@ -320,7 +330,7 @@ public class Cpu
 
             _servicingInterrupts[_interruptsCount] = interrupt;
             _interruptsCount++;
-            Logger.LogTrace($"Servicing interrupt '{interrupt}'. Count: '{_interruptsCount}'.");
+            Logger.LogDebug($"Servicing interrupt '{interrupt}'. Count: '{_interruptsCount}'.", LogCategories.Interrupts);
             if (_interruptsCount > 1)
             { // breakpoint holder
             }
@@ -345,9 +355,11 @@ public class Cpu
         var cpuClockHz = SFRs.Ocr.CpuClockHz;
 
         var cpuCycles = Step();
-        // ticks = cycles / (cycles per second) * (ticks per second)
-        var currentStepTicksElapsed = cpuCycles * TimeSpan.TicksPerSecond / cpuClockHz;
-        // TODO: store remainder? This would essentially be tracking sub-ticks.
+        // Compute a quantity which, when divided by cpuClockHz, yields the number of ticks elapsed by the instruction.
+        var cpuCycleTicksPerSecond = cpuCycles * TimeSpan.TicksPerSecond + StepCycleTicksPerSecondRemainder;
+        var currentStepTicksElapsed = cpuCycleTicksPerSecond / cpuClockHz;
+        // Note: CycleTicksPerSecond is basically a "sub-tick" unit.
+        StepCycleTicksPerSecondRemainder = cpuCycleTicksPerSecond % cpuClockHz;
         tickBaseTimer();
 
         return currentStepTicksElapsed;
@@ -388,7 +400,7 @@ public class Cpu
                 btcr.Int1Source = true;
                 if (btcr.Int1Enable)
                 {
-                    Logger.LogTrace("Requesting BTInt1");
+                    Logger.LogDebug("Requesting BTInt1", LogCategories.Interrupts);
                     RequestedInterrupts |= Interrupts.INT3_BT;
                 }
             }
@@ -401,7 +413,7 @@ public class Cpu
                 btcr.Int0Source = true;
                 if (btcr.Int0Enable)
                 {
-                    Logger.LogTrace("Requesting BTInt0");
+                    Logger.LogDebug("Requesting BTInt0", LogCategories.Interrupts);
                     RequestedInterrupts |= Interrupts.INT3_BT;
                 }
 
@@ -610,7 +622,7 @@ public class Cpu
                 var p3Raw = (byte)SFRs.P3;
                 if (p3Raw != 0xff)
                 {
-                    Logger.LogTrace($"Requesting interrupt P3 Continuous={p3int.Continuous} Value=0b{p3Raw:b}");
+                    Logger.LogDebug($"Requesting interrupt P3 Continuous={p3int.Continuous} Value=0b{p3Raw:b}", LogCategories.Interrupts);
                     p3int.Source = true;
                     RequestedInterrupts |= Interrupts.P3;
                 }
@@ -1167,7 +1179,7 @@ public class Cpu
         if (_interruptsCount > 0)
             _interruptsCount--;
         else
-            Logger.LogError($"Returning from interrupt, but no interrupt was being serviced!");
+            Logger.LogError($"Returning from interrupt, but no interrupt was being serviced!", LogCategories.Interrupts);
 
         var Pc15_8 = Memory.PopStack();
         var Pc7_0 = Memory.PopStack();
