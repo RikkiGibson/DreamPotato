@@ -143,8 +143,8 @@ public class SpecialFunctionRegisters
                     _logger.LogWarning($"Setting unsupported Ocr configuration: 0b{value:b8}", LogCategories.SystemClock);
 
                 var oldOcr = new Ocr(_rawMemory[address]);
-                if (oldOcr.SystemClockSelector != ocr.SystemClockSelector)
-                    _logger.LogTrace($"System clock changed from {oldOcr.SystemClockSelector} to {ocr.SystemClockSelector}", LogCategories.SystemClock);
+                if (oldOcr.CpuClockHz != ocr.CpuClockHz)
+                    _logger.LogDebug($"System clock changed from (CGC={oldOcr.ClockGeneratorControl}, {oldOcr.SystemClockSelector}, Hz={oldOcr.CpuClockHz}) to (CGC={ocr.ClockGeneratorControl}, {ocr.SystemClockSelector}, Hz={ocr.CpuClockHz})", LogCategories.SystemClock);
 
                 goto default;
 
