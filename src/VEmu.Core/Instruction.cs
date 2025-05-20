@@ -36,6 +36,9 @@ record struct Instruction(ushort Offset, Operation Operation, ushort Arg0 = defa
         if (!HasValue)
             return "";
 
+        if (Parameters.IsEmpty)
+            return Operation.Kind.ToString();
+
         // TODO: the most interesting/useful display is going to include some(?) cpu state.
         // e.g. if bank 0, can show built-in symbols for that bank. Same for bank 1.
         // Including cpu state really reflects a moment in time interpretation of the instruction though.

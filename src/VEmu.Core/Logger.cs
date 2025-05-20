@@ -33,6 +33,7 @@ public class Logger(LogLevel _minimumLogLevel, LogCategories _categories, Cpu _c
     private readonly string?[] _messages = new string[1000];
     private int _nextMessageIndex = 0;
 
+    // TODO: CallerFilePath, CallerLineNumber
     public void LogTrace(string s, LogCategories category = LogCategories.General)
         => LogCore(LogLevel.Trace, $"{s}", category);
 

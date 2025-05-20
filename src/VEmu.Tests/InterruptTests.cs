@@ -101,8 +101,8 @@ public class InterruptTests
     [Fact]
     public void INT0_INT1_Simultaneous_1()
     {
-        // TODO: fix test. base timer interrupt needs to be disabled possibly?
         var cpu = new Cpu();
+        cpu.Reset();
         cpu.SFRs.Ie = new() { MasterInterruptEnable = true };
         cpu.SFRs.I01Cr = new()
         {
@@ -111,7 +111,7 @@ public class InterruptTests
             Int0LevelTriggered = false,
             Int0HighTriggered = true,
             Int1LevelTriggered = false,
-            Int1HighTriggered = true
+            Int1HighTriggered = false
         };
 
         ReadOnlySpan<byte> instructions = [
@@ -149,42 +149,40 @@ public class InterruptTests
         inst380.CopyTo(cpu.ROM.AsSpan(0x380));
         inst480.CopyTo(cpu.ROM.AsSpan(0x480));
 
-        cpu.Step(); // JMPF 0x280
+        Assert.Equal("JMPF 280H", cpu.StepInstruction().ToString());
         Assert.Equal(0x280, cpu.Pc);
 
-        cpu.ReportLowVoltage(); // trigger int1
+        cpu.ReportVoltage(); // trigger int1
         // service int1
-        cpu.Step(); // JMPF 0x480
+        Assert.Equal("JMPF 480H", cpu.StepInstruction().ToString());
         Assert.Equal(0x480, cpu.Pc);
 
         cpu.ConnectDreamcast(); // trigger int0
-        cpu.Step(); // INC C
-        Assert.Equal(1, cpu.SFRs.C);
-        cpu.Step(); // INC C
-        Assert.Equal(2, cpu.SFRs.C);
-        cpu.Step(); // RETI
-        Assert.Equal(0x280, cpu.Pc);
+        Assert.Equal("JMPF 380H", cpu.StepInstruction().ToString());
+        Assert.Equal(0x380, cpu.Pc);
 
-        // int0 is not serviced until current service routine finishes and one ordinary instruction is executed
-        // TODO: VMD-145 states "Interrupt nesting is possible and can be up to 3 levels deep."
-        // Does that mean that higher priority interrupts can interrupt lower priority ones?
-        // Presumably lower pri ones do not interrupt higher pri ones, otherwise why have priority as a concept?
-        cpu.Step(); // INC ACC
+        Assert.Equal("INC B", cpu.StepInstruction().ToString());
+        Assert.Equal(1, cpu.SFRs.B);
+        Assert.Equal("INC B", cpu.StepInstruction().ToString());
+        Assert.Equal(2, cpu.SFRs.B);
+
+        Assert.Equal("RETI", cpu.StepInstruction().ToString());
+        Assert.Equal(0x480, cpu.Pc);
+
+        Assert.Equal("INC C", cpu.StepInstruction().ToString());
+        Assert.Equal(1, cpu.SFRs.C);
+        Assert.Equal("INC C", cpu.StepInstruction().ToString());
+        Assert.Equal(2, cpu.SFRs.C);
+        Assert.Equal("RETI", cpu.StepInstruction().ToString());
+        Assert.Equal(0x280, cpu.Pc);
+        Assert.Equal(Interrupts.None, cpu.RequestedInterrupts);
+        Assert.Equal(0, cpu._interruptsCount);
+
+        Assert.Equal("INC Acc", cpu.StepInstruction().ToString());
         Assert.Equal(1, cpu.SFRs.Acc);
         Assert.Equal(0x282, cpu.Pc);
 
-        cpu.Step(); // JMPF 0x380
-        Assert.Equal(0x380, cpu.Pc);
-
-        cpu.Step(); // INC B
-        Assert.Equal(1, cpu.SFRs.B);
-        cpu.Step(); // INC B
-        Assert.Equal(2, cpu.SFRs.B);
-
-        cpu.Step(); // RETI
-        Assert.Equal(0x282, cpu.Pc);
-
-        cpu.Step(); // INC ACC
+        Assert.Equal("INC Acc", cpu.StepInstruction().ToString());
         Assert.Equal(2, cpu.SFRs.Acc);
         Assert.Equal(0x284, cpu.Pc);
     }
@@ -193,21 +191,67 @@ public class InterruptTests
     public void P3Continuous_1()
     {
         var cpu = new Cpu();
+
+        // jump past interrupt vectors etc
+        ReadOnlySpan<byte> instructions = [
+            OpcodeMask.JMPF, 0x02, 0x00, // JMPF 0x200,
+        ];
+        instructions.CopyTo(cpu.CurrentROMBank);
+
+        // setup p3 interrupt vector
+        instructions = [
+            OpcodeMask.NOP,
+            OpcodeMask.RETI
+        ];
+        instructions.CopyTo(cpu.CurrentROMBank.AsSpan(startIndex: InterruptVectors.P3));
+
         cpu.Reset();
         Assert.True(cpu.SFRs.Ie.MasterInterruptEnable);
         Assert.True(cpu.SFRs.P3Int.Continuous);
         Assert.True(cpu.SFRs.P3Int.Enable);
 
-        // TODO: finish writing this test
         // TODO: write several more interrupts tests showing how they stack or not
         cpu.SFRs.P3 = new P3(0b1111_0111);
 
+        Assert.Equal(Interrupts.None, cpu.RequestedInterrupts);
+        Assert.Equal(0, cpu._interruptsCount);
+        Assert.Equal(0, cpu.Pc);
+
+        // Note that continuous P3 interrupts are only generated in cpu.Step()
+        // (We don't do it in both places to avoid generating the same interrupt twice in one cycle)
+        cpu.Step(); // JMPF
         Assert.Equal(Interrupts.P3, cpu.RequestedInterrupts);
         Assert.Equal(0, cpu._interruptsCount);
+        Assert.Equal(0x200, cpu.Pc);
 
-        cpu.Step();
+        cpu.Step(); // NOP
+        Assert.Equal(Interrupts.P3, cpu.RequestedInterrupts);
+        Assert.Equal(1, cpu._interruptsCount);
+        Assert.Equal(InterruptVectors.P3 + 1, cpu.Pc);
+
+        cpu.Step(); // RETI
+        Assert.Equal(Interrupts.P3, cpu.RequestedInterrupts);
+        Assert.Equal(0, cpu._interruptsCount);
+        Assert.Equal(0x200, cpu.Pc);
+
+        // Stop the interrupt-generating signal
+        cpu.SFRs.P3 = new P3(0b1111_1111);
+
+        cpu.Step(); // NOP
+        // Since we RETI'd, another instruction needs to be executed before we can service the pending P3 interrupt
+        Assert.Equal(Interrupts.P3, cpu.RequestedInterrupts);
+        Assert.Equal(0, cpu._interruptsCount);
+        Assert.Equal(0x201, cpu.Pc);
+
+        cpu.Step(); // NOP
         Assert.Equal(Interrupts.None, cpu.RequestedInterrupts);
         Assert.Equal(1, cpu._interruptsCount);
+        Assert.Equal(InterruptVectors.P3 + 1, cpu.Pc);
+
+        cpu.Step(); // RETI
+        Assert.Equal(Interrupts.None, cpu.RequestedInterrupts);
+        Assert.Equal(0, cpu._interruptsCount);
+        Assert.Equal(0x201, cpu.Pc);
 
         cpu.SFRs.P3 = new P3(0b1111_0111);
     }

@@ -200,18 +200,18 @@ public class Cpu
     /// <summary>
     /// Simulate INT1 (low voltage)
     /// </summary>
-    /// <param name="lowVoltage">true if entering low voltage mode, false if exiting low voltage mode</param>
-    internal void ReportLowVoltage(bool lowVoltage = true)
+    /// <param name="voltageLevel">true if voltage is high; false if voltage is low</param>
+    internal void ReportVoltage(bool voltageLevel = false)
     {
         var oldP7 = SFRs.P7;
-        SFRs.P7 = oldP7 with { LowVoltage = lowVoltage };
+        SFRs.P7 = oldP7 with { LowVoltage = voltageLevel };
 
         var i01cr = SFRs.I01Cr;
         var isLevelTriggered = i01cr.Int1LevelTriggered;
         var isHighTriggered = i01cr.Int1HighTriggered;
 
         // level trigger: just need to be at the right level to trigger it
-        if (isLevelTriggered && (isHighTriggered == lowVoltage))
+        if (isLevelTriggered && (isHighTriggered == voltageLevel))
         {
             i01cr.Int1Source = true;
             if (i01cr.Int1Enable)
@@ -219,7 +219,7 @@ public class Cpu
         }
 
         // edge trigger: need to transition to the desired level to trigger it
-        if (!isLevelTriggered && (oldP7.LowVoltage != lowVoltage) && (isHighTriggered == lowVoltage))
+        if (!isLevelTriggered && (oldP7.LowVoltage != voltageLevel) && (isHighTriggered == voltageLevel))
         {
             i01cr.Int1Source = true;
             if (i01cr.Int1Enable)
@@ -434,6 +434,9 @@ public class Cpu
 
     /// <returns>Number of CPU cycles consumed by the instruction.</returns>
     internal int Step()
+        => StepInstruction().Cycles;
+
+    internal Instruction StepInstruction()
     {
         ServiceInterruptIfNeeded();
         AdvanceInterruptState();
@@ -443,7 +446,9 @@ public class Cpu
         {
             tickCpuClockedTimers(1);
             checkContinuousSignals();
-            return 1;
+            // TODO: we didn't really execute this (PC not incremented), but, we did consume 1 cycle.
+            // We probably want a different type here or a HALT "pseudo-instruction".
+            return new Instruction(Pc, Operations.NOP);
         }
 
         var inst = InstructionDecoder.Decode(CurrentROMBank, Pc);
@@ -501,7 +506,7 @@ public class Cpu
 
         tickCpuClockedTimers(inst.Cycles);
         checkContinuousSignals();
-        return inst.Cycles;
+        return inst;
 
         static void Throw(Instruction inst) => throw new InvalidOperationException($"Unknown operation '{inst}'");
 

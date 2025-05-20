@@ -40,6 +40,7 @@ public class TimerTests
         var cpu = new Cpu();
         cpu.Reset();
         // Note that the program here consists entirely of NOPs.
+        // Note also that since we are driving this test by calling Step, the base timer does not tick
 
         cpu.SFRs.Ie = new() { MasterInterruptEnable = true };
         cpu.SFRs.T0Cnt = new T0Cnt() { T0lRun = true, T0lIe = true, T0Long = true, T0hRun = true, T0hIe = true };
@@ -71,18 +72,18 @@ public class TimerTests
         {
             cpu.Step();
         }
-        Assert.Equal(49179, cpu.Pc); // TODO: why not 0? need to disable BT interrupt?
+        Assert.Equal(0, cpu.Pc);
         Assert.Equal(0, cpu.SFRs.T0L);
         Assert.Equal(0, cpu.SFRs.T0H);
         Assert.False(cpu.SFRs.T0Cnt.T0lOvf);
         Assert.True(cpu.SFRs.T0Cnt.T0hOvf);
-        Assert.Equal(Interrupts.T0H | Interrupts.INT3_BT, cpu.RequestedInterrupts);
+        Assert.Equal(Interrupts.T0H, cpu.RequestedInterrupts);
 
         // TODO: note that interrupt servicing sets PC right before executing next instruction.
         // So there isn't a point we can externally observe Pc being exactly the same value as the interrupt vector.
         cpu.Step();
         Assert.Equal(InterruptVectors.T0H + 1, cpu.Pc);
-        Assert.Equal(Interrupts.INT3_BT, cpu.RequestedInterrupts);
+        Assert.Equal(Interrupts.None, cpu.RequestedInterrupts);
     }
 
     // TODO: timers and interrupts need much more testing.
