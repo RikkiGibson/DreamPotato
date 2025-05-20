@@ -40,33 +40,6 @@ public class Cpu
 
     internal InstructionBank InstructionBank { get; private set; }
 
-    /// <summary>
-    /// Updates <see cref="InstructionBank"/> to match <see cref="Ext.InstructionBank"/>.
-    /// </summary>
-    private void SyncInstructionBank()
-    {
-        var newBank = SFRs.Ext.InstructionBank;
-        if (newBank == InstructionBank.ROM)
-        {
-            if (Pc == BuiltInCodeSymbols.BIOSClockTick)
-            {
-                Logger.LogTrace($"Calling {nameof(BuiltInCodeSymbols.BIOSClockTick)}", LogCategories.Timers);
-            }
-        }
-
-        InstructionBank = newBank;
-    }
-
-    /// <summary>
-    /// Sets the current instruction bank both in the CPU itself and in <see cref="Ext.InstructionBank"/>.
-    /// </summary>
-    /// <param name="bank"></param>
-    public void SetInstructionBank(InstructionBank bank)
-    {
-        SFRs.Ext = SFRs.Ext with { InstructionBank = bank };
-        InstructionBank = bank;
-    }
-
     public readonly Memory Memory;
 
     internal ushort Pc;
@@ -80,6 +53,7 @@ public class Cpu
     /// <summary>
     /// After <see cref="StepTicks()"/> is called, stores the remainder of a tick, which elapsed partially during execution of a single instruction.
     /// </summary>
+    // TODO: it's doubtful this is helpful. The remainder of a tick is less than 100ns.
     internal long StepCycleTicksPerSecondRemainder;
 
     /// <summary>
@@ -114,14 +88,45 @@ public class Cpu
 
     public void Reset()
     {
-        // TODO: possibly we should setup SFR initial values during construction, unless a 'zeroInitialize' flag is set in constructor
         Pc = 0;
+        TicksOverrun = 0;
+        StepCycleTicksPerSecondRemainder = 0;
         RequestedInterrupts = 0;
+        BaseTimer = 0;
+        BaseTimerTicksRemaining = 0;
+        RequestedInterrupts = Interrupts.None;
         Array.Clear(_servicingInterrupts);
         _interruptsCount = 0;
         _interruptServicingState = InterruptServicingState.Ready;
         Memory.Reset();
         SyncInstructionBank();
+    }
+
+    /// <summary>
+    /// Updates <see cref="InstructionBank"/> to match <see cref="Ext.InstructionBank"/>.
+    /// </summary>
+    private void SyncInstructionBank()
+    {
+        var newBank = SFRs.Ext.InstructionBank;
+        if (newBank == InstructionBank.ROM)
+        {
+            if (Pc == BuiltInCodeSymbols.BIOSClockTick)
+            {
+                Logger.LogTrace($"Calling {nameof(BuiltInCodeSymbols.BIOSClockTick)}", LogCategories.Timers);
+            }
+        }
+
+        InstructionBank = newBank;
+    }
+
+    /// <summary>
+    /// Sets the current instruction bank both in the CPU itself and in <see cref="Ext.InstructionBank"/>.
+    /// </summary>
+    /// <param name="bank"></param>
+    public void SetInstructionBank(InstructionBank bank)
+    {
+        SFRs.Ext = SFRs.Ext with { InstructionBank = bank };
+        InstructionBank = bank;
     }
 
     public byte ReadRam(int address)

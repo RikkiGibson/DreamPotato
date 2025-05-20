@@ -720,9 +720,12 @@ public enum Oscillator
 public static class OscillatorHz
 {
     public const int Cf = 6_000_000;
+    // Low end of frequency range:
     // public const int Rc = 600_000;
+    // High end of frequency range:
+    public const int Rc = 1_200_000;
     // From the data sheet:
-    public const int Rc = 879_236;
+    // public const int Rc = 879_236;
 
     public const int Quartz = 32_768;
 }
@@ -759,6 +762,7 @@ public struct Ocr
         get
         {
             int divisor = ClockGeneratorControl ? 6 : 12;
+            // int divisor = ClockGeneratorControl ? 4 : 8;
             int oscillatorFrequency = SystemClockSelector switch
             {
                 Oscillator.Cf => OscillatorHz.Cf,

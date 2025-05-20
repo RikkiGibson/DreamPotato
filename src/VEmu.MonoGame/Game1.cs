@@ -114,7 +114,11 @@ public class Game1 : Game
             ButtonMode = keyboard.IsKeyUp(Keys.I),
         };
 
-        _vmu._cpu.Run(_paused ? 0 : gameTime.ElapsedGameTime.Ticks);
+        var rate = _paused ? 0 :
+            keyboard.IsKeyDown(Keys.Tab) ? gameTime.ElapsedGameTime.Ticks * 4 :
+            gameTime.ElapsedGameTime.Ticks;
+
+        _vmu._cpu.Run(rate);
 
         _previousKeys = keyboard;
 
