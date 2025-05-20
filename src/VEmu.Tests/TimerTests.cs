@@ -1,6 +1,4 @@
-﻿using System.Runtime.Intrinsics.X86;
-
-using VEmu.Core;
+﻿using VEmu.Core;
 using VEmu.Core.SFRs;
 
 namespace VEmu.Tests;
