@@ -43,4 +43,11 @@ readonly struct InstructionMap()
             instructions[offset] = value;
         }
     }
+
+    public string Dump(InstructionBank bank)
+    {
+        // TODO: dump contents of instruction bank to text
+        // print offsets and instruction data
+        return "";
+    }
 }

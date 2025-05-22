@@ -22,4 +22,8 @@
     <ProjectReference Include="..\VEmu.Core\VEmu.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="TestSource/RcOscillator.vms" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

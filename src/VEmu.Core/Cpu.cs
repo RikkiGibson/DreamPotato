@@ -80,7 +80,7 @@ public class Cpu
     // TODO: LoggerOptions type? Logger can't really be passed in since it needs to hold 'this'.
     public Cpu(LogLevel logLevel = LogLevel.Trace)
     {
-        var categories = LogCategories.General | LogCategories.SystemClock;
+        var categories = LogCategories.General | LogCategories.SystemClock | LogCategories.Interrupts | LogCategories.Timers | LogCategories.Halt;
         Logger = new Logger(logLevel, categories, this);
         Memory = new Memory(this, Logger);
         SetInstructionBank(InstructionBank.ROM);
