@@ -11,6 +11,7 @@
   reti
     .org $1B ; External int. (INT3) and base timer  - I23CR and BTCR
     not1 countModeFlag,0  ; switch between counting and reporting mode
+    clr1 BTCR,1 ; clear base timer interrupt 0 source
   reti
     .org $23 ; Timer 0 high                         - T0CNT
   reti
@@ -63,15 +64,18 @@ temp3 = $12   ; high part of message character address
 chptr = $13   ; work RAM pointer (for building character graphics)
 HaltCnt = $14
 
-ticksLow = $15  ; low byte of counter
-ticksHigh = $16 ; high byte of counter
-countModeFlag = $17 ; counting mode: 0 to count, 1 to report
+ticks0 = $15        ; low byte of counter
+ticks1 = $16        ; mid byte of counter
+ticks2 = $17        ; high byte of counter
+countModeFlag = $18 ; counting mode: 0 to count, 1 to report
 
 ; store ASCII codes for each of the hex digits we will print
 chars0 = $1A
 chars1 = $1B
 chars2 = $1C
 chars3 = $1D
+chars4 = $1E
+chars5 = $1F
 
 Start:
     mov #0, P3INT         ; disable joypad interrupt
@@ -119,15 +123,19 @@ Start:
 .LoopDone:
 
 CountMode:
-    mov #0, ticksLow
-    mov #0, ticksHigh
     ; setup counting mode
-    mov #ticksLow, 0     ; R0 points to ticksLow
+    mov #0, ticks0
+    mov #0, ticks1
+    mov #0, ticks2
+    mov #ticks0, 0     ; R0 points to ticks0
+    mov #ticks1, 1     ; R1 points to ticks1
     mov #1, countModeFlag
 .CountOnce:
-    inc ticksLow
-    bne @R0, #0, .NoOverflow
-    inc ticksHigh
+    inc ticks0                ; inc LSB
+    bne @R0, #0, .NoOverflow  ; if no overflow, skip ahead
+    inc ticks1                ; LSB overflowed, inc ticks1
+    bne @R1, #0, .NoOverflow  ; if no ticks1 overflow, skip ahead
+    inc ticks2                ; middle byte overflowed, inc ticks2
 .NoOverflow:
     ld P3               ; check if MODE pressed
     bp ACC, 6, .NoMode
@@ -140,11 +148,11 @@ ReportMode:
     set1 VSEL, 4 ; WRAM autoincrement on
     mov #0, XBNK          ; start at XRAM (video RAM) bank 0
     mov #$80, 2           ; start of XRAM address space
-    mov #4, temp1         ; message character count
+    mov #6, temp1         ; message character count
 
     ; Get most significant ascii hex value
     ; note: we could probably make this easier by laying out the 0-9, A-F graphics in order instead.
-    ld ticksHigh          ; load ticksHigh to ACC
+    ld ticks2          ; load ticks2 to ACC
     and #$f0              ; clear lower 4 bits
     ror                   ; place in lower pos
     ror
@@ -153,27 +161,43 @@ ReportMode:
   call ConvertToAscii
     st chars0
 
-    ; get smaller nybble of ticksHigh
-    ld ticksHigh
+    ; get smaller nybble of ticks2
+    ld ticks2
     and #$f
   call ConvertToAscii
     st chars1
 
-    ; get bigger nybble of ticksLow
-    ld ticksLow
-    and #$f0
-    ror
+    ; note: we could probably make this easier by laying out the 0-9, A-F graphics in order instead.
+    ld ticks1          ; load ticks1 to ACC
+    and #$f0              ; clear lower 4 bits
+    ror                   ; place in lower pos
     ror
     ror
     ror
   call ConvertToAscii
     st chars2
 
-    ; get smaller nybble of ticksLow
-    ld ticksLow
+    ; get smaller nybble of ticks1
+    ld ticks1
     and #$f
   call ConvertToAscii
     st chars3
+
+    ; get bigger nybble of ticks0
+    ld ticks0
+    and #$f0
+    ror
+    ror
+    ror
+    ror
+  call ConvertToAscii
+    st chars4
+
+    ; get smaller nybble of ticks0
+    ld ticks0
+    and #$f
+  call ConvertToAscii
+    st chars5
 
   ; ascii data setup now. Print the characters
   mov #chars0, 0  ; setup pointer to ascii char data
