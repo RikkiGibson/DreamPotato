@@ -347,6 +347,14 @@ public class Cpu
         }
     }
 
+    internal void ResetInterruptState()
+    {
+        // TODO this is kind of a hack to ensure that interrupts are not serviced
+        // until one instruction after master interrupt enable is set.
+        // TODO write a test program specifically for investigating how this works properly.
+        _interruptServicingState = InterruptServicingState.ReturnedFromInterrupt;
+    }
+
     private void AdvanceInterruptState()
     {
         if (_interruptServicingState == InterruptServicingState.ReturnedFromInterrupt)

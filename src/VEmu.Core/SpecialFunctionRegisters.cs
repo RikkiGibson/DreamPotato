@@ -132,6 +132,10 @@ public class SpecialFunctionRegisters
 
             case Ids.Isl:
                 var isl = new Isl(value);
+
+                if (value != _rawMemory[address])
+                    _logger.LogDebug($"Isl changed from 0b{_rawMemory[address]:B8} to 0b{value:B8}");
+
                 if (isl is not { BaseTimerClock: BaseTimerClock.QuartzOscillator })
                     _logger.LogWarning($"Setting unsupported Isl configuration: 0b{value:b8}", LogCategories.Timers);
 
@@ -186,6 +190,9 @@ public class SpecialFunctionRegisters
             case Ids.Ie:
                 var oldIe = new Ie(_rawMemory[address]);
                 var newIe = new Ie(value);
+                if (!oldIe.MasterInterruptEnable && newIe.MasterInterruptEnable)
+                    _cpu.ResetInterruptState();
+
                 if (oldIe.MasterInterruptEnable != newIe.MasterInterruptEnable)
                     _logger.LogDebug($"Master Interrupt Enable changed from {oldIe.MasterInterruptEnable} to {newIe.MasterInterruptEnable}");
 
