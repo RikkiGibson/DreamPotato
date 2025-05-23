@@ -324,7 +324,6 @@ public class Cpu
 
             // TODO: does priority factor in at all when interrupting one interrupt with another?
             // It feels like if so, the "priority bits" in the interrupt control registers need to factor in.
-            // return (RequestedInterrupts & candidateInterrupt) != 0;
             return (RequestedInterrupts & candidateInterrupt) != 0
                 && candidateInterrupt.IsHigherPriorityThan(currentInterrupt);
         }
@@ -445,7 +444,7 @@ public class Cpu
         if (SFRs.Pcon.HaltMode)
         {
             tickCpuClockedTimers(1);
-            checkContinuousSignals();
+            requestLevelDrivenInterrupts();
             // TODO: we didn't really execute this (PC not incremented), but, we did consume 1 cycle.
             // We probably want a different type here or a HALT "pseudo-instruction".
             return new Instruction(Pc, Operations.NOP);
@@ -505,7 +504,7 @@ public class Cpu
         }
 
         tickCpuClockedTimers(inst.Cycles);
-        checkContinuousSignals();
+        requestLevelDrivenInterrupts();
         return inst;
 
         static void Throw(Instruction inst) => throw new InvalidOperationException($"Unknown operation '{inst}'");
@@ -623,10 +622,44 @@ public class Cpu
             }
         }
 
-        void checkContinuousSignals()
+        void requestLevelDrivenInterrupts()
         {
+            // TODO: I suspect master interrupt disable should have an effect here
+            // Level triggered interrupts keep getting triggered each cycle
+            // Edge triggered interrupts are triggered in SFRs when the value changes
+            var i01cr = SFRs.I01Cr;
+            if (i01cr.Int0Enable && i01cr.Int0LevelTriggered && i01cr.Int0Source == i01cr.Int0HighTriggered && !currentlyServicing(Interrupts.INT0))
+                RequestedInterrupts |= Interrupts.INT0;
+
+            if (i01cr.Int1Enable && i01cr.Int1LevelTriggered && i01cr.Int0Source == i01cr.Int1HighTriggered && !currentlyServicing(Interrupts.INT1))
+                RequestedInterrupts |= Interrupts.INT1;
+
+            // Empirical testing shows that timer interrupts are "level driven"
+            // in that if the source flag is not cleared, the interrupt is generated continuously.
+            var t0cnt = SFRs.T0Cnt;
+            if (t0cnt.T0lIe && t0cnt.T0lOvf && !currentlyServicing(Interrupts.INT2_T0L))
+                RequestedInterrupts |= Interrupts.INT2_T0L;
+
+            if (t0cnt.T0hIe && t0cnt.T0hOvf && !currentlyServicing(Interrupts.T0H))
+                RequestedInterrupts |= Interrupts.T0H;
+
+            var t1cnt = SFRs.T1Cnt;
+            if (t1cnt.T1lIe && t1cnt.T1lOvf && !currentlyServicing(Interrupts.T1))
+                RequestedInterrupts |= Interrupts.T1;
+
+            if (t1cnt.T1hIe && t1cnt.T1hOvf && !currentlyServicing(Interrupts.T1))
+                RequestedInterrupts |= Interrupts.T1;
+
+            var btcr = SFRs.Btcr;
+            if (btcr.Int0Enable && btcr.Int0Source && !currentlyServicing(Interrupts.INT3_BT))
+                RequestedInterrupts |= Interrupts.INT3_BT;
+
+            if (btcr.Int1Enable && btcr.Int1Source && !currentlyServicing(Interrupts.INT3_BT))
+                RequestedInterrupts |= Interrupts.INT3_BT;
+
             var p3int = SFRs.P3Int;
             // NB: non-continuous interrupts are generated in SFRs.P3.set (i.e. only when P3 changes)
+            // TODO: empirical test if holding a button continuously just keeps setting the source flag.
             if (p3int.Enable && p3int.Continuous)
             {
                 var p3Raw = (byte)SFRs.P3;
@@ -637,6 +670,19 @@ public class Cpu
                     RequestedInterrupts |= Interrupts.P3;
                 }
                 SFRs.P3Int = p3int;
+            }
+
+            // TODO: it might be cleaner to just wait to clear RequestedInterrupts until RETI and the interrupt is popped off of _servicingInterrupts.
+            bool currentlyServicing(Interrupts interrupt)
+            {
+                Debug.Assert(BitHelpers.IsPowerOfTwo((int)interrupt));
+                for (int i = 0; i < _interruptsCount; i++)
+                {
+                    if (_servicingInterrupts[i] == interrupt)
+                        return true;
+                }
+
+                return false;
             }
         }
     }

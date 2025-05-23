@@ -179,7 +179,15 @@ public class SpecialFunctionRegisters
 
             case Ids.P3Int:
                 if (_rawMemory[address] != value)
-                    _logger.LogTrace($"P3Int changed: Old=0b{_rawMemory[address]:b} New=0b{value:b}");
+                    _logger.LogTrace($"P3Int changed: Old=0b{_rawMemory[address]:b} New=0b{value:b}", LogCategories.Interrupts);
+
+                goto default;
+
+            case Ids.Ie:
+                var oldIe = new Ie(_rawMemory[address]);
+                var newIe = new Ie(value);
+                if (oldIe.MasterInterruptEnable != newIe.MasterInterruptEnable)
+                    _logger.LogDebug($"Master Interrupt Enable changed from {oldIe.MasterInterruptEnable} to {newIe.MasterInterruptEnable}");
 
                 goto default;
 
