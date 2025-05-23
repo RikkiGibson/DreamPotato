@@ -1,0 +1,25 @@
+{
+  "name": "dreampotato",
+  "displayName": "DreamPotato",
+  "description": "Developer tools for LC86K assembly (used by the Dreamcast VMU)",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "lc86k",
+      "aliases": ["lc86k Assembly", "lc86k"],
+      "extensions": [".s",".asm"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "lc86k",
+      "scopeName": "source.lc86k",
+      "path": "./syntaxes/lc86k.tmLanguage.json"
+    }]
+  }
+}

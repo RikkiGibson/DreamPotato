@@ -1,0 +1,87 @@
+{
+  "scopeName": "source.lc86k",
+  "name": "lc86k Assembly",
+  "fileTypes": ["s", "asm"],
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#label" },
+    { "include": "#directive" },
+    { "include": "#instruction" },
+    { "include": "#register" },
+    { "include": "#number" },
+    { "include": "#string" }
+  ],
+  "repository": {
+    "comment": {
+      "patterns": [
+        {
+          "name": "comment.line.semicolon.lc86k",
+          "match": ";.*$"
+        }
+      ]
+    },
+    "label": {
+      "patterns": [
+        {
+          "name": "entity.name.label.lc86k",
+          "match": "^[ \\t]*([A-Za-z_][A-Za-z0-9_]*):"
+        }
+      ]
+    },
+    "directive": {
+      "patterns": [
+        {
+          "name": "keyword.directive.lc86k",
+          "match": "\\.(org|byte|include|cnop|word|long|ascii|asciiz|align|equ|set|macro|endm|end|section|globl|global|text|data|bss)\\b"
+        }
+      ]
+    },
+    "instruction": {
+      "patterns": [
+        {
+          "name": "keyword.instruction.lc86k",
+          "match": "\\b(add|addc|and|be|bn|bp|br|bne|call|clr1|dbnz|inc|dec|jmpf|jmp|ld|ldf|mov|mul|not1|or|pop|push|reti|ret|ror|rorc|set1|st|stf|sub|xor|bp|bnz|bne|bn|be|call|jmpf|jmp|ret|reti)\\b"
+        }
+      ]
+    },
+    "register": {
+      "patterns": [
+        {
+          "name": "variable.language.register.lc86k",
+          "match": "\\b(ACC|PSW|B|C|TRL|TRH|SP|PCON|IE|IP|EXT|OCR|T0CNT|T0L|T0H|T1CNT|T1L|T1H|SCON0|SBUF0|SBR|SCON1|SBUF1|P1|P1DDR|P1FCR|P3DDR|P3INT|P7|I01CR|I23CR|ISL|VSEL|VRMAD1|VRMAD2|VTRBF|BTCR|XBNK|XRAM|@r[0-3]|[0-f])\\b"
+        }
+      ]
+    },
+    "number": {
+      "patterns": [
+        {
+          "name": "constant.numeric.hex.lc86k",
+          "match": "\\$[0-9A-Fa-f]+"
+        },
+        {
+          "name": "constant.numeric.binary.lc86k",
+          "match": "%[01]+"
+        },
+        {
+          "name": "constant.numeric.decimal.lc86k",
+          "match": "\\b\\d+\\b"
+        }
+      ]
+    },
+    "string": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.lc86k",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.lc86k",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
