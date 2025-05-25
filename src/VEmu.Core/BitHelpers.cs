@@ -10,6 +10,7 @@ public static class BitHelpers
         return (operand & (1 << bit)) != 0;
     }
 
+    // TODO: simple xor simpler?
     public static void WriteBit(ref byte dest, byte bit, bool value)
     {
         Debug.Assert(bit is >= 0 and < 8);
@@ -25,6 +26,7 @@ public static class BitHelpers
         return operand;
     }
 
+    // TODO: BitOperations.IsPow2?
     public static bool IsPowerOfTwo(int value)
     {
         return (value & (value - 1)) == 0;

@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
@@ -14,6 +15,7 @@ public class Game1 : Game
 {
     private readonly GraphicsDeviceManager _graphics;
     private readonly Color[] _vmuScreenData;
+
     private readonly Vmu _vmu;
     private readonly Display _display;
 
@@ -29,6 +31,8 @@ public class Game1 : Game
     private const int TotalScreenWidth = ScaledWidth + SideMargin * 2;
     private const int TotalScreenHeight = ScaledHeight + TopMargin + BottomMargin;
 
+    private const int AudioBufferDurationMilliseconds = 50;
+
     // Set in Initialize()
     private SpriteBatch _spriteBatch = null!;
     private Texture2D _vmuScreenTexture = null!;
@@ -36,6 +40,11 @@ public class Game1 : Game
 
     // Set in LoadContent()
     private SpriteFont _font1 = null!;
+    private DynamicSoundEffectInstance _dynamicSound = null!;
+    private readonly byte[] _pcmAudioData;
+
+    // TODO: temp experiment.
+    private byte[] _wave = null!;
 
 
     public Game1()
@@ -48,6 +57,9 @@ public class Game1 : Game
 
         _display = new Display(_vmu._cpu);
         _vmuScreenData = new Color[Display.ScreenWidth * Display.ScreenHeight];
+
+        Debug.Assert(Audio.SampleRate * Audio.SampleSize * AudioBufferDurationMilliseconds % 1000 == 0);
+        _pcmAudioData = new byte[Audio.SampleRate * Audio.SampleSize * AudioBufferDurationMilliseconds / 1000];
     }
 
     protected override void Initialize()
@@ -82,12 +94,18 @@ public class Game1 : Game
         var bios = File.ReadAllBytes(@"C:\Users\rikki\OneDrive\vmu reverse engineering\dmitry-vmu\vmu\ROMs\american_v1.05.bin");
         bios.AsSpan().CopyTo(_vmu._cpu.ROM);
         _vmu._cpu.SetInstructionBank(Core.SFRs.InstructionBank.FlashBank0);
+        _vmu._cpu.PcmBuffer = _pcmAudioData;
+        _vmu.Audio.IsActiveChanged += Audio_IsActiveChanged;
         // _vmu._cpu.SetInstructionBank(Core.SFRs.InstructionBank.ROM);
 
         // TODO: it would be good to setup the bios time automatically.
         // Possibly the host system time could be used. Dunno if the DC system time could be used implicitly, without user running the memory card clock update function in system menu.
 
         _font1 = Content.Load<SpriteFont>("MyMenuFont");
+        _dynamicSound = new DynamicSoundEffectInstance(Audio.SampleRate, AudioChannels.Mono);
+        _dynamicSound.BufferNeeded += DynamicSound_BufferNeeded;
+
+        _wave = File.ReadAllBytes(@"C:\Users\rikki\Desktop\square.wav");
     }
 
     private KeyboardState _previousKeys;
@@ -121,10 +139,27 @@ public class Game1 : Game
             gameTime.ElapsedGameTime.Ticks;
 
         _vmu._cpu.Run(rate);
-
         _previousKeys = keyboard;
 
         base.Update(gameTime);
+    }
+
+    private void Audio_IsActiveChanged(bool isActive)
+    {
+        if (isActive && _dynamicSound.State != SoundState.Playing)
+            _dynamicSound.Play();
+    }
+
+    private void DynamicSound_BufferNeeded(object? sender, EventArgs e)
+    {
+        if (!_vmu.Audio.IsActive)
+        {
+            _dynamicSound.Stop();
+            return;
+        }
+
+        var endIndex = _vmu.Audio.Generate(_pcmAudioData);
+        _dynamicSound.SubmitBuffer(_pcmAudioData, offset: 0, count: endIndex);
     }
 
     protected override void Draw(GameTime gameTime)

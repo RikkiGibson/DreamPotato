@@ -194,9 +194,20 @@ public class SpecialFunctionRegisters
                     _cpu.ResetInterruptState();
 
                 if (oldIe.MasterInterruptEnable != newIe.MasterInterruptEnable)
-                    _logger.LogDebug($"Master Interrupt Enable changed from {oldIe.MasterInterruptEnable} to {newIe.MasterInterruptEnable}");
+                    _logger.LogDebug($"Master Interrupt Enable changed from {oldIe.MasterInterruptEnable} to {newIe.MasterInterruptEnable}", LogCategories.Interrupts);
 
                 goto default;
+
+            case Ids.T1Cnt:
+                var oldT1cnt = new T1Cnt(_rawMemory[address]);
+                var t1cnt = new T1Cnt(value);
+                if (!oldT1cnt.T1lRun && t1cnt.T1lRun)
+                    T1L = T1Lr;
+
+                // After writing new t1cnt value, potentially signal that audio playback should start
+                _rawMemory[address] = value;
+                _cpu.Audio.IsActive = t1cnt is { ELDT1C: true, T1lRun: true };
+                return;
 
             default:
                 _rawMemory[address] = value;
@@ -485,10 +496,10 @@ public class SpecialFunctionRegisters
     }
 
     /// <summary>Port 1 latch. VMD-58</summary>
-    public byte P1
+    public P1 P1
     {
-        get => Read(Ids.P1);
-        set => Write(Ids.P1, value);
+        get => new(Read(Ids.P1));
+        set => Write(Ids.P1, (byte)value);
     }
 
     /// <summary>Port 1 data direction register. VMD-58</summary>

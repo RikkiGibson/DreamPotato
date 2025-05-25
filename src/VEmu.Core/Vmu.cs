@@ -4,11 +4,13 @@ public class Vmu
 {
     public readonly Cpu _cpu; // TODO: probably want to wrap everything a front-end would want to use thru here
     private readonly FileSystem _fileSystem;
+    public Audio Audio { get; }
 
     public Vmu()
     {
         _cpu = new Cpu();
         _fileSystem = new FileSystem(_cpu.FlashBank0, _cpu.FlashBank1);
+        Audio = _cpu.Audio;
     }
 
     public void LoadGameVms(string filePath)

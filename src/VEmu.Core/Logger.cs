@@ -20,7 +20,8 @@ public enum LogCategories
     Timers = 1 << 2,
     Halt = 1 << 3,
     SystemClock = 1 << 4,
-    General = 1 << 5,
+    Audio = 1 << 5,
+    General = 1 << 6,
 }
 
 public class Logger(LogLevel _minimumLogLevel, LogCategories _categories, Cpu _cpu)
@@ -70,7 +71,7 @@ public class Logger(LogLevel _minimumLogLevel, LogCategories _categories, Cpu _c
 
         var timestamp = DateTimeOffset.Now;
         string message = $"{timestamp.TimeOfDay} {_cpu.InstructionBank}@[{_cpu.Pc:X4}]: [{level}] {handler.ToStringAndClear()}";
-        if (level == LogLevel.Debug)
+        if (level is LogLevel.Debug or LogLevel.Warning)
             Console.WriteLine(message);
 
         if (level == LogLevel.Error)

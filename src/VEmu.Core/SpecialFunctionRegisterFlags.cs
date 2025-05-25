@@ -320,6 +320,36 @@ public struct Vccr
     }
 }
 
+/// <summary>Port 1 latch. PWM (sound), serial I/O. VMD-50</summary>
+public struct P1
+{
+    private byte _value;
+
+    public P1(byte value) => _value = value;
+    public static explicit operator byte(P1 value) => value._value;
+
+    public bool PulseOutput
+    {
+        get => BitHelpers.ReadBit(_value, bit: 7);
+        set => BitHelpers.WriteBit(ref _value, bit: 7, value);
+    }
+}
+
+/// <summary>Port 1 function control register. VMD-59</summary>
+public struct P1Fcr
+{
+    private byte _value;
+
+    public P1Fcr(byte value) => _value = value;
+    public static explicit operator byte(P1Fcr value) => value._value;
+
+    public bool SelectPulseOutput
+    {
+        get => BitHelpers.ReadBit(_value, bit: 7);
+        set => BitHelpers.WriteBit(ref _value, bit: 7, value);
+    }
+}
+
 /// <summary>Port 3 latch. Buttons SLEEP, MODE, B, A, directions. VMD-54</summary>
 public struct P3
 {
@@ -935,7 +965,7 @@ public struct T1Cnt
     }
 
     /// <summary>
-    /// TODO: this does something with pulse generation.
+    /// 
     /// </summary>
     public bool ELDT1C
     {
