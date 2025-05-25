@@ -41,10 +41,6 @@ public class Game1 : Game
     // Set in LoadContent()
     private SpriteFont _font1 = null!;
     private DynamicSoundEffectInstance _dynamicSound = null!;
-    private readonly byte[] _pcmAudioData;
-
-    // TODO: temp experiment.
-    private byte[] _wave = null!;
 
 
     public Game1()
@@ -57,9 +53,6 @@ public class Game1 : Game
 
         _display = new Display(_vmu._cpu);
         _vmuScreenData = new Color[Display.ScreenWidth * Display.ScreenHeight];
-
-        Debug.Assert(Audio.SampleRate * Audio.SampleSize * AudioBufferDurationMilliseconds % 1000 == 0);
-        _pcmAudioData = new byte[Audio.SampleRate * Audio.SampleSize * AudioBufferDurationMilliseconds / 1000];
     }
 
     protected override void Initialize()
@@ -88,14 +81,14 @@ public class Game1 : Game
         // TODO: UI/config for picking a vmu file
         // _vmu.LoadGameVms(@"C:\Users\rikki\src\VMU-MISC-CODE\memopad.vms");
         _vmu.LoadGameVms(@"C:\Users\rikki\src\ghidra-pinta\SkiesOfArcadiaPinataQuest.vms");
+        // _vmu.LoadGameVms(@"C:\Users\rikki\src\VMU-MISC-CODE\AUDIO3_TEST.vms");
         // _vmu.LoadGameVms(@"C:\Users\rikki\src\VEmu\src\VEmu.Tests\TestSource\RcOscillator.vms");
         // _vmu.LoadGameVms(@"C:\Users\rikki\src\VEmu\src\VEmu.Tests\TestSource\BaseTimerInt1Counter.vms");
 
         var bios = File.ReadAllBytes(@"C:\Users\rikki\OneDrive\vmu reverse engineering\dmitry-vmu\vmu\ROMs\american_v1.05.bin");
         bios.AsSpan().CopyTo(_vmu._cpu.ROM);
         _vmu._cpu.SetInstructionBank(Core.SFRs.InstructionBank.FlashBank0);
-        _vmu._cpu.PcmBuffer = _pcmAudioData;
-        _vmu.Audio.IsActiveChanged += Audio_IsActiveChanged;
+        _vmu.Audio.AudioBufferReady += Audio_BufferReady;
         // _vmu._cpu.SetInstructionBank(Core.SFRs.InstructionBank.ROM);
 
         // TODO: it would be good to setup the bios time automatically.
@@ -103,9 +96,6 @@ public class Game1 : Game
 
         _font1 = Content.Load<SpriteFont>("MyMenuFont");
         _dynamicSound = new DynamicSoundEffectInstance(Audio.SampleRate, AudioChannels.Mono);
-        _dynamicSound.BufferNeeded += DynamicSound_BufferNeeded;
-
-        _wave = File.ReadAllBytes(@"C:\Users\rikki\Desktop\square.wav");
     }
 
     private KeyboardState _previousKeys;
@@ -144,22 +134,11 @@ public class Game1 : Game
         base.Update(gameTime);
     }
 
-    private void Audio_IsActiveChanged(bool isActive)
+    private void Audio_BufferReady(Audio.AudioBufferReadyEventArgs args)
     {
-        if (isActive && _dynamicSound.State != SoundState.Playing)
+        _dynamicSound.SubmitBuffer(args.Buffer, args.Start, args.Length);
+        if (_dynamicSound.State != SoundState.Playing/* && _dynamicSound.PendingBufferCount > 1*/)
             _dynamicSound.Play();
-    }
-
-    private void DynamicSound_BufferNeeded(object? sender, EventArgs e)
-    {
-        if (!_vmu.Audio.IsActive)
-        {
-            _dynamicSound.Stop();
-            return;
-        }
-
-        var endIndex = _vmu.Audio.Generate(_pcmAudioData);
-        _dynamicSound.SubmitBuffer(_pcmAudioData, offset: 0, count: endIndex);
     }
 
     protected override void Draw(GameTime gameTime)

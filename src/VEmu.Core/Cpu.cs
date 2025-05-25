@@ -20,17 +20,6 @@ public class Cpu
     public readonly byte[] FlashBank0 = new byte[InstructionBankSize];
     public readonly byte[] FlashBank1 = new byte[InstructionBankSize];
 
-    // TODO: the code using these fields is dead right now, but, it feels like some hybrid with the current approach would be better.
-    // Basically, as the cpu runs, audio samples should be written into the PCM buffer each cycle based on the hardware state.
-    // When the buffer is full enough, the cpu should raise the event that submits a buffer to the sound player.
-    // This *should* make it so the finer grained details of how the audio is adjusted over time are actually captured in the output.
-    public byte[]? PcmBuffer { get; set; }
-    public const int AudioSampleRate = 44100;
-    public const int AudioSampleSize = 2; // 16-bit
-    public int PcmIndex { get; private set; }
-    private int PcmRemainder;
-
-
     // TODO: a separate instruction map is needed per bank, and it needs to be cleared when a given bank changes.
     internal readonly InstructionMap InstructionMap = new();
 
@@ -155,16 +144,8 @@ public class Cpu
 
     public SpecialFunctionRegisters SFRs => Memory.SFRs;
 
-    private void ResetPcm()
-    {
-        PcmIndex = 0;
-        PcmRemainder = 0;
-    }
-
     public long Run(long ticksToRun)
     {
-        ResetPcm();
-
         // Reduce the number of ticks we were asked to run, by the amount we overran last frame.
         ticksToRun -= TicksOverrun;
 
@@ -176,22 +157,6 @@ public class Cpu
         TicksOverrun = ticksSoFar - ticksToRun;
 
         return ticksSoFar;
-    }
-
-    private void AppendPcm(int cpuClockHz, bool value)
-    {
-        Debug.Assert(PcmBuffer is not null);
-        // figure out number of samples to append
-        var sampleTime = cpuClockHz + PcmRemainder;
-        var numSamples = sampleTime / AudioSampleRate;
-        PcmRemainder = sampleTime % AudioSampleRate;
-
-        for (int i = 0; i < numSamples; i++)
-        {
-            var (low, high) = ((byte, byte))(value ? (0xff, 0x7f) : (0xff, 0xff));
-            PcmBuffer[PcmIndex++] = low;
-            PcmBuffer[PcmIndex++] = high;
-        }
     }
 
     #region External interrupt triggers
@@ -629,20 +594,13 @@ public class Cpu
 
                     if (t1cnt.ELDT1C)
                     {
-                        if (PcmBuffer is null)
-                        {
-                            Logger.LogDebug($"Application wants to play sound, but PcmBuffer is null.", LogCategories.Timers);
-                        }
-                        else
-                        {
-                            var cpuClockHz = SFRs.Ocr.CpuClockHz;
-                            var t1lc = SFRs.T1Lc;
-                            var pulse = t1lc < t1l;
-                            for (int i = 0; i < ticks; i++)
-                                AppendPcm(cpuClockHz, t1lc < oldT1l + i);
+                        var cpuClockHz = SFRs.Ocr.CpuClockHz;
+                        var t1lc = SFRs.T1Lc;
+                        var pulse = t1lc < t1l;
+                        for (int i = 1; i <= ticks; i++)
+                            Audio.AddPulse(cpuClockHz, t1lc < oldT1l + i);
 
-                            SFRs.P1 = SFRs.P1 with { PulseOutput = pulse };
-                        }
+                        SFRs.P1 = SFRs.P1 with { PulseOutput = pulse };
                     }
 
                     SFRs.T1L = t1l;
