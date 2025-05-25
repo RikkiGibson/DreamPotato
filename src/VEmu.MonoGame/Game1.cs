@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
@@ -31,12 +32,11 @@ public class Game1 : Game
     private const int TotalScreenWidth = ScaledWidth + SideMargin * 2;
     private const int TotalScreenHeight = ScaledHeight + TopMargin + BottomMargin;
 
-    private const int AudioBufferDurationMilliseconds = 50;
-
     // Set in Initialize()
     private SpriteBatch _spriteBatch = null!;
     private Texture2D _vmuScreenTexture = null!;
     private Texture2D _iconsTexture = null!;
+    private Configuration _configuration = null!;
 
     // Set in LoadContent()
     private SpriteFont _font1 = null!;
@@ -73,6 +73,9 @@ public class Game1 : Game
         // TODO: how should icons handle scaling? should there be a minimum scale to keep things from looking bad?
         _iconsTexture = new Texture2D(_graphics.GraphicsDevice, ScaledWidth, BottomMargin);
 
+        _configuration = Configuration.Load();
+        _configuration.Save();
+
         base.Initialize();
     }
 
@@ -104,24 +107,41 @@ public class Game1 : Game
     protected override void Update(GameTime gameTime)
     {
         var keyboard = Keyboard.GetState();
-        if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || keyboard.IsKeyDown(Keys.Escape))
+        var gamepad = GamePad.GetState(PlayerIndex.One);
+        if (keyboard.IsKeyDown(Keys.Escape))
             Exit();
 
         if (_previousKeys.IsKeyUp(Keys.F10) && keyboard.IsKeyDown(Keys.F10))
             _paused = !_paused;
 
-        // TODO: there really should be some top-level type in the Core layer which exposes the stuff a front-end wants.
-        // UpdatePlayerInput, Reset, Save/load state, GetDisplayBytes, ...
+        // If any of the mappings has the key pressed, the key is pressed; the key is only up if it is not pressed for all the mappings
+        var upPressed = _configuration.KeyMappings.Any(mapping => mapping.TargetButton == VmuButton.Up && keyboard.IsKeyDown(mapping.SourceKey))
+            || _configuration.ButtonMappings.Any(mapping => mapping.TargetButton == VmuButton.Up && gamepad.IsButtonDown(mapping.SourceButton));
+        var downPressed = _configuration.KeyMappings.Any(mapping => mapping.TargetButton == VmuButton.Down && keyboard.IsKeyDown(mapping.SourceKey))
+            || _configuration.ButtonMappings.Any(mapping => mapping.TargetButton == VmuButton.Down && gamepad.IsButtonDown(mapping.SourceButton));
+        var leftPressed = _configuration.KeyMappings.Any(mapping => mapping.TargetButton == VmuButton.Left && keyboard.IsKeyDown(mapping.SourceKey))
+            || _configuration.ButtonMappings.Any(mapping => mapping.TargetButton == VmuButton.Left && gamepad.IsButtonDown(mapping.SourceButton));
+        var rightPressed = _configuration.KeyMappings.Any(mapping => mapping.TargetButton == VmuButton.Right && keyboard.IsKeyDown(mapping.SourceKey))
+            || _configuration.ButtonMappings.Any(mapping => mapping.TargetButton == VmuButton.Right && gamepad.IsButtonDown(mapping.SourceButton));
+        var buttonAPressed = _configuration.KeyMappings.Any(mapping => mapping.TargetButton == VmuButton.A && keyboard.IsKeyDown(mapping.SourceKey))
+            || _configuration.ButtonMappings.Any(mapping => mapping.TargetButton == VmuButton.A && gamepad.IsButtonDown(mapping.SourceButton));
+        var buttonBPressed = _configuration.KeyMappings.Any(mapping => mapping.TargetButton == VmuButton.B && keyboard.IsKeyDown(mapping.SourceKey))
+            || _configuration.ButtonMappings.Any(mapping => mapping.TargetButton == VmuButton.B && gamepad.IsButtonDown(mapping.SourceButton));
+        var buttonModePressed = _configuration.KeyMappings.Any(mapping => mapping.TargetButton == VmuButton.Mode && keyboard.IsKeyDown(mapping.SourceKey))
+            || _configuration.ButtonMappings.Any(mapping => mapping.TargetButton == VmuButton.Mode && gamepad.IsButtonDown(mapping.SourceButton));
+        var buttonSleepPressed = _configuration.KeyMappings.Any(mapping => mapping.TargetButton == VmuButton.Sleep && keyboard.IsKeyDown(mapping.SourceKey))
+            || _configuration.ButtonMappings.Any(mapping => mapping.TargetButton == VmuButton.Sleep && gamepad.IsButtonDown(mapping.SourceButton));
+
         _vmu._cpu.SFRs.P3 = new Core.SFRs.P3()
         {
-            Up = keyboard.IsKeyUp(Keys.W),
-            Down = keyboard.IsKeyUp(Keys.S),
-            Left = keyboard.IsKeyUp(Keys.A),
-            Right = keyboard.IsKeyUp(Keys.D),
-            ButtonA = keyboard.IsKeyUp(Keys.K),
-            ButtonB = keyboard.IsKeyUp(Keys.L),
-            ButtonSleep = keyboard.IsKeyUp(Keys.J),
-            ButtonMode = keyboard.IsKeyUp(Keys.I),
+            Up = !upPressed,
+            Down = !downPressed,
+            Left = !leftPressed,
+            Right = !rightPressed,
+            ButtonA = !buttonAPressed,
+            ButtonB = !buttonBPressed,
+            ButtonSleep = !buttonSleepPressed,
+            ButtonMode = !buttonModePressed,
         };
 
         var rate = _paused ? 0 :
