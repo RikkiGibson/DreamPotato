@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Text.Json;
@@ -77,6 +79,90 @@ public record Configuration
             new ButtonMapping { SourceButton = Buttons.Back, TargetButton = VmuButton.Sleep },
         ],
     };
+}
+
+internal class ButtonChecker
+{
+    private readonly List<Keys> UpKeys = new();
+    private readonly List<Keys> DownKeys = new();
+    private readonly List<Keys> LeftKeys = new();
+    private readonly List<Keys> RightKeys = new();
+    private readonly List<Keys> AKeys = new();
+    private readonly List<Keys> BKeys = new();
+    private readonly List<Keys> ModeKeys = new();
+    private readonly List<Keys> SleepKeys = new();
+
+    private readonly List<Buttons> UpButtons = new();
+    private readonly List<Buttons> DownButtons = new();
+    private readonly List<Buttons> LeftButtons = new();
+    private readonly List<Buttons> RightButtons = new();
+    private readonly List<Buttons> AButtons = new();
+    private readonly List<Buttons> BButtons = new();
+    private readonly List<Buttons> ModeButtons = new();
+    private readonly List<Buttons> SleepButtons = new();
+
+    public ButtonChecker(Configuration configuration)
+    {
+        foreach (var mapping in configuration.KeyMappings)
+        {
+            switch (mapping.TargetButton)
+            {
+                case VmuButton.Up: UpKeys.Add(mapping.SourceKey); continue;
+                case VmuButton.Down: DownKeys.Add(mapping.SourceKey); continue;
+                case VmuButton.Left: LeftKeys.Add(mapping.SourceKey); continue;
+                case VmuButton.Right: RightKeys.Add(mapping.SourceKey); continue;
+                case VmuButton.A: AKeys.Add(mapping.SourceKey); continue;
+                case VmuButton.B: BKeys.Add(mapping.SourceKey); continue;
+                case VmuButton.Mode: ModeKeys.Add(mapping.SourceKey); continue;
+                case VmuButton.Sleep: SleepKeys.Add(mapping.SourceKey); continue;
+            }
+        }
+
+        foreach (var mapping in configuration.ButtonMappings)
+        {
+            switch (mapping.TargetButton)
+            {
+                case VmuButton.Up: UpButtons.Add(mapping.SourceButton); continue;
+                case VmuButton.Down: DownButtons.Add(mapping.SourceButton); continue;
+                case VmuButton.Left: LeftButtons.Add(mapping.SourceButton); continue;
+                case VmuButton.Right: RightButtons.Add(mapping.SourceButton); continue;
+                case VmuButton.A: AButtons.Add(mapping.SourceButton); continue;
+                case VmuButton.B: BButtons.Add(mapping.SourceButton); continue;
+                case VmuButton.Mode: ModeButtons.Add(mapping.SourceButton); continue;
+                case VmuButton.Sleep: SleepButtons.Add(mapping.SourceButton); continue;
+            }
+        }
+    }
+
+    public bool IsPressed(KeyboardState keyboard, GamePadState gamepad, VmuButton vmuButton)
+    {
+        var (keys, buttons) = vmuButton switch
+        {
+            VmuButton.Up => (UpKeys, UpButtons),
+            VmuButton.Down => (DownKeys, DownButtons),
+            VmuButton.Left => (LeftKeys, LeftButtons),
+            VmuButton.Right => (RightKeys, RightButtons),
+            VmuButton.A => (AKeys, AButtons),
+            VmuButton.B => (BKeys, BButtons),
+            VmuButton.Mode => (ModeKeys, ModeButtons),
+            VmuButton.Sleep => (SleepKeys, SleepButtons),
+            _ => throw new ArgumentException(nameof(vmuButton))
+        };
+
+        foreach (var button in buttons)
+        {
+            if (gamepad.IsButtonDown(button))
+                return true;
+        }
+
+        foreach (var key in keys)
+        {
+            if (keyboard.IsKeyDown(key))
+                return true;
+        }
+
+        return false;
+    }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter<VmuButton>))]

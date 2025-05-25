@@ -37,6 +37,7 @@ public class Game1 : Game
     private Texture2D _vmuScreenTexture = null!;
     private Texture2D _iconsTexture = null!;
     private Configuration _configuration = null!;
+    private ButtonChecker _buttonChecker = null!;
 
     // Set in LoadContent()
     private SpriteFont _font1 = null!;
@@ -75,6 +76,7 @@ public class Game1 : Game
 
         _configuration = Configuration.Load();
         _configuration.Save();
+        _buttonChecker = new ButtonChecker(_configuration);
 
         base.Initialize();
     }
@@ -114,34 +116,16 @@ public class Game1 : Game
         if (_previousKeys.IsKeyUp(Keys.F10) && keyboard.IsKeyDown(Keys.F10))
             _paused = !_paused;
 
-        // If any of the mappings has the key pressed, the key is pressed; the key is only up if it is not pressed for all the mappings
-        var upPressed = _configuration.KeyMappings.Any(mapping => mapping.TargetButton == VmuButton.Up && keyboard.IsKeyDown(mapping.SourceKey))
-            || _configuration.ButtonMappings.Any(mapping => mapping.TargetButton == VmuButton.Up && gamepad.IsButtonDown(mapping.SourceButton));
-        var downPressed = _configuration.KeyMappings.Any(mapping => mapping.TargetButton == VmuButton.Down && keyboard.IsKeyDown(mapping.SourceKey))
-            || _configuration.ButtonMappings.Any(mapping => mapping.TargetButton == VmuButton.Down && gamepad.IsButtonDown(mapping.SourceButton));
-        var leftPressed = _configuration.KeyMappings.Any(mapping => mapping.TargetButton == VmuButton.Left && keyboard.IsKeyDown(mapping.SourceKey))
-            || _configuration.ButtonMappings.Any(mapping => mapping.TargetButton == VmuButton.Left && gamepad.IsButtonDown(mapping.SourceButton));
-        var rightPressed = _configuration.KeyMappings.Any(mapping => mapping.TargetButton == VmuButton.Right && keyboard.IsKeyDown(mapping.SourceKey))
-            || _configuration.ButtonMappings.Any(mapping => mapping.TargetButton == VmuButton.Right && gamepad.IsButtonDown(mapping.SourceButton));
-        var buttonAPressed = _configuration.KeyMappings.Any(mapping => mapping.TargetButton == VmuButton.A && keyboard.IsKeyDown(mapping.SourceKey))
-            || _configuration.ButtonMappings.Any(mapping => mapping.TargetButton == VmuButton.A && gamepad.IsButtonDown(mapping.SourceButton));
-        var buttonBPressed = _configuration.KeyMappings.Any(mapping => mapping.TargetButton == VmuButton.B && keyboard.IsKeyDown(mapping.SourceKey))
-            || _configuration.ButtonMappings.Any(mapping => mapping.TargetButton == VmuButton.B && gamepad.IsButtonDown(mapping.SourceButton));
-        var buttonModePressed = _configuration.KeyMappings.Any(mapping => mapping.TargetButton == VmuButton.Mode && keyboard.IsKeyDown(mapping.SourceKey))
-            || _configuration.ButtonMappings.Any(mapping => mapping.TargetButton == VmuButton.Mode && gamepad.IsButtonDown(mapping.SourceButton));
-        var buttonSleepPressed = _configuration.KeyMappings.Any(mapping => mapping.TargetButton == VmuButton.Sleep && keyboard.IsKeyDown(mapping.SourceKey))
-            || _configuration.ButtonMappings.Any(mapping => mapping.TargetButton == VmuButton.Sleep && gamepad.IsButtonDown(mapping.SourceButton));
-
         _vmu._cpu.SFRs.P3 = new Core.SFRs.P3()
         {
-            Up = !upPressed,
-            Down = !downPressed,
-            Left = !leftPressed,
-            Right = !rightPressed,
-            ButtonA = !buttonAPressed,
-            ButtonB = !buttonBPressed,
-            ButtonSleep = !buttonSleepPressed,
-            ButtonMode = !buttonModePressed,
+            Up = !_buttonChecker.IsPressed(keyboard, gamepad, VmuButton.Up),
+            Down = !_buttonChecker.IsPressed(keyboard, gamepad, VmuButton.Down),
+            Left = !_buttonChecker.IsPressed(keyboard, gamepad, VmuButton.Left),
+            Right = !_buttonChecker.IsPressed(keyboard, gamepad, VmuButton.Right),
+            ButtonA = !_buttonChecker.IsPressed(keyboard, gamepad, VmuButton.A),
+            ButtonB = !_buttonChecker.IsPressed(keyboard, gamepad, VmuButton.B),
+            ButtonSleep = !_buttonChecker.IsPressed(keyboard, gamepad, VmuButton.Sleep),
+            ButtonMode = !_buttonChecker.IsPressed(keyboard, gamepad, VmuButton.Mode),
         };
 
         var rate = _paused ? 0 :
