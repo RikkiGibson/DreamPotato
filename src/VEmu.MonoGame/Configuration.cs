@@ -39,9 +39,11 @@ public record Configuration
             new KeyMapping { SourceKey = Keys.D, TargetButton = VmuButton.Right },
             new KeyMapping { SourceKey = Keys.K, TargetButton = VmuButton.A },
             new KeyMapping { SourceKey = Keys.L, TargetButton = VmuButton.B },
-            new KeyMapping { SourceKey = Keys.J, TargetButton = VmuButton.Mode },
-            new KeyMapping { SourceKey = Keys.I, TargetButton = VmuButton.Sleep },
-            new KeyMapping { SourceKey = Keys.F10, TargetButton = VmuButton.Sleep },
+            new KeyMapping { SourceKey = Keys.I, TargetButton = VmuButton.Mode },
+            new KeyMapping { SourceKey = Keys.J, TargetButton = VmuButton.Sleep },
+
+            new KeyMapping { SourceKey = Keys.F10, TargetButton = VmuButton.Pause },
+            new KeyMapping { SourceKey = Keys.Tab, TargetButton = VmuButton.FastForward },
         ],
         ButtonMappings = [
             new ButtonMapping { SourceButton = Buttons.DPadUp, TargetButton = VmuButton.Up },
@@ -65,8 +67,8 @@ public record Configuration
             new KeyMapping { SourceKey = Keys.D, TargetButton = VmuButton.Right },
             new KeyMapping { SourceKey = Keys.K, TargetButton = VmuButton.A },
             new KeyMapping { SourceKey = Keys.L, TargetButton = VmuButton.B },
-            new KeyMapping { SourceKey = Keys.J, TargetButton = VmuButton.Mode },
-            new KeyMapping { SourceKey = Keys.I, TargetButton = VmuButton.Sleep },
+            new KeyMapping { SourceKey = Keys.I, TargetButton = VmuButton.Mode },
+            new KeyMapping { SourceKey = Keys.J, TargetButton = VmuButton.Sleep },
         ],
         ButtonMappings = [
             new ButtonMapping { SourceButton = Buttons.RightThumbstickUp, TargetButton = VmuButton.Up },
