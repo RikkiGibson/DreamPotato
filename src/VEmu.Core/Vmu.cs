@@ -46,11 +46,14 @@ public class Vmu
         if (fileInfo.Length != Cpu.InstructionBankSize * 2)
             throw new ArgumentException($"VMU file '{filePath}' needs to be exactly 128KB in size.", nameof(filePath));
 
-        var readStream = fileInfo.OpenRead();
+        // NB: lifetime of the VMU file stream is managed by _cpu.
+        var fileStream = fileInfo.Open(FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
+
         _cpu.Reset();
-        readStream.ReadExactly(_cpu.FlashBank0);
-        readStream.ReadExactly(_cpu.FlashBank1);
+        fileStream.ReadExactly(_cpu.FlashBank0);
+        fileStream.ReadExactly(_cpu.FlashBank1);
         LoadedFilePath = filePath;
+        _cpu.VmuFileWriteStream = fileStream;
 
         // TODO: perhaps detect if no game is present on the VMU, and default to BIOS in that case.
         // also detect a bad/missing filesystem.
@@ -103,6 +106,9 @@ public class Vmu
                 throw new InvalidOperationException($"Unsupported save state version '{version}'");
 
             _cpu.LoadState(readStream);
+
+            // TODO: it seems like loading the state, when the associated file is a '.vmu'/.bin', should also overwrite the vmu file on disk.
+            // The emu itself only writes the bytes indicated by the STF instructions. So if we don't do that, we could end up in inconsistent state.
         }
         catch (FileNotFoundException)
         {

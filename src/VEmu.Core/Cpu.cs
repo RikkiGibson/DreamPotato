@@ -24,6 +24,16 @@ public class Cpu
 
     internal readonly InstructionMap InstructionMap = new();
 
+    public Stream? VmuFileWriteStream
+    {
+        get;
+        set
+        {
+            field?.Dispose();
+            field = value;
+        }
+    }
+
     /// <summary>
     /// May point to either ROM (BIOS), flash memory bank 0 or bank 1.
     /// </summary>
@@ -1396,6 +1406,14 @@ public class Cpu
         var a16 = SFRs.Trl | (SFRs.Trh << 8);
         var bank = SFRs.FPR.FPR0 ? FlashBank1 : FlashBank0;
         bank[a16] = SFRs.Acc;
+
+        if (VmuFileWriteStream is not null)
+        {
+            var absoluteAddress = (SFRs.FPR.FPR0 ? (1 << 16) : 0) | a16;
+            VmuFileWriteStream.Seek(absoluteAddress, SeekOrigin.Begin);
+            VmuFileWriteStream.WriteByte(SFRs.Acc);
+        }
+
         Pc += inst.Size;
     }
 
