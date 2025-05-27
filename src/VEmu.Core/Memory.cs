@@ -80,6 +80,28 @@ public class Memory
         Array.Clear(_workRam);
     }
 
+    internal void SaveState(Stream writeStream)
+    {
+        writeStream.Write(_mainRam0);
+        writeStream.Write(_mainRam1);
+        SFRs.SaveState(writeStream);
+        writeStream.Write(_xram0);
+        writeStream.Write(_xram1);
+        writeStream.Write(_xram2);
+        writeStream.Write(_workRam);
+    }
+
+    internal void LoadState(Stream readStream)
+    {
+        readStream.ReadExactly(_mainRam0);
+        readStream.ReadExactly(_mainRam1);
+        SFRs.LoadState(readStream);
+        readStream.ReadExactly(_xram0);
+        readStream.ReadExactly(_xram1);
+        readStream.ReadExactly(_xram2);
+        readStream.ReadExactly(_workRam);
+    }
+
     public byte Read(ushort address)
     {
         Debug.Assert(address < 0x200);

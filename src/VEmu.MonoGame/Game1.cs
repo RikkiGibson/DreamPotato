@@ -116,6 +116,12 @@ public class Game1 : Game
         if (_previousKeys.IsKeyUp(Keys.F10) && keyboard.IsKeyDown(Keys.F10))
             _paused = !_paused;
 
+        if (_previousKeys.IsKeyUp(Keys.F5) && keyboard.IsKeyDown(Keys.F5))
+            _vmu.SaveState(id: "0");
+
+        if (_previousKeys.IsKeyUp(Keys.F8) && keyboard.IsKeyDown(Keys.F8))
+            _vmu.LoadState(id: "0");
+
         _vmu._cpu.SFRs.P3 = new Core.SFRs.P3()
         {
             Up = !_buttonChecker.IsPressed(keyboard, gamepad, VmuButton.Up),
@@ -141,8 +147,11 @@ public class Game1 : Game
     private void Audio_BufferReady(Audio.AudioBufferReadyEventArgs args)
     {
         _dynamicSound.SubmitBuffer(args.Buffer, args.Start, args.Length);
-        if (_dynamicSound.State != SoundState.Playing/* && _dynamicSound.PendingBufferCount > 1*/)
-            _dynamicSound.Play();
+        if (_dynamicSound.State != SoundState.Playing)
+        {
+            if (!_vmu.Audio.IsActive || _dynamicSound.PendingBufferCount > 1)
+                _dynamicSound.Play();
+        }
     }
 
     protected override void Draw(GameTime gameTime)

@@ -3,6 +3,10 @@ using System.Text;
 
 namespace VEmu.Core;
 
+/// <summary>
+/// Performs file system operations on flash memory.
+/// NOTE: does not own its state. The same flash memory buffers used by <see cref="Cpu"/> are shared here.
+/// </summary>
 internal class FileSystem(byte[] flashBank0, byte[] flashBank1)
 {
     private const int VolumeSizeBytes = 128 * 1024; // 128kb

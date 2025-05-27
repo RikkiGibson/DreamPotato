@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Diagnostics;
 
 using VEmu.Core.SFRs;
@@ -9,18 +10,18 @@ public class Cpu
     public Logger Logger { get; }
 
     // VMD-35: Accumulator and all registers are mapped to RAM.
-
     // VMD-38: Memory
-    //
 
     internal const int InstructionBankSize = 64 * 1024;
+
+    // !! NOTE !!
+    // All state which is added needs to be handled appropriately in Reset, SaveState, LoadState, and similar methods.
 
     /// <summary>Read-only memory space.</summary>
     public readonly byte[] ROM = new byte[InstructionBankSize];
     public readonly byte[] FlashBank0 = new byte[InstructionBankSize];
     public readonly byte[] FlashBank1 = new byte[InstructionBankSize];
 
-    // TODO: a separate instruction map is needed per bank, and it needs to be cleared when a given bank changes.
     internal readonly InstructionMap InstructionMap = new();
 
     /// <summary>
@@ -75,6 +76,9 @@ public class Cpu
     /// until returning from the current interrupt service routine.
     /// </summary>
     private const int InterruptsCountMax = 3;
+
+    // Note that even though Interrupts is a flags enum, we keep this as an array
+    // because priority settings can make picking out the most/least recently serviced interrupt tricky
     internal readonly Interrupts[] _servicingInterrupts = new Interrupts[3];
     internal int _interruptsCount;
 
@@ -92,7 +96,6 @@ public class Cpu
         Pc = 0;
         TicksOverrun = 0;
         StepCycleTicksPerSecondRemainder = 0;
-        RequestedInterrupts = 0;
         BaseTimer = 0;
         BaseTimerTicksRemaining = 0;
         RequestedInterrupts = Interrupts.None;
@@ -101,6 +104,94 @@ public class Cpu
         _interruptServicingState = InterruptServicingState.Ready;
         Memory.Reset();
         SyncInstructionBank();
+    }
+
+    internal void SaveState(Stream writeStream)
+    {
+        // NOTE: both save and load operations should write/read the fields in declaration order.
+        writeStream.Write(ROM);
+        writeStream.Write(FlashBank0);
+        writeStream.Write(FlashBank1);
+        writeStream.WriteByte((byte)InstructionBank);
+        Memory.SaveState(writeStream);
+
+        Span<byte> buffer = [0, 0, 0, 0, 0, 0, 0, 0];
+        writeUInt16(buffer, Pc);
+        writeInt64(buffer, TicksOverrun);
+        writeInt64(buffer, StepCycleTicksPerSecondRemainder);
+        writeUInt16(buffer, BaseTimer);
+        writeInt64(buffer, BaseTimerTicksRemaining);
+        writeUInt16(buffer, (ushort)RequestedInterrupts);
+        writeStream.WriteByte((byte)_interruptServicingState);
+        for (int i = 0; i < _servicingInterrupts.Length; i++)
+        {
+            writeUInt16(buffer, (ushort)_servicingInterrupts[i]);
+        }
+        writeInt32(buffer, _interruptsCount);
+
+
+        void writeUInt16(Span<byte> bytes, ushort value)
+        {
+            BinaryPrimitives.WriteUInt16LittleEndian(bytes, value);
+            writeStream.Write(bytes[0..2]);
+        }
+
+        void writeInt32(Span<byte> bytes, int value)
+        {
+            BinaryPrimitives.WriteInt32LittleEndian(bytes, value);
+            writeStream.Write(bytes[0..4]);
+        }
+
+        void writeInt64(Span<byte> bytes, long value)
+        {
+            BinaryPrimitives.WriteInt64LittleEndian(bytes, value);
+            writeStream.Write(bytes[0..8]);
+        }
+    }
+
+    internal void LoadState(Stream readStream)
+    {
+        // TODO: do some kind of search of InstructionMap
+        // to remove instructions which are no longer present in the binary?
+        readStream.ReadExactly(ROM);
+        readStream.ReadExactly(FlashBank0);
+        readStream.ReadExactly(FlashBank1);
+        InstructionBank = (InstructionBank)readStream.ReadByte();
+        Memory.LoadState(readStream);
+
+
+        Span<byte> buffer = [0, 0, 0, 0, 0, 0, 0, 0];
+        Pc = readUInt16(buffer);
+        TicksOverrun = readInt64(buffer);
+        StepCycleTicksPerSecondRemainder = readInt64(buffer);
+        BaseTimer = readUInt16(buffer);
+        BaseTimerTicksRemaining = readInt64(buffer);
+        RequestedInterrupts = (Interrupts)readUInt16(buffer);
+        _interruptServicingState = (InterruptServicingState)readStream.ReadByte();
+        for (int i = 0; i < _servicingInterrupts.Length; i++)
+        {
+            _servicingInterrupts[i] = (Interrupts)readUInt16(buffer);
+        }
+        _interruptsCount = readInt32(buffer);
+
+
+        ushort readUInt16(Span<byte> bytes)
+        {
+            readStream.ReadExactly(bytes[0..2]);
+            return BinaryPrimitives.ReadUInt16LittleEndian(bytes);
+        }
+
+        int readInt32(Span<byte> bytes)
+        {
+            readStream.ReadExactly(bytes[0..4]);
+            return BinaryPrimitives.ReadInt32LittleEndian(bytes);
+        }
+
+        long readInt64(Span<byte> bytes)
+        {
+            readStream.ReadExactly(bytes[0..8]);
+            return BinaryPrimitives.ReadInt64LittleEndian(bytes);
+        }
     }
 
     /// <summary>

@@ -11,7 +11,7 @@ public class SpecialFunctionRegisters
     public const int Size = 0x80;
 
     // TODO: Elysian docs state there are 143 SFRs, but, the memory space is only 0x80 (128 bytes).
-    // Where are the extra 15?
+    // Where are the extra 15? Possibly some of them are multiplexed on one address (for example, T1L vs T1Lc).
 
     /// <summary>
     /// Reload data for <see cref="T1H"/> and <see cref="T1L"/>.
@@ -37,7 +37,7 @@ public class SpecialFunctionRegisters
     public void Reset()
     {
         Array.Clear(_rawMemory);
-        // NB: Memory owns clearing _workRam
+        // NB: Memory owns clearing/updating _workRam
 
         // Manual indicates that BIOS is typically responsible for setting these values.
         // It's nice to be able to run without a BIOS, so let's set them up here.
@@ -56,11 +56,24 @@ public class SpecialFunctionRegisters
         Write(Ids.Sp, Memory.StackStart - 1);
     }
 
+    internal void SaveState(Stream writeStream)
+    {
+        writeStream.WriteByte(_t1hr);
+        writeStream.WriteByte(_t1lr);
+        writeStream.Write(_rawMemory);
+    }
+
+    internal void LoadState(Stream readStream)
+    {
+        _t1hr = (byte)readStream.ReadByte();
+        _t1lr = (byte)readStream.ReadByte();
+        readStream.ReadExactly(_rawMemory);
+    }
+
     public byte Read(byte address)
     {
         Debug.Assert(address < Size);
 
-        // TODO: there are many more special cases for reading/writing SFRs than this.
         switch (address)
         {
             case Ids.Vtrbf:

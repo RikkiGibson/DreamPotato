@@ -238,7 +238,7 @@ public struct Ip
     }
 }
 
-public enum InstructionBank
+public enum InstructionBank : byte
 {
     ROM = 0,
     FlashBank0 = 1,
