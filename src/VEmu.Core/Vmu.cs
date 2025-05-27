@@ -68,7 +68,7 @@ public class Vmu
         if (string.IsNullOrEmpty(LoadedFilePath))
             throw new InvalidOperationException();
 
-        var filePath = $"{Path.GetFileNameWithoutExtension(LoadedFilePath)}_slot{id}.dpstate";
+        var filePath = $"{Path.GetFileNameWithoutExtension(LoadedFilePath)}_{id}.dpstate";
         return filePath;
     }
 
