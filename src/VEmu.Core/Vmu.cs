@@ -7,20 +7,23 @@ public class Vmu
 {
     public readonly Cpu _cpu; // TODO: probably want to wrap everything a front-end would want to use thru here
     private readonly FileSystem _fileSystem;
-    public Audio Audio { get; }
+    public Audio Audio => _cpu.Audio;
     public string? LoadedFilePath { get; private set; }
 
     public Vmu()
     {
         _cpu = new Cpu();
         _fileSystem = new FileSystem(_cpu.FlashBank0, _cpu.FlashBank1);
-        Audio = _cpu.Audio;
     }
 
     public void LoadGameVms(string filePath)
     {
-        if (!filePath.EndsWith(".vms"))
-            throw new ArgumentException($"File '{filePath}' must have .vms extension.", nameof(filePath));
+        if (!filePath.EndsWith(".vms", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException($"VMS file '{filePath}' must have .vms extension.", nameof(filePath));
+
+        var fileInfo = new FileInfo(filePath);
+        if (fileInfo.Length > Cpu.InstructionBankSize)
+            throw new ArgumentException($"VMS file '{filePath}' must be 64KB or smaller to be loaded.", nameof(filePath));
 
         var date = DateTimeOffset.Now;
 
@@ -32,6 +35,25 @@ public class Vmu
         fileName = fileName.Substring(0, Math.Min(FileSystem.DirectoryEntryFileNameLength, fileName.Length));
         _fileSystem.WriteGameFile(gameData, fileName, date);
         LoadedFilePath = filePath;
+    }
+
+    public void LoadVmu(string filePath)
+    {
+        if (!filePath.EndsWith(".vmu", StringComparison.OrdinalIgnoreCase) && !filePath.EndsWith(".bin", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException($"VMU file '{filePath}' must have .vmu or .bin extension.", nameof(filePath));
+
+        var fileInfo = new FileInfo(filePath);
+        if (fileInfo.Length != Cpu.InstructionBankSize * 2)
+            throw new ArgumentException($"VMU file '{filePath}' needs to be exactly 128KB in size.", nameof(filePath));
+
+        var readStream = fileInfo.OpenRead();
+        _cpu.Reset();
+        readStream.ReadExactly(_cpu.FlashBank0);
+        readStream.ReadExactly(_cpu.FlashBank1);
+        LoadedFilePath = filePath;
+
+        // TODO: perhaps detect if no game is present on the VMU, and default to BIOS in that case.
+        // also detect a bad/missing filesystem.
     }
 
     public const string SaveStateHeaderMessage = "DreamPotatoSaveState";
@@ -49,6 +71,8 @@ public class Vmu
 
     public void SaveState(string id)
     {
+        // TODO: it feels like it would be reasonable to zip/unzip the state implicitly.
+        // But, 194k is also not that hefty.
         var filePath = GetSaveStatePath(id);
         using var writeStream = File.Create(filePath);
         writeStream.Write(SaveStateHeaderBytes.Span);

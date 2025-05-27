@@ -85,7 +85,8 @@ public class Game1 : Game
     {
         // TODO: UI/config for picking a vmu file
         // _vmu.LoadGameVms(@"C:\Users\rikki\src\VMU-MISC-CODE\memopad.vms");
-        _vmu.LoadGameVms(@"C:\Users\rikki\src\ghidra-pinta\SkiesOfArcadiaPinataQuest.vms");
+        // _vmu.LoadGameVms(@"C:\Users\rikki\src\ghidra-pinta\SkiesOfArcadiaPinataQuest.vms");
+        _vmu.LoadVmu(@"C:\Users\rikki\src\ghidra-pinta\vmu_save_a1.bin");
         // _vmu.LoadGameVms(@"C:\Users\rikki\src\VMU-MISC-CODE\AUDIO3_TEST.vms");
         // _vmu.LoadGameVms(@"C:\Users\rikki\src\VEmu\src\VEmu.Tests\TestSource\RcOscillator.vms");
         // _vmu.LoadGameVms(@"C:\Users\rikki\src\VEmu\src\VEmu.Tests\TestSource\BaseTimerInt1Counter.vms");
