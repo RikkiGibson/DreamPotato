@@ -70,11 +70,14 @@ public class Game1 : Game
         _spriteBatch = new SpriteBatch(GraphicsDevice);
         _vmuScreenTexture = new Texture2D(_graphics.GraphicsDevice, Display.ScreenWidth, Display.ScreenHeight);
 
-        // TODO: how should icons handle scaling? should there be a minimum scale to keep things from looking bad?
+        // TODO: nice icons to resemble those on the real VMU.
         _iconsTexture = new Texture2D(_graphics.GraphicsDevice, ScaledWidth, BottomMargin);
 
         _configuration = Configuration.Load();
-        _configuration.Save();
+
+        // TODO: configuration UI.
+        // _configuration.Save();
+
         _buttonChecker = new ButtonChecker(_configuration);
 
         base.Initialize();
@@ -116,42 +119,50 @@ public class Game1 : Game
     }
 
     private KeyboardState _previousKeys;
+    private GamePadState _previousGamepad;
     private bool _paused;
 
     protected override void Update(GameTime gameTime)
     {
         var keyboard = Keyboard.GetState();
         var gamepad = GamePad.GetState(PlayerIndex.One);
+
         if (keyboard.IsKeyDown(Keys.Escape))
             Exit();
 
-        if (_previousKeys.IsKeyUp(Keys.F10) && keyboard.IsKeyDown(Keys.F10))
+        if (_buttonChecker.IsNewlyPressed(VmuButton.Pause, _previousKeys, keyboard, _previousGamepad, gamepad))
             _paused = !_paused;
 
+        // TODO: system for selecting save slots etc
         if (_previousKeys.IsKeyUp(Keys.F5) && keyboard.IsKeyDown(Keys.F5))
             _vmu.SaveState(id: "0");
 
         if (_previousKeys.IsKeyUp(Keys.F8) && keyboard.IsKeyDown(Keys.F8))
             _vmu.LoadState(id: "0");
 
+        if (_buttonChecker.IsNewlyPressed(VmuButton.InsertEject, _previousKeys, keyboard, _previousGamepad, gamepad))
+            _vmu.InsertOrEject();
+
         _vmu._cpu.SFRs.P3 = new Core.SFRs.P3()
         {
-            Up = !_buttonChecker.IsPressed(keyboard, gamepad, VmuButton.Up),
-            Down = !_buttonChecker.IsPressed(keyboard, gamepad, VmuButton.Down),
-            Left = !_buttonChecker.IsPressed(keyboard, gamepad, VmuButton.Left),
-            Right = !_buttonChecker.IsPressed(keyboard, gamepad, VmuButton.Right),
-            ButtonA = !_buttonChecker.IsPressed(keyboard, gamepad, VmuButton.A),
-            ButtonB = !_buttonChecker.IsPressed(keyboard, gamepad, VmuButton.B),
-            ButtonSleep = !_buttonChecker.IsPressed(keyboard, gamepad, VmuButton.Sleep),
-            ButtonMode = !_buttonChecker.IsPressed(keyboard, gamepad, VmuButton.Mode),
+            Up = !_buttonChecker.IsPressed(VmuButton.Up, keyboard, gamepad),
+            Down = !_buttonChecker.IsPressed(VmuButton.Down, keyboard, gamepad),
+            Left = !_buttonChecker.IsPressed(VmuButton.Left, keyboard, gamepad),
+            Right = !_buttonChecker.IsPressed(VmuButton.Right, keyboard, gamepad),
+            ButtonA = !_buttonChecker.IsPressed(VmuButton.A, keyboard, gamepad),
+            ButtonB = !_buttonChecker.IsPressed(VmuButton.B, keyboard, gamepad),
+            ButtonSleep = !_buttonChecker.IsPressed(VmuButton.Sleep, keyboard, gamepad),
+            ButtonMode = !_buttonChecker.IsPressed(VmuButton.Mode, keyboard, gamepad),
         };
 
         var rate = _paused ? 0 :
-            keyboard.IsKeyDown(Keys.Tab) ? gameTime.ElapsedGameTime.Ticks * 2 :
+            _buttonChecker.IsPressed(VmuButton.FastForward, keyboard, gamepad) ? gameTime.ElapsedGameTime.Ticks * 2 :
             gameTime.ElapsedGameTime.Ticks;
 
         _vmu._cpu.Run(rate);
+
         _previousKeys = keyboard;
+        _previousGamepad = gamepad;
 
         base.Update(gameTime);
     }

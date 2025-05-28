@@ -140,6 +140,15 @@ static class SpecialFunctionRegisterIds
     /// <summary>Input signal select. (Cannot be manipulated by application.) VMD-138</summary>
     public const byte Isl = 0x5F;
 
+    /// <summary>Maple Status Word. Contains bits reflecting the status of a Maple transfer request.</summary>
+    public const byte Mplsw = 0x60;
+
+    /// <summary>Maple Start Transfer. Used to control starting and stopping a Maple transfer.</summary>
+    public const byte Mplsta = 0x61;
+
+    /// <summary>Maple Reset. Used to reset the Maple transaction when an error has occurred.</summary>
+    public const byte Mplrst = 0x62;
+
     /// <summary>Control register. VMD-143</summary>
     public const byte Vsel = 0x63;
 
@@ -204,6 +213,9 @@ static class SpecialFunctionRegisterIds
             case 0x5D: return nameof(I01Cr);
             case 0x5E: return nameof(I23Cr);
             case 0x5F: return nameof(Isl);
+            case 0x60: return nameof(Mplsw);
+            case 0x61: return nameof(Mplsta);
+            case 0x62: return nameof(Mplrst);
             case 0x63: return nameof(Vsel);
             case 0x64: return nameof(Vrmad1);
             case 0x65: return nameof(Vrmad2);

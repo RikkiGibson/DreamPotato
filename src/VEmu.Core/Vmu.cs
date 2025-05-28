@@ -59,6 +59,14 @@ public class Vmu
         // also detect a bad/missing filesystem.
     }
 
+    public bool IsEjected => !_cpu.SFRs.P7.DreamcastConnected;
+
+    // Toggle the inserted/ejected state.
+    public void InsertOrEject()
+    {
+        _cpu.ConnectDreamcast(connect: IsEjected);
+    }
+
     public const string SaveStateHeaderMessage = "DreamPotatoSaveState";
     public static readonly ReadOnlyMemory<byte> SaveStateHeaderBytes = Encoding.UTF8.GetBytes(SaveStateHeaderMessage);
     public const int SaveStateVersion = 1;

@@ -437,7 +437,7 @@ public struct P7
         set => BitHelpers.WriteBit(ref _value, bit: 1, value);
     }
 
-    /// <summary>Dreamcast connection detection</summary>
+    /// <summary>Dreamcast connection detection. 1 is connected and 0 is disconnected.</summary>
     public bool DreamcastConnected
     {
         get => BitHelpers.ReadBit(_value, bit: 0);
