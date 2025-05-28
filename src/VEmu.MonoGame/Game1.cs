@@ -84,17 +84,29 @@ public class Game1 : Game
     {
         // TODO: UI/config for picking a vmu file
         // _vmu.LoadGameVms(@"C:\Users\rikki\src\VMU-MISC-CODE\memopad.vms");
-        // _vmu.LoadGameVms(@"C:\Users\rikki\src\ghidra-pinta\SkiesOfArcadiaPinataQuest.vms");
-        _vmu.LoadVmu(@"C:\Users\rikki\src\ghidra-pinta\vmu_save_a1.bin");
+        _vmu.LoadGameVms(@"C:\Users\rikki\src\ghidra-pinta\SkiesOfArcadiaPinataQuest.vms");
+        // _vmu.LoadVmu(@"C:\Users\rikki\src\ghidra-pinta\vmu_save_a1.bin");
         // _vmu.LoadGameVms(@"C:\Users\rikki\src\VMU-MISC-CODE\AUDIO3_TEST.vms");
         // _vmu.LoadGameVms(@"C:\Users\rikki\src\VEmu\src\VEmu.Tests\TestSource\RcOscillator.vms");
         // _vmu.LoadGameVms(@"C:\Users\rikki\src\VEmu\src\VEmu.Tests\TestSource\BaseTimerInt1Counter.vms");
 
-        var bios = File.ReadAllBytes(@"C:\Users\rikki\OneDrive\vmu reverse engineering\dmitry-vmu\vmu\ROMs\american_v1.05.bin");
-        bios.AsSpan().CopyTo(_vmu._cpu.ROM);
+        const string romFilename = @"ROM_american_v1.05.bin";
+        try
+        {
+            var bios = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, romFilename));
+            bios.AsSpan().CopyTo(_vmu._cpu.ROM);
+        }
+        catch (FileNotFoundException)
+        {
+            Console.Error.WriteLine($"'{romFilename}' must be included in the application directory '{AppContext.BaseDirectory}'.");
+            throw;
+        }
+
         _vmu.Audio.AudioBufferReady += Audio_BufferReady;
-        // _vmu._cpu.SetInstructionBank(Core.SFRs.InstructionBank.ROM);
-        _vmu._cpu.SetInstructionBank(Core.SFRs.InstructionBank.FlashBank0);
+
+        // TODO: starting a game which writes to flash, without first booting up ROM, can corrupt the game.
+        // Figure out how to automatically initialize ram values used by the ROM so we can go straight to the game.
+        // _vmu._cpu.SetInstructionBank(Core.SFRs.InstructionBank.FlashBank0);
 
         // TODO: it would be good to setup the bios time automatically.
         // Possibly the host system time could be used. Dunno if the DC system time could be used implicitly, without user running the memory card clock update function in system menu.

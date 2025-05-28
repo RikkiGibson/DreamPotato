@@ -94,7 +94,7 @@ public class Cpu
 
     public Cpu(LogLevel logLevel = LogLevel.Trace)
     {
-        var categories = LogCategories.General | LogCategories.Audio;
+        var categories = LogCategories.General | LogCategories.Audio | LogCategories.Interrupts;
         Logger = new Logger(logLevel, categories, this);
         Memory = new Memory(this, Logger);
         Audio = new Audio(this, Logger);
@@ -616,8 +616,11 @@ public class Cpu
 
         void tickCpuClockedTimers(byte cycles)
         {
+            // TODO: figure out how to reload timer 0 per cycle accounting for prescaler
             tickTimer0();
-            tickTimer1();
+
+            for (var i = 0; i < cycles; i++)
+                tickTimer1();
 
             void tickTimer0()
             {
@@ -640,7 +643,7 @@ public class Cpu
                         t0l = SFRs.T0Lr; // reload
                         if (!t0cnt.T0Long) // track the overflow only in 8-bit mode
                         {
-                            t0cnt.T0lOvf = true; // note: the hardware will not reset this flag. application needs to do it.
+                            t0cnt.T0lOvf = true;
                             if (t0cnt.T0lIe)
                                 RequestedInterrupts |= Interrupts.INT2_T0L;
                         }
@@ -663,7 +666,7 @@ public class Cpu
                     if (t0hOverflow)
                     {
                         t0h = SFRs.T0Hr;
-                        t0cnt.T0hOvf = true; // note: the hardware will not reset this flag. application needs to do it.
+                        t0cnt.T0hOvf = true;
                         if (t0cnt.T0hIe)
                             RequestedInterrupts |= Interrupts.T0H;
                     }
@@ -673,54 +676,50 @@ public class Cpu
 
                 SFRs.T0Cnt = t0cnt;
             }
+        }
 
-            void tickTimer1()
+        void tickTimer1()
+        {
+            var t1cnt = SFRs.T1Cnt;
+
+            if (t1cnt.T1lRun)
             {
-                var t1cnt = SFRs.T1Cnt;
-                var ticks = cycles; // TODO: how to tick at half the cycle clock accurately? break out a remainder bit?
-
-                bool t1lOverflow = false;
-                if (t1cnt.T1lRun)
+                var t1l = (byte)(SFRs.T1L + 1);
+                if (t1l == 0)
                 {
-                    var oldT1l = SFRs.T1L;
-                    var t1l = (byte)(oldT1l + ticks);
-                    t1lOverflow = t1l < ticks;
-                    if (t1lOverflow)
-                    {
-                        t1l = SFRs.T1Lr;
-                        t1cnt.T1lOvf = true;
-                        if (t1cnt.T1lIe)
-                            RequestedInterrupts |= Interrupts.T1;
-                    }
-
-                    if (t1cnt.ELDT1C)
-                    {
-                        var cpuClockHz = SFRs.Ocr.CpuClockHz;
-                        var t1lc = SFRs.T1Lc;
-                        var pulse = t1lc < t1l;
-                        for (int i = 1; i <= ticks; i++)
-                            Audio.AddPulse(cpuClockHz, t1lc < oldT1l + i);
-
-                        SFRs.P1 = SFRs.P1 with { PulseOutput = pulse };
-                    }
-
-                    SFRs.T1L = t1l;
+                    t1l = SFRs.T1Lr;
+                    t1cnt.T1lOvf = true;
+                    if (t1cnt.T1lIe)
+                        RequestedInterrupts |= Interrupts.T1;
                 }
 
-                if (t1cnt.T1hRun)
+                if (t1cnt.ELDT1C)
                 {
-                    var hticks = (t1cnt.T1Long, t1lOverflow) switch
-                    {
-                        (true, true) => 1,
-                        (true, false) => 0,
-                        _ => ticks
-                    };
-                    var t1h = (byte)(SFRs.T1H + hticks);
-                    var t1hOverflow = t1h < hticks;
-                    if (t1hOverflow)
+                    var cpuClockHz = SFRs.Ocr.CpuClockHz;
+                    var t1lc = SFRs.T1Lc;
+
+                    // add the pulse data from the previous tick
+                    // TODO: this solution does not produce the high pitched sound at ROM startup
+                    // it's a painful sound, so, probably for the best at the moment.
+                    var p1 = SFRs.P1;
+                    Audio.AddPulse(cpuClockHz, p1.PulseOutput);
+
+                    SFRs.P1 = p1 with { PulseOutput = t1lc < t1l };
+                }
+
+                SFRs.T1L = t1l;
+            }
+
+            if (t1cnt.T1hRun)
+            {
+                // Tick T1h only if in 8-bit mode or in 16-bit mode and lower overflowed
+                if (!t1cnt.T1Long || t1cnt.T1lOvf)
+                {
+                    var t1h = (byte)(SFRs.T1H + 1);
+                    if (t1h == 0)
                     {
                         t1h = SFRs.T1Hr;
-                        t1cnt.T1hOvf = true; // note: the hardware will not reset this flag. application needs to do it.
+                        t1cnt.T1hOvf = true;
                         if (t1cnt.T1hIe)
                             RequestedInterrupts |= Interrupts.T1;
                     }
@@ -728,6 +727,8 @@ public class Cpu
                     SFRs.T1H = t1h;
                 }
             }
+
+            SFRs.T1Cnt = t1cnt;
         }
 
         void requestLevelDrivenInterrupts()

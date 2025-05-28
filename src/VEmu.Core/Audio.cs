@@ -22,7 +22,7 @@ public class Audio
     {
         _cpu = cpu;
         _logger = logger;
-        Volume = short.MaxValue / 2;
+        Volume = short.MaxValue / 8;
     }
 
     /// <summary>
