@@ -4,7 +4,6 @@
     <TargetFramework>net9.0</TargetFramework>
     <RollForward>Major</RollForward>
     <PublishReadyToRun>false</PublishReadyToRun>
-    <PublishTrimmed>true</PublishTrimmed>
     <TieredCompilation>false</TieredCompilation>
     <Nullable>enable</Nullable>
   </PropertyGroup>
