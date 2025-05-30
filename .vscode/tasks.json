@@ -17,11 +17,11 @@
         },
         {
             "type": "dotnet",
-            "task": "build VEmu.MonoGame.csproj",
-            "file": "${workspaceFolder}/src/VEmu.MonoGame/VEmu.MonoGame.csproj",
+            "task": "build DreamPotato.MonoGame.csproj",
+            "file": "${workspaceFolder}/src/DreamPotato.MonoGame/DreamPotato.MonoGame.csproj",
             "group": "build",
             "problemMatcher": [],
-            "label": "dotnet: build VEmu.MonoGame.csproj"
+            "label": "dotnet: build DreamPotato.MonoGame.csproj"
         }
     ]
 }

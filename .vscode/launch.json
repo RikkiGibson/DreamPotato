@@ -5,11 +5,11 @@
     "version": "0.2.0",
     "configurations": [
       {
-        "name": "C#: VEmu.MonoGame Debug with args",
+        "name": "C#: DreamPotato.MonoGame Debug with args",
         "type": "coreclr",
         "request": "launch",
-        "preLaunchTask": "dotnet: build VEmu.MonoGame.csproj",
-        "program": "${workspaceFolder}/src/VEmu.MonoGame/bin/Debug/net9.0/VEmu.MonoGame.exe",
+        "preLaunchTask": "dotnet: build DreamPotato.MonoGame.csproj",
+        "program": "${workspaceFolder}/src/DreamPotato.MonoGame/bin/Debug/net9.0/DreamPotato.MonoGame.exe",
         // "args": ["C:/Users/rikki/src/ghidra-pinta/SkiesOfArcadiaPinataQuest.vms"],
         "cwd": "${workspaceFolder}",
         "stopAtEntry": false,
@@ -17,10 +17,10 @@
       },
 
       {
-        "name": "C#: VEmu.MonoGame Debug",
+        "name": "C#: DreamPotato.MonoGame Debug",
         "type": "dotnet",
         "request": "launch",
-        "projectPath": "${workspaceFolder}/src/VEmu.MonoGame/VEmu.MonoGame.csproj"
+        "projectPath": "${workspaceFolder}/src/DreamPotato.MonoGame/DreamPotato.MonoGame.csproj"
       }
     ],
   }

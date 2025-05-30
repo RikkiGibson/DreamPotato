@@ -1,0 +1,101 @@
+using DreamPotato.Core;
+
+using Xunit.Abstractions;
+
+namespace DreamPotato.Tests;
+
+public class WorkRamTests
+{
+    [Fact]
+    public void StoreAndLoadSingleValue()
+    {
+        var cpu = new Cpu();
+        cpu.Memory.Direct_WriteWorkRam(0x11f, 0x40);
+        cpu.SFRs.Vrmad1 = 0x1f;
+        cpu.SFRs.Vrmad2 = 1;
+
+        ReadOnlySpan<byte> instructions = [
+            OpcodeMask.LD | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Vtrbf,
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Vtrbf, 0x01,
+            OpcodeMask.LD | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Vtrbf,
+        ];
+
+        instructions.CopyTo(cpu.CurrentROMBank);
+        cpu.Step();
+        Assert.Equal(0x40, cpu.SFRs.Acc);
+
+        cpu.Step();
+        cpu.Step();
+        Assert.Equal(0x01, cpu.SFRs.Acc);
+    }
+
+    [Fact]
+    public void StoreAndLoadSingleValue_WrongAddress()
+    {
+        var cpu = new Cpu();
+        cpu.Memory.Direct_WriteWorkRam(0x11f, 0x40);
+        cpu.SFRs.Vrmad1 = 0x10;
+        cpu.SFRs.Vrmad2 = 1;
+
+        ReadOnlySpan<byte> instructions = [
+            OpcodeMask.LD | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Vtrbf,
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Vtrbf, 0x01,
+            OpcodeMask.LD | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Vtrbf,
+        ];
+
+        instructions.CopyTo(cpu.CurrentROMBank);
+        cpu.Step();
+        Assert.Equal(0, cpu.SFRs.Acc);
+
+        cpu.Step();
+        cpu.Step();
+        Assert.Equal(1, cpu.SFRs.Acc);
+    }
+
+    [Fact]
+    public void StoreAndLoadMultipleValues()
+    {
+        var cpu = new Cpu();
+        cpu.Memory.Direct_WriteWorkRam(0x110, 0x20);
+        cpu.Memory.Direct_WriteWorkRam(0x111, 0x40);
+        cpu.SFRs.Vrmad1 = 0x10;
+        cpu.SFRs.Vrmad2 = 1;
+
+        ReadOnlySpan<byte> instructions = [
+            OpcodeMask.LD | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Vtrbf,
+            OpcodeMask.INC | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Vrmad1,
+            OpcodeMask.LD | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Vtrbf,
+        ];
+
+        instructions.CopyTo(cpu.CurrentROMBank);
+        cpu.Step();
+        Assert.Equal(0x20, cpu.SFRs.Acc);
+
+        cpu.Step();
+        cpu.Step();
+        Assert.Equal(0x40, cpu.SFRs.Acc);
+    }
+
+    [Fact]
+    public void AutoIncrementRead()
+    {
+        var cpu = new Cpu();
+        cpu.Memory.Direct_WriteWorkRam(0x110, 0x20);
+        cpu.Memory.Direct_WriteWorkRam(0x111, 0x40);
+        cpu.SFRs.Vrmad1 = 0x10;
+        cpu.SFRs.Vrmad2 = 1;
+        cpu.SFRs.Vsel = cpu.SFRs.Vsel with { Ince = true };
+
+        ReadOnlySpan<byte> instructions = [
+            OpcodeMask.LD | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Vtrbf,
+            OpcodeMask.LD | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Vtrbf,
+        ];
+
+        instructions.CopyTo(cpu.CurrentROMBank);
+        cpu.Step();
+        Assert.Equal(0x20, cpu.SFRs.Acc);
+
+        cpu.Step();
+        Assert.Equal(0x40, cpu.SFRs.Acc);
+    }
+}

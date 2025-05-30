@@ -35,22 +35,22 @@ Install the latest bits from the Releases section.
 
 Button mapping is done by editing a json file by hand for now. Eventually a proper button mapping UI would be desirable of course.
 
-`"SourceKey"`/`"SourceButton"` means the key/button on your keyboard/gamepad you want to use. `TargetButton` means the emulated VMU button or emulator command you want to perform. See [Keys](https://docs.monogame.net/api/Microsoft.Xna.Framework.Input.Keys.html#fields) and [Buttons](https://docs.monogame.net/api/Microsoft.Xna.Framework.Input.Buttons.html) for source key/button names. See [VmuButton](src/VEmu.MonoGame/Configuration.cs) for target button names.
+`"SourceKey"`/`"SourceButton"` means the key/button on your keyboard/gamepad you want to use. `TargetButton` means the emulated VMU button or emulator command you want to perform. See [Keys](https://docs.monogame.net/api/Microsoft.Xna.Framework.Input.Keys.html#fields) and [Buttons](https://docs.monogame.net/api/Microsoft.Xna.Framework.Input.Buttons.html) for source key/button names. See [VmuButton](src/DreamPotato.MonoGame/Configuration.cs) for target button names.
 
 ## Building
 
 - You'll need the [.NET 9 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/9.0) installed on your computer.
-- Copy your `american_v1.05.bin` VMU ROM into `src/VEmu.MonoGame/ROM/`.
+- Copy your `american_v1.05.bin` VMU ROM into `src/DreamPotato.MonoGame/ROM/`.
 - Build everything: `dotnet build`.
-- Run the emulator: `dotnet run --project src/VEmu.MonoGame`.
+- Run the emulator: `dotnet run --project src/DreamPotato.MonoGame`.
 - Run tests: `dotnet test`
 
 ## Project Overview
 
 Under `src/`:
-- `VEmu.Core` is where the emulator implementation properly resides.
-- `VEmu.Tests` includes unit tests for the above.
-- `VEmu.MonoGame` is the front-end.
+- `DreamPotato.Core` is where the emulator implementation properly resides.
+- `DreamPotato.Tests` includes unit tests for the above.
+- `DreamPotato.MonoGame` is the front-end.
 - `dreampotato-vscode` is the VS Code extension--in *very* barebones/"alpha" state.
     - Currently, it contains only a TextMate grammar for LC86k assembly.
 
