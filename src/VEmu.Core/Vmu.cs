@@ -67,6 +67,7 @@ public class Vmu
         _cpu.ConnectDreamcast(connect: IsEjected);
     }
 
+    public string SaveStateFolder => Path.Combine(AppContext.BaseDirectory, "SaveStates");
     public const string SaveStateHeaderMessage = "DreamPotatoSaveState";
     public static readonly ReadOnlyMemory<byte> SaveStateHeaderBytes = Encoding.UTF8.GetBytes(SaveStateHeaderMessage);
     public const int SaveStateVersion = 1;
@@ -77,7 +78,7 @@ public class Vmu
             throw new InvalidOperationException();
 
         var filePath = $"{Path.GetFileNameWithoutExtension(LoadedFilePath)}_{id}.dpstate";
-        return filePath;
+        return Path.Combine(SaveStateFolder, filePath);
     }
 
     public void SaveState(string id)

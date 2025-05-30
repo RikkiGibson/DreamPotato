@@ -5,6 +5,18 @@
     "version": "0.2.0",
     "configurations": [
       {
+        "name": "C#: VEmu.MonoGame Debug with args",
+        "type": "coreclr",
+        "request": "launch",
+        "preLaunchTask": "dotnet: build VEmu.MonoGame.csproj",
+        "program": "${workspaceFolder}/src/VEmu.MonoGame/bin/Debug/net9.0/VEmu.MonoGame.exe",
+        // "args": ["C:/Users/rikki/src/ghidra-pinta/SkiesOfArcadiaPinataQuest.vms"],
+        "cwd": "${workspaceFolder}",
+        "stopAtEntry": false,
+        "console": "internalConsole"
+      },
+
+      {
         "name": "C#: VEmu.MonoGame Debug",
         "type": "dotnet",
         "request": "launch",

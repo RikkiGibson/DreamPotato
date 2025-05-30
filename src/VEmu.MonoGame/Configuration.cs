@@ -12,24 +12,28 @@ namespace VEmu.MonoGame;
 public record Configuration
 {
     public const string FileName = "configuration.json";
+    public static string ConfigFilePath => Path.Combine(AppContext.BaseDirectory, FileName);
+
     public ImmutableArray<KeyMapping> KeyMappings { get; init; }
     public ImmutableArray<ButtonMapping> ButtonMappings { get; init; }
 
     public void Save()
     {
-        using var fileStream = File.OpenWrite(FileName);
+        using var fileStream = File.OpenWrite(ConfigFilePath);
         JsonSerializer.Serialize(fileStream, this, ConfigurationJsonSerializerContext.Default.Configuration);
     }
 
     public static Configuration Load()
     {
-        if (!File.Exists(FileName))
+        var path = ConfigFilePath;
+        if (!File.Exists(path))
             return Preset_DreamcastSimultaneous;
 
-        using var fileStream = File.OpenRead(FileName);
+        using var fileStream = File.OpenRead(path);
         return JsonSerializer.Deserialize(fileStream, ConfigurationJsonSerializerContext.Default.Configuration) ?? Preset_DreamcastSimultaneous;
     }
 
+    // NOTE: you may need to delete configuration.json from the build folder for changes to defaults to take effect.
     public static Configuration Default = new Configuration()
     {
         KeyMappings = [
@@ -44,6 +48,8 @@ public record Configuration
 
             new KeyMapping { SourceKey = Keys.Insert, TargetButton = VmuButton.InsertEject },
 
+            new KeyMapping { SourceKey = Keys.F5, TargetButton = VmuButton.SaveState },
+            new KeyMapping { SourceKey = Keys.F8, TargetButton = VmuButton.LoadState },
             new KeyMapping { SourceKey = Keys.F10, TargetButton = VmuButton.Pause },
             new KeyMapping { SourceKey = Keys.Tab, TargetButton = VmuButton.FastForward },
         ],
@@ -154,6 +160,8 @@ public enum VmuButton
     // Commands
     Pause,
     FastForward,
+    LoadState,
+    SaveState,
 }
 
 public struct KeyMapping

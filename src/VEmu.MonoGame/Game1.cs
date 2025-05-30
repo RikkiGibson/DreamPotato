@@ -7,6 +7,8 @@ using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
+using Myra.Graphics2D.UI;
+
 using VEmu.Core;
 
 namespace VEmu.MonoGame;
@@ -16,7 +18,7 @@ public class Game1 : Game
     private readonly GraphicsDeviceManager _graphics;
     private readonly Color[] _vmuScreenData;
 
-    private readonly Vmu _vmu;
+    internal readonly Vmu Vmu;
     private readonly Display _display;
 
     // TODO: eventually, there should be UI to permit a non-constant scale.
@@ -24,7 +26,8 @@ public class Game1 : Game
     private const int ScaledWidth = Display.ScreenWidth * VmuScale;
     private const int ScaledHeight = Display.ScreenHeight * VmuScale;
 
-    private const int TopMargin = VmuScale * 2;
+    private const int MenuBarHeight = 20;
+    private const int TopMargin = VmuScale * 2 + MenuBarHeight;
     private const int SideMargin = VmuScale * 3;
     private const int BottomMargin = VmuScale * 12;
 
@@ -39,24 +42,70 @@ public class Game1 : Game
     private ButtonChecker _buttonChecker = null!;
 
     // Set in LoadContent()
+    private Desktop _desktop = null!;
     private SpriteFont _font1 = null!;
     private DynamicSoundEffectInstance _dynamicSound = null!;
 
+    // Dynamic state
+    private KeyboardState _previousKeys;
+    private GamePadState _previousGamepad;
+    internal bool Paused;
 
-    public Game1()
+
+    public Game1(string? gameFilePath)
     {
         _graphics = new GraphicsDeviceManager(this);
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
 
-        _vmu = new Vmu();
-
-        _display = new Display(_vmu._cpu);
+        Vmu = new Vmu();
+        _display = new Display(Vmu._cpu);
         _vmuScreenData = new Color[Display.ScreenWidth * Display.ScreenHeight];
+
+        LoadVmuFiles(gameFilePath);
+    }
+
+    private void LoadVmuFiles(string? gameFilePath)
+    {
+        const string romFilePath = @"ROM/american_v1.05.bin";
+        var absoluteRomFilePath = Path.Combine(AppContext.BaseDirectory, romFilePath);
+        try
+        {
+            var bios = File.ReadAllBytes(absoluteRomFilePath);
+            bios.AsSpan().CopyTo(Vmu._cpu.ROM);
+        }
+        catch (FileNotFoundException ex)
+        {
+            throw new InvalidOperationException($"'{Path.GetFileName(absoluteRomFilePath)}' must be included in the application directory '{Path.GetDirectoryName(absoluteRomFilePath)}'.", ex);
+        }
+
+        if (gameFilePath == null)
+        {
+            // Start in paused state, showing the menu so user can pick a file.
+            Paused = true;
+        }
+        else
+        {
+            Paused = false;
+            var extension = Path.GetExtension(gameFilePath);
+            if (extension == ".vms")
+            {
+                Vmu.LoadGameVms(gameFilePath);
+            }
+            else if (extension is ".vmu" or ".bin")
+            {
+                Vmu.LoadVmu(gameFilePath);
+            }
+            else
+            {
+                throw new ArgumentException($"Cannot load '{gameFilePath}' because it is not a '.vms', '.vmu', or '.bin' file.");
+            }
+        }
     }
 
     protected override void Initialize()
     {
+        _desktop = UserInterface.Initialize(this, MenuBarHeight);
         _graphics.PreferredBackBufferWidth = TotalScreenWidth;
         _graphics.PreferredBackBufferHeight = TotalScreenHeight;
         _graphics.ApplyChanges();
@@ -74,9 +123,7 @@ public class Game1 : Game
         _iconsTexture = new Texture2D(_graphics.GraphicsDevice, ScaledWidth, BottomMargin);
 
         _configuration = Configuration.Load();
-
-        // TODO: configuration UI.
-        // _configuration.Save();
+        _configuration.Save();
 
         _buttonChecker = new ButtonChecker(_configuration);
 
@@ -85,28 +132,6 @@ public class Game1 : Game
 
     protected override void LoadContent()
     {
-        // TODO: UI/config for picking a vmu file
-        // _vmu.LoadGameVms(@"C:\Users\rikki\src\VMU-MISC-CODE\memopad.vms");
-        _vmu.LoadGameVms(@"C:\Users\rikki\src\ghidra-pinta\SkiesOfArcadiaPinataQuest.vms");
-        // _vmu.LoadVmu(@"C:\Users\rikki\src\ghidra-pinta\vmu_save_a1.bin");
-        // _vmu.LoadGameVms(@"C:\Users\rikki\src\VMU-MISC-CODE\AUDIO3_TEST.vms");
-        // _vmu.LoadGameVms(@"C:\Users\rikki\src\VEmu\src\VEmu.Tests\TestSource\RcOscillator.vms");
-        // _vmu.LoadGameVms(@"C:\Users\rikki\src\VEmu\src\VEmu.Tests\TestSource\BaseTimerInt1Counter.vms");
-
-        const string romFilename = @"ROM_american_v1.05.bin";
-        try
-        {
-            var bios = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, romFilename));
-            bios.AsSpan().CopyTo(_vmu._cpu.ROM);
-        }
-        catch (FileNotFoundException)
-        {
-            Console.Error.WriteLine($"'{romFilename}' must be included in the application directory '{AppContext.BaseDirectory}'.");
-            throw;
-        }
-
-        _vmu.Audio.AudioBufferReady += Audio_BufferReady;
-
         // TODO: starting a game which writes to flash, without first booting up ROM, can corrupt the game.
         // Figure out how to automatically initialize ram values used by the ROM so we can go straight to the game.
         // _vmu._cpu.SetInstructionBank(Core.SFRs.InstructionBank.FlashBank0);
@@ -116,11 +141,22 @@ public class Game1 : Game
 
         _font1 = Content.Load<SpriteFont>("MyMenuFont");
         _dynamicSound = new DynamicSoundEffectInstance(Audio.SampleRate, AudioChannels.Mono);
+        Vmu.Audio.AudioBufferReady += Audio_BufferReady;
     }
 
-    private KeyboardState _previousKeys;
-    private GamePadState _previousGamepad;
-    private bool _paused;
+    internal Point WindowSize
+    {
+        get
+        {
+            return Window.ClientBounds.Size;
+        }
+        set
+        {
+            _graphics.PreferredBackBufferWidth = value.X;
+            _graphics.PreferredBackBufferHeight = value.Y;
+            _graphics.ApplyChanges();
+        }
+    }
 
     protected override void Update(GameTime gameTime)
     {
@@ -131,19 +167,19 @@ public class Game1 : Game
             Exit();
 
         if (_buttonChecker.IsNewlyPressed(VmuButton.Pause, _previousKeys, keyboard, _previousGamepad, gamepad))
-            _paused = !_paused;
+            Paused = !Paused;
 
         // TODO: system for selecting save slots etc
-        if (_previousKeys.IsKeyUp(Keys.F5) && keyboard.IsKeyDown(Keys.F5))
-            _vmu.SaveState(id: "0");
+        if (_buttonChecker.IsNewlyPressed(VmuButton.SaveState, _previousKeys, keyboard, _previousGamepad, gamepad))
+            Vmu.SaveState(id: "0");
 
-        if (_previousKeys.IsKeyUp(Keys.F8) && keyboard.IsKeyDown(Keys.F8))
-            _vmu.LoadState(id: "0");
+        if (_buttonChecker.IsNewlyPressed(VmuButton.LoadState, _previousKeys, keyboard, _previousGamepad, gamepad))
+            Vmu.LoadState(id: "0");
 
         if (_buttonChecker.IsNewlyPressed(VmuButton.InsertEject, _previousKeys, keyboard, _previousGamepad, gamepad))
-            _vmu.InsertOrEject();
+            Vmu.InsertOrEject();
 
-        _vmu._cpu.SFRs.P3 = new Core.SFRs.P3()
+        Vmu._cpu.SFRs.P3 = new Core.SFRs.P3()
         {
             Up = !_buttonChecker.IsPressed(VmuButton.Up, keyboard, gamepad),
             Down = !_buttonChecker.IsPressed(VmuButton.Down, keyboard, gamepad),
@@ -155,11 +191,11 @@ public class Game1 : Game
             ButtonMode = !_buttonChecker.IsPressed(VmuButton.Mode, keyboard, gamepad),
         };
 
-        var rate = _paused ? 0 :
+        var rate = Paused ? 0 :
             _buttonChecker.IsPressed(VmuButton.FastForward, keyboard, gamepad) ? gameTime.ElapsedGameTime.Ticks * 2 :
             gameTime.ElapsedGameTime.Ticks;
 
-        _vmu._cpu.Run(rate);
+        Vmu._cpu.Run(rate);
 
         _previousKeys = keyboard;
         _previousGamepad = gamepad;
@@ -172,7 +208,7 @@ public class Game1 : Game
         _dynamicSound.SubmitBuffer(args.Buffer, args.Start, args.Length);
         if (_dynamicSound.State != SoundState.Playing)
         {
-            if (!_vmu.Audio.IsActive || _dynamicSound.PendingBufferCount > 1)
+            if (!Vmu.Audio.IsActive && _dynamicSound.PendingBufferCount > 1)
                 _dynamicSound.Play();
         }
     }
@@ -207,12 +243,14 @@ public class Game1 : Game
         var gameIcon = (icons & Icons.Game) != 0 ? "Game " : " ";
         var clockIcon = (icons & Icons.Clock) != 0 ? "Clock " : " ";
         var flashIcon = (icons & Icons.Flash) != 0 ? "Flash " : "  ";
-        var sleeping = _vmu._cpu.SFRs.Vccr.DisplayControl ? " " : "(sleep) ";
-        var paused = _paused ? "(paused) " : " ";
+        var sleeping = Vmu._cpu.SFRs.Vccr.DisplayControl ? " " : "(sleep) ";
+        var paused = Paused ? "(paused) " : " ";
         var iconString = $"{fileIcon}{gameIcon}{clockIcon}{flashIcon}{sleeping}{paused}";
         _spriteBatch.DrawString(_font1, iconString, new Vector2(x: SideMargin, y: TopMargin + ScaledHeight), Color.Black);
 
         _spriteBatch.End();
+
+        _desktop.Render();
 
         base.Draw(gameTime);
 

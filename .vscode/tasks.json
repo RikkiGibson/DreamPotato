@@ -6,11 +6,22 @@
         {
             "label": "waterbear assemble",
             "type": "shell",
-            "command": ["waterbear", "assemble", "${file}", "--output", "${fileDirname}/${fileBasenameNoExtension}.vms"],
-            // "problemMatcher": [
-            //     // TODO
-            // ],
+            "command": [
+                "waterbear",
+                "assemble",
+                "${file}",
+                "--output",
+                "${fileDirname}/${fileBasenameNoExtension}.vms"
+            ],
+            "group": "build"
+        },
+        {
+            "type": "dotnet",
+            "task": "build VEmu.MonoGame.csproj",
+            "file": "${workspaceFolder}/src/VEmu.MonoGame/VEmu.MonoGame.csproj",
             "group": "build",
+            "problemMatcher": [],
+            "label": "dotnet: build VEmu.MonoGame.csproj"
         }
     ]
 }
