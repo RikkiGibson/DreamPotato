@@ -9,8 +9,8 @@
         "type": "coreclr",
         "request": "launch",
         "preLaunchTask": "dotnet: build DreamPotato.MonoGame.csproj",
-        "program": "${workspaceFolder}/src/DreamPotato.MonoGame/bin/Debug/net9.0/DreamPotato.MonoGame.exe",
-        // "args": ["C:/Users/rikki/src/ghidra-pinta/SkiesOfArcadiaPinataQuest.vms"],
+        "program": "${workspaceFolder}/artifacts/bin/DreamPotato.MonoGame/Debug/DreamPotato.MonoGame.exe",
+        // "args": ["<path-to-vms-or-vmu-file>"],
         "cwd": "${workspaceFolder}",
         "stopAtEntry": false,
         "console": "internalConsole"

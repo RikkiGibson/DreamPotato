@@ -5,27 +5,29 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using DreamPotato.Core;
+
 using Microsoft.Xna.Framework.Input;
 
 namespace DreamPotato.MonoGame;
 
 public record Configuration
 {
-    public const string FileName = "configuration.json";
-    public static string ConfigFilePath => Path.Combine(AppContext.BaseDirectory, FileName);
+    private const string FileName = "configuration.json";
+    private static string FilePath => Path.Combine(Vmu.DataFolder, FileName);
 
     public ImmutableArray<KeyMapping> KeyMappings { get; init; }
     public ImmutableArray<ButtonMapping> ButtonMappings { get; init; }
 
     public void Save()
     {
-        using var fileStream = File.OpenWrite(ConfigFilePath);
+        using var fileStream = File.OpenWrite(FilePath);
         JsonSerializer.Serialize(fileStream, this, ConfigurationJsonSerializerContext.Default.Configuration);
     }
 
     public static Configuration Load()
     {
-        var path = ConfigFilePath;
+        var path = FilePath;
         if (!File.Exists(path))
             return Preset_DreamcastSimultaneous;
 

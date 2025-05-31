@@ -3,8 +3,8 @@
 ##
 ## Get latest from `dotnet new gitignore`
 
-# ROM
-**/ROM/*.bin
+# Data
+**/Data/*.bin
 
 # dotenv files
 .env

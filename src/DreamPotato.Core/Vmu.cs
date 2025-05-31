@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Diagnostics;
 using System.Text;
 
 namespace DreamPotato.Core;
@@ -67,7 +68,7 @@ public class Vmu
         _cpu.ConnectDreamcast(connect: IsEjected);
     }
 
-    public string SaveStateFolder => Path.Combine(AppContext.BaseDirectory, "SaveStates");
+    public static string DataFolder => Path.Combine(AppContext.BaseDirectory, "Data");
     public const string SaveStateHeaderMessage = "DreamPotatoSaveState";
     public static readonly ReadOnlyMemory<byte> SaveStateHeaderBytes = Encoding.UTF8.GetBytes(SaveStateHeaderMessage);
     public const int SaveStateVersion = 1;
@@ -78,7 +79,7 @@ public class Vmu
             throw new InvalidOperationException();
 
         var filePath = $"{Path.GetFileNameWithoutExtension(LoadedFilePath)}_{id}.dpstate";
-        return Path.Combine(SaveStateFolder, filePath);
+        return Path.Combine(DataFolder, filePath);
     }
 
     public void SaveState(string id)
@@ -86,6 +87,8 @@ public class Vmu
         // TODO: it feels like it would be reasonable to zip/unzip the state implicitly.
         // But, 194k is also not that hefty.
         var filePath = GetSaveStatePath(id);
+        Debug.Assert(filePath.StartsWith(DataFolder, StringComparison.Ordinal));
+        Directory.CreateDirectory(DataFolder);
         using var writeStream = File.Create(filePath);
         writeStream.Write(SaveStateHeaderBytes.Span);
 

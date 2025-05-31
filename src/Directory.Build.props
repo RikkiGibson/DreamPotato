@@ -4,4 +4,9 @@
     <FileVersion>0.1.0.0</FileVersion>
     <InformationalVersion>0.1.0.0.alpha-1</InformationalVersion>
   </PropertyGroup>
+
+  <PropertyGroup>
+    <UseArtifactsOutput>true</UseArtifactsOutput>
+    <ArtifactsPath>$(MSBuildThisFileDirectory)../artifacts</ArtifactsPath>
+  </PropertyGroup>
 </Project>

@@ -57,6 +57,7 @@ public class Game1 : Game
         _graphics = new GraphicsDeviceManager(this);
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
+        Window.Title = "DreamPotato";
 
         Vmu = new Vmu();
         _display = new Display(Vmu._cpu);
@@ -67,16 +68,16 @@ public class Game1 : Game
 
     private void LoadVmuFiles(string? gameFilePath)
     {
-        const string romFilePath = @"ROM/american_v1.05.bin";
-        var absoluteRomFilePath = Path.Combine(AppContext.BaseDirectory, romFilePath);
+        const string romFileName = "american_v1.05.bin";
+        var romFilePath = Path.Combine(Vmu.DataFolder, romFileName);
         try
         {
-            var bios = File.ReadAllBytes(absoluteRomFilePath);
+            var bios = File.ReadAllBytes(romFilePath);
             bios.AsSpan().CopyTo(Vmu._cpu.ROM);
         }
         catch (FileNotFoundException ex)
         {
-            throw new InvalidOperationException($"'{Path.GetFileName(absoluteRomFilePath)}' must be included in the application directory '{Path.GetDirectoryName(absoluteRomFilePath)}'.", ex);
+            throw new InvalidOperationException($"'{romFileName}' must be included in '{Vmu.DataFolder}'.", ex);
         }
 
         if (gameFilePath == null)

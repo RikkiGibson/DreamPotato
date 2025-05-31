@@ -24,13 +24,13 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="ROM/*.bin">
+    <Content Include="Data/*.bin">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.*" />
-    <PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.*" />
+    <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.3" />
+    <PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.3" />
     <PackageReference Include="Myra" Version="1.5.9" />
   </ItemGroup>
   <ItemGroup>

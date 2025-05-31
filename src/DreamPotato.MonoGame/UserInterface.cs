@@ -2,6 +2,8 @@ using System;
 using System.Diagnostics;
 using System.IO;
 
+using DreamPotato.Core;
+
 using Microsoft.Xna.Framework;
 
 using Myra;
@@ -107,13 +109,13 @@ class UserInterface
                 game.Paused = !game.Paused;
             };
 
-            var openConfigItem = new MenuItem("openConfig", "Open configuration.json");
+            var openConfigItem = new MenuItem("openConfig", "Open Data Folder");
             openConfigItem.Selected += (s, a) =>
             {
                 // NB: this won't work when debugging with VS Code, if VS Code is the default app for json files
                 new Process()
                 {
-                    StartInfo = new ProcessStartInfo(Configuration.ConfigFilePath)
+                    StartInfo = new ProcessStartInfo(Vmu.DataFolder)
                     {
                         UseShellExecute = true,
                     }
