@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 
 namespace DreamPotato.Core;
 
@@ -26,7 +27,7 @@ public class Display(Cpu cpu)
     {
         // TODO: maybe could reduce CPU by returning a flag indicating whether display content has changed since last query
         // This might also give us insight into the "effective framerate" of VMU apps
-        Draw(_bytes);
+        Draw();
         return _bytes;
     }
 
@@ -45,18 +46,12 @@ public class Display(Cpu cpu)
     }
 
     // TODO: make private, operate only on _bytes
-    public void Draw(byte[] display)
+    public void Draw()
     {
-        // 48x32 1bpp
-        Debug.Assert(display.Length == DisplaySize);
-
         if (!cpu.SFRs.Vccr.DisplayControl)
         {
             // LCD is shut off, so just draw a blank.
-            // TODO: this is generally used to implement "sleep" mode.
-            // when we start showing icons etc, it would be good to indicate that we are just sleeping, the game has not crashed.
-            // Same, perhaps, with halt mode.
-            Array.Clear(display);
+            Array.Clear(_bytes);
             return;
         }
 
@@ -68,7 +63,7 @@ public class Display(Cpu cpu)
         {
             // skip 4 dead display bytes
             for (int right = 0; right < 0xc; right++, index++)
-                display[index] = xram0[left | right];
+                _bytes[index] = xram0[left | right];
         }
 
         var xram1 = cpu.Memory.Direct_ReadXram1();
@@ -77,7 +72,43 @@ public class Display(Cpu cpu)
         for (int left = 0; left < 0x80; left += 0x10)
         {
             for (int right = 0; right < 0xc; right++, index++)
-                display[index] = xram1[left | right];
+                _bytes[index] = xram1[left | right];
         }
+    }
+
+    /// <summary>Get a string representation of the display contents for testing.</summary>
+    public string GetBlockString()
+    {
+        Draw();
+
+        // Each character represents 2 bits, each from a row adjacent vertically.
+        var builder = new StringBuilder(capacity: ScreenHeight / 2 * (ScreenWidth + Environment.NewLine.Length));
+        const int BytesPerRow = ScreenWidth / 8;
+
+        // Read corresponding bits from 2 rows
+        for (int row = 0; row < ScreenHeight; row += 2)
+        {
+            for (int i = 0; i < BytesPerRow; i++)
+            {
+                var upper = _bytes[row * BytesPerRow + i];
+                var lower = _bytes[(row + 1) * BytesPerRow + i];
+                for (int bitAddress = 7; bitAddress >= 0; bitAddress--)
+                {
+                    var upperBit = BitHelpers.ReadBit(upper, bitAddress);
+                    var lowerBit = BitHelpers.ReadBit(lower, bitAddress);
+                    var ch = (upperBit, lowerBit) switch
+                    {
+                        (false, false) => ' ',
+                        (false, true) => '▄',
+                        (true, false) => '▀',
+                        (true, true) => '█'
+                    };
+                    builder.Append(ch);
+                }
+            }
+            builder.AppendLine();
+        }
+
+        return builder.ToString();
     }
 }

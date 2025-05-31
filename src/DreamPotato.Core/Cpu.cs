@@ -92,9 +92,14 @@ public class Cpu
     internal readonly Interrupts[] _servicingInterrupts = new Interrupts[3];
     internal int _interruptsCount;
 
-    public Cpu(LogLevel logLevel = LogLevel.Trace)
+    public Cpu()
     {
-        var categories = LogCategories.General | LogCategories.Audio | LogCategories.Interrupts;
+#if DEBUG
+        var logLevel = LogLevel.Trace;
+#else
+        var logLevel = LogLevel.Debug;
+#endif
+        var categories = LogCategories.General;
         Logger = new Logger(logLevel, categories, this);
         Memory = new Memory(this, Logger);
         Audio = new Audio(this, Logger);

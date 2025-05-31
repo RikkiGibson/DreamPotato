@@ -11,7 +11,6 @@ public enum LogLevel
     Error,
 }
 
-// TODO: need a better point of control here. not just swapping LogLevels around in code to view desired logs.
 public enum LogCategories
 {
     None = 0,

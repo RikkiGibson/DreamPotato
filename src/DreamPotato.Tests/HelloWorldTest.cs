@@ -22,8 +22,27 @@ public class HelloWorldTest(ITestOutputHelper outputHelper)
             var ticks = 100 * TimeSpan.TicksPerMillisecond;
             Assert.Equal(1000055, cpu.Run(ticks));
             var display = new Display(cpu);
-            var bytes = new byte[Display.DisplaySize];
-            display.Draw(bytes);
+
+            Assert.Equal<object>("""
+                █ █      █   █          █ █          █    █  █  
+                █▀█ ▄██  █   █  ▄▀▄     ███ ▄▀▄ ▄▀   █  ▄▀█  █  
+                █ █ ▀▄▄  ▀▄  ▀▄ ▀▄▀  █  █▀█ ▀▄▀ █    ▀▄ ▀▄█  ▄  
+                                                                
+                                                                
+                                                                
+                                                                
+                                                                
+                                                                
+                                                                
+                                                                
+                                                                
+                                                                
+                                                                
+                                                                
+                                                                
+
+                """,
+                display.GetBlockString());
         }
         catch
         {
