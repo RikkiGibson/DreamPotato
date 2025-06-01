@@ -212,6 +212,11 @@ public class Memory
         _workRam[address] = value;
     }
 
+    internal Span<byte> Direct_AccessWorkRam()
+    {
+        return _workRam;
+    }
+
     /// <summary>
     /// Use for front-end rendering.
     /// </summary>

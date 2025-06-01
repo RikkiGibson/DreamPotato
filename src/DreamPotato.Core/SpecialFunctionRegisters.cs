@@ -194,6 +194,35 @@ public class SpecialFunctionRegisters
                 }
                 goto default;
 
+            case Ids.Vsel:
+                var oldVsel = new Vsel(_rawMemory[address]);
+                var newVsel = new Vsel(value);
+                if (oldVsel.Asel != newVsel.Asel)
+                    _logger.LogDebug($"Vsel.Asel changing from {oldVsel.Asel} to {newVsel.Asel}", LogCategories.Maple);
+
+                if (oldVsel.Siosel != newVsel.Siosel)
+                    _logger.LogDebug($"Vsel.Siosel changing from {oldVsel.Siosel} to {newVsel.Siosel}", LogCategories.Maple);
+
+                goto default;
+
+            case Ids.Mplsw:
+                { // breakpoint holder
+                }
+                goto default;
+
+            case Ids.Mplsta:
+                { // breakpoint holder
+                }
+                goto default;
+
+            case Ids.Mplrst:
+                var oldMplrst = new Mplrst(_rawMemory[address]);
+                var newMplrst = new Mplrst(value);
+                if (oldMplrst.Reset && !newMplrst.Reset)
+                    _logger.LogDebug($"Resetting Maple bus", LogCategories.Maple);
+
+                goto default;
+
             case Ids.P3Int:
                 if (_rawMemory[address] != value)
                     _logger.LogTrace($"P3Int changed: Old=0b{_rawMemory[address]:b} New=0b{value:b}", LogCategories.Interrupts);
@@ -606,9 +635,29 @@ public class SpecialFunctionRegisters
         set => Write(Ids.Isl, (byte)value);
     }
 
-#region Work RAM
-    /// <summary>Control register. VMD-143</summary>
-    /// TODO: the application is only supposed to be able to alter bit 4.
+#region Work RAM / Maple
+    /// <summary>Maple Status Word. Contains bits reflecting the status of a Maple transfer request.</summary>
+    public Mplsw Mplsw
+    {
+        get => new(Read(Ids.Mplsw));
+        set => Write(Ids.Mplsw, (byte)value);
+    }
+
+    /// <summary>Maple Start Transfer. Used to control starting and stopping a Maple transfer.</summary>
+    public Mplsta Mplsta
+    {
+        get => new(Read(Ids.Mplsta));
+        set => Write(Ids.Mplsta, (byte)value);
+    }
+
+    /// <summary>Maple Reset. Used to reset the Maple transaction when an error has occurred.</summary>
+    public Mplrst Mplrst
+    {
+        get => new(Read(Ids.Mplrst));
+        set => Write(Ids.Mplrst, (byte)value);
+    }
+
+    /// <summary>Work RAM control register. VMD-143. Note that the application is only supposed to be able to alter bit 4.</summary>
     public Vsel Vsel
     {
         get => new(Read(Ids.Vsel));

@@ -54,6 +54,9 @@ public class Cpu
     public readonly Memory Memory;
     public readonly Audio Audio;
 
+    /// <summary>NOTE: only 'TryReceiveMessage' and 'SendMessage' methods are safe to call from here.</summary>
+    public readonly MapleMessageBroker MapleMessageBroker;
+
     internal ushort Pc;
 
     /// <summary>
@@ -99,10 +102,11 @@ public class Cpu
 #else
         var logLevel = LogLevel.Debug;
 #endif
-        var categories = LogCategories.General;
+        var categories = LogCategories.General | LogCategories.Maple;
         Logger = new Logger(logLevel, categories, this);
         Memory = new Memory(this, Logger);
         Audio = new Audio(this, Logger);
+        MapleMessageBroker = new MapleMessageBroker();
         SetInstructionBank(InstructionBank.ROM);
     }
 
@@ -770,6 +774,18 @@ public class Cpu
 
             if (btcr.Int1Enable && btcr.Int1Source && !currentlyServicing(Interrupts.INT3_BT))
                 RequestedInterrupts |= Interrupts.INT3_BT;
+
+            // TODO: maple interrupt enable?
+            if (!currentlyServicing(Interrupts.Maple) && MapleMessageBroker.TryReceiveMessage() is { HasValue: true } message)
+            {
+                if (!SFRs.Vsel.Asel)
+                {
+                    Logger.LogWarning($"Receiving maple message, but, flag is not set indicating maple transfer in progress!", LogCategories.Maple);
+                }
+
+                message.RawBytes.AsSpan().CopyTo(Memory.Direct_AccessWorkRam());
+                RequestedInterrupts |= Interrupts.Maple;
+            }
 
             var p3int = SFRs.P3Int;
             // NB: non-continuous interrupts are generated in SFRs.P3.set (i.e. only when P3 changes)

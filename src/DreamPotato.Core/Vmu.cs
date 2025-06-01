@@ -14,6 +14,7 @@ public class Vmu
     public Vmu()
     {
         _cpu = new Cpu();
+        _cpu.Reset();
         _fileSystem = new FileSystem(_cpu.FlashBank0, _cpu.FlashBank1);
     }
 

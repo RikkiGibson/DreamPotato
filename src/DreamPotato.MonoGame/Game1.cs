@@ -60,6 +60,7 @@ public class Game1 : Game
         Window.Title = "DreamPotato";
 
         Vmu = new Vmu();
+        // Vmu.Flycast.StartServer();
         _display = new Display(Vmu._cpu);
         _vmuScreenData = new Color[Display.ScreenWidth * Display.ScreenHeight];
 
