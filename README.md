@@ -37,7 +37,7 @@ Button mapping is done by editing a json file by hand for now. Eventually a prop
 ## Building
 
 - You'll need the [.NET 9 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/9.0) installed on your computer.
-- Copy your `american_v1.05.bin` VMU ROM into `src/DreamPotato.MonoGame/ROM/`.
+- Copy your `american_v1.05.bin` VMU ROM into `src/DreamPotato.MonoGame/Data/`.
 - Build everything: `dotnet build`.
 - Run the emulator: `dotnet run --project src/DreamPotato.MonoGame`.
 - Run tests: `dotnet test`
