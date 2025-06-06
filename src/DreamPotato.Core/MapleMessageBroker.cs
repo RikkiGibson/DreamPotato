@@ -1,10 +1,10 @@
+using System.Buffers.Binary;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
-
-using DreamPotato.Core;
 
 namespace DreamPotato.Core;
 
@@ -20,17 +20,15 @@ public class MapleMessageBroker
     // Message 0x01020304 is encoded as "04 03 02 01 \r\n"
     // Maple sends most of its data in 32-bit words which seem to get endian-swapped before and after transmission.
     private readonly byte[] _rawSocketBuffer = new byte[MaxMaplePacketSize * 4];
-    private readonly List<byte> _currentMessageBuilder = [];
+    private readonly List<byte> _currentInboundMessageBuilder = [];
 
-    private readonly Lock _inboundOutboundMessagesLock = new Lock();
-    private readonly List<MapleMessage> _receivedMessages = [];
-    private readonly List<MapleMessage> _outboundMessages = [];
+    private readonly ConcurrentQueue<MapleMessage> _inboundMessages = [];
+    private readonly ConcurrentQueue<MapleMessage> _outboundMessages = [];
 
     private Task? _serverTask;
     private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
     public MapleMessageBroker()
     {
-
     }
 
     public bool IsRunning => _serverTask != null;
@@ -48,69 +46,151 @@ public class MapleMessageBroker
         _serverTask = Task.Run(() => StartServerWorker(_cancellationTokenSource.Token));
     }
 
-    private void SubmitMessage()
+    internal bool TryReceiveMessage(out MapleMessage mapleMessage)
     {
-        var message = new MapleMessage();
-        message.HasValue = true;
-        message.RawBytes = _currentMessageBuilder.ToArray();
-        _currentMessageBuilder.Clear();
-
-        lock (_inboundOutboundMessagesLock)
-        {
-            _receivedMessages.Add(message);
-        }
+        return _inboundMessages.TryDequeue(out mapleMessage);
     }
 
-    internal MapleMessage TryReceiveMessage()
+    internal void SendMessage(MapleMessage mapleMessage)
     {
-        lock (_inboundOutboundMessagesLock)
-        {
-            if (_receivedMessages.Count == 0)
-                return default;
-
-            var message = _receivedMessages[0];
-            _receivedMessages.RemoveAt(0);
-            return message;
-        }
+        _outboundMessages.Enqueue(mapleMessage);
     }
 
-    /// <returns>false if the message was malformed.</returns>
-    internal bool AppendMessageFragment(ReadOnlySpan<byte> fragment)
+    internal MapleMessage DequeueMessage_TestingOnly()
     {
-        var stringValue = Encoding.UTF8.GetString(fragment);
+        _outboundMessages.TryDequeue(out var result);
+        return result;
+    }
 
-        // TODO: do this without allocating.
-        try
+    internal void ScanAsciiHexFragment(ReadOnlySpan<byte> fragment)
+    {
+        for (int i = 0; i < fragment.Length; i++)
         {
-            for (int i = 0; i < stringValue.Length;)
+            var @byte = fragment[i];
+            _currentInboundMessageBuilder.Add(@byte);
+            if (@byte == '\r' && i < fragment.Length - 1 && fragment[i + 1] == '\n')
             {
-                if (stringValue.Substring(i, 2).Equals("\r\n"))
-                {
-                    SubmitMessage();
-                    i += 2;
-                    continue;
-                }
-
-                if (stringValue[i] == ' ')
-                    i++;
-
-                _currentMessageBuilder.Add(Convert.ToByte(stringValue.Substring(i, 2)));
-                i += 2;
+                i++; // skip past the '\r', loop header will skip past the '\n'
+                _currentInboundMessageBuilder.Add((byte)'\n');
+                DecodeAndSubmitInboundMessage();
             }
         }
-        catch (FormatException)
+    }
+
+    private int DecodeAsciiHexLine(byte[] dest)
+    {
+        Debug.Assert(_currentInboundMessageBuilder.Count > 0);
+        Debug.Assert(_currentInboundMessageBuilder is [.., (byte)'\r', (byte)'\n']);
+
+        int destIndex = 0;
+        for (int i = 0; i < _currentInboundMessageBuilder.Count - 2;)
         {
-            // TODO: normal cpu Logger is not thread safe.
-            Console.Error.WriteLine($"Bad format: '{stringValue}'", LogCategories.Maple);
-            return false;
-        }
-        catch (IndexOutOfRangeException)
-        {
-            Console.Error.WriteLine($"Bad format: '{stringValue}'", LogCategories.Maple);
-            return false;
+            var msb = _currentInboundMessageBuilder[i++];
+            var lsb = _currentInboundMessageBuilder[i++];
+            var byteValue = fromAsciiHexDigits(msb, lsb);
+            dest[destIndex++] = byteValue;
+
+            if (_currentInboundMessageBuilder[i] == (byte)' ')
+                i++;
         }
 
-        return true;
+        return destIndex;
+
+        static byte fromAsciiHexDigits(byte msb, byte lsb)
+        {
+            var result = (getNybble(msb) << 4) | getNybble(lsb);
+            return (byte)result;
+
+            static int getNybble(byte asciiHexDigit)
+            {
+                if (asciiHexDigit is >= (byte)'0' and <= (byte)'9')
+                    return asciiHexDigit - (byte)'0';
+
+                if (asciiHexDigit is >= (byte)'a' and <= (byte)'f')
+                    return asciiHexDigit - (byte)'a' + 10;
+
+                if (asciiHexDigit is >= (byte)'A' and <= (byte)'F')
+                    return asciiHexDigit - (byte)'A' + 10;
+
+                throw new ArgumentException($"'{(char)asciiHexDigit}' was not an ascii hex digit", nameof(asciiHexDigit));
+            }
+        }
+    }
+
+    private void DecodeAndSubmitInboundMessage()
+    {
+        var rawBytes = new byte[_currentInboundMessageBuilder.Count / 3];
+        var rawLength = DecodeAsciiHexLine(rawBytes);
+        var rawSpan = rawBytes.AsSpan(start: 0, rawLength);
+
+        var type = (MapleMessageType)rawSpan[0];
+        var recipient = new MapleAddress(rawSpan[1]);
+        var sender = new MapleAddress(rawSpan[2]);
+        var length = rawSpan[3];
+
+        int[] additionalWords = new int[length];
+        for (int i = 4, destIndex = 0; i < rawSpan.Length; i += 4, destIndex++)
+        {
+            additionalWords[destIndex] = BinaryPrimitives.ReadInt32LittleEndian(rawSpan[i..(i + 4)]);
+        }
+        var message = new MapleMessage()
+        {
+            Type = type,
+            Recipient = recipient,
+            Sender = sender,
+            Length = length,
+            AdditionalWords = additionalWords,
+        };
+
+        _currentInboundMessageBuilder.Clear();
+        _inboundMessages.Enqueue(message);
+    }
+
+    internal int EncodeAsciiHexData(MapleMessage message, byte[] dest)
+    {
+        byte[] messageBytes = new byte[4 * (message.Length + 1)];
+        message.WriteTo(messageBytes, out var bytesWritten);
+        Debug.Assert(bytesWritten == messageBytes.Length);
+
+        int destIndex = 0;
+        for (int i = 0; i < messageBytes.Length; i++)
+        {
+            var (msb, lsb) = toAsciiHexDigits(messageBytes[i]);
+            dest[destIndex++] = msb;
+            dest[destIndex++] = lsb;
+            if (i == messageBytes.Length - 1)
+            {
+                dest[destIndex++] = (byte)'\r';
+                dest[destIndex++] = (byte)'\n';
+            }
+            else
+            {
+                dest[destIndex++] = (byte)' ';
+            }
+        }
+        return destIndex;
+
+        static (byte msb, byte lsb) toAsciiHexDigits(byte value)
+        {
+            byte msb = getSingleAsciiHexDigit(value & 0xf0 >> 4);
+            byte lsb = getSingleAsciiHexDigit(value & 0xf);
+            return (msb, lsb);
+
+            static byte getSingleAsciiHexDigit(int nybble)
+            {
+                Debug.Assert((nybble & 0xf) == nybble);
+                if (nybble is >= 0xa and <= 0xf)
+                {
+                    byte c = (byte)('A' + (nybble - 0xa));
+                    return c;
+                }
+                else
+                {
+                    byte c = (byte)('0' + nybble);
+                    return c;
+                }
+            }
+        }
     }
 
     private async Task StartServerWorker(CancellationToken cancellationToken)
@@ -120,15 +200,27 @@ public class MapleMessageBroker
         listener.Listen(backlog: 1);
 
         var handler = await listener.AcceptAsync(cancellationToken);
+        handler.ReceiveTimeout = 50;
         while (handler.Connected)
         {
             // Receive message.
-            var receivedLen = await handler.ReceiveAsync(_rawSocketBuffer, SocketFlags.None, cancellationToken);
-            AppendMessageFragment(_rawSocketBuffer.AsSpan()[0..receivedLen]);
-
-            foreach (var message in _outboundMessages)
+            if (handler.Available > 0)
             {
-                await handler.SendAsync(new byte[0], SocketFlags.None, cancellationToken);
+                var receivedLen = await handler.ReceiveAsync(_rawSocketBuffer, SocketFlags.None, cancellationToken);
+                if (_currentInboundMessageBuilder.Count == 0)
+                    Console.Write($"Received message: {Encoding.UTF8.GetString(_rawSocketBuffer.AsSpan(start: 0, length: receivedLen))}");
+                else
+                    Console.Write(Encoding.UTF8.GetString(_rawSocketBuffer.AsSpan(start: 0, length: receivedLen)));
+
+                ScanAsciiHexFragment(_rawSocketBuffer.AsSpan()[0..receivedLen]);
+            }
+
+            if (_outboundMessages.TryDequeue(out var outboundMessage))
+            {
+                var bytesWritten = EncodeAsciiHexData(outboundMessage, _rawSocketBuffer);
+                if (outboundMessage.Type != MapleMessageType.Ack)
+                    Console.WriteLine($"Sending message: {Encoding.UTF8.GetString(_rawSocketBuffer.AsSpan(start: 0, length: bytesWritten))}");
+                await handler.SendAsync(_rawSocketBuffer.AsMemory(start: 0, length: bytesWritten), cancellationToken);
             }
         }
     }

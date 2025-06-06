@@ -42,23 +42,26 @@ public class Memory
 
     internal readonly SpecialFunctionRegisters SFRs;
 
+    internal const int XramBank01Size = 0x80;
+    internal const int XramBank2Size = 6;
+
     /// <summary>
     /// Video memory. Bank 0, 0x180-0x1ff.
     /// Note that 0x20 of the bytes are "dead", only 0x60 of the space is usable.
     /// </summary>
-    private readonly byte[] _xram0 = new byte[0x80];
+    private readonly byte[] _xram0 = new byte[XramBank01Size];
 
     /// <summary>
     /// Video memory. Bank 1, 0x180-0x1ff.
     /// Note that 0x20 of the bytes are "dead", only 0x60 of the space is usable.
     /// </summary>
-    private readonly byte[] _xram1 = new byte[0x80];
+    private readonly byte[] _xram1 = new byte[XramBank01Size];
 
     /// <summary>
     /// Video memory. Bank 2, 0x180-0x186.
     /// Icons, only modifiable by system.
     /// </summary>
-    private readonly byte[] _xram2 = new byte[6];
+    private readonly byte[] _xram2 = new byte[XramBank2Size];
 
     private readonly byte[] _workRam = new byte[0x200];
 
@@ -218,18 +221,14 @@ public class Memory
     }
 
     /// <summary>
-    /// Use for front-end rendering.
+    /// Do not use when executing user code; use for implementing front-end or direct Maple handling only.
     /// </summary>
-    internal ReadOnlySpan<byte> Direct_ReadXram0() => _xram0;
+    internal Span<byte> Direct_AccessXram0() => _xram0;
 
-    /// <summary>
-    /// Use for front-end rendering.
-    /// </summary>
-    internal ReadOnlySpan<byte> Direct_ReadXram1() => _xram1;
+    /// <inheritdoc cref="Direct_AccessXram0"/>
+    internal Span<byte> Direct_AccessXram1() => _xram1;
 
-    /// <summary>
-    /// Use for front-end rendering.
-    /// </summary>
+    /// <inheritdoc cref="Direct_AccessXram0"/>
     internal ReadOnlySpan<byte> Direct_ReadXram2() => _xram2;
 
     private byte ReadMainMemory(ushort address)

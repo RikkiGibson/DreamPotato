@@ -1,23 +1,43 @@
+using System.Buffers.Binary;
+using System.Diagnostics;
+
 namespace DreamPotato.Core;
 
-internal struct MapleMessage
+internal record struct MapleMessage()
 {
-    public bool HasValue;
+    public bool HasValue { get; } = true;
 
-    public byte Type;
-    public byte Recipient; // TODO: sticking an 0x20 onto the recipient ID seems to indicate a request to enumerate attached devices (e.g. VMUs and jump packs)
-    public byte Sender;
+    public MapleMessageType Type { get; init; }
+    public MapleAddress Recipient { get; init; }
+    public MapleAddress Sender { get; init; }
+
+    public MapleFunction Function => (MapleFunction)AdditionalWords[0];
 
     /// <summary>
     /// The number of additional 32-bit words being sent in the packet.
     /// </summary>
-    public byte Length;
+    public byte Length { get; init; }
 
-    public byte Checksum;
+    public byte Checksum { get; init; }
 
-    public byte[] AdditionalWords;
+    public required int[] AdditionalWords { get; init; }
 
-    public byte[] RawBytes;
+    public byte[] WriteTo(byte[] buffer, out int bytesWritten)
+    {
+        bytesWritten = 4 * (Length + 1);
+
+        buffer[0] = (byte)Type;
+        buffer[1] = (byte)Recipient;
+        buffer[2] = (byte)Sender;
+        buffer[3] = Length;
+        var byteSpan = buffer.AsSpan();
+        for (int i = 0; i < Length; i++)
+        {
+            BinaryPrimitives.WriteInt32LittleEndian(byteSpan[(4 * i + 1)..(4 * i + 2)], AdditionalWords[i]);
+        }
+
+        return buffer;
+    }
 }
 
 enum DreamcastPort
@@ -44,13 +64,25 @@ struct MapleAddress
     public MapleAddress(byte value) => _value = value;
     public static explicit operator byte(MapleAddress value) => value._value;
 
-    DreamcastPort Port => (DreamcastPort)(_value >> 6);
-    DreamcastSlot Slot => (DreamcastSlot)(_value & 0b0001_1111);
+    public DreamcastPort Port
+    {
+        get => (DreamcastPort)(_value >> 6);
+        // TODO: this is likely incorrect.
+        set => _value = (byte)(((byte)value << 6) | (_value & ~0b1100_0000));
+    }
+    public DreamcastSlot Slot
+    {
+        get => (DreamcastSlot)(_value & 0b0001_1111);
+        // TODO: likely incorrect.
+        set => _value = (byte)((byte)value | _value & ~0b0001_1111);
+    }
+
+    public bool EnumerateAttachedDevices => BitHelpers.ReadBit(_value, bit: 5);
 }
 
 // Derived from https://dmitry.gr/index.php?r=05.Projects&proj=25.%20VMU%20Hacking.
-// Corresponds to 'enum MapleDeviceCommand' in flycast.
-enum MapleMessageType
+// Largely corresponds to 'enum MapleDeviceCommand' in flycast.
+enum MapleMessageType : byte
 {
     GetDeviceInfo = 1,
     GetExtendedDeviceInfo = 2,
@@ -62,6 +94,7 @@ enum MapleMessageType
     /// <summary>Reply to GetExtendedDeviceInfo.</summary>
     ExtendedDeviceInfoTransfer = 6,
 
+    /// <summary>Corresponds to 'MDRS_DeviceReply' in flycast.</summary>
     Ack = 7,
 
     DataTransfer = 8,
@@ -76,4 +109,12 @@ enum MapleMessageType
     ResendLastPacket = 0xfc,
     ErrorUnknownCommand = 0xfd,
     ErrorUnknownFunction = 0xfe,
+}
+
+enum MapleFunction
+{
+    Input = 0x0100_0000, // valid to combine with 'GetCondition'
+    Storage = 0x0200_0000, // valid to combine with 'ReadBlock'/'WriteBlock'/'CompleteWrite'
+    LCD = 0x0400_0000, // valid to combine with 'WriteBlock'
+    Clock = 0x0800_0000, // valid to combine with 'SetCondition'
 }

@@ -256,6 +256,16 @@ public class Cpu
 
     public long Run(long ticksToRun)
     {
+        if (SFRs.P7.DreamcastConnected)
+        {
+            // TODO: more carefully manage the state transition.
+            if (!MapleMessageBroker.IsRunning)
+                MapleMessageBroker.StartServer();
+
+            HandleMapleMessages();
+            return 0;
+        }
+
         // Reduce the number of ticks we were asked to run, by the amount we overran last frame.
         ticksToRun -= TicksOverrun;
 
@@ -267,6 +277,99 @@ public class Cpu
         TicksOverrun = ticksSoFar - ticksToRun;
 
         return ticksSoFar;
+    }
+
+    private void HandleMapleMessages()
+    {
+        while (MapleMessageBroker.TryReceiveMessage(out var message))
+        {
+            switch (message.Type, message.Function)
+            {
+                case (MapleMessageType.GetCondition, MapleFunction.Input):
+                    handleGetConditionInput();
+                    break;
+                case (MapleMessageType.SetCondition, MapleFunction.Clock):
+                    handleSetConditionClock(message);
+                    break;
+                case (MapleMessageType.WriteBlock, MapleFunction.LCD):
+                    handleWriteBlockLcd(message);
+                    break;
+                default:
+                    Debug.Fail($"Unhandled Maple message  '({message.Type}, {message.Function})'");
+                    Logger.LogError($"Unhandled Maple message  '({message.Type}, {message.Function})'", category: LogCategories.Maple);
+                    break;
+            }
+        }
+
+        void handleGetConditionInput()
+        {
+            var reply = new MapleMessage()
+            {
+                Type = MapleMessageType.Ack,
+                Recipient = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
+                Sender = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Slot1 },
+                Length = 0,
+                AdditionalWords = [],
+            };
+            MapleMessageBroker.SendMessage(reply);
+        }
+
+        void handleSetConditionClock(MapleMessage message)
+        {
+            if (message.AdditionalWords.Length != 1
+                || message.AdditionalWords[0] != 0)
+            {
+                Logger.LogWarning($"VMU beeps over Maple not implemented.", LogCategories.Maple);
+            }
+
+            var reply = new MapleMessage()
+            {
+                Type = MapleMessageType.Ack,
+                Recipient = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
+                Sender = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Slot1 },
+                Length = 0,
+                AdditionalWords = [],
+            };
+            MapleMessageBroker.SendMessage(reply);
+        }
+
+        void handleWriteBlockLcd(MapleMessage message)
+        {
+            var lcdWords = message.AdditionalWords.AsSpan(startIndex: 2);
+
+            var xram0 = Memory.Direct_AccessXram0();
+            int index = 0;
+            for (int left = 0; left < Memory.XramBank01Size; left += 0x10)
+            {
+                // skip 4 dead display bytes
+                for (int right = 0; right < 0xc; right++)
+                    xram0[left | right] = getAdditionalByte(lcdWords, index++);
+            }
+
+            var xram1 = Memory.Direct_AccessXram1();
+            for (int left = 0; left < Memory.XramBank01Size; left += 0x10)
+            {
+                for (int right = 0; right < 0xc; right++)
+                    xram1[left | right] = getAdditionalByte(lcdWords, index++);
+            }
+
+            var reply = new MapleMessage()
+            {
+                Type = MapleMessageType.Ack,
+                Recipient = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
+                Sender = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Slot1 },
+                Length = 0,
+                AdditionalWords = [],
+            };
+            MapleMessageBroker.SendMessage(reply);
+
+            static byte getAdditionalByte(ReadOnlySpan<int> additionalWords, int pos)
+            {
+                var i32 = additionalWords[pos / 4];
+                var @byte = i32 >> (pos % 4 * 8) & 0xff;
+                return (byte)@byte;
+            }
+        }
     }
 
     #region External interrupt triggers
@@ -774,18 +877,6 @@ public class Cpu
 
             if (btcr.Int1Enable && btcr.Int1Source && !currentlyServicing(Interrupts.INT3_BT))
                 RequestedInterrupts |= Interrupts.INT3_BT;
-
-            // TODO: maple interrupt enable?
-            if (!currentlyServicing(Interrupts.Maple) && MapleMessageBroker.TryReceiveMessage() is { HasValue: true } message)
-            {
-                if (!SFRs.Vsel.Asel)
-                {
-                    Logger.LogWarning($"Receiving maple message, but, flag is not set indicating maple transfer in progress!", LogCategories.Maple);
-                }
-
-                message.RawBytes.AsSpan().CopyTo(Memory.Direct_AccessWorkRam());
-                RequestedInterrupts |= Interrupts.Maple;
-            }
 
             var p3int = SFRs.P3Int;
             // NB: non-continuous interrupts are generated in SFRs.P3.set (i.e. only when P3 changes)
