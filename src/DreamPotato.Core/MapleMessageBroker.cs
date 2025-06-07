@@ -56,7 +56,7 @@ public class MapleMessageBroker
         _outboundMessages.Enqueue(mapleMessage);
     }
 
-    internal MapleMessage DequeueMessage_TestingOnly()
+    internal MapleMessage DequeueOutboundMessage_TestingOnly()
     {
         _outboundMessages.TryDequeue(out var result);
         return result;
@@ -199,28 +199,32 @@ public class MapleMessageBroker
         listener.Bind(new IPEndPoint(IPAddress.Loopback, BasePort));
         listener.Listen(backlog: 1);
 
-        var handler = await listener.AcceptAsync(cancellationToken);
-        handler.ReceiveTimeout = 50;
-        while (handler.Connected)
+        while (true) // Accept a new client whenever one disconnects
         {
-            // Receive message.
-            if (handler.Available > 0)
+            var handler = await listener.AcceptAsync(cancellationToken);
+            handler.ReceiveTimeout = 50;
+            while (handler.Connected)
             {
-                var receivedLen = await handler.ReceiveAsync(_rawSocketBuffer, SocketFlags.None, cancellationToken);
-                if (_currentInboundMessageBuilder.Count == 0)
-                    Console.Write($"Received message: {Encoding.UTF8.GetString(_rawSocketBuffer.AsSpan(start: 0, length: receivedLen))}");
-                else
-                    Console.Write(Encoding.UTF8.GetString(_rawSocketBuffer.AsSpan(start: 0, length: receivedLen)));
+                // Receive message.
+                if (handler.Available > 0)
+                {
+                    var receivedLen = await handler.ReceiveAsync(_rawSocketBuffer, SocketFlags.None, cancellationToken);
+                    if (_currentInboundMessageBuilder.Count == 0)
+                        Console.Write($"Received message: {Encoding.UTF8.GetString(_rawSocketBuffer.AsSpan(start: 0, length: receivedLen))}");
+                    else
+                        Console.Write(Encoding.UTF8.GetString(_rawSocketBuffer.AsSpan(start: 0, length: receivedLen)));
 
-                ScanAsciiHexFragment(_rawSocketBuffer.AsSpan()[0..receivedLen]);
-            }
+                    ScanAsciiHexFragment(_rawSocketBuffer.AsSpan()[0..receivedLen]);
+                }
 
-            if (_outboundMessages.TryDequeue(out var outboundMessage))
-            {
-                var bytesWritten = EncodeAsciiHexData(outboundMessage, _rawSocketBuffer);
-                if (outboundMessage.Type != MapleMessageType.Ack)
-                    Console.WriteLine($"Sending message: {Encoding.UTF8.GetString(_rawSocketBuffer.AsSpan(start: 0, length: bytesWritten))}");
-                await handler.SendAsync(_rawSocketBuffer.AsMemory(start: 0, length: bytesWritten), cancellationToken);
+                // TODO: a condition variable seems appropriate here so this thread is not just hammering the queue waiting for a message.
+                if (_outboundMessages.TryDequeue(out var outboundMessage))
+                {
+                    var bytesWritten = EncodeAsciiHexData(outboundMessage, _rawSocketBuffer);
+                    if (outboundMessage.Type != MapleMessageType.Ack)
+                        Console.WriteLine($"Sending message: {Encoding.UTF8.GetString(_rawSocketBuffer.AsSpan(start: 0, length: bytesWritten))}");
+                    await handler.SendAsync(_rawSocketBuffer.AsMemory(start: 0, length: bytesWritten), cancellationToken);
+                }
             }
         }
     }

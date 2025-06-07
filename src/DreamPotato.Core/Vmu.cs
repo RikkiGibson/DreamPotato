@@ -41,6 +41,7 @@ public class Vmu
 
     public void LoadVmu(string filePath)
     {
+        // TODO: loading a wrong file type should just show a toast or something, not crash the emu.
         if (!filePath.EndsWith(".vmu", StringComparison.OrdinalIgnoreCase) && !filePath.EndsWith(".bin", StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException($"VMU file '{filePath}' must have .vmu or .bin extension.", nameof(filePath));
 

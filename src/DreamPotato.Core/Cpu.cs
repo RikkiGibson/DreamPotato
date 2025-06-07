@@ -297,6 +297,12 @@ public class Cpu
                 case (MapleMessageType.ReadBlock, MapleFunction.Storage):
                     handleReadBlockStorage(message);
                     break;
+                case (MapleMessageType.WriteBlock, MapleFunction.Storage):
+                    handleWriteBlockStorage(message);
+                    break;
+                case (MapleMessageType.CompleteWrite, MapleFunction.Storage):
+                    handleCompleteWriteStorage(message);
+                    break;
                 default:
                     Debug.Fail($"Unhandled Maple message  '({message.Type}, {message.Function})'");
                     Logger.LogError($"Unhandled Maple message  '({message.Type}, {message.Function})'", category: LogCategories.Maple);
@@ -325,7 +331,8 @@ public class Cpu
                 Logger.LogWarning($"VMU beeps over Maple not implemented.", LogCategories.Maple);
             }
 
-            // No reply expected
+            // TODO: flycast doesn't seem to expect a reply here, but,
+            // dmitry's blog implies that VMU does reply.
         }
 
         void handleWriteBlockLcd(MapleMessage message)
@@ -366,6 +373,8 @@ public class Cpu
             var bankStartAddress = startAddress & 0xffff;
             var responseBytes = bank.AsSpan(bankStartAddress, Memory.WorkRamSize);
 
+            // TODO: verify phase and pt are zero
+
             const int responseSize = 130;
             Debug.Assert(responseSize == Memory.WorkRamSize / 4 + 2);
             var additionalWords = new int[responseSize];
@@ -385,6 +394,78 @@ public class Cpu
                 AdditionalWords = additionalWords
             };
             MapleMessageBroker.SendMessage(reply);
+        }
+
+        void handleWriteBlockStorage(MapleMessage message)
+        {
+            const int preambleWordCount = 2; // 0: function ID, 1: block/phase IDs
+            const int writePayloadWordCount = Memory.WorkRamSize / 4 / 4; // 4 phases, 4 bytes per word
+            const int expectedSize = preambleWordCount + writePayloadWordCount;
+            if (message.Length != expectedSize)
+            {
+                Logger.LogError($"Unexpected WriteBlock_Storage length: {message.Length}", LogCategories.Maple);
+                return;
+            }
+
+            // Note: WriteBlock_Storage generally comes in sequences of 4, where the "phase" value is incremented.
+            // Each message holds 128 bytes to be written.
+            var blockNumber = (message.AdditionalWords[1] >> 24) & 0xff;
+            var phaseNumber = (message.AdditionalWords[1] >> 8) & 0xff;
+            if ((message.AdditionalWords[1] & 0xff) is not 0 and var pt)
+                Logger.LogWarning($"Unexpected 'pt' value: {pt}", LogCategories.Maple);
+
+            var startAddress = blockNumber * Memory.WorkRamSize + phaseNumber * Memory.WorkRamSize / 4;
+            var bank = startAddress > 0xffff ? FlashBank1 : FlashBank0;
+            var bankStartAddress = startAddress & 0xffff;
+            var destSpan = bank.AsSpan(bankStartAddress, Memory.WorkRamSize);
+
+            for (int i = 0; i < writePayloadWordCount; i++)
+            {
+                BinaryPrimitives.WriteInt32LittleEndian(destSpan[(i * 4)..((i + 1) * 4)], message.AdditionalWords[i + 2]);
+            }
+
+            if (VmuFileWriteStream is not null)
+            {
+                Logger.LogDebug($"Writing to VMU file at address 0x{startAddress:X}", LogCategories.Maple);
+                // TODO: make sure the messages are good before messing with stuff on disk.
+                // VmuFileWriteStream.Seek(startAddress, SeekOrigin.Begin);
+                // VmuFileWriteStream.Write(destSpan);
+            }
+
+            var reply = new MapleMessage()
+            {
+                Type = MapleMessageType.Ack,
+                Recipient = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
+                Sender = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Slot1 },
+                Length = 0,
+                AdditionalWords = [],
+            };
+            MapleMessageBroker.SendMessage(reply);
+        }
+
+        void handleCompleteWriteStorage(MapleMessage message)
+        {
+            if (message.Length == 2)
+            {
+                Logger.LogWarning($"Unexpected CompleteWrite message length: {message.Length}", LogCategories.Maple);
+            }
+            else
+            {
+                var phase = (message.AdditionalWords[1] >> 8) & 0xff;
+                if (phase != 4)
+                    Logger.LogWarning($"Unexpected CompleteWrite phase: {phase}", LogCategories.Maple);
+            }
+
+            var reply = new MapleMessage()
+            {
+                Type = MapleMessageType.Ack,
+                Recipient = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
+                Sender = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Slot1 },
+                Length = 0,
+                AdditionalWords = [],
+            };
+            MapleMessageBroker.SendMessage(reply);
+
         }
     }
 

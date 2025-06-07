@@ -247,7 +247,8 @@ public class Game1 : Game
         var flashIcon = (icons & Icons.Flash) != 0 ? "Flash " : "  ";
         var sleeping = Vmu._cpu.SFRs.Vccr.DisplayControl ? " " : "(sleep) ";
         var paused = Paused ? "(paused) " : " ";
-        var iconString = $"{fileIcon}{gameIcon}{clockIcon}{flashIcon}{sleeping}{paused}";
+        var connected = Vmu.IsEjected ? " " : "(DC connected)";
+        var iconString = $"{fileIcon}{gameIcon}{clockIcon}{flashIcon}{sleeping}{paused}{connected}";
         _spriteBatch.DrawString(_font1, iconString, new Vector2(x: SideMargin, y: TopMargin + ScaledHeight), Color.Black);
 
         _spriteBatch.End();
