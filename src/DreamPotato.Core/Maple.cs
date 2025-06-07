@@ -33,7 +33,7 @@ internal record struct MapleMessage()
         var byteSpan = buffer.AsSpan();
         for (int i = 0; i < Length; i++)
         {
-            BinaryPrimitives.WriteInt32LittleEndian(byteSpan[(4 * i + 1)..(4 * i + 2)], AdditionalWords[i]);
+            BinaryPrimitives.WriteInt32LittleEndian(byteSpan[(4 * (i + 1))..(4 * (i + 2))], AdditionalWords[i]);
         }
 
         return buffer;

@@ -294,6 +294,9 @@ public class Cpu
                 case (MapleMessageType.WriteBlock, MapleFunction.LCD):
                     handleWriteBlockLcd(message);
                     break;
+                case (MapleMessageType.ReadBlock, MapleFunction.Storage):
+                    handleReadBlockStorage(message);
+                    break;
                 default:
                     Debug.Fail($"Unhandled Maple message  '({message.Type}, {message.Function})'");
                     Logger.LogError($"Unhandled Maple message  '({message.Type}, {message.Function})'", category: LogCategories.Maple);
@@ -322,15 +325,7 @@ public class Cpu
                 Logger.LogWarning($"VMU beeps over Maple not implemented.", LogCategories.Maple);
             }
 
-            var reply = new MapleMessage()
-            {
-                Type = MapleMessageType.Ack,
-                Recipient = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
-                Sender = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Slot1 },
-                Length = 0,
-                AdditionalWords = [],
-            };
-            MapleMessageBroker.SendMessage(reply);
+            // No reply expected
         }
 
         void handleWriteBlockLcd(MapleMessage message)
@@ -353,15 +348,7 @@ public class Cpu
                     xram1[left | right] = getAdditionalByte(lcdWords, index++);
             }
 
-            var reply = new MapleMessage()
-            {
-                Type = MapleMessageType.Ack,
-                Recipient = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
-                Sender = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Slot1 },
-                Length = 0,
-                AdditionalWords = [],
-            };
-            MapleMessageBroker.SendMessage(reply);
+            // No reply expected
 
             static byte getAdditionalByte(ReadOnlySpan<int> additionalWords, int pos)
             {
@@ -369,6 +356,35 @@ public class Cpu
                 var @byte = i32 >> (pos % 4 * 8) & 0xff;
                 return (byte)@byte;
             }
+        }
+
+        void handleReadBlockStorage(MapleMessage message)
+        {
+            var blockNumber = message.AdditionalWords[1] >> 24 & 0xff;
+            var startAddress = blockNumber * Memory.WorkRamSize;
+            var bank = startAddress > 0xffff ? FlashBank1 : FlashBank0;
+            var bankStartAddress = startAddress & 0xffff;
+            var responseBytes = bank.AsSpan(bankStartAddress, Memory.WorkRamSize);
+
+            const int responseSize = 130;
+            Debug.Assert(responseSize == Memory.WorkRamSize / 4 + 2);
+            var additionalWords = new int[responseSize];
+            additionalWords[0] = (int)MapleFunction.Storage;
+            additionalWords[1] = message.AdditionalWords[1];
+            for (int i = 0; i < Memory.WorkRamSize / 4; i++)
+            {
+                additionalWords[i + 2] = BinaryPrimitives.ReadInt32LittleEndian(responseBytes[(i * 4)..((i + 1) * 4)]);
+            }
+
+            var reply = new MapleMessage()
+            {
+                Type = MapleMessageType.DataTransfer,
+                Recipient = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
+                Sender = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Slot1 },
+                Length = responseSize,
+                AdditionalWords = additionalWords
+            };
+            MapleMessageBroker.SendMessage(reply);
         }
     }
 

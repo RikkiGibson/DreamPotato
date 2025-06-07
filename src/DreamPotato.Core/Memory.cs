@@ -63,7 +63,8 @@ public class Memory
     /// </summary>
     private readonly byte[] _xram2 = new byte[XramBank2Size];
 
-    private readonly byte[] _workRam = new byte[0x200];
+    public const int WorkRamSize = 0x200;
+    private readonly byte[] _workRam = new byte[WorkRamSize];
 
     private readonly Logger _logger;
     public Memory(Cpu cpu, Logger logger)

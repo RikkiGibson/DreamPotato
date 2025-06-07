@@ -172,7 +172,7 @@ public class MapleMessageBroker
 
         static (byte msb, byte lsb) toAsciiHexDigits(byte value)
         {
-            byte msb = getSingleAsciiHexDigit(value & 0xf0 >> 4);
+            byte msb = getSingleAsciiHexDigit((value & 0xf0) >> 4);
             byte lsb = getSingleAsciiHexDigit(value & 0xf);
             return (msb, lsb);
 
