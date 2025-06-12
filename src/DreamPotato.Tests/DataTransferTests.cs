@@ -542,8 +542,22 @@ public class DataTransferTests
         var cpu = new Cpu();
 
         ReadOnlySpan<byte> instructions = [
+            OpcodeMask.SET1 | AddressModeMask.D8 | /* bit address */ 1, SpecialFunctionRegisterIds.FPR,
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Trh, 0x55, // Trh
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Trl, 0x55, // Trl
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Acc, 0xaa, // Acc
+            OpcodeMask.STF,
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Trh, 0x2a, // Trh
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Trl, 0xaa, // Trl
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Acc, 0x55, // Acc
+            OpcodeMask.STF,
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Trh, 0x55, // Trh
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Trl, 0x55, // Trl
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Acc, 0xa0, // Acc
+            OpcodeMask.STF,
+            OpcodeMask.CLR1 | AddressModeMask.D8 | /* bit address */ 1, SpecialFunctionRegisterIds.FPR,
             OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Trh, 0x01, // Trh
-            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Trl, 0x23, // Trl
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Trl, 0x00, // Trl
             OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Acc, 0xaa, // Acc
             OpcodeMask.STF,
             OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Acc, 0x00, // Acc
@@ -554,21 +568,16 @@ public class DataTransferTests
         cpu.Reset();
         cpu.SetInstructionBank(Core.SFRs.InstructionBank.FlashBank0);
 
-        cpu.Step();
-        cpu.Step();
-        cpu.Step();
+        while (cpu.Pc < instructions.Length)
+            cpu.Step();
 
+        Assert.Equal(instructions.Length, cpu.Pc);
+
+        Assert.Equal(0, (byte)cpu.SFRs.FPR);
         Assert.Equal(0x01, cpu.SFRs.Trh);
-        Assert.Equal(0x23, cpu.SFRs.Trl);
+        Assert.Equal(0x00, cpu.SFRs.Trl);
         Assert.Equal(0xaa, cpu.SFRs.Acc);
-
-        Assert.Equal(2, cpu.Step());
-        Assert.Equal(2, cpu.Step());
-        Assert.Equal(0xaa, cpu.FlashBank0[0x123]);
-        Assert.Equal(0, cpu.SFRs.Acc);
-
-        Assert.Equal(2, cpu.Step());
-        Assert.Equal(0xaa, cpu.SFRs.Acc);
+        Assert.Equal(0xaa, cpu.FlashBank0[0x100]);
     }
 
     [Fact]
@@ -579,8 +588,22 @@ public class DataTransferTests
 
         ReadOnlySpan<byte> instructions = [
             OpcodeMask.SET1 | AddressModeMask.D8 | /* bit address */ 0, SpecialFunctionRegisterIds.FPR,
+            OpcodeMask.SET1 | AddressModeMask.D8 | /* bit address */ 1, SpecialFunctionRegisterIds.FPR,
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Trh, 0x55, // Trh
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Trl, 0x55, // Trl
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Acc, 0xaa, // Acc
+            OpcodeMask.STF,
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Trh, 0x2a, // Trh
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Trl, 0xaa, // Trl
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Acc, 0x55, // Acc
+            OpcodeMask.STF,
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Trh, 0x55, // Trh
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Trl, 0x55, // Trl
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Acc, 0xa0, // Acc
+            OpcodeMask.STF,
+            OpcodeMask.CLR1 | AddressModeMask.D8 | /* bit address */ 1, SpecialFunctionRegisterIds.FPR,
             OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Trh, 0x01, // Trh
-            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Trl, 0x23, // Trl
+            OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Trl, 0x00, // Trl
             OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Acc, 0xaa, // Acc
             OpcodeMask.STF,
             OpcodeMask.MOV | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Acc, 0x00, // Acc
@@ -591,22 +614,15 @@ public class DataTransferTests
         cpu.Reset();
         cpu.SetInstructionBank(Core.SFRs.InstructionBank.FlashBank0);
 
-        cpu.Step();
-        cpu.Step();
-        cpu.Step();
-        cpu.Step();
+        while (cpu.Pc < instructions.Length)
+            cpu.Step();
+
+        Assert.Equal(instructions.Length, cpu.Pc);
 
         Assert.Equal(0x01, (byte)cpu.SFRs.FPR);
         Assert.Equal(0x01, cpu.SFRs.Trh);
-        Assert.Equal(0x23, cpu.SFRs.Trl);
+        Assert.Equal(0x00, cpu.SFRs.Trl);
         Assert.Equal(0xaa, cpu.SFRs.Acc);
-
-        Assert.Equal(2, cpu.Step());
-        Assert.Equal(2, cpu.Step());
-        Assert.Equal(0xaa, cpu.FlashBank1[0x123]);
-        Assert.Equal(0, cpu.SFRs.Acc);
-
-        Assert.Equal(2, cpu.Step());
-        Assert.Equal(0xaa, cpu.SFRs.Acc);
+        Assert.Equal(0xaa, cpu.FlashBank1[0x100]);
     }
 }

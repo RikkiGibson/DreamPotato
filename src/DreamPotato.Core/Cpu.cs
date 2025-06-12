@@ -95,6 +95,8 @@ public class Cpu
     internal readonly Interrupts[] _servicingInterrupts = new Interrupts[3];
     internal int _interruptsCount;
 
+    internal int _flashWriteUnlockSequence;
+
     public Cpu()
     {
 #if DEBUG
@@ -121,6 +123,7 @@ public class Cpu
         Array.Clear(_servicingInterrupts);
         _interruptsCount = 0;
         _interruptServicingState = InterruptServicingState.Ready;
+        _flashWriteUnlockSequence = 0;
         Memory.Reset();
         SyncInstructionBank();
     }
@@ -147,6 +150,7 @@ public class Cpu
             writeUInt16(buffer, (ushort)_servicingInterrupts[i]);
         }
         writeInt32(buffer, _interruptsCount);
+        writeInt32(buffer, _flashWriteUnlockSequence);
 
 
         void writeUInt16(Span<byte> bytes, ushort value)
@@ -192,7 +196,7 @@ public class Cpu
             _servicingInterrupts[i] = (Interrupts)readUInt16(buffer);
         }
         _interruptsCount = readInt32(buffer);
-
+        _flashWriteUnlockSequence = readInt32(buffer);
 
         ushort readUInt16(Span<byte> bytes)
         {
@@ -256,15 +260,7 @@ public class Cpu
 
     public long Run(long ticksToRun)
     {
-        if (SFRs.P7.DreamcastConnected)
-        {
-            // TODO: more carefully manage the state transition.
-            if (!MapleMessageBroker.IsRunning)
-                MapleMessageBroker.StartServer();
-
-            HandleMapleMessages();
-            return 0;
-        }
+        HandleMapleMessages();
 
         // Reduce the number of ticks we were asked to run, by the amount we overran last frame.
         ticksToRun -= TicksOverrun;
@@ -283,6 +279,38 @@ public class Cpu
     {
         while (MapleMessageBroker.TryReceiveMessage(out var message))
         {
+            if (!SFRs.P7.DreamcastConnected)
+            {
+                if ((message.Type, message.Function) == (MapleMessageType.GetCondition, MapleFunction.Input))
+                {
+                    // Report no VMU in slot 1
+                    var reply = new MapleMessage()
+                    {
+                        Type = MapleMessageType.Ack,
+                        Recipient = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
+                        Sender = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
+                        Length = 0,
+                        AdditionalWords = [],
+                    };
+                    MapleMessageBroker.SendMessage(reply);
+                }
+                else
+                {
+                    // apparently this signals that the device is not connected?
+                    Logger.LogDebug($"Received unexpected message while VMU disconnected: ({message.Type}, {message.Function})", LogCategories.Maple);
+                    var reply = new MapleMessage()
+                    {
+                        Type = (MapleMessageType)0xff,
+                        Recipient = new MapleAddress(0xff),
+                        Sender = new MapleAddress(0xff),
+                        Length = 0xff,
+                        AdditionalWords = []
+                    };
+                    MapleMessageBroker.SendMessage(reply);
+                }
+                continue;
+            }
+
             switch (message.Type, message.Function)
             {
                 case (MapleMessageType.GetCondition, MapleFunction.Input):
@@ -304,8 +332,8 @@ public class Cpu
                     handleCompleteWriteStorage(message);
                     break;
                 default:
-                    Debug.Fail($"Unhandled Maple message  '({message.Type}, {message.Function})'");
-                    Logger.LogError($"Unhandled Maple message  '({message.Type}, {message.Function})'", category: LogCategories.Maple);
+                    Debug.Fail($"Unhandled Maple message '({message.Type}, {message.Function})'");
+                    Logger.LogError($"Unhandled Maple message '({message.Type}, {message.Function})'", category: LogCategories.Maple);
                     break;
             }
         }
@@ -427,9 +455,8 @@ public class Cpu
             if (VmuFileWriteStream is not null)
             {
                 Logger.LogDebug($"Writing to VMU file at address 0x{startAddress:X}", LogCategories.Maple);
-                // TODO: make sure the messages are good before messing with stuff on disk.
-                // VmuFileWriteStream.Seek(startAddress, SeekOrigin.Begin);
-                // VmuFileWriteStream.Write(destSpan);
+                VmuFileWriteStream.Seek(startAddress, SeekOrigin.Begin);
+                VmuFileWriteStream.Write(destSpan);
             }
 
             var reply = new MapleMessage()
@@ -1601,7 +1628,7 @@ public class Cpu
     private void Op_LDF(Instruction inst)
     {
         var a16 = SFRs.Trl | (SFRs.Trh << 8);
-        var bank = SFRs.FPR.FPR0 ? FlashBank1 : FlashBank0;
+        var bank = SFRs.FPR.FlashAddressBank ? FlashBank1 : FlashBank0;
         SFRs.Acc = bank[a16];
         Pc += inst.Size;
     }
@@ -1609,25 +1636,66 @@ public class Cpu
     /// <summary>Store the accumulator to flash memory. Intended for use only by BIOS. Undocumented.</summary>
     private void Op_STF(Instruction inst)
     {
-        // TODO: emulate hardware unlock sequence
         if (InstructionBank != InstructionBank.ROM)
             Logger.LogWarning("Executing STF outside of ROM!");
 
         var a16 = SFRs.Trl | (SFRs.Trh << 8);
-        var bank = SFRs.FPR.FPR0 ? FlashBank1 : FlashBank0;
-        bank[a16] = SFRs.Acc;
+        var bank = SFRs.FPR.FlashAddressBank ? FlashBank1 : FlashBank0;
+        var value = SFRs.Acc;
 
-        if (VmuFileWriteStream is not null)
+        // Sequence number when flash is first unlocked for writing
+        const int flashFirstUnlockSeq = 3;
+        // Size of the aligned page that we expect the BIOS to write in a sequence
+        const int flashPageSize = 128;
+
+        if (SFRs.FPR.FlashWriteUnlock)
         {
-            var absoluteAddress = (SFRs.FPR.FPR0 ? (1 << 16) : 0) | a16;
-            VmuFileWriteStream.Seek(absoluteAddress, SeekOrigin.Begin);
-            VmuFileWriteStream.WriteByte(SFRs.Acc);
+            switch (_flashWriteUnlockSequence, a16, value)
+            {
+                case (0, 0x5555, 0xAA):
+                    _flashWriteUnlockSequence = 1;
+                    break;
+                case (1, 0x2AAA, 0x55):
+                    _flashWriteUnlockSequence = 2;
+                    break;
+                case (2, 0x5555, 0xA0):
+                    _flashWriteUnlockSequence = flashFirstUnlockSeq;
+                    break;
+                default:
+                    _flashWriteUnlockSequence = 0;
+                    break;
+            }
+
+            Pc += inst.Size;
+            return;
         }
+
+        if (_flashWriteUnlockSequence == flashFirstUnlockSeq && (a16 & 0x127) != 0)
+            Logger.LogWarning($"Starting unaligned flash write: {a16}", LogCategories.Instructions);
+
+        if (_flashWriteUnlockSequence >= flashFirstUnlockSeq)
+        {
+            bank[a16] = value;
+
+            if (VmuFileWriteStream is not null)
+            {
+                var absoluteAddress = (SFRs.FPR.FlashAddressBank ? (1 << 16) : 0) | a16;
+                VmuFileWriteStream.Seek(absoluteAddress, SeekOrigin.Begin);
+                VmuFileWriteStream.WriteByte(SFRs.Acc);
+            }
+
+            _flashWriteUnlockSequence++;
+        }
+        else
+        {
+            Logger.LogWarning($"Failed flash write due to bad sequence number {_flashWriteUnlockSequence}");
+        }
+
+        if (_flashWriteUnlockSequence == flashFirstUnlockSeq + flashPageSize)
+                _flashWriteUnlockSequence = 0;
 
         Pc += inst.Size;
     }
-
-    // OP_STF
 
     /// <summary>No operation</summary>
     private void Op_NOP(Instruction inst)

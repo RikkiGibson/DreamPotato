@@ -485,15 +485,15 @@ public struct FPR
     public FPR(byte value) => _value = value;
     public static explicit operator byte(FPR value) => value._value;
 
-    /// <summary>Flash Address Bank. Used as the upper bit of the address for flash access, i.e. whether flash bank 0 or 1 is used.</summary>
-    public bool FPR0
+    /// <summary>Used as the upper bit of the address for flash access, i.e. whether flash bank 0 or 1 is used.</summary>
+    public bool FlashAddressBank
     {
         get => BitHelpers.ReadBit(_value, bit: 0);
         set => BitHelpers.WriteBit(ref _value, bit: 0, value);
     }
 
-    /// <summary>Flash Write Unlock</summary>
-    public bool FPR1
+    /// <summary>Flash Write Unlock. Used to indicate that the flash unlock sequence is being initiated.</summary>
+    public bool FlashWriteUnlock
     {
         get => BitHelpers.ReadBit(_value, bit: 1);
         set => BitHelpers.WriteBit(ref _value, bit: 1, value);

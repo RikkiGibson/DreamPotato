@@ -22,8 +22,19 @@ public class MapleMessageBroker
     private readonly byte[] _rawSocketBuffer = new byte[MaxMaplePacketSize * 4];
     private readonly List<byte> _currentInboundMessageBuilder = [];
 
-    private readonly ConcurrentQueue<MapleMessage> _inboundMessages = [];
-    private readonly ConcurrentQueue<MapleMessage> _outboundMessages = [];
+    /// <summary>
+    /// Guards <see cref="_clientConnected"/>, <see cref="_inboundMessages"/>, <see cref="_outboundMessages"/>
+    /// </summary>
+    private readonly Lock _lock = new Lock();
+
+    /// <summary>Guarded by <see cref="_lock"/>.</summary>
+    private Socket? _clientSocket;
+
+    /// <summary>Guarded by <see cref="_lock"/>.</summary>
+    private readonly Queue<MapleMessage> _inboundMessages = [];
+
+    /// <summary>Guarded by <see cref="_lock"/>.</summary>
+    private readonly Queue<MapleMessage> _outboundMessages = [];
 
     private Task? _serverTask;
     private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
@@ -32,6 +43,7 @@ public class MapleMessageBroker
     }
 
     public bool IsRunning => _serverTask != null;
+
     public void ShutdownServer()
     {
         _cancellationTokenSource.Cancel();
@@ -46,20 +58,64 @@ public class MapleMessageBroker
         _serverTask = Task.Run(() => StartServerWorker(_cancellationTokenSource.Token));
     }
 
+    /// <summary>Can be called by threads besides the socket server thread.</summary>
     internal bool TryReceiveMessage(out MapleMessage mapleMessage)
     {
-        return _inboundMessages.TryDequeue(out mapleMessage);
+        lock (_lock)
+        {
+            return _inboundMessages.TryDequeue(out mapleMessage);
+        }
     }
 
+    /// <summary>Can be called by threads besides the socket server thread.</summary>
     internal void SendMessage(MapleMessage mapleMessage)
     {
-        _outboundMessages.Enqueue(mapleMessage);
+        lock (_lock)
+        {
+            _outboundMessages.Enqueue(mapleMessage);
+        }
     }
 
-    internal MapleMessage DequeueOutboundMessage_TestingOnly()
+    /// <summary>Can be called by threads besides the socket server thread.</summary>
+    internal bool IsConnected
     {
-        _outboundMessages.TryDequeue(out var result);
-        return result;
+        get
+        {
+            lock (_lock)
+            {
+                return _clientSocket?.Connected ?? false;
+            }
+        }
+    }
+
+    internal void Disconnect()
+    {
+        lock (_lock)
+        {
+            if (_clientSocket is not null)
+            {
+                _clientSocket.Shutdown(SocketShutdown.Both);
+                _clientSocket.Disconnect(reuseSocket: false);
+            }
+        }
+    }
+
+    internal MapleMessage PeekInboundMessage_TestingOnly()
+    {
+        lock (_lock)
+        {
+            _inboundMessages.TryPeek(out var result);
+            return result;
+        }
+    }
+
+    internal MapleMessage DequeueOutboundMessage()
+    {
+        lock (_lock)
+        {
+            _outboundMessages.TryDequeue(out var result);
+            return result;
+        }
     }
 
     internal void ScanAsciiHexFragment(ReadOnlySpan<byte> fragment)
@@ -143,7 +199,11 @@ public class MapleMessageBroker
         };
 
         _currentInboundMessageBuilder.Clear();
-        _inboundMessages.Enqueue(message);
+
+        lock (_lock)
+        {
+            _inboundMessages.Enqueue(message);
+        }
     }
 
     internal int EncodeAsciiHexData(MapleMessage message, byte[] dest)
@@ -201,30 +261,49 @@ public class MapleMessageBroker
 
         while (true) // Accept a new client whenever one disconnects
         {
-            var handler = await listener.AcceptAsync(cancellationToken);
-            handler.ReceiveTimeout = 50;
-            while (handler.Connected)
+            Console.WriteLine("Waiting for client");
+            var clientSocket = await listener.AcceptAsync(cancellationToken);
+            Console.WriteLine("Client connected");
+            clientSocket.ReceiveTimeout = 50;
+            lock (_lock)
             {
-                // Receive message.
-                if (handler.Available > 0)
+                _clientSocket = clientSocket;
+            }
+            try
+            {
+                while (clientSocket.Connected)
                 {
-                    var receivedLen = await handler.ReceiveAsync(_rawSocketBuffer, SocketFlags.None, cancellationToken);
-                    if (_currentInboundMessageBuilder.Count == 0)
-                        Console.Write($"Received message: {Encoding.UTF8.GetString(_rawSocketBuffer.AsSpan(start: 0, length: receivedLen))}");
-                    else
-                        Console.Write(Encoding.UTF8.GetString(_rawSocketBuffer.AsSpan(start: 0, length: receivedLen)));
+                    // Receive message.
+                    if (clientSocket.Available > 0)
+                    {
+                        var receivedLen = await clientSocket.ReceiveAsync(_rawSocketBuffer, SocketFlags.None, cancellationToken);
+                        if (_currentInboundMessageBuilder.Count == 0)
+                            Console.Write($"Received message: {Encoding.UTF8.GetString(_rawSocketBuffer.AsSpan(start: 0, length: receivedLen))}");
+                        else
+                            Console.Write(Encoding.UTF8.GetString(_rawSocketBuffer.AsSpan(start: 0, length: receivedLen)));
 
-                    ScanAsciiHexFragment(_rawSocketBuffer.AsSpan()[0..receivedLen]);
-                }
+                        ScanAsciiHexFragment(_rawSocketBuffer.AsSpan()[0..receivedLen]);
+                    }
 
-                // TODO: a condition variable seems appropriate here so this thread is not just hammering the queue waiting for a message.
-                if (_outboundMessages.TryDequeue(out var outboundMessage))
-                {
-                    var bytesWritten = EncodeAsciiHexData(outboundMessage, _rawSocketBuffer);
-                    if (outboundMessage.Type != MapleMessageType.Ack)
-                        Console.WriteLine($"Sending message: {Encoding.UTF8.GetString(_rawSocketBuffer.AsSpan(start: 0, length: bytesWritten))}");
-                    await handler.SendAsync(_rawSocketBuffer.AsMemory(start: 0, length: bytesWritten), cancellationToken);
+                    // TODO: a condition variable/semaphore seems appropriate here so this thread is not just hammering the queue waiting for a message.
+                    if (DequeueOutboundMessage() is { HasValue: true } outboundMessage)
+                    {
+                        var bytesWritten = EncodeAsciiHexData(outboundMessage, _rawSocketBuffer);
+                        if (outboundMessage.Type != MapleMessageType.Ack)
+                            Console.WriteLine($"Sending message: {Encoding.UTF8.GetString(_rawSocketBuffer.AsSpan(start: 0, length: bytesWritten))}");
+                        await clientSocket.SendAsync(_rawSocketBuffer.AsMemory(start: 0, length: bytesWritten), cancellationToken);
+                    }
                 }
+            }
+            catch (ObjectDisposedException)
+            {
+                Console.WriteLine("Connection closed");
+            }
+            lock (_lock)
+            {
+                _clientSocket = null;
+                _inboundMessages.Clear();
+                _outboundMessages.Clear();
             }
         }
     }

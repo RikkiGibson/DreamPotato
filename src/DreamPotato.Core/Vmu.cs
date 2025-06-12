@@ -62,6 +62,19 @@ public class Vmu
         // also detect a bad/missing filesystem.
     }
 
+    public void StartMapleServer()
+    {
+        _cpu.MapleMessageBroker.StartServer();
+    }
+
+    public bool IsServerConnected
+    {
+        get
+        {
+            return _cpu.MapleMessageBroker.IsConnected;
+        }
+    }
+
     public bool IsEjected => !_cpu.SFRs.P7.DreamcastConnected;
 
     // Toggle the inserted/ejected state.
@@ -73,7 +86,7 @@ public class Vmu
     public static string DataFolder => Path.Combine(AppContext.BaseDirectory, "Data");
     public const string SaveStateHeaderMessage = "DreamPotatoSaveState";
     public static readonly ReadOnlyMemory<byte> SaveStateHeaderBytes = Encoding.UTF8.GetBytes(SaveStateHeaderMessage);
-    public const int SaveStateVersion = 1;
+    public const int SaveStateVersion = 2;
 
     private string GetSaveStatePath(string id)
     {
