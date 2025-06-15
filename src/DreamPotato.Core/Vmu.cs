@@ -37,6 +37,8 @@ public class Vmu
         fileName = fileName.Substring(0, Math.Min(FileSystem.DirectoryEntryFileNameLength, fileName.Length));
         _fileSystem.WriteGameFile(gameData, fileName, date);
         LoadedFilePath = filePath;
+
+        _cpu.ResyncMapleOutbound();
     }
 
     public void LoadVmu(string filePath)
@@ -56,9 +58,7 @@ public class Vmu
         fileStream.ReadExactly(_cpu.Flash);
         LoadedFilePath = filePath;
         _cpu.VmuFileWriteStream = fileStream;
-
-        // TODO: perhaps detect if no game is present on the VMU, and default to BIOS in that case.
-        // also detect a bad/missing filesystem.
+        _cpu.ResyncMapleOutbound();
     }
 
     public void StartMapleServer()

@@ -200,11 +200,12 @@ public class SpecialFunctionRegisters
                 {
                     var oldP7 = new P7(_rawMemory[address]);
                     var newP7 = new P7(value);
-                    // Peripheral connection state changed. Disconnect the socket to make the remote client re-query us.
+                    _rawMemory[address] = value;
+                    // Peripheral connection state changed.
                     if (oldP7.DreamcastConnected != newP7.DreamcastConnected)
-                        _cpu.MapleMessageBroker.Disconnect();
+                        _cpu.ResyncMaple();
                 }
-                goto default;
+                break;
 
             case Ids.Sp:
                 { // breakpoint holder

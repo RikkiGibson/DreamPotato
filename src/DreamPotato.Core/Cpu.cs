@@ -3,6 +3,9 @@ using System.Diagnostics;
 
 using DreamPotato.Core.SFRs;
 
+// note that these also work on unix despite the name
+using Microsoft.Win32.SafeHandles;
+
 namespace DreamPotato.Core;
 
 public class Cpu
@@ -27,15 +30,21 @@ public class Cpu
 
     internal readonly InstructionMap InstructionMap = new();
 
-    public Stream? VmuFileWriteStream
+    internal FileStream? VmuFileWriteStream
     {
-        get;
+        private get;
         set
         {
             field?.Dispose();
             field = value;
         }
     }
+
+    /// <summary>
+    /// Allows reading/writing to the VMU file in a thread-safe manner.
+    /// </summary>
+    internal SafeFileHandle? VmuFileHandle
+        => VmuFileWriteStream?.SafeFileHandle;
 
     /// <summary>
     /// May point to either ROM (BIOS), flash memory bank 0 or bank 1.
@@ -111,7 +120,7 @@ public class Cpu
         Logger = new Logger(logLevel, categories, this);
         Memory = new Memory(this, Logger);
         Audio = new Audio(this, Logger);
-        MapleMessageBroker = new MapleMessageBroker();
+        MapleMessageBroker = new MapleMessageBroker(logLevel);
         SetInstructionBank(InstructionBank.ROM);
     }
 
@@ -133,6 +142,9 @@ public class Cpu
 
     internal void SaveState(Stream writeStream)
     {
+        if (SFRs.P7.DreamcastConnected)
+            ResyncMapleInbound();
+
         // NOTE: both save and load operations should write/read the fields in declaration order.
         writeStream.Write(ROM);
         writeStream.Write(Flash);
@@ -153,7 +165,6 @@ public class Cpu
         }
         writeInt32(buffer, _interruptsCount);
         writeInt32(buffer, _flashWriteUnlockSequence);
-
 
         void writeUInt16(Span<byte> bytes, ushort value)
         {
@@ -178,11 +189,11 @@ public class Cpu
     {
         // TODO: do some kind of search of InstructionMap
         // to remove instructions which are no longer present in the binary?
+
         readStream.ReadExactly(ROM);
         readStream.ReadExactly(Flash);
         InstructionBank = (InstructionBank)readStream.ReadByte();
         Memory.LoadState(readStream);
-
 
         Span<byte> buffer = [0, 0, 0, 0, 0, 0, 0, 0];
         Pc = readUInt16(buffer);
@@ -198,6 +209,9 @@ public class Cpu
         }
         _interruptsCount = readInt32(buffer);
         _flashWriteUnlockSequence = readInt32(buffer);
+
+        if (SFRs.P7.DreamcastConnected)
+            ResyncMapleOutbound();
 
         ushort readUInt16(Span<byte> bytes)
         {
@@ -276,80 +290,49 @@ public class Cpu
         return ticksSoFar;
     }
 
+    /// <summary>If VMU just became docked, update Maple flash from Cpu; otherwise, if VMU just became undocked, update Cpu flash from Maple.</summary>
+    internal void ResyncMaple()
+    {
+        bool vmuDocked = SFRs.P7.DreamcastConnected;
+        MapleMessageBroker.Resync(vmuDocked, writeToMapleFlash: vmuDocked, Flash, VmuFileHandle);
+    }
+
+    /// <summary>Update the <see cref="MapleMessageBroker"/> from <see cref="Flash"/> regardless of whether VMU is currently docked.</summary>
+    internal void ResyncMapleOutbound()
+    {
+        bool vmuDocked = SFRs.P7.DreamcastConnected;
+        MapleMessageBroker.Resync(vmuDocked, writeToMapleFlash: true, Flash, VmuFileHandle);
+    }
+
+    /// <summary>Update <see cref="Flash"/> from <see cref="MapleMessageBroker"/> regardless of whether VMU is currently docked.</summary>
+    internal void ResyncMapleInbound()
+    {
+        bool vmuDocked = SFRs.P7.DreamcastConnected;
+        MapleMessageBroker.Resync(vmuDocked, writeToMapleFlash: false, Flash, VmuFileHandle);
+    }
+
     private void HandleMapleMessages()
     {
-        while (MapleMessageBroker.TryReceiveMessage(out var message))
+        while (MapleMessageBroker.TryReceiveCpuMessage(out var message))
         {
             if (!SFRs.P7.DreamcastConnected)
-            {
-                if ((message.Type, message.Function) == (MapleMessageType.GetCondition, MapleFunction.Input))
-                {
-                    // Report no VMU in slot 1
-                    var reply = new MapleMessage()
-                    {
-                        Type = MapleMessageType.Ack,
-                        Recipient = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
-                        Sender = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
-                        Length = 0,
-                        AdditionalWords = [],
-                    };
-                    MapleMessageBroker.SendMessage(reply);
-                }
-                else
-                {
-                    // apparently this signals that the device is not connected?
-                    Logger.LogDebug($"Received unexpected message while VMU disconnected: ({message.Type}, {message.Function})", LogCategories.Maple);
-                    var reply = new MapleMessage()
-                    {
-                        Type = (MapleMessageType)0xff,
-                        Recipient = new MapleAddress(0xff),
-                        Sender = new MapleAddress(0xff),
-                        Length = 0xff,
-                        AdditionalWords = []
-                    };
-                    MapleMessageBroker.SendMessage(reply);
-                }
-                continue;
-            }
+                Logger.LogWarning($"Ignoring Maple message while undocked: '({message.Type}, {message.Function})'", category: LogCategories.Maple);
 
+            // Note that only message types which handle immediately user-facing components (e.g. LCD, buzzer) are handled here.
+            // Other message types are handled in MapleMessageBroker directly.
             switch (message.Type, message.Function)
             {
-                case (MapleMessageType.GetCondition, MapleFunction.Input):
-                    handleGetConditionInput();
-                    break;
                 case (MapleMessageType.SetCondition, MapleFunction.Clock):
                     handleSetConditionClock(message);
                     break;
                 case (MapleMessageType.WriteBlock, MapleFunction.LCD):
                     handleWriteBlockLcd(message);
                     break;
-                case (MapleMessageType.ReadBlock, MapleFunction.Storage):
-                    handleReadBlockStorage(message);
-                    break;
-                case (MapleMessageType.WriteBlock, MapleFunction.Storage):
-                    handleWriteBlockStorage(message);
-                    break;
-                case (MapleMessageType.CompleteWrite, MapleFunction.Storage):
-                    handleCompleteWriteStorage(message);
-                    break;
                 default:
                     Debug.Fail($"Unhandled Maple message '({message.Type}, {message.Function})'");
                     Logger.LogError($"Unhandled Maple message '({message.Type}, {message.Function})'", category: LogCategories.Maple);
                     break;
             }
-        }
-
-        void handleGetConditionInput()
-        {
-            var reply = new MapleMessage()
-            {
-                Type = MapleMessageType.Ack,
-                Recipient = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
-                Sender = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Slot1 },
-                Length = 0,
-                AdditionalWords = [],
-            };
-            MapleMessageBroker.SendMessage(reply);
         }
 
         void handleSetConditionClock(MapleMessage message)
@@ -359,9 +342,6 @@ public class Cpu
             {
                 Logger.LogWarning($"VMU beeps over Maple not implemented.", LogCategories.Maple);
             }
-
-            // TODO: flycast doesn't seem to expect a reply here, but,
-            // dmitry's blog implies that VMU does reply.
         }
 
         void handleWriteBlockLcd(MapleMessage message)
@@ -384,112 +364,12 @@ public class Cpu
                     xram1[left | right] = getAdditionalByte(lcdWords, index++);
             }
 
-            // No reply expected
-
             static byte getAdditionalByte(ReadOnlySpan<int> additionalWords, int pos)
             {
                 var i32 = additionalWords[pos / 4];
                 var @byte = i32 >> (pos % 4 * 8) & 0xff;
                 return (byte)@byte;
             }
-        }
-
-        void handleReadBlockStorage(MapleMessage message)
-        {
-            var blockNumber = message.AdditionalWords[1] >> 24 & 0xff;
-            var startAddress = blockNumber * Memory.WorkRamSize;
-            var responseBytes = Flash.AsSpan(startAddress, Memory.WorkRamSize);
-
-            // TODO: verify phase and pt are zero
-
-            const int responseSize = 130;
-            Debug.Assert(responseSize == Memory.WorkRamSize / 4 + 2);
-            var additionalWords = new int[responseSize];
-            additionalWords[0] = (int)MapleFunction.Storage;
-            additionalWords[1] = message.AdditionalWords[1];
-            for (int i = 0; i < Memory.WorkRamSize / 4; i++)
-            {
-                additionalWords[i + 2] = BinaryPrimitives.ReadInt32LittleEndian(responseBytes[(i * 4)..((i + 1) * 4)]);
-            }
-
-            var reply = new MapleMessage()
-            {
-                Type = MapleMessageType.DataTransfer,
-                Recipient = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
-                Sender = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Slot1 },
-                Length = responseSize,
-                AdditionalWords = additionalWords
-            };
-            MapleMessageBroker.SendMessage(reply);
-        }
-
-        void handleWriteBlockStorage(MapleMessage message)
-        {
-            const int preambleWordCount = 2; // 0: function ID, 1: block/phase IDs
-            const int writePayloadWordCount = Memory.WorkRamSize / 4 / 4; // 4 phases, 4 bytes per word
-            const int expectedSize = preambleWordCount + writePayloadWordCount;
-            if (message.Length != expectedSize)
-            {
-                Logger.LogError($"Unexpected WriteBlock_Storage length: {message.Length}", LogCategories.Maple);
-                return;
-            }
-
-            // Note: WriteBlock_Storage generally comes in sequences of 4, where the "phase" value is incremented.
-            // Each message holds 128 bytes to be written.
-            var blockNumber = (message.AdditionalWords[1] >> 24) & 0xff;
-            var phaseNumber = (message.AdditionalWords[1] >> 8) & 0xff;
-            if ((message.AdditionalWords[1] & 0xff) is not 0 and var pt)
-                Logger.LogWarning($"Unexpected 'pt' value: {pt}", LogCategories.Maple);
-
-            var startAddress = blockNumber * Memory.WorkRamSize + phaseNumber * Memory.WorkRamSize / 4;
-            var destSpan = Flash.AsSpan(startAddress, Memory.WorkRamSize);
-
-            for (int i = 0; i < writePayloadWordCount; i++)
-            {
-                BinaryPrimitives.WriteInt32LittleEndian(destSpan[(i * 4)..((i + 1) * 4)], message.AdditionalWords[i + 2]);
-            }
-
-            if (VmuFileWriteStream is not null)
-            {
-                Logger.LogDebug($"Writing to VMU file at address 0x{startAddress:X}", LogCategories.Maple);
-                VmuFileWriteStream.Seek(startAddress, SeekOrigin.Begin);
-                VmuFileWriteStream.Write(destSpan);
-            }
-
-            var reply = new MapleMessage()
-            {
-                Type = MapleMessageType.Ack,
-                Recipient = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
-                Sender = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Slot1 },
-                Length = 0,
-                AdditionalWords = [],
-            };
-            MapleMessageBroker.SendMessage(reply);
-        }
-
-        void handleCompleteWriteStorage(MapleMessage message)
-        {
-            if (message.Length == 2)
-            {
-                Logger.LogWarning($"Unexpected CompleteWrite message length: {message.Length}", LogCategories.Maple);
-            }
-            else
-            {
-                var phase = (message.AdditionalWords[1] >> 8) & 0xff;
-                if (phase != 4)
-                    Logger.LogWarning($"Unexpected CompleteWrite phase: {phase}", LogCategories.Maple);
-            }
-
-            var reply = new MapleMessage()
-            {
-                Type = MapleMessageType.Ack,
-                Recipient = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
-                Sender = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Slot1 },
-                Length = 0,
-                AdditionalWords = [],
-            };
-            MapleMessageBroker.SendMessage(reply);
-
         }
     }
 
@@ -1674,11 +1554,10 @@ public class Cpu
             var a17 = a16 | (SFRs.FPR.FlashAddressBank ? InstructionBankSize : 0);
             Flash[a17] = value;
 
-            if (VmuFileWriteStream is not null)
+            if (VmuFileHandle is not null)
             {
                 var absoluteAddress = (SFRs.FPR.FlashAddressBank ? (1 << 16) : 0) | a16;
-                VmuFileWriteStream.Seek(absoluteAddress, SeekOrigin.Begin);
-                VmuFileWriteStream.WriteByte(SFRs.Acc);
+                RandomAccess.Write(VmuFileHandle, [value], absoluteAddress);
             }
 
             _flashWriteUnlockSequence++;

@@ -1,10 +1,10 @@
 using System.Buffers.Binary;
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Text.RegularExpressions;
+
+using Microsoft.Win32.SafeHandles;
 
 namespace DreamPotato.Core;
 
@@ -22,8 +22,11 @@ public class MapleMessageBroker
     private readonly byte[] _rawSocketBuffer = new byte[MaxMaplePacketSize * 4];
     private readonly List<byte> _currentInboundMessageBuilder = [];
 
+    /// <summary>A logger independent from Cpu for thread safety reasons.</summary>
+    private readonly Logger Logger;
+
     /// <summary>
-    /// Guards <see cref="_clientConnected"/>, <see cref="_inboundMessages"/>, <see cref="_outboundMessages"/>
+    /// Guards <see cref="_clientConnected"/>, <see cref="_inboundCpuMessages"/>, <see cref="_vmuDocked"/>, <see cref="_vmuFlashData"/>, <see cref="_vmuFileHandle"/>.
     /// </summary>
     private readonly Lock _lock = new Lock();
 
@@ -31,15 +34,22 @@ public class MapleMessageBroker
     private Socket? _clientSocket;
 
     /// <summary>Guarded by <see cref="_lock"/>.</summary>
-    private readonly Queue<MapleMessage> _inboundMessages = [];
+    private readonly Queue<MapleMessage> _inboundCpuMessages = [];
 
     /// <summary>Guarded by <see cref="_lock"/>.</summary>
-    private readonly Queue<MapleMessage> _outboundMessages = [];
+    private bool _vmuDocked;
+
+    /// <summary>Guarded by <see cref="_lock"/>.</summary>
+    private readonly byte[] _vmuFlashData = new byte[Cpu.FlashSize];
+
+    /// <summary>Guarded by <see cref="_lock"/>.</summary>
+    private SafeFileHandle? _vmuFileHandle;
 
     private Task? _serverTask;
     private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
-    public MapleMessageBroker()
+    public MapleMessageBroker(LogLevel minimumLogLevel)
     {
+        Logger = new Logger(minimumLogLevel, LogCategories.Maple, _cpu: null);
     }
 
     public bool IsRunning => _serverTask != null;
@@ -58,21 +68,39 @@ public class MapleMessageBroker
         _serverTask = Task.Run(() => StartServerWorker(_cancellationTokenSource.Token));
     }
 
-    /// <summary>Can be called by threads besides the socket server thread.</summary>
-    internal bool TryReceiveMessage(out MapleMessage mapleMessage)
+    internal void Resync(bool vmuDocked, bool writeToMapleFlash, Span<byte> flash, SafeFileHandle? vmuFileHandle)
     {
+        // Keeping an extra copy of the flash memory and maintaining both is a pain, but, it is thought to be preferable to synchronizing on a single copy.
+        // This is because the CPU needs to read it every cycle to decode instructions (which can change while emulation is running due to STF--store flash).
+        // Acquiring a lock potentially ~100Ks of times per second is thought to be excessively expensive.
+        // Acquiring a lock per-frame is too slow (can't wait up to 16ms to do I/O). Doing it lock-free also seems like it would be harder to get right than copying.
+        // The basic design here is that when the VMU is "docked" in the controller, the current flash state is copied over to the socket thread.
+        // The socket thread immediately responds to flash I/O requests rather than waiting for main game thread to handle them.
+        // Write LCD and buzzer requests are still routed to main game thread, but no response is expected for those.
+        bool dockedChanged;
         lock (_lock)
         {
-            return _inboundMessages.TryDequeue(out mapleMessage);
+            dockedChanged = _vmuDocked != vmuDocked;
+            _vmuDocked = vmuDocked;
+
+            if (writeToMapleFlash)
+                flash.CopyTo(_vmuFlashData);
+            else
+                _vmuFlashData.CopyTo(flash);
+
+            _vmuFileHandle = vmuFileHandle;
         }
+
+        if (dockedChanged)
+            Disconnect();
     }
 
-    /// <summary>Can be called by threads besides the socket server thread.</summary>
-    internal void SendMessage(MapleMessage mapleMessage)
+    /// <summary>Allows main game thread to receive messages affecting game-visible state (e.g. LCD, buzzer).</summary>
+    internal bool TryReceiveCpuMessage(out MapleMessage mapleMessage)
     {
         lock (_lock)
         {
-            _outboundMessages.Enqueue(mapleMessage);
+            return _inboundCpuMessages.TryDequeue(out mapleMessage);
         }
     }
 
@@ -100,25 +128,7 @@ public class MapleMessageBroker
         }
     }
 
-    internal MapleMessage PeekInboundMessage_TestingOnly()
-    {
-        lock (_lock)
-        {
-            _inboundMessages.TryPeek(out var result);
-            return result;
-        }
-    }
-
-    internal MapleMessage DequeueOutboundMessage()
-    {
-        lock (_lock)
-        {
-            _outboundMessages.TryDequeue(out var result);
-            return result;
-        }
-    }
-
-    internal void ScanAsciiHexFragment(ReadOnlySpan<byte> fragment)
+    internal void ScanAsciiHexFragment(Queue<MapleMessage> inboundMessages, ReadOnlySpan<byte> fragment)
     {
         for (int i = 0; i < fragment.Length; i++)
         {
@@ -128,7 +138,7 @@ public class MapleMessageBroker
             {
                 i++; // skip past the '\r', loop header will skip past the '\n'
                 _currentInboundMessageBuilder.Add((byte)'\n');
-                DecodeAndSubmitInboundMessage();
+                DecodeAndSubmitInboundMessage(inboundMessages);
             }
         }
     }
@@ -173,7 +183,7 @@ public class MapleMessageBroker
         }
     }
 
-    private void DecodeAndSubmitInboundMessage()
+    private void DecodeAndSubmitInboundMessage(Queue<MapleMessage> inboundMessages)
     {
         var rawBytes = new byte[_currentInboundMessageBuilder.Count / 3];
         var rawLength = DecodeAsciiHexLine(rawBytes);
@@ -199,10 +209,184 @@ public class MapleMessageBroker
         };
 
         _currentInboundMessageBuilder.Clear();
+        inboundMessages.Enqueue(message);
+    }
 
-        lock (_lock)
+    /// <summary>Internal for testing only.</summary>
+    internal MapleMessage HandleMapleMessage(MapleMessage message)
+    {
+        // Don't allow the docking, connection, flash state etc to change while we are in the process of creating a reply.
+        using var _ = _lock.EnterScope();
+
+        Debug.Assert(message.HasValue);
+        if (!_vmuDocked)
         {
-            _inboundMessages.Enqueue(message);
+            if ((message.Type, message.Function) == (MapleMessageType.GetCondition, MapleFunction.Input))
+            {
+                // Report no VMU in slot 1
+                var reply = new MapleMessage()
+                {
+                    Type = MapleMessageType.Ack,
+                    Recipient = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
+                    Sender = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
+                    Length = 0,
+                    AdditionalWords = [],
+                };
+                return reply;
+            }
+            else
+            {
+                // apparently this signals that the device is not connected?
+                Logger.LogDebug($"Received unexpected message while VMU disconnected: ({message.Type}, {message.Function})", LogCategories.Maple);
+                var reply = new MapleMessage()
+                {
+                    Type = (MapleMessageType)0xff,
+                    Recipient = new MapleAddress(0xff),
+                    Sender = new MapleAddress(0xff),
+                    Length = 0xff,
+                    AdditionalWords = []
+                };
+                return reply;
+            }
+
+            throw new InvalidOperationException("Unreachable code");
+        }
+
+        switch (message.Type, message.Function)
+        {
+            case (MapleMessageType.SetCondition, MapleFunction.Clock):
+            case (MapleMessageType.WriteBlock, MapleFunction.LCD):
+                // Cpu handles these message types.
+                _inboundCpuMessages.Enqueue(message);
+                return default; // No reply
+            case (MapleMessageType.GetCondition, MapleFunction.Input):
+                return handleGetConditionInput();
+            case (MapleMessageType.ReadBlock, MapleFunction.Storage):
+                return handleReadBlockStorage(message);
+            case (MapleMessageType.WriteBlock, MapleFunction.Storage):
+                return handleWriteBlockStorage(message);
+            case (MapleMessageType.CompleteWrite, MapleFunction.Storage):
+                return handleCompleteWriteStorage(message);
+            default:
+                Debug.Fail($"Unhandled Maple message '({message.Type}, {message.Function})'");
+                Logger.LogError($"Unhandled Maple message '({message.Type}, {message.Function})'", category: LogCategories.Maple);
+                return default; // No reply
+        }
+
+        MapleMessage handleGetConditionInput()
+        {
+            var reply = new MapleMessage()
+            {
+                Type = MapleMessageType.Ack,
+                Recipient = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
+                Sender = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Slot1 },
+                Length = 0,
+                AdditionalWords = [],
+            };
+            return reply;
+        }
+
+        MapleMessage handleReadBlockStorage(MapleMessage message)
+        {
+            var blockNumber = message.AdditionalWords[1] >> 24 & 0xff;
+            var startAddress = blockNumber * Memory.WorkRamSize;
+            var responseBytes = _vmuFlashData.AsSpan(startAddress, Memory.WorkRamSize);
+
+            // TODO: verify phase and pt are zero
+
+            const int responseSize = 130;
+            Debug.Assert(responseSize == Memory.WorkRamSize / 4 + 2);
+            var additionalWords = new int[responseSize];
+            additionalWords[0] = (int)MapleFunction.Storage;
+            additionalWords[1] = message.AdditionalWords[1];
+            for (int i = 0; i < Memory.WorkRamSize / 4; i++)
+            {
+                additionalWords[i + 2] = BinaryPrimitives.ReadInt32LittleEndian(responseBytes[(i * 4)..((i + 1) * 4)]);
+            }
+
+            var reply = new MapleMessage()
+            {
+                Type = MapleMessageType.DataTransfer,
+                Recipient = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
+                Sender = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Slot1 },
+                Length = responseSize,
+                AdditionalWords = additionalWords
+            };
+            return reply;
+        }
+
+        MapleMessage handleWriteBlockStorage(MapleMessage message)
+        {
+            const int preambleWordCount = 2; // 0: function ID, 1: block/phase IDs
+            const int writePayloadWordCount = Memory.WorkRamSize / 4 / 4; // 4 phases, 4 bytes per word
+            const int expectedSize = preambleWordCount + writePayloadWordCount;
+            if (message.Length != expectedSize)
+            {
+                Logger.LogError($"Unexpected WriteBlock_Storage length: {message.Length}", LogCategories.Maple);
+                return new MapleMessage()
+                {
+                    Type = MapleMessageType.ErrorInvalidFlashAddress,
+                    Recipient = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
+                    Sender = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Slot1 },
+                    Length = 0,
+                    AdditionalWords = [],
+                };
+            }
+
+            // Note: WriteBlock_Storage generally comes in sequences of 4, where the "phase" value is incremented.
+            // Each message holds 128 bytes to be written.
+            var blockNumber = (message.AdditionalWords[1] >> 24) & 0xff;
+            var phaseNumber = (message.AdditionalWords[1] >> 8) & 0xff;
+            if ((message.AdditionalWords[1] & 0xff) is not 0 and var pt)
+                Logger.LogWarning($"Unexpected 'pt' value: {pt}", LogCategories.Maple);
+
+            var startAddress = blockNumber * Memory.WorkRamSize + phaseNumber * Memory.WorkRamSize / 4;
+            var destSpan = _vmuFlashData.AsSpan(startAddress, Memory.WorkRamSize);
+
+            for (int i = 0; i < writePayloadWordCount; i++)
+            {
+                BinaryPrimitives.WriteInt32LittleEndian(destSpan[(i * 4)..((i + 1) * 4)], message.AdditionalWords[i + 2]);
+            }
+
+            if (_vmuFileHandle is not null)
+            {
+                Logger.LogDebug($"Writing to VMU file at address 0x{startAddress:X}", LogCategories.Maple);
+                RandomAccess.Write(_vmuFileHandle, destSpan, fileOffset: startAddress);
+            }
+
+            var reply = new MapleMessage()
+            {
+                Type = MapleMessageType.Ack,
+                Recipient = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
+                Sender = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Slot1 },
+                Length = 0,
+                AdditionalWords = [],
+            };
+            return reply;
+        }
+
+        MapleMessage handleCompleteWriteStorage(MapleMessage message)
+        {
+            if (message.Length != 2)
+            {
+                Logger.LogWarning($"Unexpected CompleteWrite message length: {message.Length}", LogCategories.Maple);
+            }
+            else
+            {
+                var phase = (message.AdditionalWords[1] >> 8) & 0xff;
+                if (phase != 4)
+                    Logger.LogWarning($"Unexpected CompleteWrite phase: {phase}", LogCategories.Maple);
+            }
+
+            var reply = new MapleMessage()
+            {
+                Type = MapleMessageType.Ack,
+                Recipient = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
+                Sender = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Slot1 },
+                Length = 0,
+                AdditionalWords = [],
+            };
+            return reply;
         }
     }
 
@@ -261,49 +445,53 @@ public class MapleMessageBroker
 
         while (true) // Accept a new client whenever one disconnects
         {
-            Console.WriteLine("Waiting for client");
+            Logger.LogDebug("Waiting for client");
             var clientSocket = await listener.AcceptAsync(cancellationToken);
-            Console.WriteLine("Client connected");
+            Logger.LogDebug("Client connected");
             clientSocket.ReceiveTimeout = 50;
             lock (_lock)
             {
                 _clientSocket = clientSocket;
             }
+
+            Queue<MapleMessage> inboundMessages = [];
             try
             {
                 while (clientSocket.Connected)
                 {
-                    // Receive message.
-                    if (clientSocket.Available > 0)
-                    {
-                        var receivedLen = await clientSocket.ReceiveAsync(_rawSocketBuffer, SocketFlags.None, cancellationToken);
-                        if (_currentInboundMessageBuilder.Count == 0)
-                            Console.Write($"Received message: {Encoding.UTF8.GetString(_rawSocketBuffer.AsSpan(start: 0, length: receivedLen))}");
-                        else
-                            Console.Write(Encoding.UTF8.GetString(_rawSocketBuffer.AsSpan(start: 0, length: receivedLen)));
+                    var receivedLen = await clientSocket.ReceiveAsync(_rawSocketBuffer, SocketFlags.None, cancellationToken);
+                    if (_currentInboundMessageBuilder.Count == 0)
+                        Logger.LogTrace($"Received message: {Encoding.UTF8.GetString(_rawSocketBuffer.AsSpan(start: 0, length: receivedLen))}");
+                    else
+                        Logger.LogTrace(Encoding.UTF8.GetString(_rawSocketBuffer.AsSpan(start: 0, length: receivedLen)));
 
-                        ScanAsciiHexFragment(_rawSocketBuffer.AsSpan()[0..receivedLen]);
-                    }
+                    ScanAsciiHexFragment(inboundMessages, _rawSocketBuffer.AsSpan()[0..receivedLen]);
 
-                    // TODO: a condition variable/semaphore seems appropriate here so this thread is not just hammering the queue waiting for a message.
-                    if (DequeueOutboundMessage() is { HasValue: true } outboundMessage)
+                    while (inboundMessages.TryDequeue(out var message))
                     {
+                        var outboundMessage = HandleMapleMessage(message);
+                        if (!outboundMessage.HasValue)
+                            continue;
+
                         var bytesWritten = EncodeAsciiHexData(outboundMessage, _rawSocketBuffer);
                         if (outboundMessage.Type != MapleMessageType.Ack)
-                            Console.WriteLine($"Sending message: {Encoding.UTF8.GetString(_rawSocketBuffer.AsSpan(start: 0, length: bytesWritten))}");
+                            Logger.LogTrace($"Sending message: {Encoding.UTF8.GetString(_rawSocketBuffer.AsSpan(start: 0, length: bytesWritten))}");
                         await clientSocket.SendAsync(_rawSocketBuffer.AsMemory(start: 0, length: bytesWritten), cancellationToken);
                     }
                 }
             }
             catch (ObjectDisposedException)
             {
-                Console.WriteLine("Connection closed");
+                Logger.LogDebug("Connection closed");
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e.Message, LogCategories.Maple);
             }
             lock (_lock)
             {
                 _clientSocket = null;
-                _inboundMessages.Clear();
-                _outboundMessages.Clear();
+                _inboundCpuMessages.Clear();
             }
         }
     }

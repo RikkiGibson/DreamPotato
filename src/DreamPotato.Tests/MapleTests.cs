@@ -18,9 +18,10 @@ public class MapleTests
 
         // MDCF_GetCondition, destAP (requesting attached devices), originAP, length, MFID_0_Input
         var deviceStatusMessage = "09 20 00 01 00 00 00 01\r\n"u8;
-        messageBroker.ScanAsciiHexFragment(deviceStatusMessage);
+        Queue<MapleMessage> inbound = [];
+        messageBroker.ScanAsciiHexFragment(inbound, deviceStatusMessage);
         cpu.Run(ticksToRun: TimeSpan.TicksPerMillisecond);
-        var message = messageBroker.DequeueOutboundMessage();
+        var message = messageBroker.HandleMapleMessage(inbound.Dequeue());
         Assert.True(message.HasValue);
         Assert.Equal(MapleMessageType.Ack, message.Type);
         Assert.Equal((byte)new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast }, (byte)message.Recipient);
@@ -43,9 +44,10 @@ public class MapleTests
         // Apparently this function is used to make the VMU beep. The first two bytes are meaningful, the second two are discarded(?)
         // The first is a period, the second is a duty cycle, for PWM.
         var setCondition = "0E 01 00 02 00 00 00 08 00 00 00 00\r\n"u8;
-        messageBroker.ScanAsciiHexFragment(setCondition);
+        Queue<MapleMessage> inbound = [];
+        messageBroker.ScanAsciiHexFragment(inbound, setCondition);
         cpu.Run(ticksToRun: TimeSpan.TicksPerMillisecond);
-        var message = messageBroker.DequeueOutboundMessage();
+        var message = messageBroker.HandleMapleMessage(inbound.Dequeue());
         Assert.False(message.HasValue); // no reply expected
     }
 
@@ -64,10 +66,12 @@ public class MapleTests
         // The first is a period, the second is a duty cycle, for PWM.
         var setCondition1 = "0E 01 00 02 "u8;
         var setCondition2 = "00 00 00 08 00 00 00 00\r\n"u8;
-        messageBroker.ScanAsciiHexFragment(setCondition1);
-        messageBroker.ScanAsciiHexFragment(setCondition2);
+        Queue<MapleMessage> inbound = [];
+        messageBroker.ScanAsciiHexFragment(inbound, setCondition1);
+        messageBroker.ScanAsciiHexFragment(inbound, setCondition2);
         cpu.Run(ticksToRun: TimeSpan.TicksPerMillisecond);
-        var message = messageBroker.DequeueOutboundMessage();
+
+        var message = messageBroker.HandleMapleMessage(inbound.Dequeue());
         Assert.False(message.HasValue); // No reply expected
     }
 
@@ -84,7 +88,9 @@ public class MapleTests
         // MDCF_BlockWrite, destAP (VMU in slot 0), originAP (Dreamcast), length, MFID_2_LCD
         var writeLcdMessage = "0C 01 00 32 00 00 00 04 00 00 00 00 FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF F1 8F FF FF FF FF F5 AF FF FF FF FF F2 4F FF FF FF FF DC 3B FF FF FF FF C9 97 FF FF FF FF 2B D4 FF FF FF BC 57 E8 3D FF FF 98 9C 38 19 FF FF D1 30 0C 8B FF FF F2 67 E6 47 FF FF E0 C8 13 23 FF FF A1 99 99 8F FF FF A1 F1 87 99 FF FF 21 4C 30 9A FF FE E1 32 78 8F FF FE 27 2D 7C C5 7F FC ED A9 1D C1 BF F9 3A 93 05 4B 1F FD B4 CC 83 CB FF E2 78 42 42 4A 47 FF 80 E1 27 2F FF C0 03 F8 9F A4 03 80 07 FC 5F E8 01 8F FF FF FF FF F1 BF FF FF FF FF FD FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF\r\n";
         var messageBytes = Encoding.UTF8.GetBytes(writeLcdMessage);
-        messageBroker.ScanAsciiHexFragment(messageBytes);
+        Queue<MapleMessage> inbound = [];
+        messageBroker.ScanAsciiHexFragment(inbound, messageBytes);
+        var message = messageBroker.HandleMapleMessage(inbound.Dequeue());
         cpu.Run(ticksToRun: TimeSpan.TicksPerMillisecond);
 
         var display = new Display(cpu);
@@ -108,8 +114,7 @@ public class MapleTests
 
             """, display.GetBlockString());
 
-        var message = messageBroker.DequeueOutboundMessage();
-        // No response is expected for an LCD write?
+        // No response is expected for an LCD write
         Assert.False(message.HasValue);
     }
 
@@ -131,9 +136,10 @@ public class MapleTests
 
         // MDCF_ReadBlock, destAP (VMU in slot 0), originAP (Dreamcast), length, MFID_1_Storage, block number
         var readBlock = "0B 01 00 02 00 00 00 02 00 00 00 FF\r\n"u8;
-        messageBroker.ScanAsciiHexFragment(readBlock);
+        Queue<MapleMessage> inbound = [];
+        messageBroker.ScanAsciiHexFragment(inbound, readBlock);
         cpu.Run(ticksToRun: TimeSpan.TicksPerMillisecond);
-        var message = messageBroker.DequeueOutboundMessage();
+        var message = messageBroker.HandleMapleMessage(inbound.Dequeue());
 
         Assert.True(message.HasValue);
         Assert.Equal(MapleMessageType.DataTransfer, message.Type);
@@ -177,8 +183,9 @@ public class MapleTests
         0C 01 00 22 00 00 00 02 00 00 00 0A 41 72 63 61 64 69 61 20 49 63 6F 6E 20 20 20 20 20 00 00 00 A0 00 00 00 00 00 00 00 00 00 00 00 FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF F7 FF FF FF E7 FD 1F FF E7 F4 87 FF D3 E2 43 FF D3 C1 31 FB 93 80 AC FB 93 B0 52 F3 93 3D 5A 61 89 3F DD 41 B1 3F 52 41 F9 DE 2D C1 F9 EC 97 C1 F5 99 CC 91 C4 CC 19 93 E4 E4 93 23 E2 67 F3 63 F1 3A AE C7 F8 1C 1D 8F FC 0B F7 1F
 
         """u8;
-        messageBroker.ScanAsciiHexFragment(writeBlock);
-        var message = messageBroker.PeekInboundMessage_TestingOnly();
+        Queue<MapleMessage> inbound = [];
+        messageBroker.ScanAsciiHexFragment(inbound, writeBlock);
+        var message = inbound.Dequeue();
 
         cpu.Run(ticksToRun: TimeSpan.TicksPerMillisecond);
 
@@ -189,7 +196,7 @@ public class MapleTests
         Assert.Equal(34, message.Length);
         Assert.Equal(34, message.AdditionalWords.Length);
 
-        var outboundMessage = messageBroker.DequeueOutboundMessage();
+        var outboundMessage = messageBroker.HandleMapleMessage(message);
         Assert.True(outboundMessage.HasValue);
         Assert.Equal(MapleMessageType.Ack, outboundMessage.Type);
         Assert.Equal((byte)new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast }, (byte)outboundMessage.Recipient);
@@ -219,9 +226,10 @@ public class MapleTests
         0D 01 00 02 00 00 00 02 00 04 00 A2
 
         """u8;
-        messageBroker.ScanAsciiHexFragment(writeBlock);
+        Queue<MapleMessage> inbound = [];
+        messageBroker.ScanAsciiHexFragment(inbound, writeBlock);
         cpu.Run(ticksToRun: TimeSpan.TicksPerMillisecond);
-        var message = messageBroker.DequeueOutboundMessage();
+        var message = messageBroker.HandleMapleMessage(inbound.Dequeue());
         Assert.True(message.HasValue);
         Assert.Equal(MapleMessageType.Ack, message.Type);
         Assert.Equal((byte)new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast }, (byte)message.Recipient);

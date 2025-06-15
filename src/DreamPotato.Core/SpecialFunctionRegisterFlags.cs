@@ -918,10 +918,14 @@ public struct Ocr
         get
         {
             int divisor = ClockGeneratorControl ? 6 : 12;
-            // int divisor = ClockGeneratorControl ? 4 : 8;
             int oscillatorFrequency = SystemClockSelector switch
             {
+#if DEBUG
+                // CPU performance is poor at the real Cf speed when a debugger is attached.
+                Oscillator.Cf => OscillatorHz.Rc,
+#else
                 Oscillator.Cf => OscillatorHz.Cf,
+#endif
                 Oscillator.Rc => OscillatorHz.Rc,
                 Oscillator.Quartz => OscillatorHz.Quartz,
                 _ => throw new InvalidOperationException()
