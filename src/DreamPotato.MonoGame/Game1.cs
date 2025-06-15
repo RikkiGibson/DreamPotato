@@ -242,7 +242,15 @@ public class Game1 : Game
         // Use nearest neighbor scaling
         _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
-        _spriteBatch.Draw(_vmuScreenTexture, new Rectangle(new Point(x: SideMargin, y: TopMargin), new Point(x: ScaledWidth, y: ScaledHeight)), color: Color.White);
+        _spriteBatch.Draw(
+            _vmuScreenTexture,
+            destinationRectangle: new Rectangle(new Point(x: SideMargin, y: TopMargin), new Point(x: ScaledWidth, y: ScaledHeight)),
+            sourceRectangle: null,
+            color: Color.White,
+            rotation: 0,
+            origin: default,
+            effects: Vmu.IsEjected ? SpriteEffects.None : (SpriteEffects.FlipHorizontally | SpriteEffects.FlipVertically),
+            layerDepth: 0);
 
         // Draw icons
         var icons = _display.GetIcons();
