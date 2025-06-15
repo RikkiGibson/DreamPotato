@@ -122,8 +122,15 @@ public class MapleMessageBroker
         {
             if (_clientSocket is not null)
             {
-                _clientSocket.Shutdown(SocketShutdown.Both);
-                _clientSocket.Disconnect(reuseSocket: false);
+                try
+                {
+                    _clientSocket.Shutdown(SocketShutdown.Both);
+                    _clientSocket.Disconnect(reuseSocket: false);
+                }
+                catch (SocketException ex)
+                {
+                    Logger.LogWarning(ex.Message, LogCategories.Maple);
+                }
             }
         }
     }
