@@ -13,14 +13,17 @@ public class Cpu
     // VMD-38: Memory
 
     internal const int InstructionBankSize = 64 * 1024;
+    internal const int FlashBankSize = InstructionBankSize;
+    internal const int FlashSize = FlashBankSize * 2;
 
     // !! NOTE !!
     // All state which is added needs to be handled appropriately in Reset, SaveState, LoadState, and similar methods.
 
     /// <summary>Read-only memory space.</summary>
     public readonly byte[] ROM = new byte[InstructionBankSize];
-    public readonly byte[] FlashBank0 = new byte[InstructionBankSize];
-    public readonly byte[] FlashBank1 = new byte[InstructionBankSize];
+    public readonly byte[] Flash = new byte[FlashSize];
+    internal Span<byte> FlashBank0 => Flash.AsSpan(0, FlashBankSize);
+    internal Span<byte> FlashBank1 => Flash.AsSpan(FlashBankSize, FlashBankSize);
 
     internal readonly InstructionMap InstructionMap = new();
 
@@ -41,7 +44,7 @@ public class Cpu
     /// Note that we need an extra bit of state here. We can't just look at the value of <see cref="SpecialFunctionRegisters.Ext"/>.
     /// The bank is only actually switched when using a jmpf instruction.
     /// </remarks>
-    public byte[] CurrentROMBank => InstructionBank switch
+    public Span<byte> CurrentROMBank => InstructionBank switch
     {
         InstructionBank.ROM => ROM,
         InstructionBank.FlashBank0 => FlashBank0,
@@ -132,8 +135,7 @@ public class Cpu
     {
         // NOTE: both save and load operations should write/read the fields in declaration order.
         writeStream.Write(ROM);
-        writeStream.Write(FlashBank0);
-        writeStream.Write(FlashBank1);
+        writeStream.Write(Flash);
         writeStream.WriteByte((byte)InstructionBank);
         Memory.SaveState(writeStream);
 
@@ -177,8 +179,7 @@ public class Cpu
         // TODO: do some kind of search of InstructionMap
         // to remove instructions which are no longer present in the binary?
         readStream.ReadExactly(ROM);
-        readStream.ReadExactly(FlashBank0);
-        readStream.ReadExactly(FlashBank1);
+        readStream.ReadExactly(Flash);
         InstructionBank = (InstructionBank)readStream.ReadByte();
         Memory.LoadState(readStream);
 
@@ -397,9 +398,7 @@ public class Cpu
         {
             var blockNumber = message.AdditionalWords[1] >> 24 & 0xff;
             var startAddress = blockNumber * Memory.WorkRamSize;
-            var bank = startAddress > 0xffff ? FlashBank1 : FlashBank0;
-            var bankStartAddress = startAddress & 0xffff;
-            var responseBytes = bank.AsSpan(bankStartAddress, Memory.WorkRamSize);
+            var responseBytes = Flash.AsSpan(startAddress, Memory.WorkRamSize);
 
             // TODO: verify phase and pt are zero
 
@@ -443,9 +442,7 @@ public class Cpu
                 Logger.LogWarning($"Unexpected 'pt' value: {pt}", LogCategories.Maple);
 
             var startAddress = blockNumber * Memory.WorkRamSize + phaseNumber * Memory.WorkRamSize / 4;
-            var bank = startAddress > 0xffff ? FlashBank1 : FlashBank0;
-            var bankStartAddress = startAddress & 0xffff;
-            var destSpan = bank.AsSpan(bankStartAddress, Memory.WorkRamSize);
+            var destSpan = Flash.AsSpan(startAddress, Memory.WorkRamSize);
 
             for (int i = 0; i < writePayloadWordCount; i++)
             {
@@ -1627,9 +1624,9 @@ public class Cpu
     /// <summary>Load a value from flash memory into accumulator. Undocumented.</summary>
     private void Op_LDF(Instruction inst)
     {
-        var a16 = SFRs.Trl | (SFRs.Trh << 8);
-        var bank = SFRs.FPR.FlashAddressBank ? FlashBank1 : FlashBank0;
-        SFRs.Acc = bank[a16];
+        Debug.Assert(BitHelpers.IsPowerOfTwo(InstructionBankSize));
+        var a17 = SFRs.Trl | (SFRs.Trh << 8) | (SFRs.FPR.FlashAddressBank ? InstructionBankSize : 0);
+        SFRs.Acc = Flash[a17];
         Pc += inst.Size;
     }
 
@@ -1640,7 +1637,6 @@ public class Cpu
             Logger.LogWarning("Executing STF outside of ROM!");
 
         var a16 = SFRs.Trl | (SFRs.Trh << 8);
-        var bank = SFRs.FPR.FlashAddressBank ? FlashBank1 : FlashBank0;
         var value = SFRs.Acc;
 
         // Sequence number when flash is first unlocked for writing
@@ -1675,7 +1671,8 @@ public class Cpu
 
         if (_flashWriteUnlockSequence >= flashFirstUnlockSeq)
         {
-            bank[a16] = value;
+            var a17 = a16 | (SFRs.FPR.FlashAddressBank ? InstructionBankSize : 0);
+            Flash[a17] = value;
 
             if (VmuFileWriteStream is not null)
             {

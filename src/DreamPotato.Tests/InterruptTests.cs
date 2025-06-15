@@ -203,7 +203,7 @@ public class InterruptTests
             OpcodeMask.NOP,
             OpcodeMask.RETI
         ];
-        instructions.CopyTo(cpu.CurrentROMBank.AsSpan(startIndex: InterruptVectors.P3));
+        instructions.CopyTo(cpu.CurrentROMBank[InterruptVectors.P3..]);
 
         cpu.Reset();
         Assert.True(cpu.SFRs.Ie.MasterInterruptEnable);

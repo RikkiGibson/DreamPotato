@@ -15,7 +15,7 @@ public class Vmu
     {
         _cpu = new Cpu();
         _cpu.Reset();
-        _fileSystem = new FileSystem(_cpu.FlashBank0, _cpu.FlashBank1);
+        _fileSystem = new FileSystem(_cpu.Flash);
     }
 
     public void LoadGameVms(string filePath)
@@ -53,8 +53,7 @@ public class Vmu
         var fileStream = fileInfo.Open(FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
 
         _cpu.Reset();
-        fileStream.ReadExactly(_cpu.FlashBank0);
-        fileStream.ReadExactly(_cpu.FlashBank1);
+        fileStream.ReadExactly(_cpu.Flash);
         LoadedFilePath = filePath;
         _cpu.VmuFileWriteStream = fileStream;
 

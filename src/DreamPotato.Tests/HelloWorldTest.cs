@@ -14,7 +14,7 @@ public class HelloWorldTest(ITestOutputHelper outputHelper)
         var cpu = new Cpu();
         cpu.Reset();
 
-        s_instructions.CopyTo(cpu.FlashBank0.AsSpan());
+        s_instructions.CopyTo(cpu.FlashBank0);
         cpu.SetInstructionBank(InstructionBank.FlashBank0);
 
         try

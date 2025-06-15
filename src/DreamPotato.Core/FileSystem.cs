@@ -7,7 +7,7 @@ namespace DreamPotato.Core;
 /// Performs file system operations on flash memory.
 /// NOTE: does not own its state. The same flash memory buffers used by <see cref="Cpu"/> are shared here.
 /// </summary>
-internal class FileSystem(byte[] flashBank0, byte[] flashBank1)
+internal class FileSystem(byte[] flash)
 {
     private const int VolumeSizeBytes = 128 * 1024; // 128kb
 
@@ -52,8 +52,7 @@ internal class FileSystem(byte[] flashBank0, byte[] flashBank1)
     public void InitializeFileSystem(DateTimeOffset date)
     {
         // Note that multi-byte values are little-endian encoded!
-        Debug.Assert(flashBank0.Length == Cpu.InstructionBankSize);
-        Debug.Assert(flashBank1.Length == Cpu.InstructionBankSize);
+        Debug.Assert(flash.Length == Cpu.FlashSize);
 
         initializeRootBlock();
         initializeFAT();
@@ -189,7 +188,7 @@ internal class FileSystem(byte[] flashBank0, byte[] flashBank1)
             throw new ArgumentException(nameof(filename));
 
         // Game data itself must be written to start of bank 0
-        gameFileData.CopyTo(flashBank0);
+        gameFileData.CopyTo(flash);
 
         // Update FAT table indicating the game data starts at block 0 and grows toward the end
         var fatBlock = GetBlock(FATBlockId);
@@ -234,19 +233,9 @@ internal class FileSystem(byte[] flashBank0, byte[] flashBank1)
 
     internal Span<byte> GetBlock(int blockId)
     {
-        if (blockId >= BlocksCount / 2) // use bank 1
-        {
-            var bankStart = Cpu.InstructionBankSize;
-            var rangeStart = blockId * BlockSize - bankStart;
-            var rangeEnd = (blockId + 1) * BlockSize - bankStart;
-            return flashBank1.AsSpan(rangeStart..rangeEnd);
-        }
-        else // use bank 0
-        {
-            var rangeStart = blockId * BlockSize;
-            var rangeEnd = (blockId + 1) * BlockSize;
-            return flashBank0.AsSpan(rangeStart..rangeEnd);
-        }
+        var rangeStart = blockId * BlockSize;
+        var rangeEnd = (blockId + 1) * BlockSize;
+        return flash.AsSpan(rangeStart..rangeEnd);
     }
 
     private static byte ToBinaryCodedDecimal(int value)

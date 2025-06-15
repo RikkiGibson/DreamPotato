@@ -131,6 +131,15 @@ public class SpecialFunctionRegisters
                 _t1hr = value;
                 return;
 
+            case Ids.Vccr:
+                // A write to T1H from user code sets the reload value
+                var oldVccr = new Vccr(_rawMemory[address]);
+                var newVccr = new Vccr(value);
+                if (oldVccr.DisplayControl != newVccr.DisplayControl)
+                    _logger.LogDebug($"Changing Vccr.DisplayControl from {oldVccr.DisplayControl} to {newVccr.DisplayControl}", LogCategories.General);
+
+                goto default;
+
             case Ids.Btcr:
                 var btcr = new Btcr(value);
 
