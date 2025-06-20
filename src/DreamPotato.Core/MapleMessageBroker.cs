@@ -235,6 +235,7 @@ public class MapleMessageBroker
             if ((message.Type, message.Function) == (MapleMessageType.GetCondition, MapleFunction.Input))
             {
                 // Report no VMU in slot 1
+                Logger.LogDebug("(GetCondition, Input): No VMUs", LogCategories.Maple);
                 var reply = new MapleMessage()
                 {
                     Type = MapleMessageType.Ack,
@@ -287,6 +288,7 @@ public class MapleMessageBroker
 
         MapleMessage handleGetConditionInput()
         {
+            Logger.LogDebug("(GetCondition, Input): VMU in slot 1", LogCategories.Maple);
             var reply = new MapleMessage()
             {
                 Type = MapleMessageType.Ack,
