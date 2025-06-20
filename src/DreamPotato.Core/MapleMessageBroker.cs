@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading.Channels;
 
 using Microsoft.Win32.SafeHandles;
 
@@ -19,22 +20,21 @@ public class MapleMessageBroker
     // The Maple message bytes are encoded as ASCII hex digits separated by spaces. e.g.
     // Message 0x01020304 is encoded as "04 03 02 01 \r\n"
     // Maple sends most of its data in 32-bit words which seem to get endian-swapped before and after transmission.
-    private readonly byte[] _rawSocketBuffer = new byte[MaxMaplePacketSize * 4];
     private readonly List<byte> _currentInboundMessageBuilder = [];
 
     /// <summary>A logger independent from Cpu for thread safety reasons.</summary>
     private readonly Logger Logger;
 
     /// <summary>
-    /// Guards <see cref="_clientConnected"/>, <see cref="_inboundCpuMessages"/>, <see cref="_vmuDocked"/>, <see cref="_vmuFlashData"/>, <see cref="_vmuFileHandle"/>.
+    /// Guards <see cref="_clientConnected"/>, <see cref="_vmuDocked"/>, <see cref="_vmuFlashData"/>, <see cref="_vmuFileHandle"/>.
     /// </summary>
     private readonly Lock _lock = new Lock();
 
     /// <summary>Guarded by <see cref="_lock"/>.</summary>
     private Socket? _clientSocket;
 
-    /// <summary>Guarded by <see cref="_lock"/>.</summary>
-    private readonly Queue<MapleMessage> _inboundCpuMessages = [];
+    private readonly Channel<MapleMessage> _inboundCpuMessages = Channel.CreateUnbounded<MapleMessage>();
+    private readonly Channel<MapleMessage> _outboundMessages = Channel.CreateUnbounded<MapleMessage>();
 
     /// <summary>Guarded by <see cref="_lock"/>.</summary>
     private bool _vmuDocked;
@@ -65,7 +65,7 @@ public class MapleMessageBroker
         if (_serverTask != null || _cancellationTokenSource.IsCancellationRequested)
             throw new InvalidOperationException();
 
-        _serverTask = Task.Run(() => StartServerWorker(_cancellationTokenSource.Token));
+        _serverTask = Task.Run(() => SocketListenerEntryPoint(_cancellationTokenSource.Token));
     }
 
     internal void Resync(bool vmuDocked, bool writeToMapleFlash, Span<byte> flash, SafeFileHandle? vmuFileHandle)
@@ -77,10 +77,9 @@ public class MapleMessageBroker
         // The basic design here is that when the VMU is "docked" in the controller, the current flash state is copied over to the socket thread.
         // The socket thread immediately responds to flash I/O requests rather than waiting for main game thread to handle them.
         // Write LCD and buzzer requests are still routed to main game thread, but no response is expected for those.
-        bool dockedChanged;
         lock (_lock)
         {
-            dockedChanged = _vmuDocked != vmuDocked;
+            bool dockedChanged = _vmuDocked != vmuDocked;
             _vmuDocked = vmuDocked;
 
             if (writeToMapleFlash)
@@ -89,10 +88,15 @@ public class MapleMessageBroker
                 _vmuFlashData.CopyTo(flash);
 
             _vmuFileHandle = vmuFileHandle;
-        }
 
-        if (dockedChanged)
-            Disconnect();
+            if (dockedChanged && _clientSocket is { })
+            {
+                // Send a message telling client to re-query devices
+                var message = new MapleMessage() { Type = (MapleMessageType)0xff, Sender = new MapleAddress(0xff), Recipient = new MapleAddress(0xff), Length = 0xff, AdditionalWords = [] };
+                var written = _outboundMessages.Writer.TryWrite(message);
+                Debug.Assert(written); // Channel is unbounded, this should always succeed
+            }
+        }
     }
 
     /// <summary>Allows main game thread to receive messages affecting game-visible state (e.g. LCD, buzzer).</summary>
@@ -100,7 +104,7 @@ public class MapleMessageBroker
     {
         lock (_lock)
         {
-            return _inboundCpuMessages.TryDequeue(out mapleMessage);
+            return _inboundCpuMessages.Reader.TryRead(out mapleMessage);
         }
     }
 
@@ -264,7 +268,8 @@ public class MapleMessageBroker
             case (MapleMessageType.SetCondition, MapleFunction.Clock):
             case (MapleMessageType.WriteBlock, MapleFunction.LCD):
                 // Cpu handles these message types.
-                _inboundCpuMessages.Enqueue(message);
+                var written = _inboundCpuMessages.Writer.TryWrite(message);
+                Debug.Assert(written);
                 return default; // No reply
             case (MapleMessageType.GetCondition, MapleFunction.Input):
                 return handleGetConditionInput();
@@ -399,9 +404,9 @@ public class MapleMessageBroker
 
     internal int EncodeAsciiHexData(MapleMessage message, byte[] dest)
     {
-        byte[] messageBytes = new byte[4 * (message.Length + 1)];
+        byte[] messageBytes = new byte[4 * (message.EffectiveLength + 1)];
         message.WriteTo(messageBytes, out var bytesWritten);
-        Debug.Assert(bytesWritten == messageBytes.Length);
+        Debug.Assert(bytesWritten == messageBytes.Length || message.IsResetMessage);
 
         int destIndex = 0;
         for (int i = 0; i < messageBytes.Length; i++)
@@ -444,7 +449,47 @@ public class MapleMessageBroker
         }
     }
 
-    private async Task StartServerWorker(CancellationToken cancellationToken)
+    private async Task SocketReaderEntryPoint(Socket clientSocket, CancellationToken cancellationToken)
+    {
+        Queue<MapleMessage> localInboundMessages = [];
+        byte[] rawSocketBuffer = new byte[MaxMaplePacketSize * 4];
+        while (clientSocket.Connected)
+        {
+            var receivedLen = await clientSocket.ReceiveAsync(rawSocketBuffer, SocketFlags.None, cancellationToken);
+            if (_currentInboundMessageBuilder.Count == 0)
+                Logger.LogTrace($"Received message: {Encoding.UTF8.GetString(rawSocketBuffer.AsSpan(start: 0, length: receivedLen))}");
+            else
+                Logger.LogTrace(Encoding.UTF8.GetString(rawSocketBuffer.AsSpan(start: 0, length: receivedLen)));
+
+            ScanAsciiHexFragment(localInboundMessages, rawSocketBuffer.AsSpan()[0..receivedLen]);
+
+            while (localInboundMessages.TryDequeue(out var message))
+            {
+                var outboundMessage = HandleMapleMessage(message);
+                if (!outboundMessage.HasValue)
+                    continue;
+
+                await _outboundMessages.Writer.WriteAsync(outboundMessage, cancellationToken);
+            }
+        }
+    }
+
+    private async Task SocketWriterEntryPoint(Socket clientSocket, CancellationToken cancellationToken)
+    {
+        byte[] rawSocketBuffer = new byte[MaxMaplePacketSize * 4];
+        while (clientSocket.Connected)
+        {
+            var outboundMessage = await _outboundMessages.Reader.ReadAsync(cancellationToken);
+            Debug.Assert(outboundMessage.HasValue);
+
+            var bytesWritten = EncodeAsciiHexData(outboundMessage, rawSocketBuffer);
+            if (outboundMessage.Type != MapleMessageType.Ack)
+                Logger.LogTrace($"Sending message: {Encoding.UTF8.GetString(rawSocketBuffer.AsSpan(start: 0, length: bytesWritten))}");
+            await clientSocket.SendAsync(rawSocketBuffer.AsMemory(start: 0, length: bytesWritten), cancellationToken);
+        }
+    }
+
+    private async Task SocketListenerEntryPoint(CancellationToken cancellationToken)
     {
         using var listener = new Socket(SocketType.Stream, ProtocolType.Tcp);
         listener.Bind(new IPEndPoint(IPAddress.Loopback, BasePort));
@@ -461,31 +506,11 @@ public class MapleMessageBroker
                 _clientSocket = clientSocket;
             }
 
-            Queue<MapleMessage> inboundMessages = [];
             try
             {
-                while (clientSocket.Connected)
-                {
-                    var receivedLen = await clientSocket.ReceiveAsync(_rawSocketBuffer, SocketFlags.None, cancellationToken);
-                    if (_currentInboundMessageBuilder.Count == 0)
-                        Logger.LogTrace($"Received message: {Encoding.UTF8.GetString(_rawSocketBuffer.AsSpan(start: 0, length: receivedLen))}");
-                    else
-                        Logger.LogTrace(Encoding.UTF8.GetString(_rawSocketBuffer.AsSpan(start: 0, length: receivedLen)));
-
-                    ScanAsciiHexFragment(inboundMessages, _rawSocketBuffer.AsSpan()[0..receivedLen]);
-
-                    while (inboundMessages.TryDequeue(out var message))
-                    {
-                        var outboundMessage = HandleMapleMessage(message);
-                        if (!outboundMessage.HasValue)
-                            continue;
-
-                        var bytesWritten = EncodeAsciiHexData(outboundMessage, _rawSocketBuffer);
-                        if (outboundMessage.Type != MapleMessageType.Ack)
-                            Logger.LogTrace($"Sending message: {Encoding.UTF8.GetString(_rawSocketBuffer.AsSpan(start: 0, length: bytesWritten))}");
-                        await clientSocket.SendAsync(_rawSocketBuffer.AsMemory(start: 0, length: bytesWritten), cancellationToken);
-                    }
-                }
+                await Task.WhenAll(
+                    Task.Run(() => SocketReaderEntryPoint(clientSocket, cancellationToken), cancellationToken),
+                    Task.Run(() => SocketWriterEntryPoint(clientSocket, cancellationToken), cancellationToken));
             }
             catch (ObjectDisposedException)
             {
@@ -495,11 +520,16 @@ public class MapleMessageBroker
             {
                 Logger.LogError(e.Message, LogCategories.Maple);
             }
+
             lock (_lock)
             {
                 _clientSocket = null;
-                _inboundCpuMessages.Clear();
             }
+
+            // discard all messages from the last connection
+            _ = _inboundCpuMessages.Reader.ReadAllAsync(cancellationToken);
+            _ = _outboundMessages.Reader.ReadAllAsync(cancellationToken);
+
         }
     }
 }

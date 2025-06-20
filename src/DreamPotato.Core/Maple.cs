@@ -7,6 +7,12 @@ internal record struct MapleMessage()
 {
     public bool HasValue { get; } = true;
 
+    public bool IsResetMessage => (byte)Type == 0xff
+        && (byte)Sender == 0xff
+        && (byte)Recipient == 0xff
+        && Length == 0xff
+        && AdditionalWords.Length == 0;
+
     public MapleMessageType Type { get; init; }
     public MapleAddress Recipient { get; init; }
     public MapleAddress Sender { get; init; }
@@ -18,13 +24,15 @@ internal record struct MapleMessage()
     /// </summary>
     public byte Length { get; init; }
 
+    public byte EffectiveLength => IsResetMessage ? (byte)0 : Length;
+
     public byte Checksum { get; init; }
 
     public required int[] AdditionalWords { get; init; }
 
     public byte[] WriteTo(byte[] buffer, out int bytesWritten)
     {
-        bytesWritten = 4 * (Length + 1);
+        bytesWritten = 4 * (EffectiveLength + 1);
 
         buffer[0] = (byte)Type;
         buffer[1] = (byte)Recipient;

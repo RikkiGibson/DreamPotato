@@ -247,6 +247,30 @@ public class MapleTests
             outboundMessageString);
     }
 
+    [Fact]
+    public void Reconnect()
+    {
+        var rom = File.ReadAllBytes("Data/american_v1.05.bin");
+        var cpu = new Cpu();
+        rom.AsSpan().CopyTo(cpu.ROM);
+
+        cpu.Reset();
+
+        // Changing the connection state causes us to send a reconnect message
+        cpu.ConnectDreamcast();
+
+        var message = new MapleMessage() { Type = (MapleMessageType)0xff, Sender = new MapleAddress(0xff), Recipient = new MapleAddress(0xff), Length = 0xff, AdditionalWords = [] };
+        var rawSocketData = new byte[2048];
+        var length = cpu.MapleMessageBroker.EncodeAsciiHexData(message, rawSocketData);
+        var outboundMessageString = Encoding.UTF8.GetString(rawSocketData.AsSpan(start: 0, length));
+        Assert.Equal<object>("""
+            FF FF FF FF
+
+            """,
+            outboundMessageString);
+        Assert.Equal(13, outboundMessageString.Length);
+    }
+
     // test write nonzero phase:
     // Received message: 0C 01 00 22 00 00 00 02 00 03 00 A2 22 22 22 17 22 16 66 66 17 72 22 21 66 66 12 22 22 22 22 11 11 16 66 66 61 11 11 11 66 66 12 22 22 22 11 16 66 61 66 66 66 66 66 66 66 61 12 22 22 11 11 16 66 61 66 66 66 66 66 66 61 11 11 11 11 10 00 11 66 66 66 66 66 66 66 66 10 00 00 01 10 00 00 01 66 66 11 11 16 66 66 61 10 00 00 00 00 00 00 01 16 66 61 11 16 66 66 11 10 00 00 00 00 00 00 00 11 66 66 11 66 66 61 18 10 00 00 00
 
