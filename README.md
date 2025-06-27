@@ -11,7 +11,15 @@ See [compatibility.md](compatibility.md) for the current compatibility status of
 
 ## Flycast Integration Prototype
 
+[Demo Video](https://www.youtube.com/watch?v=EN8Y3UX_TDM)
+
 DreamPotato can connect to Flycast to support an experience similar to real hardware. Currently, trying this out requires building the [Flycast vmuconn branch](https://github.com/RikkiGibson/flycast/tree/vmuconn) from source.
+
+A few caveats:
+1. A controller needs to be plugged in to your PC, due to a hack/workaround being used for the Flycast prototype.
+2. Make sure you launch DreamPotato before Flycast, as DreamPotato runs the server side of the TCP connection.
+3. When the VMU is ejected, the BIOS puts it to sleep, you'll have to hit Sleep again before being able to do anything.
+4. In Chao Adventure, make sure you hit Mode to exit the game before inserting the VMU, or your progress may not be saved.
 
 ## Usage
 
@@ -31,6 +39,18 @@ Download the latest bits from the [Releases](https://github.com/RikkiGibson/Drea
 - F8 - Load State
 - F10 - Pause/Resume
 - Tab (hold) - Fast Forward
+
+### Default Gamepad Button Mappings
+
+Currently an unusual control scheme is used by default to make it easier to map the Dreamcast buttons and VMU buttons onto a single controller.
+
+- Right Thumbstick - Up/Left/Down/Right
+- Right Shoulder - A
+- Left Shoulder - B
+- Back - Sleep
+- Right Stick Press - Mode
+
+For the moment, if you build from source, you can change usages of `Preset_DreamcastSimultaneous` to `Default`, in order to use a normal button mapping. Just make sure to delete `configuration.json` from the output directory so that your new default is used.
 
 ### Configuration
 
