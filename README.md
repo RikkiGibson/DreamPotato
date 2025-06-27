@@ -9,6 +9,10 @@ DreamPotato is a Dreamcast VMU emulator in currently in alpha. For the moment on
 
 See [compatibility.md](compatibility.md) for the current compatibility status of various games.
 
+## Flycast Integration Prototype
+
+DreamPotato can connect to Flycast to support an experience similar to real hardware. Currently, trying this out requires building the [Flycast vmuconn branch](https://github.com/RikkiGibson/flycast/tree/vmuconn) from source.
+
 ## Usage
 
 Download the latest bits from the [Releases](https://github.com/RikkiGibson/DreamPotato/releases) section.
