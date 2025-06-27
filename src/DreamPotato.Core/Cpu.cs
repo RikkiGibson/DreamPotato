@@ -3,6 +3,9 @@ using System.Diagnostics;
 
 using DreamPotato.Core.SFRs;
 
+// note that these also work on unix despite the name
+using Microsoft.Win32.SafeHandles;
+
 namespace DreamPotato.Core;
 
 public class Cpu
@@ -13,20 +16,23 @@ public class Cpu
     // VMD-38: Memory
 
     internal const int InstructionBankSize = 64 * 1024;
+    internal const int FlashBankSize = InstructionBankSize;
+    internal const int FlashSize = FlashBankSize * 2;
 
     // !! NOTE !!
     // All state which is added needs to be handled appropriately in Reset, SaveState, LoadState, and similar methods.
 
     /// <summary>Read-only memory space.</summary>
     public readonly byte[] ROM = new byte[InstructionBankSize];
-    public readonly byte[] FlashBank0 = new byte[InstructionBankSize];
-    public readonly byte[] FlashBank1 = new byte[InstructionBankSize];
+    public readonly byte[] Flash = new byte[FlashSize];
+    internal Span<byte> FlashBank0 => Flash.AsSpan(0, FlashBankSize);
+    internal Span<byte> FlashBank1 => Flash.AsSpan(FlashBankSize, FlashBankSize);
 
     internal readonly InstructionMap InstructionMap = new();
 
-    public Stream? VmuFileWriteStream
+    internal FileStream? VmuFileWriteStream
     {
-        get;
+        private get;
         set
         {
             field?.Dispose();
@@ -35,13 +41,19 @@ public class Cpu
     }
 
     /// <summary>
+    /// Allows reading/writing to the VMU file in a thread-safe manner.
+    /// </summary>
+    internal SafeFileHandle? VmuFileHandle
+        => VmuFileWriteStream?.SafeFileHandle;
+
+    /// <summary>
     /// May point to either ROM (BIOS), flash memory bank 0 or bank 1.
     /// </summary>
     /// <remarks>
     /// Note that we need an extra bit of state here. We can't just look at the value of <see cref="SpecialFunctionRegisters.Ext"/>.
     /// The bank is only actually switched when using a jmpf instruction.
     /// </remarks>
-    public byte[] CurrentROMBank => InstructionBank switch
+    public Span<byte> CurrentROMBank => InstructionBank switch
     {
         InstructionBank.ROM => ROM,
         InstructionBank.FlashBank0 => FlashBank0,
@@ -53,6 +65,9 @@ public class Cpu
 
     public readonly Memory Memory;
     public readonly Audio Audio;
+
+    /// <summary>NOTE: only 'TryReceiveMessage' and 'SendMessage' methods are safe to call from here.</summary>
+    public readonly MapleMessageBroker MapleMessageBroker;
 
     internal ushort Pc;
 
@@ -92,6 +107,8 @@ public class Cpu
     internal readonly Interrupts[] _servicingInterrupts = new Interrupts[3];
     internal int _interruptsCount;
 
+    internal int _flashWriteUnlockSequence;
+
     public Cpu()
     {
 #if DEBUG
@@ -99,10 +116,11 @@ public class Cpu
 #else
         var logLevel = LogLevel.Debug;
 #endif
-        var categories = LogCategories.General;
+        var categories = LogCategories.General | LogCategories.Maple;
         Logger = new Logger(logLevel, categories, this);
         Memory = new Memory(this, Logger);
         Audio = new Audio(this, Logger);
+        MapleMessageBroker = new MapleMessageBroker(logLevel);
         SetInstructionBank(InstructionBank.ROM);
     }
 
@@ -117,16 +135,19 @@ public class Cpu
         Array.Clear(_servicingInterrupts);
         _interruptsCount = 0;
         _interruptServicingState = InterruptServicingState.Ready;
+        _flashWriteUnlockSequence = 0;
         Memory.Reset();
         SyncInstructionBank();
     }
 
     internal void SaveState(Stream writeStream)
     {
+        if (SFRs.P7.DreamcastConnected)
+            ResyncMapleInbound();
+
         // NOTE: both save and load operations should write/read the fields in declaration order.
         writeStream.Write(ROM);
-        writeStream.Write(FlashBank0);
-        writeStream.Write(FlashBank1);
+        writeStream.Write(Flash);
         writeStream.WriteByte((byte)InstructionBank);
         Memory.SaveState(writeStream);
 
@@ -143,7 +164,7 @@ public class Cpu
             writeUInt16(buffer, (ushort)_servicingInterrupts[i]);
         }
         writeInt32(buffer, _interruptsCount);
-
+        writeInt32(buffer, _flashWriteUnlockSequence);
 
         void writeUInt16(Span<byte> bytes, ushort value)
         {
@@ -168,12 +189,11 @@ public class Cpu
     {
         // TODO: do some kind of search of InstructionMap
         // to remove instructions which are no longer present in the binary?
+
         readStream.ReadExactly(ROM);
-        readStream.ReadExactly(FlashBank0);
-        readStream.ReadExactly(FlashBank1);
+        readStream.ReadExactly(Flash);
         InstructionBank = (InstructionBank)readStream.ReadByte();
         Memory.LoadState(readStream);
-
 
         Span<byte> buffer = [0, 0, 0, 0, 0, 0, 0, 0];
         Pc = readUInt16(buffer);
@@ -188,7 +208,10 @@ public class Cpu
             _servicingInterrupts[i] = (Interrupts)readUInt16(buffer);
         }
         _interruptsCount = readInt32(buffer);
+        _flashWriteUnlockSequence = readInt32(buffer);
 
+        if (SFRs.P7.DreamcastConnected)
+            ResyncMapleOutbound();
 
         ushort readUInt16(Span<byte> bytes)
         {
@@ -252,6 +275,8 @@ public class Cpu
 
     public long Run(long ticksToRun)
     {
+        HandleMapleMessages();
+
         // Reduce the number of ticks we were asked to run, by the amount we overran last frame.
         ticksToRun -= TicksOverrun;
 
@@ -263,6 +288,89 @@ public class Cpu
         TicksOverrun = ticksSoFar - ticksToRun;
 
         return ticksSoFar;
+    }
+
+    /// <summary>If VMU just became docked, update Maple flash from Cpu; otherwise, if VMU just became undocked, update Cpu flash from Maple.</summary>
+    internal void ResyncMaple()
+    {
+        bool vmuDocked = SFRs.P7.DreamcastConnected;
+        MapleMessageBroker.Resync(vmuDocked, writeToMapleFlash: vmuDocked, Flash, VmuFileHandle);
+    }
+
+    /// <summary>Update the <see cref="MapleMessageBroker"/> from <see cref="Flash"/> regardless of whether VMU is currently docked.</summary>
+    internal void ResyncMapleOutbound()
+    {
+        bool vmuDocked = SFRs.P7.DreamcastConnected;
+        MapleMessageBroker.Resync(vmuDocked, writeToMapleFlash: true, Flash, VmuFileHandle);
+    }
+
+    /// <summary>Update <see cref="Flash"/> from <see cref="MapleMessageBroker"/> regardless of whether VMU is currently docked.</summary>
+    internal void ResyncMapleInbound()
+    {
+        bool vmuDocked = SFRs.P7.DreamcastConnected;
+        MapleMessageBroker.Resync(vmuDocked, writeToMapleFlash: false, Flash, VmuFileHandle);
+    }
+
+    private void HandleMapleMessages()
+    {
+        while (MapleMessageBroker.TryReceiveCpuMessage(out var message))
+        {
+            if (!SFRs.P7.DreamcastConnected)
+                Logger.LogWarning($"Ignoring Maple message while undocked: '({message.Type}, {message.Function})'", category: LogCategories.Maple);
+
+            // Note that only message types which handle immediately user-facing components (e.g. LCD, buzzer) are handled here.
+            // Other message types are handled in MapleMessageBroker directly.
+            switch (message.Type, message.Function)
+            {
+                case (MapleMessageType.SetCondition, MapleFunction.Clock):
+                    handleSetConditionClock(message);
+                    break;
+                case (MapleMessageType.WriteBlock, MapleFunction.LCD):
+                    handleWriteBlockLcd(message);
+                    break;
+                default:
+                    Debug.Fail($"Unhandled Maple message '({message.Type}, {message.Function})'");
+                    Logger.LogError($"Unhandled Maple message '({message.Type}, {message.Function})'", category: LogCategories.Maple);
+                    break;
+            }
+        }
+
+        void handleSetConditionClock(MapleMessage message)
+        {
+            if (message.AdditionalWords.Length != 1
+                || message.AdditionalWords[0] != 0)
+            {
+                Logger.LogWarning($"VMU beeps over Maple not implemented.", LogCategories.Maple);
+            }
+        }
+
+        void handleWriteBlockLcd(MapleMessage message)
+        {
+            var lcdWords = message.AdditionalWords.AsSpan(startIndex: 2);
+
+            var xram0 = Memory.Direct_AccessXram0();
+            int index = 0;
+            for (int left = 0; left < Memory.XramBank01Size; left += 0x10)
+            {
+                // skip 4 dead display bytes
+                for (int right = 0; right < 0xc; right++)
+                    xram0[left | right] = getAdditionalByte(lcdWords, index++);
+            }
+
+            var xram1 = Memory.Direct_AccessXram1();
+            for (int left = 0; left < Memory.XramBank01Size; left += 0x10)
+            {
+                for (int right = 0; right < 0xc; right++)
+                    xram1[left | right] = getAdditionalByte(lcdWords, index++);
+            }
+
+            static byte getAdditionalByte(ReadOnlySpan<int> additionalWords, int pos)
+            {
+                var i32 = additionalWords[pos / 4];
+                var @byte = i32 >> (pos % 4 * 8) & 0xff;
+                return (byte)@byte;
+            }
+        }
     }
 
     #region External interrupt triggers
@@ -1396,34 +1504,74 @@ public class Cpu
     /// <summary>Load a value from flash memory into accumulator. Undocumented.</summary>
     private void Op_LDF(Instruction inst)
     {
-        var a16 = SFRs.Trl | (SFRs.Trh << 8);
-        var bank = SFRs.FPR.FPR0 ? FlashBank1 : FlashBank0;
-        SFRs.Acc = bank[a16];
+        Debug.Assert(BitHelpers.IsPowerOfTwo(InstructionBankSize));
+        var a17 = SFRs.Trl | (SFRs.Trh << 8) | (SFRs.FPR.FlashAddressBank ? InstructionBankSize : 0);
+        SFRs.Acc = Flash[a17];
         Pc += inst.Size;
     }
 
     /// <summary>Store the accumulator to flash memory. Intended for use only by BIOS. Undocumented.</summary>
     private void Op_STF(Instruction inst)
     {
-        // TODO: emulate hardware unlock sequence
         if (InstructionBank != InstructionBank.ROM)
             Logger.LogWarning("Executing STF outside of ROM!");
 
         var a16 = SFRs.Trl | (SFRs.Trh << 8);
-        var bank = SFRs.FPR.FPR0 ? FlashBank1 : FlashBank0;
-        bank[a16] = SFRs.Acc;
+        var value = SFRs.Acc;
 
-        if (VmuFileWriteStream is not null)
+        // Sequence number when flash is first unlocked for writing
+        const int flashFirstUnlockSeq = 3;
+        // Size of the aligned page that we expect the BIOS to write in a sequence
+        const int flashPageSize = 128;
+
+        if (SFRs.FPR.FlashWriteUnlock)
         {
-            var absoluteAddress = (SFRs.FPR.FPR0 ? (1 << 16) : 0) | a16;
-            VmuFileWriteStream.Seek(absoluteAddress, SeekOrigin.Begin);
-            VmuFileWriteStream.WriteByte(SFRs.Acc);
+            switch (_flashWriteUnlockSequence, a16, value)
+            {
+                case (0, 0x5555, 0xAA):
+                    _flashWriteUnlockSequence = 1;
+                    break;
+                case (1, 0x2AAA, 0x55):
+                    _flashWriteUnlockSequence = 2;
+                    break;
+                case (2, 0x5555, 0xA0):
+                    _flashWriteUnlockSequence = flashFirstUnlockSeq;
+                    break;
+                default:
+                    _flashWriteUnlockSequence = 0;
+                    break;
+            }
+
+            Pc += inst.Size;
+            return;
         }
+
+        if (_flashWriteUnlockSequence == flashFirstUnlockSeq && (a16 & 0x127) != 0)
+            Logger.LogWarning($"Starting unaligned flash write: {a16}", LogCategories.Instructions);
+
+        if (_flashWriteUnlockSequence >= flashFirstUnlockSeq)
+        {
+            var a17 = a16 | (SFRs.FPR.FlashAddressBank ? InstructionBankSize : 0);
+            Flash[a17] = value;
+
+            if (VmuFileHandle is not null)
+            {
+                var absoluteAddress = (SFRs.FPR.FlashAddressBank ? (1 << 16) : 0) | a16;
+                RandomAccess.Write(VmuFileHandle, [value], absoluteAddress);
+            }
+
+            _flashWriteUnlockSequence++;
+        }
+        else
+        {
+            Logger.LogWarning($"Failed flash write due to bad sequence number {_flashWriteUnlockSequence}");
+        }
+
+        if (_flashWriteUnlockSequence == flashFirstUnlockSeq + flashPageSize)
+                _flashWriteUnlockSequence = 0;
 
         Pc += inst.Size;
     }
-
-    // OP_STF
 
     /// <summary>No operation</summary>
     private void Op_NOP(Instruction inst)

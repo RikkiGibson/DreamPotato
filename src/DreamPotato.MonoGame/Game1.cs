@@ -60,6 +60,7 @@ public class Game1 : Game
         Window.Title = "DreamPotato";
 
         Vmu = new Vmu();
+        Vmu.StartMapleServer();
         _display = new Display(Vmu._cpu);
         _vmuScreenData = new Color[Display.ScreenWidth * Display.ScreenHeight];
 
@@ -167,18 +168,23 @@ public class Game1 : Game
         if (keyboard.IsKeyDown(Keys.Escape))
             Exit();
 
-        if (_buttonChecker.IsNewlyPressed(VmuButton.Pause, _previousKeys, keyboard, _previousGamepad, gamepad))
+        if (Vmu.IsEjected && _buttonChecker.IsNewlyPressed(VmuButton.Pause, _previousKeys, keyboard, _previousGamepad, gamepad))
             Paused = !Paused;
 
+        if (_buttonChecker.IsNewlyPressed(VmuButton.InsertEject, _previousKeys, keyboard, _previousGamepad, gamepad))
+        {
+            // force unpause when vmu is inserted, as we need to more directly/forcefully manage the vmu state/execution.
+            Vmu.InsertOrEject();
+            if (!Vmu.IsEjected)
+                Paused = false;
+        }
+
         // TODO: system for selecting save slots etc
-        if (_buttonChecker.IsNewlyPressed(VmuButton.SaveState, _previousKeys, keyboard, _previousGamepad, gamepad))
-            Vmu.SaveState(id: "0");
+            if (_buttonChecker.IsNewlyPressed(VmuButton.SaveState, _previousKeys, keyboard, _previousGamepad, gamepad))
+                Vmu.SaveState(id: "0");
 
         if (_buttonChecker.IsNewlyPressed(VmuButton.LoadState, _previousKeys, keyboard, _previousGamepad, gamepad))
             Vmu.LoadState(id: "0");
-
-        if (_buttonChecker.IsNewlyPressed(VmuButton.InsertEject, _previousKeys, keyboard, _previousGamepad, gamepad))
-            Vmu.InsertOrEject();
 
         Vmu._cpu.SFRs.P3 = new Core.SFRs.P3()
         {
@@ -236,7 +242,15 @@ public class Game1 : Game
         // Use nearest neighbor scaling
         _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
-        _spriteBatch.Draw(_vmuScreenTexture, new Rectangle(new Point(x: SideMargin, y: TopMargin), new Point(x: ScaledWidth, y: ScaledHeight)), color: Color.White);
+        _spriteBatch.Draw(
+            _vmuScreenTexture,
+            destinationRectangle: new Rectangle(new Point(x: SideMargin, y: TopMargin), new Point(x: ScaledWidth, y: ScaledHeight)),
+            sourceRectangle: null,
+            color: Color.White,
+            rotation: 0,
+            origin: default,
+            effects: Vmu.IsEjected ? SpriteEffects.None : (SpriteEffects.FlipHorizontally | SpriteEffects.FlipVertically),
+            layerDepth: 0);
 
         // Draw icons
         var icons = _display.GetIcons();
@@ -246,7 +260,9 @@ public class Game1 : Game
         var flashIcon = (icons & Icons.Flash) != 0 ? "Flash " : "  ";
         var sleeping = Vmu._cpu.SFRs.Vccr.DisplayControl ? " " : "(sleep) ";
         var paused = Paused ? "(paused) " : " ";
-        var iconString = $"{fileIcon}{gameIcon}{clockIcon}{flashIcon}{sleeping}{paused}";
+        var vmuEjected = Vmu.IsEjected ? "(standalone)" : "(plugged-in)";
+        var connection = Vmu.IsServerConnected ? "(server connected)" : "(server disconnected)";
+        var iconString = $"{fileIcon}{gameIcon}{clockIcon}{flashIcon}{sleeping}{paused}{vmuEjected}{connection}";
         _spriteBatch.DrawString(_font1, iconString, new Vector2(x: SideMargin, y: TopMargin + ScaledHeight), Color.Black);
 
         _spriteBatch.End();

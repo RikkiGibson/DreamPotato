@@ -36,6 +36,9 @@ public class SpecialFunctionRegisters
     /// </summary>
     public void Reset()
     {
+        // Do not change the 'DreamcastConnected' bit except from user "insert/eject" action.
+        var dreamcastConnected = P7.DreamcastConnected;
+
         Array.Clear(_rawMemory);
         // NB: Memory owns clearing/updating _workRam
 
@@ -46,7 +49,7 @@ public class SpecialFunctionRegisters
         Write(Ids.P1Fcr, 0b1011_1111);
         Write(Ids.P3Int, 0b1111_1101);
         Write(Ids.P3, 0b1111_1111);
-        Write(Ids.P7, (byte)new P7() { LowVoltage = true });
+        Write(Ids.P7, (byte)new P7() { LowVoltage = true, DreamcastConnected = dreamcastConnected });
         Write(Ids.Isl, 0b1100_0000);
         Write(Ids.Vsel, 0b1111_1100);
         Write(Ids.Btcr, 0b0100_0001);
@@ -128,6 +131,15 @@ public class SpecialFunctionRegisters
                 _t1hr = value;
                 return;
 
+            case Ids.Vccr:
+                // A write to T1H from user code sets the reload value
+                var oldVccr = new Vccr(_rawMemory[address]);
+                var newVccr = new Vccr(value);
+                if (oldVccr.DisplayControl != newVccr.DisplayControl)
+                    _logger.LogDebug($"Changing Vccr.DisplayControl from {oldVccr.DisplayControl} to {newVccr.DisplayControl}", LogCategories.General);
+
+                goto default;
+
             case Ids.Btcr:
                 var btcr = new Btcr(value);
 
@@ -185,13 +197,48 @@ public class SpecialFunctionRegisters
                 goto default;
 
             case Ids.P7:
-                { // breakpoint holder
+                {
+                    var oldP7 = new P7(_rawMemory[address]);
+                    var newP7 = new P7(value);
+                    _rawMemory[address] = value;
+                    // Peripheral connection state changed.
+                    if (oldP7.DreamcastConnected != newP7.DreamcastConnected)
+                        _cpu.ResyncMaple();
                 }
-                goto default;
+                break;
 
             case Ids.Sp:
                 { // breakpoint holder
                 }
+                goto default;
+
+            case Ids.Vsel:
+                var oldVsel = new Vsel(_rawMemory[address]);
+                var newVsel = new Vsel(value);
+                if (oldVsel.Asel != newVsel.Asel)
+                    _logger.LogDebug($"Vsel.Asel changing from {oldVsel.Asel} to {newVsel.Asel}", LogCategories.Maple);
+
+                if (oldVsel.Siosel != newVsel.Siosel)
+                    _logger.LogDebug($"Vsel.Siosel changing from {oldVsel.Siosel} to {newVsel.Siosel}", LogCategories.Maple);
+
+                goto default;
+
+            case Ids.Mplsw:
+                { // breakpoint holder
+                }
+                goto default;
+
+            case Ids.Mplsta:
+                { // breakpoint holder
+                }
+                goto default;
+
+            case Ids.Mplrst:
+                var oldMplrst = new Mplrst(_rawMemory[address]);
+                var newMplrst = new Mplrst(value);
+                if (oldMplrst.Reset && !newMplrst.Reset)
+                    _logger.LogDebug($"Resetting Maple bus", LogCategories.Maple);
+
                 goto default;
 
             case Ids.P3Int:
@@ -606,9 +653,29 @@ public class SpecialFunctionRegisters
         set => Write(Ids.Isl, (byte)value);
     }
 
-#region Work RAM
-    /// <summary>Control register. VMD-143</summary>
-    /// TODO: the application is only supposed to be able to alter bit 4.
+#region Work RAM / Maple
+    /// <summary>Maple Status Word. Contains bits reflecting the status of a Maple transfer request.</summary>
+    public Mplsw Mplsw
+    {
+        get => new(Read(Ids.Mplsw));
+        set => Write(Ids.Mplsw, (byte)value);
+    }
+
+    /// <summary>Maple Start Transfer. Used to control starting and stopping a Maple transfer.</summary>
+    public Mplsta Mplsta
+    {
+        get => new(Read(Ids.Mplsta));
+        set => Write(Ids.Mplsta, (byte)value);
+    }
+
+    /// <summary>Maple Reset. Used to reset the Maple transaction when an error has occurred.</summary>
+    public Mplrst Mplrst
+    {
+        get => new(Read(Ids.Mplrst));
+        set => Write(Ids.Mplrst, (byte)value);
+    }
+
+    /// <summary>Work RAM control register. VMD-143. Note that the application is only supposed to be able to alter bit 4.</summary>
     public Vsel Vsel
     {
         get => new(Read(Ids.Vsel));

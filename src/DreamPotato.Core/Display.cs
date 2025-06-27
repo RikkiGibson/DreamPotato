@@ -55,21 +55,17 @@ public class Display(Cpu cpu)
             return;
         }
 
-        var xram0 = cpu.Memory.Direct_ReadXram0();
-        Debug.Assert(xram0.Length == 0x80);
-
         int index = 0;
-        for (int left = 0; left < 0x80; left += 0x10)
+        var xram0 = cpu.Memory.Direct_AccessXram0();
+        for (int left = 0; left < Memory.XramBank01Size; left += 0x10)
         {
             // skip 4 dead display bytes
             for (int right = 0; right < 0xc; right++, index++)
                 _bytes[index] = xram0[left | right];
         }
 
-        var xram1 = cpu.Memory.Direct_ReadXram1();
-        Debug.Assert(xram1.Length == 0x80);
-
-        for (int left = 0; left < 0x80; left += 0x10)
+        var xram1 = cpu.Memory.Direct_AccessXram1();
+        for (int left = 0; left < Memory.XramBank01Size; left += 0x10)
         {
             for (int right = 0; right < 0xc; right++, index++)
                 _bytes[index] = xram1[left | right];

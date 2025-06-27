@@ -161,6 +161,9 @@ static class SpecialFunctionRegisterIds
     /// <summary>Work RAM access (Send/receive buffer). VMD-144</summary>
     public const byte Vtrbf = 0x66;
 
+    /// <summary>Maple Word Length Registration. Controls the length of words for Maple transactions.</summary>
+    public const byte Vlreg = 0x67;
+
     /// <summary>Base timer control. VMD-101</summary>
     public const byte Btcr = 0x7F;
 

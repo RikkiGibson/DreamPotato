@@ -14,20 +14,21 @@ public enum LogLevel
 public enum LogCategories
 {
     None = 0,
-    Instructions = 1 << 0,
-    Interrupts = 1 << 1,
-    Timers = 1 << 2,
-    Halt = 1 << 3,
-    SystemClock = 1 << 4,
-    Audio = 1 << 5,
-    General = 1 << 6,
+    General = 1 << 0,
+    Instructions = 1 << 1,
+    Interrupts = 1 << 2,
+    Timers = 1 << 3,
+    Halt = 1 << 4,
+    SystemClock = 1 << 5,
+    Audio = 1 << 6,
+    Maple = 1 << 7,
 }
 
-public class Logger(LogLevel _minimumLogLevel, LogCategories _categories, Cpu _cpu)
+public class Logger(LogLevel _minimumLogLevel, LogCategories _categories, Cpu? _cpu = null)
 {
     private readonly LogLevel _minimumLogLevel = _minimumLogLevel;
     private readonly LogCategories _categories = _categories;
-    private readonly Cpu _cpu = _cpu;
+    private readonly Cpu? _cpu = _cpu;
 
     // Rolling buffer of log messages.
     private readonly string?[] _messages = new string[1000];
@@ -69,7 +70,8 @@ public class Logger(LogLevel _minimumLogLevel, LogCategories _categories, Cpu _c
             return;
 
         var timestamp = DateTimeOffset.Now;
-        string message = $"{timestamp.TimeOfDay} {_cpu.InstructionBank}@[{_cpu.Pc:X4}]: [{level}] {handler.ToStringAndClear()}";
+        var cpuDescription = _cpu is null ? $"" : (DefaultInterpolatedStringHandler)$" {_cpu.InstructionBank}@[{_cpu.Pc:X4}]";
+        string message = $"{timestamp.TimeOfDay}{cpuDescription.ToStringAndClear()}: [{level}] {handler.ToStringAndClear()}";
         if (level is LogLevel.Debug or LogLevel.Warning)
             Console.WriteLine(message);
 

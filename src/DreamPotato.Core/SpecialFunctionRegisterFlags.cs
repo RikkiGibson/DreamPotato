@@ -2,6 +2,8 @@
 // Note that we expect this kind of representation to add little/no overhead because
 // the .NET runtime is good at treating structs with a single field as equivalent to the underlying value.
 
+// The definitions here are taken from a combination of digging through VMU.pdf, emulator code, and ElysianVMU docs.
+
 namespace DreamPotato.Core.SFRs;
 
 /// <summary>Program status word. VMD-52</summary>
@@ -483,15 +485,15 @@ public struct FPR
     public FPR(byte value) => _value = value;
     public static explicit operator byte(FPR value) => value._value;
 
-    /// <summary>Flash Address Bank. Used as the upper bit of the address for flash access, i.e. whether flash bank 0 or 1 is used.</summary>
-    public bool FPR0
+    /// <summary>Used as the upper bit of the address for flash access, i.e. whether flash bank 0 or 1 is used.</summary>
+    public bool FlashAddressBank
     {
         get => BitHelpers.ReadBit(_value, bit: 0);
         set => BitHelpers.WriteBit(ref _value, bit: 0, value);
     }
 
-    /// <summary>Flash Write Unlock</summary>
-    public bool FPR1
+    /// <summary>Flash Write Unlock. Used to indicate that the flash unlock sequence is being initiated.</summary>
+    public bool FlashWriteUnlock
     {
         get => BitHelpers.ReadBit(_value, bit: 1);
         set => BitHelpers.WriteBit(ref _value, bit: 1, value);
@@ -726,26 +728,150 @@ public struct Isl
     }
 }
 
-public enum Oscillator
+/// <summary>Maple Status Word. Contains bits reflecting the status of a Maple transfer request.</summary>
+public struct Mplsw
 {
-    /// <summary>
-    /// Internal (RC) oscillator: 600 kHz / 10.0us cycle time.
-    /// Used when accessing XRAM or flash memory in standalone mode.
-    /// </summary>
-    Rc,
+    private byte _value;
+
+    public Mplsw(byte value) => _value = value;
+    public static explicit operator byte(Mplsw value) => value._value;
 
     /// <summary>
-    /// Ceramic (CF) oscillator: 6 MHz / 1.0us cycle time.
-    /// Used when connected to console.
+    /// Set if packet is last.
     /// </summary>
-    Cf,
+    public bool LastPkt
+    {
+        get => BitHelpers.ReadBit(_value, bit: 4);
+        set => BitHelpers.WriteBit(ref _value, bit: 4, value);
+    }
 
     /// <summary>
-    /// Quartz (X'TAL) oscillator: 32 kHz / 183.0us cycle time.
-    /// Used most of the time in standalone mode.
+    /// Indicates whether hardware is on.
     /// </summary>
-    Quartz,
+    public bool HwEna
+    {
+        get => BitHelpers.ReadBit(_value, bit: 2);
+        set => BitHelpers.WriteBit(ref _value, bit: 2, value);
+    }
+
+    /// <summary>
+    /// Indicates a normal packet is being transmitted.
+    /// </summary>
+    public bool Tx
+    {
+        get => BitHelpers.ReadBit(_value, bit: 1);
+        set => BitHelpers.WriteBit(ref _value, bit: 1, value);
+    }
+
+    /// <summary>
+    /// Indicates the starting packet is being transmitted.
+    /// </summary>
+    public bool Txs
+    {
+        get => BitHelpers.ReadBit(_value, bit: 0);
+        set => BitHelpers.WriteBit(ref _value, bit: 0, value);
+    }
 }
+
+/// <summary>Maple Start Transfer. Used to control starting and stopping a Maple transfer.</summary>
+public struct Mplsta
+{
+    private byte _value;
+
+    public Mplsta(byte value) => _value = value;
+    public static explicit operator byte(Mplsta value) => value._value;
+
+    public bool Unk
+    {
+        get => BitHelpers.ReadBit(_value, bit: 6);
+        set => BitHelpers.WriteBit(ref _value, bit: 6, value);
+    }
+
+    /// <summary>
+    /// Set if received packet was bad.
+    /// </summary>
+    public bool Err3
+    {
+        get => BitHelpers.ReadBit(_value, bit: 5);
+        set => BitHelpers.WriteBit(ref _value, bit: 5, value);
+    }
+
+    /// <summary>
+    /// Set if received packet was bad.
+    /// </summary>
+    public bool Err2
+    {
+        get => BitHelpers.ReadBit(_value, bit: 4);
+        set => BitHelpers.WriteBit(ref _value, bit: 4, value);
+    }
+
+    /// <summary>
+    /// Requests the Maple interrupt.
+    /// </summary>
+    public bool InterruptRequest
+    {
+        get => BitHelpers.ReadBit(_value, bit: 2);
+        set => BitHelpers.WriteBit(ref _value, bit: 2, value);
+    }
+
+    /// <summary>
+    /// Set if received packet was bad.
+    /// </summary>
+    public bool Err1
+    {
+        get => BitHelpers.ReadBit(_value, bit: 1);
+        set => BitHelpers.WriteBit(ref _value, bit: 1, value);
+    }
+
+    /// <summary>
+    /// Set when transmission is done.
+    /// </summary>
+    public bool TxDone
+    {
+        get => BitHelpers.ReadBit(_value, bit: 0);
+        set => BitHelpers.WriteBit(ref _value, bit: 0, value);
+    }
+}
+
+/// <summary>Maple Reset. Used to reset the Maple transaction when an error has occurred.</summary>
+public struct Mplrst
+{
+    private byte _value;
+
+    public Mplrst(byte value) => _value = value;
+    public static explicit operator byte(Mplrst value) => value._value;
+
+    /// <summary>
+    /// Set, then clear, to reset the Maple bus. See American ROM@[1007].
+    /// </summary>
+    public bool Reset
+    {
+        get => BitHelpers.ReadBit(_value, bit: 7);
+        set => BitHelpers.WriteBit(ref _value, bit: 7, value);
+    }
+}
+
+
+public enum Oscillator
+    {
+        /// <summary>
+        /// Internal (RC) oscillator: 600 kHz / 10.0us cycle time.
+        /// Used when accessing XRAM or flash memory in standalone mode.
+        /// </summary>
+        Rc,
+
+        /// <summary>
+        /// Ceramic (CF) oscillator: 6 MHz / 1.0us cycle time.
+        /// Used when connected to console.
+        /// </summary>
+        Cf,
+
+        /// <summary>
+        /// Quartz (X'TAL) oscillator: 32 kHz / 183.0us cycle time.
+        /// Used most of the time in standalone mode.
+        /// </summary>
+        Quartz,
+    }
 
 public static class OscillatorHz
 {
@@ -792,10 +918,14 @@ public struct Ocr
         get
         {
             int divisor = ClockGeneratorControl ? 6 : 12;
-            // int divisor = ClockGeneratorControl ? 4 : 8;
             int oscillatorFrequency = SystemClockSelector switch
             {
+#if DEBUG
+                // CPU performance is poor at the real Cf speed when a debugger is attached.
+                Oscillator.Cf => OscillatorHz.Rc,
+#else
                 Oscillator.Cf => OscillatorHz.Cf,
+#endif
                 Oscillator.Rc => OscillatorHz.Rc,
                 Oscillator.Quartz => OscillatorHz.Quartz,
                 _ => throw new InvalidOperationException()
@@ -1010,7 +1140,7 @@ public struct T1Cnt
     }
 }
 
-/// <summary>Control register. VMD-143</summary>
+/// <summary>Work RAM control register. VMD-143</summary>
 public struct Vsel
 {
     private byte _value;
@@ -1023,6 +1153,24 @@ public struct Vsel
     {
         get => BitHelpers.ReadBit(_value, bit: 4);
         set => _value = BitHelpers.WithBit(_value, bit: 4, value);
+    }
+
+    /// <summary>Serial IO Selector. When set to 1, port 1 is used as a dedicated Maple interface. When reset to 0, it is used as a normal I/O port for serial communication.</summary>
+    public bool Siosel
+    {
+        get => BitHelpers.ReadBit(_value, bit: 1);
+        set => _value = BitHelpers.WithBit(_value, bit: 1, value);
+    }
+
+    /// <summary>
+    /// Vtrbf Address Input Select.
+    /// When set to 1, a transfer between Dreamcast and WRAM is currently being carried out, and the VMU cannot access WRAM.
+    /// When reset to 0, there is no Maple transfer in progress, and WRAM can be accessed normally by the VMU.
+    /// </summary>
+    public bool Asel
+    {
+        get => BitHelpers.ReadBit(_value, bit: 0);
+        set => _value = BitHelpers.WithBit(_value, bit: 0, value);
     }
 }
 

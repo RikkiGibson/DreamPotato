@@ -14,7 +14,8 @@ public class Vmu
     public Vmu()
     {
         _cpu = new Cpu();
-        _fileSystem = new FileSystem(_cpu.FlashBank0, _cpu.FlashBank1);
+        _cpu.Reset();
+        _fileSystem = new FileSystem(_cpu.Flash);
     }
 
     public void LoadGameVms(string filePath)
@@ -36,10 +37,13 @@ public class Vmu
         fileName = fileName.Substring(0, Math.Min(FileSystem.DirectoryEntryFileNameLength, fileName.Length));
         _fileSystem.WriteGameFile(gameData, fileName, date);
         LoadedFilePath = filePath;
+
+        _cpu.ResyncMapleOutbound();
     }
 
     public void LoadVmu(string filePath)
     {
+        // TODO: loading a wrong file type should just show a toast or something, not crash the emu.
         if (!filePath.EndsWith(".vmu", StringComparison.OrdinalIgnoreCase) && !filePath.EndsWith(".bin", StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException($"VMU file '{filePath}' must have .vmu or .bin extension.", nameof(filePath));
 
@@ -51,13 +55,23 @@ public class Vmu
         var fileStream = fileInfo.Open(FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
 
         _cpu.Reset();
-        fileStream.ReadExactly(_cpu.FlashBank0);
-        fileStream.ReadExactly(_cpu.FlashBank1);
+        fileStream.ReadExactly(_cpu.Flash);
         LoadedFilePath = filePath;
         _cpu.VmuFileWriteStream = fileStream;
+        _cpu.ResyncMapleOutbound();
+    }
 
-        // TODO: perhaps detect if no game is present on the VMU, and default to BIOS in that case.
-        // also detect a bad/missing filesystem.
+    public void StartMapleServer()
+    {
+        _cpu.MapleMessageBroker.StartServer();
+    }
+
+    public bool IsServerConnected
+    {
+        get
+        {
+            return _cpu.MapleMessageBroker.IsConnected;
+        }
     }
 
     public bool IsEjected => !_cpu.SFRs.P7.DreamcastConnected;
@@ -71,7 +85,7 @@ public class Vmu
     public static string DataFolder => Path.Combine(AppContext.BaseDirectory, "Data");
     public const string SaveStateHeaderMessage = "DreamPotatoSaveState";
     public static readonly ReadOnlyMemory<byte> SaveStateHeaderBytes = Encoding.UTF8.GetBytes(SaveStateHeaderMessage);
-    public const int SaveStateVersion = 1;
+    public const int SaveStateVersion = 2;
 
     private string GetSaveStatePath(string id)
     {

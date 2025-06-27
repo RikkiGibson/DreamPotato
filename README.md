@@ -9,6 +9,10 @@ DreamPotato is a Dreamcast VMU emulator in currently in alpha. For the moment on
 
 See [compatibility.md](compatibility.md) for the current compatibility status of various games.
 
+## Flycast Integration Prototype
+
+DreamPotato can connect to Flycast to support an experience similar to real hardware. Currently, trying this out requires building the [Flycast vmuconn branch](https://github.com/RikkiGibson/flycast/tree/vmuconn) from source.
+
 ## Usage
 
 Download the latest bits from the [Releases](https://github.com/RikkiGibson/DreamPotato/releases) section.
@@ -50,6 +54,10 @@ Under `src/`:
 - `DreamPotato.MonoGame` is the front-end, including UI and config file handling.
 - `dreampotato-vscode` is the VS Code extension--in *very* barebones/"alpha" state.
     - Currently, it contains only a TextMate grammar for LC86k assembly.
+
+## Why write a new emulator?
+
+The biggest reason was: I was interested in timing-based luck manipulation in Pinta's Quest, which requires emulating the game at a very similar speed to real VMU hardware. I found that existing emulators did not run the game at a similar enough speed to real hardware to allow the same timings to work. I thought that writing a new emulator from scratch would be a good way to learn the hardware well enough to get to the bottom of how to do that.
 
 ## Acknowledgements
 

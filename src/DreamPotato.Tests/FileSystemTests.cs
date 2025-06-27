@@ -8,9 +8,8 @@ public class FileSystemTests
     public void InitializeFileSystem()
     {
         var date = DateTime.Parse("08/18/2018 07:22:16");
-        var bank0 = new byte[Cpu.InstructionBankSize];
-        var bank1 = new byte[Cpu.InstructionBankSize];
-        var fileSystem = new FileSystem(bank0, bank1);
+        var flash = new byte[Cpu.FlashSize];
+        var fileSystem = new FileSystem(flash);
         fileSystem.InitializeFileSystem(date);
 
         verifyRootBlock();
@@ -82,9 +81,8 @@ public class FileSystemTests
     public void WriteGameFile()
     {
         var date = DateTime.Parse("08/18/2018 07:22:16");
-        var bank0 = new byte[Cpu.InstructionBankSize];
-        var bank1 = new byte[Cpu.InstructionBankSize];
-        var fileSystem = new FileSystem(bank0, bank1);
+        var flash = new byte[Cpu.FlashSize];
+        var fileSystem = new FileSystem(flash);
         fileSystem.InitializeFileSystem(date);
         fileSystem.WriteGameFile(HelloWorldTest.s_instructions, "HelloWorld", date);
 
