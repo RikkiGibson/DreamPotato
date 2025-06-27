@@ -248,17 +248,8 @@ public class MapleMessageBroker
             }
             else
             {
-                // apparently this signals that the device is not connected?
                 Logger.LogDebug($"Received unexpected message while VMU disconnected: ({message.Type}, {message.Function})", LogCategories.Maple);
-                var reply = new MapleMessage()
-                {
-                    Type = (MapleMessageType)0xff,
-                    Recipient = new MapleAddress(0xff),
-                    Sender = new MapleAddress(0xff),
-                    Length = 0xff,
-                    AdditionalWords = []
-                };
-                return reply;
+                return default;
             }
 
             throw new InvalidOperationException("Unreachable code");

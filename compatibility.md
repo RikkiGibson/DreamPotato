@@ -3,7 +3,7 @@
 Table missing a game you are interested in? Something not working right that isn't mentioned here? Please send a PR editing this file to describe the current compatibility status of the game.
 
 Statuses:
-- 🟢 Perfect
+- 🟢 No issues or virtually unnoticeable issues
 - 🟡 Playable but has issues
 - 🔴 Unplayable/broken
 
@@ -16,9 +16,19 @@ Statuses:
   </tr></thead>
 <tbody>
   <tr>
+    <td>Chao Adventure (Sonic Adventure)</td>
+    <td>🟡 Playable</td>
+    <td>The basics appear to work. Not thoroughly tested.</td>
+  </tr>
+  <tr>
     <td>Pinta's Quest (Skies of Arcadia)</td>
     <td>🟡 Playable</td>
-    <td>Emulated speed is accurate enough that the same RNG manip timings used on real hardware work here. Graphical glitches seem to occur in Headwinds events.</td>
+    <td>Emulated speed is accurate enough that the same RNG manip timings used on real hardware work here.</td>
+  </tr>
+  <tr>
+    <td>Power Stone Mini (Power Stone)</td>
+    <td>🔴 Broken</td>
+    <td>Locks up in menus.</td>
   </tr>
   <tr>
     <td>memopad (homebrew)</td>

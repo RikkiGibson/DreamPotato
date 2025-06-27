@@ -51,6 +51,10 @@ Under `src/`:
 - `dreampotato-vscode` is the VS Code extension--in *very* barebones/"alpha" state.
     - Currently, it contains only a TextMate grammar for LC86k assembly.
 
+## Why write a new emulator?
+
+The biggest reason was: I was interested in timing-based luck manipulation in Pinta's Quest, which requires emulating the game at a very similar speed to real VMU hardware. I found that existing emulators did not run the game at a similar enough speed to real hardware to allow the same timings to work. I thought that writing a new emulator from scratch would be a good way to learn the hardware well enough to get to the bottom of how to do that.
+
 ## Acknowledgements
 
 Thanks to the following individuals, whose invaluable work on VMU emulation and reverse engineering helped make DreamPotato possible.
