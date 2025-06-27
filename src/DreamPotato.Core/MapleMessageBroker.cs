@@ -102,6 +102,7 @@ public class MapleMessageBroker
     /// <summary>Allows main game thread to receive messages affecting game-visible state (e.g. LCD, buzzer).</summary>
     internal bool TryReceiveCpuMessage(out MapleMessage mapleMessage)
     {
+        // TODO: cleanup usage of this lock. Channel read/writing should not need locking at all.
         lock (_lock)
         {
             return _inboundCpuMessages.Reader.TryRead(out mapleMessage);
