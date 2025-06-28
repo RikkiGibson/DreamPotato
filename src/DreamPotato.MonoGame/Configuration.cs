@@ -85,7 +85,6 @@ public record Configuration
 
 internal class ButtonChecker
 {
-    // TODO: cleraly a dictionary is needed.
     private readonly Dictionary<VmuButton, (List<Keys> Keys, List<Buttons> Buttons)> Mappings;
 
     public ButtonChecker(Configuration configuration)

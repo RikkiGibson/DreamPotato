@@ -112,7 +112,6 @@ class UserInterface
             var openConfigItem = new MenuItem("openConfig", "Open Data Folder");
             openConfigItem.Selected += (s, a) =>
             {
-                // NB: this won't work when debugging with VS Code, if VS Code is the default app for json files
                 new Process()
                 {
                     StartInfo = new ProcessStartInfo(Vmu.DataFolder)

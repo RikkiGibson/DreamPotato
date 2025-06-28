@@ -13,13 +13,14 @@ See [compatibility.md](compatibility.md) for the current compatibility status of
 
 [Demo Video](https://www.youtube.com/watch?v=EN8Y3UX_TDM)
 
-DreamPotato can connect to Flycast to support an experience similar to real hardware. Currently, trying this out requires building the [Flycast vmuconn branch](https://github.com/RikkiGibson/flycast/tree/vmuconn) from source.
+DreamPotato can connect to Flycast to support an experience similar to using a real Dreamcast and VMU together. Currently, trying this out requires building the [Flycast vmuconn branch](https://github.com/RikkiGibson/flycast/tree/vmuconn) from source.
 
 A few caveats:
 1. A controller needs to be plugged in to your PC, due to a hack/workaround being used for the Flycast prototype.
 2. Make sure you launch DreamPotato before Flycast, as DreamPotato runs the server side of the TCP connection.
-3. When the VMU is ejected, the BIOS puts it to sleep, you'll have to hit Sleep again before being able to do anything.
-4. In Chao Adventure, make sure you hit Mode to exit the game before inserting the VMU, or your progress may not be saved.
+3. A valid VMU file must be opened manually as automatic initialization of the VMU flash storage isn't yet implemented.
+4. When the VMU is ejected, the BIOS puts it to sleep, you'll have to hit Sleep again before being able to do anything.
+5. In Chao Adventure, make sure you hit Mode to exit the game before inserting the VMU, or your progress may not be saved.
 
 ## Usage
 
