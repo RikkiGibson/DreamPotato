@@ -7,7 +7,7 @@ public class Audio
 {
     public const int SampleRate = 48000;
     public const int SampleSize = 2; // 16-bit
-    public const int BufferDurationMilliseconds = 50;
+    public const int BufferDurationMilliseconds = 100;
 
     private readonly Cpu _cpu;
     private readonly Logger _logger;

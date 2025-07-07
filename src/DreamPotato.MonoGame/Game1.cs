@@ -146,6 +146,7 @@ public class Game1 : Game
 
         _font1 = Content.Load<SpriteFont>("MyMenuFont");
         _dynamicSound = new DynamicSoundEffectInstance(Audio.SampleRate, AudioChannels.Mono);
+        _dynamicSound.Play();
         Vmu.Audio.AudioBufferReady += Audio_BufferReady;
     }
 
@@ -216,11 +217,6 @@ public class Game1 : Game
     private void Audio_BufferReady(Audio.AudioBufferReadyEventArgs args)
     {
         _dynamicSound.SubmitBuffer(args.Buffer, args.Start, args.Length);
-        if (_dynamicSound.State != SoundState.Playing)
-        {
-            if (!Vmu.Audio.IsActive && _dynamicSound.PendingBufferCount > 1)
-                _dynamicSound.Play();
-        }
     }
 
     protected override void Draw(GameTime gameTime)
