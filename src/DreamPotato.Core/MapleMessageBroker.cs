@@ -17,11 +17,6 @@ public class MapleMessageBroker
     private const int MaxMaplePacketSize = 1025;
     public const int BasePort = 37393;
 
-    // The Maple message bytes are encoded as ASCII hex digits separated by spaces. e.g.
-    // Message 0x01020304 is encoded as "04 03 02 01 \r\n"
-    // Maple sends most of its data in 32-bit words which seem to get endian-swapped before and after transmission.
-    private readonly List<byte> _currentInboundMessageBuilder = [];
-
     /// <summary>A logger independent from Cpu for thread safety reasons.</summary>
     private readonly Logger Logger;
 
@@ -140,35 +135,35 @@ public class MapleMessageBroker
         }
     }
 
-    internal void ScanAsciiHexFragment(Queue<MapleMessage> inboundMessages, ReadOnlySpan<byte> fragment)
+    internal void ScanAsciiHexFragment(List<byte> asciiMessageBuilder, Queue<MapleMessage> inboundMessages, ReadOnlySpan<byte> fragment)
     {
         for (int i = 0; i < fragment.Length; i++)
         {
             var @byte = fragment[i];
-            _currentInboundMessageBuilder.Add(@byte);
+            asciiMessageBuilder.Add(@byte);
             if (@byte == '\r' && i < fragment.Length - 1 && fragment[i + 1] == '\n')
             {
                 i++; // skip past the '\r', loop header will skip past the '\n'
-                _currentInboundMessageBuilder.Add((byte)'\n');
-                DecodeAndSubmitInboundMessage(inboundMessages);
+                asciiMessageBuilder.Add((byte)'\n');
+                DecodeAndSubmitInboundMessage(asciiMessageBuilder, inboundMessages);
             }
         }
     }
 
-    private int DecodeAsciiHexLine(byte[] dest)
+    private int DecodeAsciiHexLine(List<byte> asciiMessageBuilder, byte[] dest)
     {
-        Debug.Assert(_currentInboundMessageBuilder.Count > 0);
-        Debug.Assert(_currentInboundMessageBuilder is [.., (byte)'\r', (byte)'\n']);
+        Debug.Assert(asciiMessageBuilder.Count > 0);
+        Debug.Assert(asciiMessageBuilder is [.., (byte)'\r', (byte)'\n']);
 
         int destIndex = 0;
-        for (int i = 0; i < _currentInboundMessageBuilder.Count - 2;)
+        for (int i = 0; i < asciiMessageBuilder.Count - 2;)
         {
-            var msb = _currentInboundMessageBuilder[i++];
-            var lsb = _currentInboundMessageBuilder[i++];
+            var msb = asciiMessageBuilder[i++];
+            var lsb = asciiMessageBuilder[i++];
             var byteValue = fromAsciiHexDigits(msb, lsb);
             dest[destIndex++] = byteValue;
 
-            if (_currentInboundMessageBuilder[i] == (byte)' ')
+            if (asciiMessageBuilder[i] == (byte)' ')
                 i++;
         }
 
@@ -195,10 +190,10 @@ public class MapleMessageBroker
         }
     }
 
-    private void DecodeAndSubmitInboundMessage(Queue<MapleMessage> inboundMessages)
+    private void DecodeAndSubmitInboundMessage(List<byte> asciiMessageBuilder, Queue<MapleMessage> inboundMessages)
     {
-        var rawBytes = new byte[_currentInboundMessageBuilder.Count / 3];
-        var rawLength = DecodeAsciiHexLine(rawBytes);
+        var rawBytes = new byte[asciiMessageBuilder.Count / 3];
+        var rawLength = DecodeAsciiHexLine(asciiMessageBuilder, rawBytes);
         var rawSpan = rawBytes.AsSpan(start: 0, rawLength);
 
         var type = (MapleMessageType)rawSpan[0];
@@ -220,7 +215,7 @@ public class MapleMessageBroker
             AdditionalWords = additionalWords,
         };
 
-        _currentInboundMessageBuilder.Clear();
+        asciiMessageBuilder.Clear();
         inboundMessages.Enqueue(message);
     }
 
@@ -445,17 +440,28 @@ public class MapleMessageBroker
 
     private async Task SocketReaderEntryPoint(Socket clientSocket, CancellationToken cancellationToken)
     {
+        // The Maple message bytes are encoded as ASCII hex digits separated by spaces. e.g.
+        // Message 0x01020304 is encoded as "04 03 02 01\r\n"
+        // Maple sends most of its data in 32-bit words which seem to get endian-swapped before and after transmission.
+        List<byte> asciiMessageBuilder = [];
         Queue<MapleMessage> localInboundMessages = [];
         byte[] rawSocketBuffer = new byte[MaxMaplePacketSize * 4];
-        while (clientSocket.Connected)
+        while (true)
         {
             var receivedLen = await clientSocket.ReceiveAsync(rawSocketBuffer, SocketFlags.None, cancellationToken);
-            if (_currentInboundMessageBuilder.Count == 0)
+            if (receivedLen <= 0)
+            {
+                // disconnected
+                asciiMessageBuilder.Clear();
+                return;
+            }
+
+            if (asciiMessageBuilder.Count == 0)
                 Logger.LogTrace($"Received message: {Encoding.UTF8.GetString(rawSocketBuffer.AsSpan(start: 0, length: receivedLen))}");
             else
                 Logger.LogTrace(Encoding.UTF8.GetString(rawSocketBuffer.AsSpan(start: 0, length: receivedLen)));
 
-            ScanAsciiHexFragment(localInboundMessages, rawSocketBuffer.AsSpan()[0..receivedLen]);
+            ScanAsciiHexFragment(asciiMessageBuilder, localInboundMessages, rawSocketBuffer.AsSpan()[0..receivedLen]);
 
             while (localInboundMessages.TryDequeue(out var message))
             {
@@ -471,7 +477,7 @@ public class MapleMessageBroker
     private async Task SocketWriterEntryPoint(Socket clientSocket, CancellationToken cancellationToken)
     {
         byte[] rawSocketBuffer = new byte[MaxMaplePacketSize * 4];
-        while (clientSocket.Connected)
+        while (true)
         {
             var outboundMessage = await _outboundMessages.Reader.ReadAsync(cancellationToken);
             Debug.Assert(outboundMessage.HasValue);
@@ -491,39 +497,48 @@ public class MapleMessageBroker
 
         while (true) // Accept a new client whenever one disconnects
         {
-            Logger.LogDebug("Waiting for client");
+            Logger.LogDebug("Waiting for client to connect", LogCategories.Maple);
             var clientSocket = await listener.AcceptAsync(cancellationToken);
-            Logger.LogDebug("Client connected");
-            clientSocket.ReceiveTimeout = 50;
+            Logger.LogDebug("Client connected", LogCategories.Maple);
             lock (_lock)
             {
                 _clientSocket = clientSocket;
             }
 
-            try
-            {
-                await Task.WhenAll(
-                    Task.Run(() => SocketReaderEntryPoint(clientSocket, cancellationToken), cancellationToken),
-                    Task.Run(() => SocketWriterEntryPoint(clientSocket, cancellationToken), cancellationToken));
-            }
-            catch (ObjectDisposedException)
-            {
-                Logger.LogDebug("Connection closed");
-            }
-            catch (Exception e)
-            {
-                Logger.LogError(e.Message, LogCategories.Maple);
-            }
+            var clientCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            await waitForClientDisconnectAsync(clientSocket, clientCancellationSource.Token);
+            // Ensure all socket tasks are completed or canceled
+            clientCancellationSource.Cancel();
 
             lock (_lock)
             {
+                _clientSocket.Close();
                 _clientSocket = null;
             }
 
             // discard all messages from the last connection
             _ = _inboundCpuMessages.Reader.ReadAllAsync(cancellationToken);
             _ = _outboundMessages.Reader.ReadAllAsync(cancellationToken);
+        }
 
+        async Task waitForClientDisconnectAsync(Socket clientSocket, CancellationToken cancellationToken)
+        {
+            try
+            {
+                await Task.WhenAny(
+                    Task.Run(() => SocketReaderEntryPoint(clientSocket, cancellationToken), cancellationToken),
+                    Task.Run(() => SocketWriterEntryPoint(clientSocket, cancellationToken), cancellationToken));
+            }
+            catch (OperationCanceledException)
+            {
+                // Operation was canceled using token rather than completing (e.g. ReceiveAsync returning 0).
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e.Message, LogCategories.Maple);
+            }
+
+            Logger.LogDebug("Client disconnected", LogCategories.Maple);
         }
     }
 }

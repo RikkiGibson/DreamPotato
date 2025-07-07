@@ -44,9 +44,11 @@ class UserInterface
         {
             var openVMSFileItem = new MenuItem("openVMSFile", "Open VMS (Game)");
             var openVMUFileItem = new MenuItem("openVMUFile", "Open VMU (Memory Card)");
+            var saveAsItem = new MenuItem("saveAs", "Save As");
             var quitItem = new MenuItem("quit", "Quit");
             fileMenuSection.Items.Add(openVMSFileItem);
             fileMenuSection.Items.Add(openVMUFileItem);
+            fileMenuSection.Items.Add(saveAsItem);
             fileMenuSection.Items.Add(quitItem);
 
             const int fileDialogWidth = 600;
@@ -68,6 +70,7 @@ class UserInterface
 
                     game.Vmu.LoadGameVms(fileDialog.FilePath);
                     game.Paused = false;
+                    game.UpdateWindowTitle(fileDialog.FilePath);
                 };
 
                 game.WindowSize = new Point(fileDialogWidth, fileDialogHeight);
@@ -89,6 +92,32 @@ class UserInterface
 
                     game.Vmu.LoadVmu(fileDialog.FilePath);
                     game.Paused = false;
+                    game.UpdateWindowTitle(fileDialog.FilePath);
+                };
+
+                game.WindowSize = new Point(fileDialogWidth, fileDialogHeight);
+                fileDialog.ShowModal(desktop);
+            };
+
+            saveAsItem.Selected += (s, a) =>
+            {
+                var fileDialog = new FileDialog(FileDialogMode.SaveFile)
+                {
+                    Title = "Save as .vmu File"
+                };
+                var oldWindowSize = game.WindowSize;
+                fileDialog.Closed += (s, a) =>
+                {
+                    game.WindowSize = oldWindowSize;
+                    if (!fileDialog.Result)
+                        return;
+
+                    var path = fileDialog.FilePath.EndsWith(".vmu", StringComparison.OrdinalIgnoreCase)
+                        ? fileDialog.FilePath
+                        : Path.ChangeExtension(fileDialog.FilePath, ".vmu");
+
+                    game.Vmu.SaveVmuAs(path);
+                    game.UpdateWindowTitle(path);
                 };
 
                 game.WindowSize = new Point(fileDialogWidth, fileDialogHeight);

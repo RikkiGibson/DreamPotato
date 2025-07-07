@@ -18,6 +18,11 @@ public class Vmu
         _fileSystem = new FileSystem(_cpu.Flash);
     }
 
+    public void InitializeFlash(DateTimeOffset date)
+    {
+        _fileSystem.InitializeFileSystem(date);
+    }
+
     public void LoadGameVms(string filePath)
     {
         if (!filePath.EndsWith(".vms", StringComparison.OrdinalIgnoreCase))
@@ -59,6 +64,14 @@ public class Vmu
         LoadedFilePath = filePath;
         _cpu.VmuFileWriteStream = fileStream;
         _cpu.ResyncMapleOutbound();
+    }
+
+    public void SaveVmuAs(string filePath)
+    {
+        var fileStream = File.Open(filePath, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite);
+        fileStream.Write(_cpu.Flash);
+        LoadedFilePath = filePath;
+        _cpu.VmuFileWriteStream = fileStream;
     }
 
     public void StartMapleServer()

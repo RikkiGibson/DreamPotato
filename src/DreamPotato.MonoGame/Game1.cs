@@ -57,14 +57,22 @@ public class Game1 : Game
         _graphics = new GraphicsDeviceManager(this);
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
-        Window.Title = "DreamPotato";
+        UpdateWindowTitle(gameFilePath);
 
         Vmu = new Vmu();
+        Vmu.InitializeFlash(DateTime.Now);
         Vmu.StartMapleServer();
         _display = new Display(Vmu._cpu);
         _vmuScreenData = new Color[Display.ScreenWidth * Display.ScreenHeight];
 
         LoadVmuFiles(gameFilePath);
+    }
+
+    internal void UpdateWindowTitle(string? gameFilePath)
+    {
+        Window.Title = gameFilePath is null
+            ? "DreamPotato - (new VMU)"
+            : $"DreamPotato - {Path.GetFileName(gameFilePath)}";
     }
 
     private void LoadVmuFiles(string? gameFilePath)
@@ -81,12 +89,7 @@ public class Game1 : Game
             throw new InvalidOperationException($"'{romFileName}' must be included in '{Vmu.DataFolder}'.", ex);
         }
 
-        if (gameFilePath == null)
-        {
-            // Start in paused state, showing the menu so user can pick a file.
-            Paused = true;
-        }
-        else
+        if (gameFilePath != null)
         {
             Paused = false;
             var extension = Path.GetExtension(gameFilePath);
