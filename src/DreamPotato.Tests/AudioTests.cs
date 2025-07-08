@@ -31,8 +31,44 @@ public class AudioTests
 
         int widthSamples = width * Audio.SampleRate / cpuClockHz;
         byte[] referencePulse = new byte[widthSamples * 2];
+        vmu.Audio.IsActive = true;
         vmu.Audio.Generate(referencePulse);
 
         Assert.Equal(referencePulse[0..widthSamples], audioArgs.Buffer[0..widthSamples]);
+    }
+
+    [Fact]
+    public void PulseLength_02()
+    {
+        // Edge case: verify that the startup tone is accurate
+        var vmu = new Vmu();
+        Audio.AudioBufferReadyEventArgs audioArgs = default;
+        vmu.Audio.AudioBufferReady +=
+            args => audioArgs = args;
+
+        var cpu = vmu._cpu;
+        cpu.Reset();
+        cpu.SFRs.Ocr = cpu.SFRs.Ocr with { ClockGeneratorControl = true, SystemClockSelector = Oscillator.Quartz };
+        var cpuClockHz = cpu.SFRs.Ocr.CpuClockHz;
+        cpu.SFRs.T1Lr = 254;
+        cpu.SFRs.T1Lc = 255;
+        // TODO: the startup beep is super unpleasant it should probably be forced really quiet or even silenced by default
+        // cpu.SFRs.StartupBeepEnable = true;
+        cpu.SFRs.T1Cnt = new T1Cnt() { ELDT1C = true, T1lRun = true };
+
+        int width = (0xff - cpu.SFRs.T1Lr) * 2;
+        for (int i = 0; i < width; i++)
+            cpu.Step();
+        cpu.SFRs.T1Cnt = cpu.SFRs.T1Cnt with { T1lRun = false };
+        Assert.NotNull(audioArgs.Buffer);
+
+        int widthSamples = width * Audio.SampleRate / cpuClockHz;
+        int widthBytes = widthSamples * 2;
+        Assert.Equal(17, widthSamples);
+
+        byte[] referencePulse = new byte[widthBytes];
+        vmu.Audio.IsActive = true;
+        vmu.Audio.Generate(referencePulse);
+        Assert.Equal(referencePulse[0..widthBytes], audioArgs.Buffer[0..widthBytes]);
     }
 }

@@ -89,7 +89,7 @@ public class Audio
         // Typical setup: (R=Reload, C=Compare, M=Max)
         // R----C----M
 
-        var timerTicksPerPeriod = 0xff - t1lr;
+        var timerTicksPerPeriod = 0xff - t1lr + 1;
         var timerTicksAtLowSignal = t1lc - t1lr;
         if (timerTicksPerPeriod < 2 || timerTicksAtLowSignal <= 0)
         {
@@ -105,7 +105,7 @@ public class Audio
         BinaryPrimitives.WriteInt16LittleEndian(_lowSignal, (short)-Volume);
 
         int bufferIndex;
-        for (bufferIndex = 0; bufferIndex < buffer.Length - samplesPerTimerPeriod * 2;)
+        for (bufferIndex = 0; bufferIndex <= buffer.Length - samplesPerTimerPeriod * 2;)
         {
             for (int i = 0; i < samplesAtLowSignal; i++)
             {

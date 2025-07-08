@@ -797,27 +797,27 @@ public class Cpu
 
             if (t1cnt.T1lRun)
             {
-                var t1l = (byte)(SFRs.T1L + 1);
+                var t1l = SFRs.T1L;
+                if (t1cnt.ELDT1C)
+                {
+                    var cpuClockHz = SFRs.Ocr.CpuClockHz;
+                    var t1lc = SFRs.T1Lc;
+
+                    // TODO: this solution does not produce the high pitched sound at ROM startup
+                    // it's a painful sound, so, probably for the best at the moment.
+
+                    var p1 = SFRs.P1 with { PulseOutput = t1lc <= t1l };
+                    Audio.AddPulse(cpuClockHz, p1.PulseOutput);
+                    SFRs.P1 = p1;
+                }
+
+                t1l++;
                 if (t1l == 0)
                 {
                     t1l = SFRs.T1Lr;
                     t1cnt.T1lOvf = true;
                     if (t1cnt.T1lIe)
                         RequestedInterrupts |= Interrupts.T1;
-                }
-
-                if (t1cnt.ELDT1C)
-                {
-                    var cpuClockHz = SFRs.Ocr.CpuClockHz;
-                    var t1lc = SFRs.T1Lc;
-
-                    // add the pulse data from the previous tick
-                    // TODO: this solution does not produce the high pitched sound at ROM startup
-                    // it's a painful sound, so, probably for the best at the moment.
-                    var p1 = SFRs.P1;
-                    Audio.AddPulse(cpuClockHz, p1.PulseOutput);
-
-                    SFRs.P1 = p1 with { PulseOutput = t1lc < t1l };
                 }
 
                 SFRs.T1L = t1l;
