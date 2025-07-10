@@ -47,6 +47,14 @@ readonly struct InstructionMap()
         }
     }
 
+    public void Clear()
+    {
+        foreach (var bank in _instructionBanks)
+        {
+            Array.Clear(bank);
+        }
+    }
+
     public string Dump(InstructionBank bank)
     {
         // TODO: dump contents of instruction bank to text

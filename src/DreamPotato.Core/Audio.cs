@@ -1,11 +1,16 @@
 using System.Buffers.Binary;
 using System.Diagnostics;
 
+using DreamPotato.Core.SFRs;
+
 namespace DreamPotato.Core;
 
 public class Audio
 {
-    public const int SampleRate = 48000;
+    // TODO: this won't work well with cf oscillator sounds.
+    // could consider using a separate sample rate of like 43600 there.
+    // But that would really just be a way to avoid doing our own resampling
+    public const int SampleRate = OscillatorHz.Quartz;
     public const int SampleSize = 2; // 16-bit
     public const int BufferDurationMilliseconds = 100;
 
@@ -128,6 +133,11 @@ public class Audio
     /// </summary>
     internal void AddPulse(int cpuClockHz, bool value)
     {
+        if (cpuClockHz is not (OscillatorHz.Quartz / 6) or (OscillatorHz.Quartz / 12))
+        {
+            _logger.LogWarning($"Bad pulse hz! {cpuClockHz}", LogCategories.Audio);
+        }
+
         var sampleRateAndRemainder = SampleRate + _pcmRemainder;
         var samplesPerCycle = sampleRateAndRemainder / cpuClockHz;
         _pcmRemainder = sampleRateAndRemainder % cpuClockHz;
@@ -154,6 +164,13 @@ public class Audio
             return;
 
         _logger.LogDebug($"EndAudio: Submitting audio buffer of length {_pcmBufferIndex}", LogCategories.Audio);
+        if (_cpu.SFRs.Ocr.CpuClockHz is not (OscillatorHz.Quartz / 6) or (OscillatorHz.Quartz / 12))
+        {
+            _logger.LogWarning(
+                $"Sample rate not compatible with clock {_cpu.SFRs.Ocr.SystemClockSelector}.",
+                LogCategories.Audio);
+        }
+
         AudioBufferReady?.Invoke(new(_pcmBuffer, 0, _pcmBufferIndex));
         _pcmBufferIndex = 0;
     }

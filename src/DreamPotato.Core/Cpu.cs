@@ -114,7 +114,7 @@ public class Cpu
 #if DEBUG
         var logLevel = LogLevel.Trace;
 #else
-        var logLevel = LogLevel.Debug;
+        var logLevel = LogLevel.Warning;
 #endif
         var categories = LogCategories.General | LogCategories.Maple;
         Logger = new Logger(logLevel, categories, this);
@@ -137,6 +137,7 @@ public class Cpu
         _interruptServicingState = InterruptServicingState.Ready;
         _flashWriteUnlockSequence = 0;
         Memory.Reset();
+        InstructionMap.Clear();
         SyncInstructionBank();
     }
 
@@ -1553,6 +1554,7 @@ public class Cpu
         {
             var a17 = a16 | (SFRs.FPR.FlashAddressBank ? InstructionBankSize : 0);
             Flash[a17] = value;
+            InstructionMap[InstructionBank, (ushort)a16] = default;
 
             if (VmuFileHandle is not null)
             {
