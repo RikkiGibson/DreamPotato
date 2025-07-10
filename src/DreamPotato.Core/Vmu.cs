@@ -23,7 +23,37 @@ public class Vmu
         _fileSystem.InitializeFileSystem(date);
     }
 
-    public void LoadGameVms(string filePath)
+    public void InitializeDate(DateTimeOffset date)
+    {
+        // TODO: this isn't really enough. subtle things are different so probably need to compare the memory state after manually setting a date to this.
+        // Basically need to check the memory state to look for values which "don't change much over time", and set them.
+        // Diffing two save states in a hex editor may help here
+
+        if (_cpu.Pc != 0 || _cpu.InstructionBank != SFRs.InstructionBank.ROM)
+            throw new Exception("Date should only be initialized at startup");
+
+        _cpu.Pc = BuiltInCodeSymbols.BIOSExit;
+
+        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Century_Bcd, FileSystem.ToBinaryCodedDecimal(date.Year / 100 % 100));
+        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Year_Bcd, FileSystem.ToBinaryCodedDecimal(date.Year % 100));
+        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Month_Bcd, FileSystem.ToBinaryCodedDecimal(date.Month));
+        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Day_Bcd, FileSystem.ToBinaryCodedDecimal(date.Day));
+        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Hour_Bcd, FileSystem.ToBinaryCodedDecimal(date.Hour));
+        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Minute_Bcd, FileSystem.ToBinaryCodedDecimal(date.Minute));
+        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Second_Bcd, FileSystem.ToBinaryCodedDecimal(date.Second));
+        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Year_Msb, (byte)(date.Year >> 8 & 0xff));
+        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Year_Lsb, (byte)(date.Year & 0xff));
+        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Month, (byte)date.Month);
+        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Day, (byte)date.Day);
+        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Hour, (byte)date.Hour);
+        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Minute, (byte)date.Minute);
+        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Second, (byte)date.Second);
+        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_HalfSecond, (byte)(date.Millisecond >= 500 ? 1 : 0));
+        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_LeapYear, (byte)(DateTime.IsLeapYear(date.Year) ? 1 : 0));
+        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_DateSet, 0xff);
+    }
+
+    public void LoadGameVms(string filePath, DateTimeOffset? date)
     {
         if (!filePath.EndsWith(".vms", StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException($"VMS file '{filePath}' must have .vms extension.", nameof(filePath));
@@ -32,21 +62,23 @@ public class Vmu
         if (fileInfo.Length > Cpu.InstructionBankSize)
             throw new ArgumentException($"VMS file '{filePath}' must be 64KB or smaller to be loaded.", nameof(filePath));
 
-        var date = DateTimeOffset.Now;
-
         _cpu.Reset();
-        _fileSystem.InitializeFileSystem(date);
+        if (date.HasValue)
+            InitializeDate(date.GetValueOrDefault());
+
+        var fileSystemDate = date ?? DateTime.Now;
+        _fileSystem.InitializeFileSystem(fileSystemDate);
 
         var gameData = File.ReadAllBytes(filePath);
         var fileName = Path.GetFileNameWithoutExtension(filePath);
         fileName = fileName.Substring(0, Math.Min(FileSystem.DirectoryEntryFileNameLength, fileName.Length));
-        _fileSystem.WriteGameFile(gameData, fileName, date);
+        _fileSystem.WriteGameFile(gameData, fileName, fileSystemDate);
         LoadedFilePath = filePath;
 
         _cpu.ResyncMapleOutbound();
     }
 
-    public void LoadVmu(string filePath)
+    public void LoadVmu(string filePath, DateTimeOffset? date)
     {
         // TODO: loading a wrong file type should just show a toast or something, not crash the emu.
         if (!filePath.EndsWith(".vmu", StringComparison.OrdinalIgnoreCase) && !filePath.EndsWith(".bin", StringComparison.OrdinalIgnoreCase))
@@ -60,6 +92,9 @@ public class Vmu
         var fileStream = fileInfo.Open(FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
 
         _cpu.Reset();
+        if (date.HasValue)
+            InitializeDate(date.GetValueOrDefault());
+
         fileStream.ReadExactly(_cpu.Flash);
         LoadedFilePath = filePath;
         _cpu.VmuFileWriteStream = fileStream;

@@ -17,6 +17,7 @@ public class Game1 : Game
 {
     private readonly GraphicsDeviceManager _graphics;
     private readonly Color[] _vmuScreenData;
+    internal Configuration _configuration;
 
     internal readonly Vmu Vmu;
     private readonly Display _display;
@@ -38,7 +39,6 @@ public class Game1 : Game
     private SpriteBatch _spriteBatch = null!;
     private Texture2D _vmuScreenTexture = null!;
     private Texture2D _iconsTexture = null!;
-    private Configuration _configuration = null!;
     private ButtonChecker _buttonChecker = null!;
 
     // Set in LoadContent()
@@ -59,13 +59,21 @@ public class Game1 : Game
         IsMouseVisible = true;
         UpdateWindowTitle(gameFilePath);
 
+        _configuration = Configuration.Load();
+        _configuration.Save();
+
         Vmu = new Vmu();
-        Vmu.InitializeFlash(DateTime.Now);
+
+        var date = DateTime.Now;
+        Vmu.InitializeFlash(date);
+        if (_configuration.AutoInitializeDate)
+            Vmu.InitializeDate(date);
+
         Vmu.StartMapleServer();
         _display = new Display(Vmu._cpu);
         _vmuScreenData = new Color[Display.ScreenWidth * Display.ScreenHeight];
 
-        LoadVmuFiles(gameFilePath);
+        LoadVmuFiles(gameFilePath, date: _configuration.AutoInitializeDate ? date : null);
     }
 
     internal void UpdateWindowTitle(string? gameFilePath)
@@ -75,7 +83,7 @@ public class Game1 : Game
             : $"DreamPotato - {Path.GetFileName(gameFilePath)}";
     }
 
-    private void LoadVmuFiles(string? gameFilePath)
+    private void LoadVmuFiles(string? gameFilePath, DateTimeOffset? date)
     {
         const string romFileName = "american_v1.05.bin";
         var romFilePath = Path.Combine(Vmu.DataFolder, romFileName);
@@ -95,11 +103,11 @@ public class Game1 : Game
             var extension = Path.GetExtension(gameFilePath);
             if (extension == ".vms")
             {
-                Vmu.LoadGameVms(gameFilePath);
+                Vmu.LoadGameVms(gameFilePath, date);
             }
             else if (extension is ".vmu" or ".bin")
             {
-                Vmu.LoadVmu(gameFilePath);
+                Vmu.LoadVmu(gameFilePath, date);
             }
             else
             {
@@ -126,9 +134,6 @@ public class Game1 : Game
 
         // TODO: nice icons to resemble those on the real VMU.
         _iconsTexture = new Texture2D(_graphics.GraphicsDevice, ScaledWidth, BottomMargin);
-
-        _configuration = Configuration.Load();
-        _configuration.Save();
 
         _buttonChecker = new ButtonChecker(_configuration);
 

@@ -11,7 +11,8 @@ using Microsoft.Xna.Framework.Input;
 
 namespace DreamPotato.MonoGame;
 
-public record Configuration
+public record Configuration(
+    bool AutoInitializeDate = true)
 {
     private const string FileName = "configuration.json";
     private static string FilePath => Path.Combine(Vmu.DataFolder, FileName);

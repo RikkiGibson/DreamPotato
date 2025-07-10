@@ -238,7 +238,7 @@ internal class FileSystem(byte[] flash)
         return flash.AsSpan(rangeStart..rangeEnd);
     }
 
-    private static byte ToBinaryCodedDecimal(int value)
+    internal static byte ToBinaryCodedDecimal(int value)
     {
         Debug.Assert(value is >= 0 and <= 99);
         var digit1 = value / 10;

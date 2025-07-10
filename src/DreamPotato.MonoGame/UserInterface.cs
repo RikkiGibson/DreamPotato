@@ -68,7 +68,8 @@ class UserInterface
                     if (!fileDialog.Result)
                         return;
 
-                    game.Vmu.LoadGameVms(fileDialog.FilePath);
+                    game.Vmu.LoadGameVms(fileDialog.FilePath,
+                        date: game._configuration.AutoInitializeDate ? DateTime.Now : null);
                     game.Paused = false;
                     game.UpdateWindowTitle(fileDialog.FilePath);
                 };
@@ -90,7 +91,8 @@ class UserInterface
                     if (!fileDialog.Result)
                         return;
 
-                    game.Vmu.LoadVmu(fileDialog.FilePath);
+                    game.Vmu.LoadVmu(fileDialog.FilePath,
+                        date: game._configuration.AutoInitializeDate ? DateTime.Now : null);
                     game.Paused = false;
                     game.UpdateWindowTitle(fileDialog.FilePath);
                 };
