@@ -14,9 +14,6 @@ readonly struct InstructionMap()
 
     public ReadOnlyMemory<Instruction> this[InstructionBank bank, Range range] => _instructionBanks[(int)bank][range];
 
-    // TODO: we likely need a clear operation for this.
-    // strictly, VMU applications can rewrite themselves (ugh.)
-    // Perhaps instructions which we think are being rewritten by a STF instruction, should be removed from the map.
     public Instruction this[InstructionBank bank, ushort offset]
     {
         get
