@@ -27,6 +27,20 @@ readonly struct InstructionMap()
         set
         {
             var instructions = _instructionBanks[(int)bank];
+            if (!value.HasValue)
+            {
+                // clearing a single instruction because associated byte was changed.
+                // Note that realistically byte sequences are written to ascending addresses but we can't bet on that.
+                // For example, if an instruction starts before the start of the page currently being written.
+                // So, deciding if this assignment is invalidating existing region of instructions is tricky.
+                //
+                // Possibly we just want to replace this map with just marking certain addresses as executable based on the fact that we executed them.
+                // Also marking certain addresses as data because we read them with LDC/LDF.
+                // No need to cache the instruction here, we could instead expose an on-demand view of the executable instructions based on what we know in that moment.
+                instructions[offset] = value;
+                return;
+            }
+
             // Ensure not overlapping with a later instruction
             var end = offset + value.Operation.Size;
             for (var i = offset + 1; i < end; i++)

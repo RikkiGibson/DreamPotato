@@ -137,13 +137,6 @@ public class Game1 : Game
 
     protected override void LoadContent()
     {
-        // TODO: starting a game which writes to flash, without first booting up ROM, can corrupt the game.
-        // Figure out how to automatically initialize ram values used by the ROM so we can go straight to the game.
-        // _vmu._cpu.SetInstructionBank(Core.SFRs.InstructionBank.FlashBank0);
-
-        // TODO: it would be good to setup the bios time automatically.
-        // Possibly the host system time could be used. Dunno if the DC system time could be used implicitly, without user running the memory card clock update function in system menu.
-
         _font1 = Content.Load<SpriteFont>("MyMenuFont");
         _dynamicSound = new DynamicSoundEffectInstance(Audio.SampleRate, AudioChannels.Mono);
         _dynamicSound.Play();

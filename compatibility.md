@@ -18,7 +18,7 @@ Statuses:
   <tr>
     <td>Chao Adventure (Sonic Adventure)</td>
     <td>🟡 Playable</td>
-    <td>The basics appear to work. Not thoroughly tested.</td>
+    <td>The basics appear to work. Some events look like they run faster than on real hardware. Not thoroughly tested.</td>
   </tr>
   <tr>
     <td>Pinta's Quest (Skies of Arcadia)</td>
