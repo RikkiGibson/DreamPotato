@@ -22,6 +22,14 @@
             "group": "build",
             "problemMatcher": [],
             "label": "dotnet: build DreamPotato.MonoGame.csproj"
+        },
+        {
+            "type": "dotnet",
+            "task": "build DreamPotato.SaveStateDiff.csproj",
+            "file": "${workspaceFolder}/src/DreamPotato.SaveStateDiff/DreamPotato.SaveStateDiff.csproj",
+            "group": "build",
+            "problemMatcher": [],
+            "label": "dotnet: build DreamPotato.SaveStateDiff.csproj"
         }
     ]
 }

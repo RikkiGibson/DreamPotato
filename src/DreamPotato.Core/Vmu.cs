@@ -32,7 +32,7 @@ public class Vmu
         if (_cpu.Pc != 0 || _cpu.InstructionBank != SFRs.InstructionBank.ROM)
             throw new Exception("Date should only be initialized at startup");
 
-        _cpu.Pc = BuiltInCodeSymbols.BIOSExit;
+        _cpu.Pc = BuiltInCodeSymbols.BIOSAfterDateIsSet;
 
         _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Century_Bcd, FileSystem.ToBinaryCodedDecimal(date.Year / 100 % 100));
         _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Year_Bcd, FileSystem.ToBinaryCodedDecimal(date.Year % 100));
@@ -160,10 +160,15 @@ public class Vmu
         _cpu.SaveState(writeStream);
     }
 
-    public void LoadState(string id)
+    public void LoadStateById(string id)
+    {
+        var filePath = GetSaveStatePath(id);
+        LoadStateFromPath(filePath);
+    }
+
+    public void LoadStateFromPath(string filePath)
     {
         // TODO: before overwriting current state, save it to an oops file
-        var filePath = GetSaveStatePath(id);
         try
         {
             using var readStream = File.OpenRead(filePath);

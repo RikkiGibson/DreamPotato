@@ -182,11 +182,11 @@ public class Game1 : Game
         }
 
         // TODO: system for selecting save slots etc
-            if (_buttonChecker.IsNewlyPressed(VmuButton.SaveState, _previousKeys, keyboard, _previousGamepad, gamepad))
-                Vmu.SaveState(id: "0");
+        if (_buttonChecker.IsNewlyPressed(VmuButton.SaveState, _previousKeys, keyboard, _previousGamepad, gamepad))
+            Vmu.SaveState(id: "0");
 
         if (_buttonChecker.IsNewlyPressed(VmuButton.LoadState, _previousKeys, keyboard, _previousGamepad, gamepad))
-            Vmu.LoadState(id: "0");
+            Vmu.LoadStateById(id: "0");
 
         Vmu._cpu.SFRs.P3 = new Core.SFRs.P3()
         {
