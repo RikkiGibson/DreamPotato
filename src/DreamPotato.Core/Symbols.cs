@@ -30,6 +30,7 @@ static class BuiltInRamSymbols
 
     /// <summary>Least significant byte of the 16-bit year</summary>
     internal const ushort DateTime_Year_Lsb = 0x18;
+
     internal const ushort DateTime_Month = 0x19;
     internal const ushort DateTime_Day = 0x1a;
     internal const ushort DateTime_Hour = 0x1b;

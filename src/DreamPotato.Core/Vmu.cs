@@ -28,7 +28,7 @@ public class Vmu
     public void InitializeDate(DateTimeOffset date)
     {
         if (_cpu.Pc != 0 || _cpu.InstructionBank != InstructionBank.ROM)
-            throw new Exception("Date should only be initialized at startup");
+            throw new InvalidOperationException("Date should only be initialized at startup");
 
         _cpu.Pc = BuiltInCodeSymbols.BIOSAfterDateIsSet;
 

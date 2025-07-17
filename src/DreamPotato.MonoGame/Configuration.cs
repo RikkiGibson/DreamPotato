@@ -11,6 +11,10 @@ using Microsoft.Xna.Framework.Input;
 
 namespace DreamPotato.MonoGame;
 
+/// <param name="AutoInitializeDate">
+/// If true, skips the date initialization on startup.
+/// Specify false to get the real hardware behavior, like when batteries are first inserted in the VMU.
+/// </param>
 public record Configuration(
     bool AutoInitializeDate = true)
 {
