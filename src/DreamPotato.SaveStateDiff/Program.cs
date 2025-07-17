@@ -117,8 +117,8 @@ for (int i = 0; i < xram1_1.Length; i++)
 }
 
 // Compare XRAM2
-var xram2_1 = mem1.Direct_ReadXram2();
-var xram2_2 = mem2.Direct_ReadXram2();
+var xram2_1 = mem1.Direct_AccessXram2();
+var xram2_2 = mem2.Direct_AccessXram2();
 for (int i = 0; i < xram2_1.Length; i++)
 {
     if (xram2_1[i] != xram2_2[i])

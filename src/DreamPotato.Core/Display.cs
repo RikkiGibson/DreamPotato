@@ -37,7 +37,7 @@ public class Display(Cpu cpu)
         if (!cpu.SFRs.Vccr.DisplayControl)
             return Icons.None;
 
-        var xram2 = cpu.Memory.Direct_ReadXram2();
+        var xram2 = cpu.Memory.Direct_AccessXram2();
         var icons = ((Icons)xram2[1] & Icons.File)
             | ((Icons)xram2[2] & Icons.Game)
             | ((Icons)xram2[3] & Icons.Clock)

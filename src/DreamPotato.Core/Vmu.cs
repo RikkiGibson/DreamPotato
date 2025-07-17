@@ -2,6 +2,8 @@ using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Text;
 
+using DreamPotato.Core.SFRs;
+
 namespace DreamPotato.Core;
 
 public class Vmu
@@ -25,11 +27,7 @@ public class Vmu
 
     public void InitializeDate(DateTimeOffset date)
     {
-        // TODO: this isn't really enough. subtle things are different so probably need to compare the memory state after manually setting a date to this.
-        // Basically need to check the memory state to look for values which "don't change much over time", and set them.
-        // Diffing two save states in a hex editor may help here
-
-        if (_cpu.Pc != 0 || _cpu.InstructionBank != SFRs.InstructionBank.ROM)
+        if (_cpu.Pc != 0 || _cpu.InstructionBank != InstructionBank.ROM)
             throw new Exception("Date should only be initialized at startup");
 
         _cpu.Pc = BuiltInCodeSymbols.BIOSAfterDateIsSet;
@@ -51,6 +49,24 @@ public class Vmu
         _cpu.Memory.Write(BuiltInRamSymbols.DateTime_HalfSecond, (byte)(date.Millisecond >= 500 ? 1 : 0));
         _cpu.Memory.Write(BuiltInRamSymbols.DateTime_LeapYear, (byte)(DateTime.IsLeapYear(date.Year) ? 1 : 0));
         _cpu.Memory.Write(BuiltInRamSymbols.DateTime_DateSet, 0xff);
+
+        // Following SFR writes are based on examining memory state from manual date initialization.
+        _cpu.SFRs.Ie = new Ie { PriorityControl0 = true, PriorityControl1 = true, MasterInterruptEnable = true };
+        _cpu.SFRs.Ip = new Ip { Int3_BaseTimer = true };
+        _cpu.SFRs.Ocr = new Ocr(0xA3);
+        _cpu.SFRs.T1Lc = 0xff;
+        _cpu.SFRs.T1L = 0xff;
+        _cpu.SFRs.Mcr = 0x9;
+        _cpu.SFRs.Cnr = 0x5;
+        _cpu.SFRs.Tdr = 0x20;
+        _cpu.SFRs.P1 = new P1(0xC0);
+        _cpu.SFRs.P1Ddr = 0xC0;
+        _cpu.SFRs.P3Int = new P3Int { Continuous = true, Enable = true };
+        _cpu.SFRs.Write(0x51, 0x20);
+        _cpu.SFRs.FPR = new FPR();
+        _cpu.SFRs.Write(0x55, 0xFF);
+        _cpu.SFRs.Vsel = new Vsel { Ince = true };
+        _cpu.SFRs.Btcr = new Btcr(0x79);
     }
 
     public void LoadGameVms(string filePath, DateTimeOffset? date)

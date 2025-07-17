@@ -230,7 +230,7 @@ public class Memory
     internal Span<byte> Direct_AccessXram1() => _xram1;
 
     /// <inheritdoc cref="Direct_AccessXram0"/>
-    internal ReadOnlySpan<byte> Direct_ReadXram2() => _xram2;
+    internal Span<byte> Direct_AccessXram2() => _xram2;
 
     private byte ReadMainMemory(ushort address)
     {
