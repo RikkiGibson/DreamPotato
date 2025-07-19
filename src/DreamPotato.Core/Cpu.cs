@@ -740,7 +740,8 @@ public class Cpu
             {
                 var t0cnt = SFRs.T0Cnt;
 
-                var scale = 0xff - SFRs.T0Prr;
+                var scale = 0x100 - SFRs.T0Prr;
+                Debug.Assert(scale > 0);
                 var ticks = (ushort)(cycles * scale);
 
                 // tick t0l
