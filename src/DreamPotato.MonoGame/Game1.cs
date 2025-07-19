@@ -35,6 +35,8 @@ public class Game1 : Game
     private const int TotalScreenWidth = ScaledWidth + SideMargin * 2;
     private const int TotalScreenHeight = ScaledHeight + TopMargin + BottomMargin;
 
+    private const int SleepToggleInsertEjectFrameCount = 60; // 1 second
+
     // Set in Initialize()
     private SpriteBatch _spriteBatch = null!;
     private Texture2D _vmuScreenTexture = null!;
@@ -50,7 +52,7 @@ public class Game1 : Game
     private KeyboardState _previousKeys;
     private GamePadState _previousGamepad;
     internal bool Paused;
-
+    internal int SleepHeldFrameCount;
 
     public Game1(string? gameFilePath)
     {
@@ -170,16 +172,9 @@ public class Game1 : Game
         if (keyboard.IsKeyDown(Keys.Escape))
             Exit();
 
+        // Only respect a pause command if VMU is in the ejected state
         if (Vmu.IsEjected && _buttonChecker.IsNewlyPressed(VmuButton.Pause, _previousKeys, keyboard, _previousGamepad, gamepad))
             Paused = !Paused;
-
-        if (_buttonChecker.IsNewlyPressed(VmuButton.InsertEject, _previousKeys, keyboard, _previousGamepad, gamepad))
-        {
-            // force unpause when vmu is inserted, as we need to more directly/forcefully manage the vmu state/execution.
-            Vmu.InsertOrEject();
-            if (!Vmu.IsEjected)
-                Paused = false;
-        }
 
         // TODO: system for selecting save slots etc
         if (_buttonChecker.IsNewlyPressed(VmuButton.SaveState, _previousKeys, keyboard, _previousGamepad, gamepad))
@@ -188,7 +183,7 @@ public class Game1 : Game
         if (_buttonChecker.IsNewlyPressed(VmuButton.LoadState, _previousKeys, keyboard, _previousGamepad, gamepad))
             Vmu.LoadStateById(id: "0");
 
-        Vmu._cpu.SFRs.P3 = new Core.SFRs.P3()
+        var newP3 = new Core.SFRs.P3()
         {
             Up = !_buttonChecker.IsPressed(VmuButton.Up, keyboard, gamepad),
             Down = !_buttonChecker.IsPressed(VmuButton.Down, keyboard, gamepad),
@@ -199,6 +194,41 @@ public class Game1 : Game
             ButtonSleep = !_buttonChecker.IsPressed(VmuButton.Sleep, keyboard, gamepad),
             ButtonMode = !_buttonChecker.IsPressed(VmuButton.Mode, keyboard, gamepad),
         };
+
+        // Holding sleep can be used to toggle insert/eject
+        if (!newP3.ButtonSleep)
+        {
+            if (SleepHeldFrameCount != -1)
+            {
+                // Sleep button held and frame counter not in post-toggle position
+                SleepHeldFrameCount++;
+            }
+        }
+        else
+        {
+            // Sleep button up. Reset sleep counter.
+            SleepHeldFrameCount = 0;
+        }
+
+        if (SleepHeldFrameCount >= SleepToggleInsertEjectFrameCount
+            || _buttonChecker.IsNewlyPressed(VmuButton.InsertEject, _previousKeys, keyboard, _previousGamepad, gamepad))
+        {
+            // Do not toggle insert/eject via sleep until sleep button is released and re-pressed
+            SleepHeldFrameCount = -1;
+
+            // force unpause when vmu is inserted, as we need to more directly/forcefully manage the vmu state/execution.
+            Vmu.InsertOrEject();
+            if (!Vmu.IsEjected)
+                Paused = false;
+        }
+
+        // Let any button press wake the VMU from sleep
+        if (_configuration.AnyButtonWakesFromSleep && !Vmu._cpu.SFRs.Vccr.DisplayControl && (byte)newP3 != 0xff)
+        {
+            newP3 = newP3 with { ButtonSleep = false };
+        }
+
+        Vmu._cpu.SFRs.P3 = newP3;
 
         var rate = Paused ? 0 :
             _buttonChecker.IsPressed(VmuButton.FastForward, keyboard, gamepad) ? gameTime.ElapsedGameTime.Ticks * 2 :

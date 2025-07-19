@@ -16,7 +16,8 @@ namespace DreamPotato.MonoGame;
 /// Specify false to get the real hardware behavior, like when batteries are first inserted in the VMU.
 /// </param>
 public record Configuration(
-    bool AutoInitializeDate = true)
+    bool AutoInitializeDate = true,
+    bool AnyButtonWakesFromSleep = true)
 {
     private const string FileName = "configuration.json";
     private static string FilePath => Path.Combine(Vmu.DataFolder, FileName);
