@@ -258,10 +258,21 @@ public class SpecialFunctionRegisters
 
                 goto default;
 
+            case Ids.T0Cnt:
+                var oldT0cnt = new T0Cnt(_rawMemory[address]);
+                var t0cnt = new T0Cnt(value);
+                if (oldT0cnt.T0lRun != t0cnt.T0lRun)
+                    T0L = T0Lr;
+
+                if (oldT0cnt.T0hRun != t0cnt.T0hRun)
+                    T0H = T0Hr;
+
+                goto default;
+
             case Ids.T1Cnt:
                 var oldT1cnt = new T1Cnt(_rawMemory[address]);
                 var t1cnt = new T1Cnt(value);
-                if (!oldT1cnt.T1lRun && t1cnt.T1lRun)
+                if (oldT1cnt.T1lRun != t1cnt.T1lRun)
                     T1L = T1Lr;
 
                 // After writing new t1cnt value, potentially signal that audio playback should start

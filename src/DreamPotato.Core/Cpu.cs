@@ -116,7 +116,7 @@ public class Cpu
 #else
         var logLevel = LogLevel.Warning;
 #endif
-        var categories = LogCategories.General | LogCategories.Maple;
+        var categories = LogCategories.General | LogCategories.Interrupts;
         Logger = new Logger(logLevel, categories, this);
         Memory = new Memory(this, Logger);
         Audio = new Audio(this, Logger);
@@ -730,7 +730,6 @@ public class Cpu
 
         void tickCpuClockedTimers(byte cycles)
         {
-            // TODO: figure out how to reload timer 0 per cycle accounting for prescaler
             tickTimer0();
 
             for (var i = 0; i < cycles; i++)
@@ -738,57 +737,62 @@ public class Cpu
 
             void tickTimer0()
             {
-                var t0cnt = SFRs.T0Cnt;
-
+                // TODO: Power Stone Mini still running way too slowly.
+                // I think t1h interrupt is being generated way too frequently.
+                // need to review hardware docs and also try this game on real hardware.
+                // maybe a test program which counts t1 interrupts per base timer cycle (0.5s) would help here.
                 var scale = 0x100 - SFRs.T0Prr;
                 Debug.Assert(scale > 0);
                 var ticks = (ushort)(cycles * scale);
 
-                // tick t0l
-                bool t0lOverflow = false;
-                if (t0cnt.T0lRun)
+                var t0l = SFRs.T0L;
+                var t0h = SFRs.T0H;
+                var t0cnt = SFRs.T0Cnt;
+                for (var i = 0; i < ticks; i++)
                 {
-                    var t0l = (byte)(SFRs.T0L + ticks);
-                    t0lOverflow = t0l < ticks;
-                    if (t0lOverflow)
+                    // tick t0l
+                    bool t0lOverflow = false;
+                    if (t0cnt.T0lRun)
                     {
-                        // TODO: I think we care about the remainder from the overflow
-                        // but accounting for both that remainder and the reload data is not straightforward
-                        // e.g. for a long instruction like mul we could probably end up reloading multiple times
-                        t0l = SFRs.T0Lr; // reload
-                        if (!t0cnt.T0Long) // track the overflow only in 8-bit mode
+                        t0l++;
+                        if (t0l == 0)
                         {
-                            t0cnt.T0lOvf = true;
-                            if (t0cnt.T0lIe)
-                                RequestedInterrupts |= Interrupts.INT2_T0L;
+                            t0lOverflow = true;
+                            t0l = SFRs.T0Lr;
+                            if (!t0cnt.T0Long) // interrupt for overflow only in 8-bit mode
+                            {
+                                t0cnt.T0lOvf = true;
+                                if (t0cnt.T0lIe)
+                                    RequestedInterrupts |= Interrupts.INT2_T0L;
+                            }
                         }
                     }
 
-                    SFRs.T0L = t0l;
-                }
+                    // tick t0h
+                    if (t0cnt.T0hRun)
+                    {
+                        if (t0cnt.T0Long)
+                        {
+                            // 16-bit mode
+                            if (t0lOverflow)
+                                t0h++;
+                        }
+                        else
+                        {
+                            t0h++;
+                        }
 
-                // tick t0h
-                if (t0cnt.T0hRun)
-                {
-                    var hticks = (t0cnt.T0Long, t0lOverflow) switch
-                    {
-                        (true, true) => 1,
-                        (true, false) => 0,
-                        _ => ticks
-                    };
-                    var t0h = (byte)(SFRs.T0H + hticks);
-                    var t0hOverflow = t0h < hticks;
-                    if (t0hOverflow)
-                    {
-                        t0h = SFRs.T0Hr;
-                        t0cnt.T0hOvf = true;
-                        if (t0cnt.T0hIe)
-                            RequestedInterrupts |= Interrupts.T0H;
+                        if (t0h == 0)
+                        {
+                            t0h = SFRs.T0Hr;
+                            t0cnt.T0hOvf = true;
+                            if (t0cnt.T0hIe)
+                                RequestedInterrupts |= Interrupts.T0H;
+                        }
                     }
-
-                    SFRs.T0H = t0h;
                 }
-
+                SFRs.T0L = t0l;
+                SFRs.T0H = t0h;
                 SFRs.T0Cnt = t0cnt;
             }
         }
@@ -804,10 +808,6 @@ public class Cpu
                 {
                     var cpuClockHz = SFRs.Ocr.CpuClockHz;
                     var t1lc = SFRs.T1Lc;
-
-                    // TODO: this solution does not produce the high pitched sound at ROM startup
-                    // it's a painful sound, so, probably for the best at the moment.
-
                     var p1 = SFRs.P1 with { PulseOutput = t1lc <= t1l };
                     Audio.AddPulse(cpuClockHz, p1.PulseOutput);
                     SFRs.P1 = p1;
