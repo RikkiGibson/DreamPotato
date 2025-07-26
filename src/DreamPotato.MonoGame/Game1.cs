@@ -7,8 +7,6 @@ using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
-using Myra.Graphics2D.UI;
-
 using DreamPotato.Core;
 using DreamPotato.MonoGame.UI;
 
