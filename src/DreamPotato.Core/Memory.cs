@@ -259,7 +259,7 @@ public class Memory
         {
             if ((address & 0xf) is >= 0xc and <= 0xf)
             {
-                _logger.LogDebug($"Reading skipped XRAM {address:X}!");
+                _logger.LogDebug($"Reading skipped XRAM {SFRs.Xbnk} 0x{address:X}!");
                 return 0xff;
             }
 
