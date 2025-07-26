@@ -14,6 +14,11 @@ public class Audio
     public const int SampleSize = 2; // 16-bit
     public const int BufferDurationMilliseconds = 100;
 
+    public const int DefaultVolume = 50;
+
+    public const int MinVolume = 0;
+    public const int MaxVolume = 100;
+
     private readonly Cpu _cpu;
     private readonly Logger _logger;
 
@@ -27,7 +32,7 @@ public class Audio
     {
         _cpu = cpu;
         _logger = logger;
-        Volume = short.MaxValue / 16;
+        Volume = DefaultVolume;
     }
 
     /// <summary>
@@ -48,18 +53,32 @@ public class Audio
     public record struct AudioBufferReadyEventArgs(byte[] Buffer, int Start, int Length);
     public event Action<AudioBufferReadyEventArgs>? AudioBufferReady;
 
+    public short GetSampleVolume()
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(Volume, 0);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(Volume, 100);
+
+        // Audio perception is logarithmic. Approximate this by squaring the volume setting value.
+        // Take the fraction of the total possible squared volume and multiply by the maximum sample amplitude.
+        var percentage = Math.Pow(Volume, 2) / Math.Pow(MaxVolume, 2);
+        Debug.Assert(percentage is >= 0 and <= 1);
+        return (short)(percentage * short.MaxValue);
+    }
+
     /// <summary>
-    /// Sets the volume of audio output (between 0 and <see cref="short.MaxValue"/>).
+    /// Sets the volume of audio output (between <see cref="MinVolume"/> and <see cref="MaxVolume"/>).
     /// </summary>
-    public short Volume
+    public int Volume
     {
         get;
         set
         {
-            ArgumentOutOfRangeException.ThrowIfNegative(value);
-            BinaryPrimitives.WriteInt16LittleEndian(_highSignal, value);
-            BinaryPrimitives.WriteInt16LittleEndian(_lowSignal, (short)-value);
             field = value;
+            var sampleVolume = GetSampleVolume();
+            _logger.LogDebug($"New Volume: {value}, SampleVolume: {sampleVolume}", LogCategories.Audio);
+            ArgumentOutOfRangeException.ThrowIfNegative(sampleVolume);
+            BinaryPrimitives.WriteInt16LittleEndian(_highSignal, sampleVolume);
+            BinaryPrimitives.WriteInt16LittleEndian(_lowSignal, (short)-sampleVolume);
         }
     }
 
@@ -106,8 +125,9 @@ public class Audio
         var samplesPerTimerPeriod = timerTicksPerPeriod * SampleRate / cpuClockHz;
         var samplesAtLowSignal = timerTicksAtLowSignal * SampleRate / cpuClockHz;
 
-        BinaryPrimitives.WriteInt16LittleEndian(_highSignal, Volume);
-        BinaryPrimitives.WriteInt16LittleEndian(_lowSignal, (short)-Volume);
+        var sampleVolume = GetSampleVolume();
+        BinaryPrimitives.WriteInt16LittleEndian(_highSignal, sampleVolume);
+        BinaryPrimitives.WriteInt16LittleEndian(_lowSignal, (short)-sampleVolume);
 
         int bufferIndex;
         for (bufferIndex = 0; bufferIndex <= buffer.Length - samplesPerTimerPeriod * 2;)

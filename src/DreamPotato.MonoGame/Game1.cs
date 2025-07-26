@@ -16,7 +16,7 @@ public class Game1 : Game
 {
     private readonly GraphicsDeviceManager _graphics;
     private readonly Color[] _vmuScreenData;
-    internal Configuration _configuration;
+    internal Configuration Configuration;
 
     internal readonly Vmu Vmu;
     private readonly Display _display;
@@ -63,21 +63,21 @@ public class Game1 : Game
         IsMouseVisible = true;
         UpdateWindowTitle(gameFilePath);
 
-        _configuration = Configuration.Load();
-        _configuration.Save();
+        Configuration = Configuration.Load();
+        Configuration.Save();
 
         Vmu = new Vmu();
 
         var date = DateTime.Now;
         Vmu.InitializeFlash(date);
-        if (_configuration.AutoInitializeDate)
+        if (Configuration.AutoInitializeDate)
             Vmu.InitializeDate(date);
 
         Vmu.StartMapleServer();
         _display = new Display(Vmu._cpu);
         _vmuScreenData = new Color[Display.ScreenWidth * Display.ScreenHeight];
 
-        LoadVmuFiles(gameFilePath, date: _configuration.AutoInitializeDate ? date : null);
+        LoadVmuFiles(gameFilePath, date: Configuration.AutoInitializeDate ? date : null);
     }
 
     internal void UpdateWindowTitle(string? gameFilePath)
@@ -140,6 +140,27 @@ public class Game1 : Game
         Vmu.SaveVmuAs(vmuFilePath);
     }
 
+    internal void Configuration_AutoInitializeDateChanged(bool newValue)
+    {
+        Configuration = Configuration with { AutoInitializeDate = newValue };
+    }
+
+    internal void Configuration_AnyButtonWakesFromSleepChanged(bool newValue)
+    {
+        Configuration = Configuration with { AnyButtonWakesFromSleep = newValue };
+    }
+
+    internal void Configuration_VolumeChanged(int newVolume)
+    {
+        Vmu.Audio.Volume = newVolume;
+        Configuration = Configuration with { Volume = newVolume };
+    }
+
+    internal void Configuration_DoneEditing()
+    {
+        Configuration.Save();
+    }
+
     protected override void Initialize()
     {
         _userInterface = new UserInterface(this);
@@ -158,7 +179,7 @@ public class Game1 : Game
         // TODO: nice icons to resemble those on the real VMU.
         _iconsTexture = new Texture2D(_graphics.GraphicsDevice, ScaledWidth, BottomMargin);
 
-        _buttonChecker = new ButtonChecker(_configuration);
+        _buttonChecker = new ButtonChecker(Configuration);
 
         base.Initialize();
     }
@@ -244,7 +265,7 @@ public class Game1 : Game
         }
 
         // Let any button press wake the VMU from sleep
-        if (_configuration.AnyButtonWakesFromSleep && !Vmu._cpu.SFRs.Vccr.DisplayControl && (byte)newP3 != 0xff)
+        if (Configuration.AnyButtonWakesFromSleep && !Vmu._cpu.SFRs.Vccr.DisplayControl && (byte)newP3 != 0xff)
         {
             newP3 = newP3 with { ButtonSleep = false };
         }

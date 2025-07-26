@@ -17,7 +17,8 @@ namespace DreamPotato.MonoGame;
 /// </param>
 public record Configuration(
     bool AutoInitializeDate = true,
-    bool AnyButtonWakesFromSleep = true)
+    bool AnyButtonWakesFromSleep = true,
+    int Volume = Audio.DefaultVolume)
 {
     private const string FileName = "configuration.json";
     private static string FilePath => Path.Combine(Vmu.DataFolder, FileName);
@@ -27,7 +28,7 @@ public record Configuration(
 
     public void Save()
     {
-        using var fileStream = File.OpenWrite(FilePath);
+        using var fileStream = File.Open(FilePath, FileMode.Truncate);
         JsonSerializer.Serialize(fileStream, this, ConfigurationJsonSerializerContext.Default.Configuration);
     }
 
