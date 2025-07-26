@@ -34,6 +34,7 @@
     <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.3" />
     <PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.3" />
     <PackageReference Include="Myra" Version="1.5.9" />
+    <PackageReference Include="NativeFileDialogSharp" Version="0.6.0-alpha" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../DreamPotato.Core/DreamPotato.Core.csproj" />

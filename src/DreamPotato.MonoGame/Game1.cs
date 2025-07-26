@@ -89,7 +89,7 @@ public class Game1 : Game
             : $"DreamPotato - {Path.GetFileName(gameFilePath)}";
     }
 
-    private void LoadVmuFiles(string? gameFilePath, DateTimeOffset? date)
+    private void LoadVmuFiles(string? vmsOrVmuFilePath, DateTimeOffset? date)
     {
         const string romFileName = "american_v1.05.bin";
         var romFilePath = Path.Combine(Vmu.DataFolder, romFileName);
@@ -103,23 +103,43 @@ public class Game1 : Game
             throw new InvalidOperationException($"'{romFileName}' must be included in '{Vmu.DataFolder}'.", ex);
         }
 
-        if (gameFilePath != null)
+        if (vmsOrVmuFilePath != null)
         {
-            Paused = false;
-            var extension = Path.GetExtension(gameFilePath);
-            if (extension == ".vms")
-            {
-                Vmu.LoadGameVms(gameFilePath, date);
-            }
-            else if (extension is ".vmu" or ".bin")
-            {
-                Vmu.LoadVmu(gameFilePath, date);
-            }
-            else
-            {
-                throw new ArgumentException($"Cannot load '{gameFilePath}' because it is not a '.vms', '.vmu', or '.bin' file.");
-            }
+            LoadAndStartVmsOrVmuFile(vmsOrVmuFilePath);
         }
+    }
+
+    internal void LoadAndStartVmsOrVmuFile(string filePath)
+    {
+        Paused = false;
+        UpdateWindowTitle(filePath);
+        var extension = Path.GetExtension(filePath);
+        if (extension.Equals(".vms", StringComparison.OrdinalIgnoreCase))
+        {
+            Vmu.LoadGameVms(filePath, DateTime.Now);
+        }
+        else if (extension.Equals(".vmu", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".bin", StringComparison.OrdinalIgnoreCase))
+        {
+            Vmu.LoadVmu(filePath, DateTime.Now);
+        }
+        else
+        {
+            throw new ArgumentException($"Cannot load '{filePath}' because it is not a '.vms', '.vmu', or '.bin' file.");
+        }
+    }
+
+    internal void SaveVmuFileAs(string vmuFilePath)
+    {
+        var extension = Path.GetExtension(vmuFilePath);
+        if (!extension.Equals(".vmu", StringComparison.OrdinalIgnoreCase)
+            && !extension.Equals(".bin", StringComparison.OrdinalIgnoreCase))
+        {
+            vmuFilePath = Path.ChangeExtension(vmuFilePath, ".vmu");
+        }
+
+        UpdateWindowTitle(vmuFilePath);
+        Vmu.SaveVmuAs(vmuFilePath);
     }
 
     protected override void Initialize()

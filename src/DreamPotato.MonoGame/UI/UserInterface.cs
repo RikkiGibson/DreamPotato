@@ -1,11 +1,16 @@
 
 using System;
+using System.Diagnostics;
 using System.IO;
+
+using DreamPotato.Core;
 
 using ImGuiNET;
 
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+
+using NativeFileDialogSharp;
 
 using Numerics = System.Numerics;
 
@@ -48,42 +53,66 @@ class UserInterface
     // Direct port of the example at https://github.com/ocornut/imgui/blob/master/examples/sdl_opengl2_example/main.cpp
     protected void ImGuiLayout()
     {
-        bool openSaveFile = false;
         ImGui.BeginMainMenuBar();
         if (ImGui.BeginMenu("File"))
         {
             if (ImGui.MenuItem("Open VMS (Game)"))
             {
-                openSaveFile = true;
+                var result = Dialog.FileOpen("vms", defaultPath: null);
+                if (result.IsOk)
+                {
+                    _game.LoadAndStartVmsOrVmuFile(result.Path);
+                }
             }
+
+            if (ImGui.MenuItem("Open VMU (Memory Card)"))
+            {
+                var result = Dialog.FileOpen("vmu,bin", defaultPath: null);
+                if (result.IsOk)
+                {
+                    _game.LoadAndStartVmsOrVmuFile(result.Path);
+                }
+            }
+
+            if (ImGui.MenuItem("Save As"))
+            {
+                var result = Dialog.FileSave(filterList: "vmu,bin", defaultPath: null);
+                if (result.IsOk)
+                {
+                    _game.SaveVmuFileAs(result.Path);
+                }
+            }
+
+            if (ImGui.MenuItem("Quit"))
+            {
+                _game.Exit();
+            }
+
             ImGui.EndMenu();
         }
 
         if (ImGui.BeginMenu("Emulation"))
         {
-            ImGui.MenuItem("GOOD STUFF");
+            var pauseResumeLabel = _game.Paused ? "Resume" : "Pause";
+            if (ImGui.MenuItem(pauseResumeLabel))
+            {
+                _game.Paused = !_game.Paused;
+            }
+
+            if (ImGui.MenuItem("Open Data Folder"))
+            {
+                new Process()
+                {
+                    StartInfo = new ProcessStartInfo(Vmu.DataFolder)
+                    {
+                        UseShellExecute = true,
+                    }
+                }.Start();
+            }
+
             ImGui.EndMenu();
         }
 
         ImGui.EndMainMenuBar();
-
-        if (openSaveFile)
-            ImGui.OpenPopup("save-file");
-        LayoutFilePicker();
-    }
-
-    private void LayoutFilePicker()
-    {
-        var isOpen = true;
-        if (ImGui.BeginPopupModal("save-file", ref isOpen, ImGuiWindowFlags.NoTitleBar))
-        {
-            var picker = FilePicker.GetFolderPicker(this, Path.Combine(Environment.CurrentDirectory));
-            if (picker.Draw())
-            {
-                Console.WriteLine(picker.SelectedFile);
-                FilePicker.RemoveFilePicker(this);
-            }
-            ImGui.EndPopup();
-        }
     }
 }
