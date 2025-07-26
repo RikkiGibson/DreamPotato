@@ -12,7 +12,7 @@ using Myra.Graphics2D.UI.File;
 
 namespace DreamPotato.MonoGame;
 
-class UserInterface
+class UserInterfaceOld
 {
     public static Desktop Initialize(Game1 game, int menuBarHeight)
     {

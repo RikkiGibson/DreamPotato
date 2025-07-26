@@ -10,6 +10,7 @@ using Microsoft.Xna.Framework.Input;
 using Myra.Graphics2D.UI;
 
 using DreamPotato.Core;
+using DreamPotato.MonoGame.UI;
 
 namespace DreamPotato.MonoGame;
 
@@ -32,8 +33,8 @@ public class Game1 : Game
     private const int SideMargin = VmuScale * 3;
     private const int BottomMargin = VmuScale * 12;
 
-    private const int TotalScreenWidth = ScaledWidth + SideMargin * 2;
-    private const int TotalScreenHeight = ScaledHeight + TopMargin + BottomMargin;
+    internal const int TotalScreenWidth = ScaledWidth + SideMargin * 2;
+    internal const int TotalScreenHeight = ScaledHeight + TopMargin + BottomMargin;
 
     private const int SleepToggleInsertEjectFrameCount = 60; // 1 second
 
@@ -42,9 +43,9 @@ public class Game1 : Game
     private Texture2D _vmuScreenTexture = null!;
     private Texture2D _iconsTexture = null!;
     private ButtonChecker _buttonChecker = null!;
+    private UserInterface _userInterface = null!;
 
     // Set in LoadContent()
-    private Desktop _desktop = null!;
     private SpriteFont _font1 = null!;
     private DynamicSoundEffectInstance _dynamicSound = null!;
 
@@ -57,6 +58,9 @@ public class Game1 : Game
     public Game1(string? gameFilePath)
     {
         _graphics = new GraphicsDeviceManager(this);
+        _graphics.PreferredBackBufferWidth = TotalScreenWidth;
+        _graphics.PreferredBackBufferHeight = TotalScreenHeight;
+
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
         UpdateWindowTitle(gameFilePath);
@@ -120,9 +124,8 @@ public class Game1 : Game
 
     protected override void Initialize()
     {
-        _desktop = UserInterface.Initialize(this, MenuBarHeight);
-        _graphics.PreferredBackBufferWidth = TotalScreenWidth;
-        _graphics.PreferredBackBufferHeight = TotalScreenHeight;
+        _userInterface = new UserInterface(this);
+        _userInterface.Initialize();
         _graphics.ApplyChanges();
 
         if (Debugger.IsAttached)
@@ -294,7 +297,7 @@ public class Game1 : Game
 
         _spriteBatch.End();
 
-        _desktop.Render();
+        _userInterface.Layout(gameTime);
 
         base.Draw(gameTime);
 
