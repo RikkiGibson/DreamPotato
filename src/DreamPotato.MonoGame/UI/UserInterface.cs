@@ -22,20 +22,20 @@ class UserInterface
 
     private ImGuiRenderer _imGuiRenderer = null!;
     private Texture2D _userInterfaceTexture = null!;
-    private IntPtr _rawImguiTexture;
+    private nint _rawIconConnectedTexture;
 
     public UserInterface(Game1 game)
     {
         _game = game;
     }
 
-    internal void Initialize()
+    internal void Initialize(Texture2D iconConnectedTexture)
     {
         _imGuiRenderer = new ImGuiRenderer(_game);
         _imGuiRenderer.RebuildFontAtlas();
 
         _userInterfaceTexture = new Texture2D(_game.GraphicsDevice, Game1.TotalScreenWidth, Game1.TotalScreenHeight);
-        _rawImguiTexture = _imGuiRenderer.BindTexture(_userInterfaceTexture);
+        _rawIconConnectedTexture = _imGuiRenderer.BindTexture(iconConnectedTexture);
     }
 
     internal void Layout(GameTime gameTime)
@@ -54,6 +54,7 @@ class UserInterface
     {
         LayoutMenuBar();
         LayoutSettings();
+        LayoutResetModal();
     }
 
     private void LayoutMenuBar()
@@ -97,12 +98,19 @@ class UserInterface
         }
 
         bool doOpenSettings = false;
+        bool doOpenResetModal = false;
         if (ImGui.BeginMenu("Emulation"))
         {
             var pauseResumeLabel = _game.Paused ? "Resume" : "Pause";
             if (ImGui.MenuItem(pauseResumeLabel))
             {
                 _game.Paused = !_game.Paused;
+            }
+
+            if (ImGui.MenuItem("Reset"))
+            {
+                // Workaround to delay calling OpenPopup: https://github.com/ocornut/imgui/issues/331#issuecomment-751372071
+                doOpenResetModal = true;
             }
 
             if (ImGui.MenuItem("Settings"))
@@ -125,10 +133,26 @@ class UserInterface
             ImGui.EndMenu();
         }
 
+
+        // TODO: smaller connected icon.
+        if (true || _game.Vmu.IsServerConnected)
+        {
+            ImGui.Image(_rawIconConnectedTexture, new Numerics.Vector2(32));
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.BeginTooltip();
+                ImGui.Text("Dreamcast connected over TCP");
+                ImGui.EndTooltip();
+            }
+        }
+
         ImGui.EndMainMenuBar();
 
         if (doOpenSettings)
             ImGui.OpenPopup("Settings");
+
+        if (doOpenResetModal)
+            ImGui.OpenPopup("Reset?");
     }
 
     private void LayoutSettings()
@@ -163,6 +187,26 @@ class UserInterface
 
             if (configuration.Volume != sliderVolume)
                 _game.Configuration_VolumeChanged(sliderVolume);
+
+            ImGui.EndPopup();
+        }
+    }
+
+    private void LayoutResetModal()
+    {
+        ImGui.SetNextWindowSize(Numerics.Vector2.Create(x: Game1.TotalScreenWidth * 3 / 4, y: Game1.TotalScreenHeight * 1 / 4));
+        if (ImGui.BeginPopupModal("Reset?"))
+        {
+            ImGui.Text("Unsaved progress will be lost.");
+            if (ImGui.Button("Reset"))
+            {
+                _game.Reset();
+                ImGui.CloseCurrentPopup();
+            }
+
+            ImGui.SameLine();
+            if (ImGui.Button("Cancel"))
+                ImGui.CloseCurrentPopup();
 
             ImGui.EndPopup();
         }

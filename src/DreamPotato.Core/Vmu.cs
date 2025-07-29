@@ -69,6 +69,13 @@ public class Vmu
         _cpu.SFRs.Btcr = new Btcr(0x79);
     }
 
+    public void Reset(DateTimeOffset? date)
+    {
+        _cpu.Reset();
+        if (date.HasValue)
+            InitializeDate(date.GetValueOrDefault());
+    }
+
     public void LoadGameVms(string filePath, DateTimeOffset? date)
     {
         if (!filePath.EndsWith(".vms", StringComparison.OrdinalIgnoreCase))

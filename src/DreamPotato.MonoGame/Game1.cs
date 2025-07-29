@@ -26,6 +26,9 @@ public class Game1 : Game
     private const int ScaledWidth = Display.ScreenWidth * VmuScale;
     private const int ScaledHeight = Display.ScreenHeight * VmuScale;
 
+    private const int IconWidth = 64;
+    private const int IconHeight = 64;
+
     private const int MenuBarHeight = 20;
     private const int TopMargin = VmuScale * 2 + MenuBarHeight;
     private const int SideMargin = VmuScale * 3;
@@ -39,7 +42,14 @@ public class Game1 : Game
     // Set in Initialize()
     private SpriteBatch _spriteBatch = null!;
     private Texture2D _vmuScreenTexture = null!;
-    private Texture2D _iconsTexture = null!;
+
+    private Texture2D _iconFileTexture = null!;
+    private Texture2D _iconGameTexture = null!;
+    private Texture2D _iconClockTexture = null!;
+    private Texture2D _iconIOTexture = null!;
+    private Texture2D _iconSleepTexture = null!;
+    private Texture2D _iconConnectedTexture = null!;
+
     private ButtonChecker _buttonChecker = null!;
     private UserInterface _userInterface = null!;
 
@@ -67,6 +77,7 @@ public class Game1 : Game
         Configuration.Save();
 
         Vmu = new Vmu();
+        Vmu.Audio.Volume = Configuration.Volume;
 
         var date = DateTime.Now;
         Vmu.InitializeFlash(date);
@@ -80,11 +91,11 @@ public class Game1 : Game
         LoadVmuFiles(gameFilePath, date: Configuration.AutoInitializeDate ? date : null);
     }
 
-    internal void UpdateWindowTitle(string? gameFilePath)
+    internal void UpdateWindowTitle(string? vmsOrVmuFilePath)
     {
-        Window.Title = gameFilePath is null
-            ? "DreamPotato - (new VMU)"
-            : $"DreamPotato - {Path.GetFileName(gameFilePath)}";
+        Window.Title = vmsOrVmuFilePath is null
+            ? "DreamPotato"
+            : $"{Path.GetFileName(vmsOrVmuFilePath)} - DreamPotato";
     }
 
     private void LoadVmuFiles(string? vmsOrVmuFilePath, DateTimeOffset? date)
@@ -140,6 +151,11 @@ public class Game1 : Game
         Vmu.SaveVmuAs(vmuFilePath);
     }
 
+    internal void Reset()
+    {
+        Vmu.Reset(Configuration.AutoInitializeDate ? DateTimeOffset.Now : null);
+    }
+
     internal void Configuration_AutoInitializeDateChanged(bool newValue)
     {
         Configuration = Configuration with { AutoInitializeDate = newValue };
@@ -163,8 +179,15 @@ public class Game1 : Game
 
     protected override void Initialize()
     {
+        _iconFileTexture = Content.Load<Texture2D>("VMUIconFile");
+        _iconGameTexture = Content.Load<Texture2D>("VMUIconGame");
+        _iconClockTexture = Content.Load<Texture2D>("VMUIconClock");
+        _iconIOTexture = Content.Load<Texture2D>("VMUIconIO");
+        _iconSleepTexture = Content.Load<Texture2D>("VMUIconSleep");
+        _iconConnectedTexture = Content.Load<Texture2D>("VMUIconConn");
+
         _userInterface = new UserInterface(this);
-        _userInterface.Initialize();
+        _userInterface.Initialize(_iconConnectedTexture);
         _graphics.ApplyChanges();
 
         if (Debugger.IsAttached)
@@ -175,9 +198,6 @@ public class Game1 : Game
 
         _spriteBatch = new SpriteBatch(GraphicsDevice);
         _vmuScreenTexture = new Texture2D(_graphics.GraphicsDevice, Display.ScreenWidth, Display.ScreenHeight);
-
-        // TODO: nice icons to resemble those on the real VMU.
-        _iconsTexture = new Texture2D(_graphics.GraphicsDevice, ScaledWidth, BottomMargin);
 
         _buttonChecker = new ButtonChecker(Configuration);
 
@@ -291,7 +311,7 @@ public class Game1 : Game
 
     protected override void Draw(GameTime gameTime)
     {
-        GraphicsDevice.Clear(Color.CornflowerBlue);
+        GraphicsDevice.Clear(Color.LightGray);
 
         var screenData = _display.GetBytes();
         int i = 0;
@@ -322,21 +342,38 @@ public class Game1 : Game
             layerDepth: 0);
 
         // Draw icons
+        const int iconsYPos = TopMargin + ScaledHeight + VmuScale / 2;
+        const int iconSpacing = VmuScale * 2;
         var icons = _display.GetIcons();
-        var fileIcon = (icons & Icons.File) != 0 ? "File " : "  ";
-        var gameIcon = (icons & Icons.Game) != 0 ? "Game " : " ";
-        var clockIcon = (icons & Icons.Clock) != 0 ? "Clock " : " ";
-        var flashIcon = (icons & Icons.Flash) != 0 ? "Flash " : "  ";
-        var sleeping = Vmu._cpu.SFRs.Vccr.DisplayControl ? " " : "(sleep) ";
-        var paused = Paused ? "(paused) " : " ";
-        var vmuEjected = Vmu.IsEjected ? "(standalone)" : "(plugged-in)";
-        var connection = Vmu.IsServerConnected ? "(server connected)" : "(server disconnected)";
-        var iconString = $"{fileIcon}{gameIcon}{clockIcon}{flashIcon}{sleeping}{paused}{vmuEjected}{connection}";
-        _spriteBatch.DrawString(_font1, iconString, new Vector2(x: SideMargin, y: TopMargin + ScaledHeight), Color.Black);
+
+        var displayOn = Vmu._cpu.SFRs.Vccr.DisplayControl;
+        if (displayOn)
+        {
+            _spriteBatch.Draw(_iconFileTexture, getIconRectangle(0), getIconColor(enabled: (icons & Icons.File) != 0));
+            _spriteBatch.Draw(_iconGameTexture, getIconRectangle(1), getIconColor(enabled: (icons & Icons.Game) != 0));
+            _spriteBatch.Draw(_iconClockTexture, getIconRectangle(2), getIconColor(enabled: (icons & Icons.Clock) != 0));
+            _spriteBatch.Draw(_iconIOTexture, getIconRectangle(3), getIconColor(enabled: (icons & Icons.Flash) != 0));
+        }
+        else
+        {
+            _spriteBatch.Draw(_iconSleepTexture, getIconRectangle(3), getIconColor(enabled: true));
+        }
+
+        Color getIconColor(bool enabled) => enabled ? Color.Black : Color.DarkGray;
+
+        Rectangle getIconRectangle(int ordinal)
+            => new Rectangle(
+                location: new Point(x: SideMargin + iconSpacing * ordinal + IconWidth * ordinal, y: iconsYPos),
+                size: new Point(x: IconWidth, y: IconHeight));
 
         _spriteBatch.End();
 
         _userInterface.Layout(gameTime);
+
+        const int iconConnectedSize = 16;
+        _spriteBatch.Begin(samplerState: SamplerState.AnisotropicClamp);
+        _spriteBatch.Draw(_iconConnectedTexture, new Rectangle(new Point(TotalScreenWidth - iconConnectedSize - 1, 1), new Point(16)), Color.White);
+        _spriteBatch.End();
 
         base.Draw(gameTime);
 
