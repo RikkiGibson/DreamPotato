@@ -184,7 +184,7 @@ public class Game1 : Game
         _iconClockTexture = Content.Load<Texture2D>("VMUIconClock");
         _iconIOTexture = Content.Load<Texture2D>("VMUIconIO");
         _iconSleepTexture = Content.Load<Texture2D>("VMUIconSleep");
-        _iconConnectedTexture = Content.Load<Texture2D>("VMUIconConn");
+        _iconConnectedTexture = Content.Load<Texture2D>("swirl-icon-test1");
 
         _userInterface = new UserInterface(this);
         _userInterface.Initialize(_iconConnectedTexture);
@@ -369,11 +369,6 @@ public class Game1 : Game
         _spriteBatch.End();
 
         _userInterface.Layout(gameTime);
-
-        const int iconConnectedSize = 16;
-        _spriteBatch.Begin(samplerState: SamplerState.AnisotropicClamp);
-        _spriteBatch.Draw(_iconConnectedTexture, new Rectangle(new Point(TotalScreenWidth - iconConnectedSize - 1, 1), new Point(16)), Color.White);
-        _spriteBatch.End();
 
         base.Draw(gameTime);
 

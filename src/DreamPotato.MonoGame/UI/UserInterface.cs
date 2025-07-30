@@ -134,10 +134,9 @@ class UserInterface
         }
 
 
-        // TODO: smaller connected icon.
-        if (true || _game.Vmu.IsServerConnected)
+        if (_game.Vmu.IsServerConnected)
         {
-            ImGui.Image(_rawIconConnectedTexture, new Numerics.Vector2(32));
+            ImGui.Image(_rawIconConnectedTexture, new Numerics.Vector2(18));
             if (ImGui.IsItemHovered())
             {
                 ImGui.BeginTooltip();
