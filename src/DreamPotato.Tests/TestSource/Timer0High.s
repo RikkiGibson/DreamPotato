@@ -79,8 +79,13 @@ chars3 = $1D
 chars4 = $1E
 chars5 = $1F
 
-; TODO: count number of t0 interrupts that occur in 0.5 seconds
+t0lTemp = $20           ; copy of t0l to check for changes
+t0lIsChangingFlag = $21 ; track if t0l has changed despite count being "off"
+
+; count number of t0 interrupts that occur in 0.5 seconds
 ; Display and reset the counter every other 0.5 seconds
+; also check if t0l is changing during this time
+
 ; t0 setup:
 ; t0prr = 174 (0xae)
 ; t0cnt = 0x80 (t0hEnable)
@@ -92,6 +97,8 @@ Start:
     ; NB: DO NOT use set1 and similar instrs for write-only regs like VCCR.
     ; Only MOV, ST and POP are suitable.
 	  mov #%10000001, OCR ; select RC clock /6
+    ; mov #%10100011, OCR ; select quartz clock /6
+
     mov #$AE, T0PRR       ; timer 0 prescaler
     mov #%10000100, T0CNT ; timer 0 control: t0hrun, t0hie
     mov #$fd, T0HR        ; timer 0 reload
@@ -142,16 +149,29 @@ CountMode:
     mov #ticks0, 0     ; R0 points to ticks0
     mov #ticks1, 1     ; R1 points to ticks1
     mov #1, countModeFlag
+    ld t0l
+    st t0lTemp         ; track initial value of t0l
+    mov #0, t0lIsChangingFlag
+.CheckT0L:
+    ld t0l              ; read t0h into acc
+    sub t0lTemp         ; subtract acc - t0hTemp
+    bz .WaitForT0H      ; if they were equal, do nothing
+    set1 t0lIsChangingFlag,0 ; if non-equal, t0l changed.
 .WaitForT0H:
     set1 pcon,0         ; halt and wait for timer interrupt
     ld P3               ; check if MODE pressed
     bp ACC, 6, .NoMode
     jmpf goodbye        ; mode was pressed, exit.
 .NoMode:
-    bp countModeFlag, 0, .WaitForT0H   ; if still in count mode, keep counting
+    bp countModeFlag, 0, .CheckT0L   ; if still in count mode, keep counting
 
 ReportMode:
     ; setup reporting
+    bn t0lIsChangingFlag,0,.t0lIsNotChanging
+    ld ticks2
+    or #$80
+    st ticks2
+.t0lIsNotChanging:
     set1 VSEL, 4 ; WRAM autoincrement on
     mov #0, XBNK          ; start at XRAM (video RAM) bank 0
     mov #$80, 2           ; start of XRAM address space
@@ -211,8 +231,8 @@ ReportMode:
   call PrintStringRAM
 .Halt:
     set1 PCON, 0            ; halt until a timer interrupt goes off
-    bp countModeFlag, 0, CountMode  ; return to count mode if set
-    br .Halt                ; not in count mode? wait to go into count mode
+    bn countModeFlag, 0, .Halt  ; not in count mode? wait to go into count mode
+    jmp CountMode             ; in count mode. jump to it
 
 ;    /////////////////////////////////////////////////////////////
 ;   ///                      SUBROUTINES                      ///

@@ -116,7 +116,7 @@ public class Cpu
 #else
         var logLevel = LogLevel.Warning;
 #endif
-        var categories = LogCategories.General | LogCategories.Interrupts;
+        var categories = LogCategories.General;
         Logger = new Logger(logLevel, categories, this);
         Memory = new Memory(this, Logger);
         Audio = new Audio(this, Logger);
@@ -731,12 +731,14 @@ public class Cpu
         void tickCpuClockedTimers(byte cycles)
         {
             tickTimer0();
-
-            for (var i = 0; i < cycles; i++)
-                tickTimer1();
+            tickTimer1();
 
             void tickTimer0()
             {
+                var t0cnt = SFRs.T0Cnt;
+                if (t0cnt is { T0lRun: false, T0hRun: false })
+                    return;
+
                 // TODO: Power Stone Mini still running way too slowly.
                 // I think t1h interrupt is being generated way too frequently.
                 // need to review hardware docs and also try this game on real hardware.
@@ -747,7 +749,6 @@ public class Cpu
 
                 var t0l = SFRs.T0L;
                 var t0h = SFRs.T0H;
-                var t0cnt = SFRs.T0Cnt;
                 for (var i = 0; i < ticks; i++)
                 {
                     // tick t0l
@@ -795,55 +796,60 @@ public class Cpu
                 SFRs.T0H = t0h;
                 SFRs.T0Cnt = t0cnt;
             }
-        }
 
-        void tickTimer1()
-        {
-            var t1cnt = SFRs.T1Cnt;
-
-            if (t1cnt.T1lRun)
+            void tickTimer1()
             {
-                var t1l = SFRs.T1L;
-                if (t1cnt.ELDT1C)
-                {
-                    var cpuClockHz = SFRs.Ocr.CpuClockHz;
-                    var t1lc = SFRs.T1Lc;
-                    var p1 = SFRs.P1 with { PulseOutput = t1lc <= t1l };
-                    Audio.AddPulse(cpuClockHz, p1.PulseOutput);
-                    SFRs.P1 = p1;
-                }
+                var t1cnt = SFRs.T1Cnt;
+                if (t1cnt is { T1lRun: false, T1hRun: false })
+                    return;
 
-                t1l++;
-                if (t1l == 0)
+                for (var i = 0; i < cycles; i++)
                 {
-                    t1l = SFRs.T1Lr;
-                    t1cnt.T1lOvf = true;
-                    if (t1cnt.T1lIe)
-                        RequestedInterrupts |= Interrupts.T1;
-                }
-
-                SFRs.T1L = t1l;
-            }
-
-            if (t1cnt.T1hRun)
-            {
-                // Tick T1h only if in 8-bit mode or in 16-bit mode and lower overflowed
-                if (!t1cnt.T1Long || t1cnt.T1lOvf)
-                {
-                    var t1h = (byte)(SFRs.T1H + 1);
-                    if (t1h == 0)
+                    if (t1cnt.T1lRun)
                     {
-                        t1h = SFRs.T1Hr;
-                        t1cnt.T1hOvf = true;
-                        if (t1cnt.T1hIe)
-                            RequestedInterrupts |= Interrupts.T1;
+                        var t1l = SFRs.T1L;
+                        if (t1cnt.ELDT1C)
+                        {
+                            var cpuClockHz = SFRs.Ocr.CpuClockHz;
+                            var t1lc = SFRs.T1Lc;
+                            var p1 = SFRs.P1 with { PulseOutput = t1lc <= t1l };
+                            Audio.AddPulse(cpuClockHz, p1.PulseOutput);
+                            SFRs.P1 = p1;
+                        }
+
+                        t1l++;
+                        if (t1l == 0)
+                        {
+                            t1l = SFRs.T1Lr;
+                            t1cnt.T1lOvf = true;
+                            if (t1cnt.T1lIe)
+                                RequestedInterrupts |= Interrupts.T1;
+                        }
+
+                        SFRs.T1L = t1l;
                     }
 
-                    SFRs.T1H = t1h;
-                }
-            }
+                    if (t1cnt.T1hRun)
+                    {
+                        // Tick T1h only if in 8-bit mode or in 16-bit mode and lower overflowed
+                        if (!t1cnt.T1Long || t1cnt.T1lOvf)
+                        {
+                            var t1h = (byte)(SFRs.T1H + 1);
+                            if (t1h == 0)
+                            {
+                                t1h = SFRs.T1Hr;
+                                t1cnt.T1hOvf = true;
+                                if (t1cnt.T1hIe)
+                                    RequestedInterrupts |= Interrupts.T1;
+                            }
 
-            SFRs.T1Cnt = t1cnt;
+                            SFRs.T1H = t1h;
+                        }
+                    }
+                }
+
+                SFRs.T1Cnt = t1cnt;
+            }
         }
 
         void requestLevelDrivenInterrupts()
