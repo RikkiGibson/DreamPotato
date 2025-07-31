@@ -26,8 +26,7 @@ public class Game1 : Game
     private const int ScaledWidth = Display.ScreenWidth * VmuScale;
     private const int ScaledHeight = Display.ScreenHeight * VmuScale;
 
-    private const int IconWidth = 64;
-    private const int IconHeight = 64;
+    private const int IconSize = 64;
 
     private const int MenuBarHeight = 20;
     private const int TopMargin = VmuScale * 2 + MenuBarHeight;
@@ -331,40 +330,61 @@ public class Game1 : Game
         // Use nearest neighbor scaling
         _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
+        var vmuIsEjected = Vmu.IsEjected;
+        var screenSize = new Point(x: ScaledWidth, y: ScaledHeight);
+        var screenRectangle = vmuIsEjected
+            ? new Rectangle(new Point(x: SideMargin, y: TopMargin), screenSize)
+            : new Rectangle(location: new Point(x: SideMargin, y: TopMargin + IconSize), screenSize);
+
         _spriteBatch.Draw(
             _vmuScreenTexture,
-            destinationRectangle: new Rectangle(new Point(x: SideMargin, y: TopMargin), new Point(x: ScaledWidth, y: ScaledHeight)),
+            destinationRectangle: screenRectangle,
             sourceRectangle: null,
             color: Color.White,
             rotation: 0,
             origin: default,
-            effects: Vmu.IsEjected ? SpriteEffects.None : (SpriteEffects.FlipHorizontally | SpriteEffects.FlipVertically),
+            effects: vmuIsEjected ? SpriteEffects.None : (SpriteEffects.FlipHorizontally | SpriteEffects.FlipVertically),
             layerDepth: 0);
 
         // Draw icons
-        const int iconsYPos = TopMargin + ScaledHeight + VmuScale / 2;
+        int iconsYPos = vmuIsEjected ? TopMargin + ScaledHeight + VmuScale / 2 : TopMargin - VmuScale / 2;
         const int iconSpacing = VmuScale * 2;
         var icons = _display.GetIcons();
 
         var displayOn = Vmu._cpu.SFRs.Vccr.DisplayControl;
         if (displayOn)
         {
-            _spriteBatch.Draw(_iconFileTexture, getIconRectangle(0), getIconColor(enabled: (icons & Icons.File) != 0));
-            _spriteBatch.Draw(_iconGameTexture, getIconRectangle(1), getIconColor(enabled: (icons & Icons.Game) != 0));
-            _spriteBatch.Draw(_iconClockTexture, getIconRectangle(2), getIconColor(enabled: (icons & Icons.Clock) != 0));
-            _spriteBatch.Draw(_iconIOTexture, getIconRectangle(3), getIconColor(enabled: (icons & Icons.Flash) != 0));
+            drawIcon(_iconFileTexture, ordinal: 0, enabled: (icons & Icons.File) != 0);
+            drawIcon(_iconGameTexture, ordinal: 1, enabled: (icons & Icons.Game) != 0);
+            drawIcon(_iconClockTexture, ordinal: 2, enabled: (icons & Icons.Clock) != 0);
+            drawIcon(_iconIOTexture, ordinal: 3, enabled: (icons & Icons.Flash) != 0);
         }
         else
         {
-            _spriteBatch.Draw(_iconSleepTexture, getIconRectangle(3), getIconColor(enabled: true));
+            drawIcon(_iconSleepTexture, ordinal: 3, enabled: true);
         }
 
-        Color getIconColor(bool enabled) => enabled ? Color.Black : Color.DarkGray;
+        void drawIcon(Texture2D texture, int ordinal, bool enabled)
+        {
+            const int maxPosition = 3;
+            Debug.Assert(ordinal is >= 0 and <= maxPosition);
 
-        Rectangle getIconRectangle(int ordinal)
-            => new Rectangle(
-                location: new Point(x: SideMargin + iconSpacing * ordinal + IconWidth * ordinal, y: iconsYPos),
-                size: new Point(x: IconWidth, y: IconHeight));
+            var iconColor = enabled ? Color.Black : Color.DarkGray;
+            var iconSize = new Point(IconSize);
+            var iconRectangle = vmuIsEjected
+                ? new Rectangle(location: new Point(x: SideMargin + iconSpacing * ordinal + IconSize * ordinal, y: iconsYPos), iconSize)
+                : new Rectangle(location: new Point(x: SideMargin + iconSpacing * (maxPosition - ordinal) + IconSize * (maxPosition - ordinal), y: iconsYPos), iconSize);
+
+            _spriteBatch.Draw(
+                texture,
+                destinationRectangle: iconRectangle,
+                sourceRectangle: null,
+                color: iconColor,
+                rotation: 0,
+                origin: default,
+                effects: vmuIsEjected ? SpriteEffects.None : (SpriteEffects.FlipHorizontally | SpriteEffects.FlipVertically),
+                layerDepth: 0);
+        }
 
         _spriteBatch.End();
 
