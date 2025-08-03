@@ -116,25 +116,6 @@ public class MapleMessageBroker
         }
     }
 
-    internal void Disconnect()
-    {
-        lock (_lock)
-        {
-            if (_clientSocket is not null)
-            {
-                try
-                {
-                    _clientSocket.Shutdown(SocketShutdown.Both);
-                    _clientSocket.Disconnect(reuseSocket: false);
-                }
-                catch (SocketException ex)
-                {
-                    Logger.LogWarning(ex.Message, LogCategories.Maple);
-                }
-            }
-        }
-    }
-
     internal void ScanAsciiHexFragment(List<byte> asciiMessageBuilder, Queue<MapleMessage> inboundMessages, ReadOnlySpan<byte> fragment)
     {
         for (int i = 0; i < fragment.Length; i++)
@@ -516,9 +497,7 @@ public class MapleMessageBroker
                 _clientSocket = null;
             }
 
-            // discard all messages from the last connection
-            _ = _inboundCpuMessages.Reader.ReadAllAsync(cancellationToken);
-            _ = _outboundMessages.Reader.ReadAllAsync(cancellationToken);
+            OnDisconnect();
         }
 
         async Task waitForClientDisconnectAsync(Socket clientSocket, CancellationToken cancellationToken)
@@ -540,5 +519,22 @@ public class MapleMessageBroker
 
             Logger.LogDebug("Client disconnected", LogCategories.Maple);
         }
+    }
+
+    private void OnDisconnect()
+    {
+        // discard all messages from the last connection
+        while (_inboundCpuMessages.Reader.TryRead(out _)) { }
+        while (_outboundMessages.Reader.TryRead(out _)) { }
+
+        // clear the screen
+        var additionalWords = new int[50];
+        additionalWords[0] = (int)MapleFunction.LCD;
+        bool written = _inboundCpuMessages.Writer.TryWrite(new MapleMessage
+        {
+            Type = MapleMessageType.WriteBlock,
+            AdditionalWords = additionalWords,
+        });
+        Debug.Assert(written);
     }
 }

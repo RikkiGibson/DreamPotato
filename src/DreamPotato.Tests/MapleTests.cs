@@ -120,6 +120,50 @@ public class MapleTests
     }
 
     [Fact]
+    public void WriteLcd_2()
+    {
+        // test clear screen message
+        var rom = File.ReadAllBytes("Data/american_v1.05.bin");
+        var cpu = new Cpu();
+        var messageBroker = cpu.MapleMessageBroker;
+        rom.AsSpan().CopyTo(cpu.ROM);
+        cpu.Reset();
+        cpu.ConnectDreamcast();
+
+        // MDCF_BlockWrite, destAP (VMU in slot 0), originAP (Dreamcast), length, MFID_2_LCD
+        var writeLcdMessage = "0C 01 00 32 00 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\r\n";
+        var messageBytes = Encoding.UTF8.GetBytes(writeLcdMessage);
+        Queue<MapleMessage> inbound = [];
+        messageBroker.ScanAsciiHexFragment(asciiMessageBuilder: [], inbound, messageBytes);
+        var message = messageBroker.HandleMapleMessage(inbound.Dequeue());
+        cpu.Run(ticksToRun: TimeSpan.TicksPerMillisecond);
+
+        var display = new Display(cpu);
+        Assert.Equal<object>("""
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+
+            """, display.GetBlockString());
+
+        // No response is expected for an LCD write
+        Assert.False(message.HasValue);
+    }
+
+    [Fact]
     public void ReadBlock_01()
     {
         var rom = File.ReadAllBytes("Data/american_v1.05.bin");

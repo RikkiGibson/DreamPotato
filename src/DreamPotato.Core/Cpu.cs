@@ -317,7 +317,10 @@ public class Cpu
         while (MapleMessageBroker.TryReceiveCpuMessage(out var message))
         {
             if (!SFRs.P7.DreamcastConnected)
+            {
                 Logger.LogWarning($"Ignoring Maple message while undocked: '({message.Type}, {message.Function})'", category: LogCategories.Maple);
+                continue;
+            }
 
             // Note that only message types which handle immediately user-facing components (e.g. LCD, buzzer) are handled here.
             // Other message types are handled in MapleMessageBroker directly.
