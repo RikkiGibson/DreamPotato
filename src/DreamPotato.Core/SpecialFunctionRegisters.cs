@@ -36,9 +36,6 @@ public class SpecialFunctionRegisters
     /// </summary>
     public void Reset()
     {
-        // Do not change the 'DreamcastConnected' bit except from user "insert/eject" action.
-        var dreamcastConnected = P7.DreamcastConnected;
-
         Array.Clear(_rawMemory);
         // NB: Memory owns clearing/updating _workRam
 
@@ -49,7 +46,7 @@ public class SpecialFunctionRegisters
         Write(Ids.P1Fcr, 0b1011_1111);
         Write(Ids.P3Int, 0b1111_1101);
         Write(Ids.P3, 0b1111_1111);
-        Write(Ids.P7, (byte)new P7() { LowVoltage = true, DreamcastConnected = dreamcastConnected });
+        Write(Ids.P7, (byte)new P7() { LowVoltage = true, DreamcastConnected = false });
         Write(Ids.Isl, 0b1100_0000);
         Write(Ids.Vsel, 0b1111_1100);
         Write(Ids.Btcr, 0b0100_0001);
