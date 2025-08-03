@@ -181,11 +181,23 @@ class UserInterface
 
             var sliderVolume = configuration.Volume;
             ImGui.PushID("VolumeSlider");
-            ImGui.SliderInt(label: "", ref sliderVolume, v_min: 0, v_max: 100);
+            ImGui.SliderInt(label: "", ref sliderVolume, v_min: Audio.MinVolume, v_max: Audio.MaxVolume);
             ImGui.PopID();
-
             if (configuration.Volume != sliderVolume)
                 _game.Configuration_VolumeChanged(sliderVolume);
+
+            ImGui.Text("Color Palette");
+            ImGui.SameLine();
+
+            var palette = configuration.ColorPaletteName;
+            var paletteIndex = Array.IndexOf(ColorPalette.AllPaletteNames, palette);
+            var selectedIndex = paletteIndex == -1 ? 0 : paletteIndex;
+            ImGui.SetNextItemWidth(150);
+            ImGui.PushID("ColorPaletteCombo");
+            ImGui.Combo(label: "", ref selectedIndex, items: ColorPalette.AllPaletteNames, items_count: ColorPalette.AllPaletteNames.Length);
+            ImGui.PopID();
+            if (paletteIndex != selectedIndex)
+                _game.Configuration_PaletteChanged(ColorPalette.AllPalettes[selectedIndex]);
 
             ImGui.EndPopup();
         }

@@ -9,6 +9,7 @@ using Microsoft.Xna.Framework.Input;
 
 using DreamPotato.Core;
 using DreamPotato.MonoGame.UI;
+using System.Linq;
 
 namespace DreamPotato.MonoGame;
 
@@ -16,6 +17,7 @@ public class Game1 : Game
 {
     private readonly GraphicsDeviceManager _graphics;
     private readonly Color[] _vmuScreenData;
+    private ColorPalette _colorPalette;
     internal Configuration Configuration;
 
     internal readonly Vmu Vmu;
@@ -74,6 +76,8 @@ public class Game1 : Game
 
         Configuration = Configuration.Load();
         Configuration.Save();
+
+        _colorPalette = ColorPalette.AllPalettes.FirstOrDefault(palette => palette.Name == Configuration.ColorPaletteName) ?? ColorPalette.AllPalettes[0];
 
         Vmu = new Vmu();
         Vmu.Audio.Volume = Configuration.Volume;
@@ -169,6 +173,12 @@ public class Game1 : Game
     {
         Vmu.Audio.Volume = newVolume;
         Configuration = Configuration with { Volume = newVolume };
+    }
+
+    internal void Configuration_PaletteChanged(ColorPalette palette)
+    {
+        _colorPalette = palette;
+        Configuration = Configuration with { ColorPaletteName = palette.Name };
     }
 
     internal void Configuration_DoneEditing()
@@ -310,7 +320,7 @@ public class Game1 : Game
 
     protected override void Draw(GameTime gameTime)
     {
-        GraphicsDevice.Clear(Color.LightGray);
+        GraphicsDevice.Clear(_colorPalette.Margin);
 
         var screenData = _display.GetBytes();
         int i = 0;
@@ -369,7 +379,7 @@ public class Game1 : Game
             const int maxPosition = 3;
             Debug.Assert(ordinal is >= 0 and <= maxPosition);
 
-            var iconColor = enabled ? Color.Black : Color.DarkGray;
+            var iconColor = enabled ? _colorPalette.Icon1 : _colorPalette.Icon0;
             var iconSize = new Point(IconSize);
             var iconRectangle = vmuIsEjected
                 ? new Rectangle(location: new Point(x: SideMargin + iconSpacing * ordinal + IconSize * ordinal, y: iconsYPos), iconSize)
@@ -392,9 +402,9 @@ public class Game1 : Game
 
         base.Draw(gameTime);
 
-        static Color ReadColor(byte b, byte bitAddress)
+        Color ReadColor(byte b, byte bitAddress)
         {
-            return BitHelpers.ReadBit(b, bitAddress) ? Color.Black : Color.White;
+            return BitHelpers.ReadBit(b, bitAddress) ? _colorPalette.Screen1 : _colorPalette.Screen0;
         }
     }
 }

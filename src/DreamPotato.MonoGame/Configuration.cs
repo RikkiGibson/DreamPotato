@@ -23,6 +23,7 @@ public record Configuration(
     private const string FileName = "configuration.json";
     private static string FilePath => Path.Combine(Vmu.DataFolder, FileName);
 
+    public string? ColorPaletteName { get; init; }
     public ImmutableArray<KeyMapping> KeyMappings { get; init; }
     public ImmutableArray<ButtonMapping> ButtonMappings { get; init; }
 
@@ -45,6 +46,7 @@ public record Configuration(
     // NOTE: you may need to delete configuration.json from the build folder for changes to defaults to take effect.
     public static Configuration Default = new Configuration()
     {
+        ColorPaletteName = ColorPalette.White.Name,
         KeyMappings = [
             new KeyMapping { SourceKey = Keys.W, TargetButton = VmuButton.Up },
             new KeyMapping { SourceKey = Keys.S, TargetButton = VmuButton.Down },
