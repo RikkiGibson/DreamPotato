@@ -70,7 +70,8 @@ public class MapleTests
         cpu.Run(ticksToRun: TimeSpan.TicksPerMillisecond);
         var message = messageBroker.HandleMapleMessage(inbound.Dequeue());
         Assert.False(message.HasValue); // no reply expected
-        Assert.True(cpu.SFRs.T1Cnt.ELDT1C);
+        Assert.Equal(0xc0, cpu._mapleAudioDutyCycle.On);
+        Assert.Equal(0xe0, cpu._mapleAudioDutyCycle.Period);
     }
 
     [Fact]

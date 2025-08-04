@@ -56,6 +56,7 @@ public class Game1 : Game
     // Set in LoadContent()
     private SpriteFont _font1 = null!;
     private DynamicSoundEffectInstance _dynamicSound = null!;
+    private DynamicSoundEffectInstance _mapleDynamicSound = null!;
 
     // Dynamic state
     private KeyboardState _previousKeys;
@@ -214,9 +215,14 @@ public class Game1 : Game
     protected override void LoadContent()
     {
         _font1 = Content.Load<SpriteFont>("MyMenuFont");
-        _dynamicSound = new DynamicSoundEffectInstance(Audio.SampleRate, AudioChannels.Mono);
+
+        _dynamicSound = new DynamicSoundEffectInstance(Audio.StandaloneSampleRate, AudioChannels.Mono);
         _dynamicSound.Play();
         Vmu.Audio.AudioBufferReady += Audio_BufferReady;
+
+        _mapleDynamicSound = new DynamicSoundEffectInstance(Audio.MapleSampleRate, AudioChannels.Mono);
+        _mapleDynamicSound.Play();
+        Vmu.MapleAudio.AudioBufferReady += MapleAudio_BufferReady;
     }
 
     internal Point WindowSize
@@ -314,6 +320,11 @@ public class Game1 : Game
     private void Audio_BufferReady(Audio.AudioBufferReadyEventArgs args)
     {
         _dynamicSound.SubmitBuffer(args.Buffer, args.Start, args.Length);
+    }
+
+    private void MapleAudio_BufferReady(Audio.AudioBufferReadyEventArgs args)
+    {
+        _mapleDynamicSound.SubmitBuffer(args.Buffer, args.Start, args.Length);
     }
 
     protected override void Draw(GameTime gameTime)

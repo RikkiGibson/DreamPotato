@@ -65,6 +65,8 @@ public class Cpu
 
     public readonly Memory Memory;
     public readonly Audio Audio;
+    public readonly Audio MapleAudio;
+
     public readonly Display Display;
 
     /// <summary>NOTE: only 'TryReceiveMessage' and 'SendMessage' methods are safe to call from here.</summary>
@@ -110,6 +112,9 @@ public class Cpu
 
     internal int _flashWriteUnlockSequence;
 
+    // internal for testing
+    internal (byte On, byte Period) _mapleAudioDutyCycle;
+
     public Cpu()
     {
 #if DEBUG
@@ -120,7 +125,10 @@ public class Cpu
         var categories = LogCategories.General;
         Logger = new Logger(logLevel, categories, this);
         Memory = new Memory(this, Logger);
-        Audio = new Audio(this, Logger);
+
+        Audio = new Audio("Standalone", Audio.StandaloneSampleRate, this, Logger);
+        MapleAudio = new Audio("Maple", Audio.MapleSampleRate, this, Logger);
+
         Display = new Display(this);
         MapleMessageBroker = new MapleMessageBroker(logLevel);
         SetInstructionBank(InstructionBank.ROM);
@@ -283,6 +291,8 @@ public class Cpu
 
         if (SFRs.P7.DreamcastConnected)
         {
+            HandleMapleAudio(ticksToRun);
+
             // While connected to Dreamcast, we do not execute any VMU instructions.
             // Instead HandleMapleMessages handles everything that should be happening while in this state.
             return ticksToRun;
@@ -299,6 +309,20 @@ public class Cpu
         TicksOverrun = ticksSoFar - ticksToRun;
 
         return ticksSoFar;
+    }
+
+    private void HandleMapleAudio(long ticksToRun)
+    {
+        Debug.Assert(SFRs.P7.DreamcastConnected);
+
+        var (on, period) = _mapleAudioDutyCycle;
+        if (on == 0 || period == 0 || on >= period)
+        {
+            MapleAudio.IsActive = false;
+            return;
+        }
+
+        MapleAudio.IsActive = true;
     }
 
     /// <summary>If VMU just became docked, update Maple flash from Cpu; otherwise, if VMU just became undocked, update Cpu flash from Maple.</summary>
@@ -364,11 +388,13 @@ public class Cpu
 
         void handleSetConditionClock(MapleMessage message)
         {
-            if (message.AdditionalWords.Length != 1
-                || message.AdditionalWords[0] != 0)
+            if (message.AdditionalWords is not [int word])
             {
-                Logger.LogWarning($"VMU beeps over Maple not implemented.", LogCategories.Maple);
+                Logger.LogWarning($"Unexpected size.VMU beeps over Maple not implemented.", LogCategories.Maple);
+                return;
             }
+
+            _mapleAudioDutyCycle = ((byte)(word >> 24), (byte)(word >> 16 & 0xff));
         }
 
         void handleWriteBlockLcd(MapleMessage message)

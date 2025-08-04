@@ -11,6 +11,7 @@ public class Vmu
     public readonly Cpu _cpu; // TODO: probably want to wrap everything a front-end would want to use thru here
     private readonly FileSystem _fileSystem;
     public Audio Audio => _cpu.Audio;
+    public Audio MapleAudio => _cpu.MapleAudio;
     public Display Display => _cpu.Display;
     public string? LoadedFilePath { get; private set; }
 

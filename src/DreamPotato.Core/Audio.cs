@@ -7,10 +7,16 @@ namespace DreamPotato.Core;
 
 public class Audio
 {
+    public string Name { get; }
+    public int SampleRate { get; }
+
     // This won't work well with RC oscillator sounds.
     // Could consider using a separate sample rate of like 43600 there (872000 / 43600 = 20).
     // But that would really just be a way to avoid doing our own resampling
-    public const int SampleRate = OscillatorHz.Quartz;
+    // public const int SampleRate = OscillatorHz.Quartz;
+    public const int StandaloneSampleRate = OscillatorHz.Quartz;
+    public const int MapleSampleRate = 40000; // OscillatorHz.Cf / 150
+
     public const int SampleSize = 2; // 16-bit
     public const int BufferDurationMilliseconds = 100;
 
@@ -22,14 +28,19 @@ public class Audio
     private readonly Cpu _cpu;
     private readonly Logger _logger;
 
-    private const int PcmBufferFilledSize = SampleRate * SampleSize * BufferDurationMilliseconds / 1000;
+    private readonly int PcmBufferFilledSize;
     /// <summary>
     /// PCM data at <see cref="SampleRate"/> and <see cref="SampleSize"/>.
     /// </summary>
-    private readonly byte[] _pcmBuffer = new byte[2 * PcmBufferFilledSize];
+    private readonly byte[] _pcmBuffer;
 
-    internal Audio(Cpu cpu, Logger logger)
+    internal Audio(string name, int sampleRate, Cpu cpu, Logger logger)
     {
+        Name = name;
+        SampleRate = sampleRate;
+        PcmBufferFilledSize = SampleRate * SampleSize * BufferDurationMilliseconds / 1000;
+        _pcmBuffer = new byte[2 * PcmBufferFilledSize];
+
         _cpu = cpu;
         _logger = logger;
         Volume = DefaultVolume;
@@ -75,7 +86,7 @@ public class Audio
         {
             field = value;
             var sampleVolume = GetSampleVolume();
-            _logger.LogDebug($"New Volume: {value}, SampleVolume: {sampleVolume}", LogCategories.Audio);
+            _logger.LogDebug($"{Name}: New Volume: {value}, SampleVolume: {sampleVolume}", LogCategories.Audio);
             ArgumentOutOfRangeException.ThrowIfNegative(sampleVolume);
             BinaryPrimitives.WriteInt16LittleEndian(_highSignal, sampleVolume);
             BinaryPrimitives.WriteInt16LittleEndian(_lowSignal, (short)-sampleVolume);
@@ -100,7 +111,7 @@ public class Audio
         if (!IsActive)
             return -1;
 
-        _logger.LogDebug($"Generating audio buffer of size {buffer.Length}", LogCategories.Audio);
+        _logger.LogDebug($"{Name}: Generating audio buffer of size {buffer.Length}", LogCategories.Audio);
 
         var cpuClockHz = _cpu.SFRs.Ocr.CpuClockHz;
         var t1lc = _cpu.SFRs.T1Lc;
@@ -117,7 +128,7 @@ public class Audio
         var timerTicksAtLowSignal = t1lc - t1lr;
         if (timerTicksPerPeriod < 2 || timerTicksAtLowSignal <= 0)
         {
-            _logger.LogWarning($"Could not play sound with T1lc={t1lc:X} T1lr={t1lr:X}");
+            _logger.LogWarning($"{Name}: Could not play sound with T1lc={t1lc:X} T1lr={t1lr:X}");
             return -1;
         }
         Debug.Assert(timerTicksAtLowSignal < timerTicksPerPeriod);
@@ -153,9 +164,9 @@ public class Audio
     /// </summary>
     internal void AddPulse(int cpuClockHz, bool value)
     {
-        if (cpuClockHz is not (OscillatorHz.Quartz / 6) or (OscillatorHz.Quartz / 12))
+        if (cpuClockHz % SampleRate != 0)
         {
-            _logger.LogWarning($"Bad pulse hz! {cpuClockHz}", LogCategories.Audio);
+            _logger.LogWarning($"{Name}: Bad pulse hz! {cpuClockHz}", LogCategories.Audio);
         }
 
         var sampleRateAndRemainder = SampleRate + _pcmRemainder;
@@ -171,7 +182,7 @@ public class Audio
 
         if (_pcmBufferIndex >= PcmBufferFilledSize)
         {
-            _logger.LogDebug($"Submitting audio buffer of length {_pcmBufferIndex}", LogCategories.Audio);
+            _logger.LogDebug($"{Name}: Submitting audio buffer of length {_pcmBufferIndex}", LogCategories.Audio);
             AudioBufferReady?.Invoke(new(_pcmBuffer, Start: 0, Length: _pcmBufferIndex));
             _pcmBufferIndex = 0;
             _pcmRemainder = 0;
@@ -183,11 +194,11 @@ public class Audio
         if (_pcmBufferIndex == 0)
             return;
 
-        _logger.LogDebug($"EndAudio: Submitting audio buffer of length {_pcmBufferIndex}", LogCategories.Audio);
-        if (_cpu.SFRs.Ocr.CpuClockHz is not (OscillatorHz.Quartz / 6) or (OscillatorHz.Quartz / 12))
+        _logger.LogDebug($"{Name} EndAudio: Submitting audio buffer of length {_pcmBufferIndex}", LogCategories.Audio);
+        if (_cpu.SFRs.Ocr.CpuClockHz % SampleRate != 0)
         {
             _logger.LogWarning(
-                $"Sample rate not compatible with clock {_cpu.SFRs.Ocr.SystemClockSelector}.",
+                $"{Name}: Sample rate not compatible with clock {_cpu.SFRs.Ocr.SystemClockSelector}.",
                 LogCategories.Audio);
         }
 
