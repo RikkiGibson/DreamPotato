@@ -853,25 +853,25 @@ public struct Mplrst
 
 
 public enum Oscillator
-    {
-        /// <summary>
-        /// Internal (RC) oscillator: 600 kHz / 10.0us cycle time.
-        /// Used when accessing XRAM or flash memory in standalone mode.
-        /// </summary>
-        Rc,
+{
+    /// <summary>
+    /// Internal (RC) oscillator: 600 kHz / 10.0us cycle time.
+    /// Used when accessing XRAM or flash memory in standalone mode.
+    /// </summary>
+    Rc,
 
-        /// <summary>
-        /// Ceramic (CF) oscillator: 6 MHz / 1.0us cycle time.
-        /// Used when connected to console.
-        /// </summary>
-        Cf,
+    /// <summary>
+    /// Ceramic (CF) oscillator: 6 MHz / 1.0us cycle time.
+    /// Used when connected to console.
+    /// </summary>
+    Cf,
 
-        /// <summary>
-        /// Quartz (X'TAL) oscillator: 32 kHz / 183.0us cycle time.
-        /// Used most of the time in standalone mode.
-        /// </summary>
-        Quartz,
-    }
+    /// <summary>
+    /// Quartz (X'TAL) oscillator: 32 kHz / 183.0us cycle time.
+    /// Used most of the time in standalone mode.
+    /// </summary>
+    Quartz,
+}
 
 public static class OscillatorHz
 {
