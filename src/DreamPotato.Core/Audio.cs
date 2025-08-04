@@ -7,8 +7,8 @@ namespace DreamPotato.Core;
 
 public class Audio
 {
-    // TODO: this won't work well with cf oscillator sounds.
-    // could consider using a separate sample rate of like 43600 there.
+    // This won't work well with RC oscillator sounds.
+    // Could consider using a separate sample rate of like 43600 there (872000 / 43600 = 20).
     // But that would really just be a way to avoid doing our own resampling
     public const int SampleRate = OscillatorHz.Quartz;
     public const int SampleSize = 2; // 16-bit
