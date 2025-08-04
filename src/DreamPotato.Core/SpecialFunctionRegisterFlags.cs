@@ -873,6 +873,9 @@ public enum Oscillator
     Quartz,
 }
 
+// TODO: supposedly frequent integer division is faster when the divisor is constant.
+// Since it is common to divide by the cpu hz, perhaps a specialized Oscillator.Divide method would be helpful.
+// Would want to actually measure things or at least inspect the native code to make sure this would make a difference.
 public static class OscillatorHz
 {
     public const int Cf = 6_000_000;
