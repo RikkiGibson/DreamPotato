@@ -1095,7 +1095,7 @@ public struct T1Cnt
     }
 
     /// <summary>
-    /// 
+    /// When enabled, PWM audio signal is output on <see cref="P1.PulseOutput"/>.
     /// </summary>
     public bool ELDT1C
     {
