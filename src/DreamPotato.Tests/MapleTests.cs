@@ -52,6 +52,28 @@ public class MapleTests
     }
 
     [Fact]
+    public void SetConditionClock_02()
+    {
+        var rom = File.ReadAllBytes("Data/american_v1.05.bin");
+        var cpu = new Cpu();
+        var messageBroker = cpu.MapleMessageBroker;
+        rom.AsSpan().CopyTo(cpu.ROM);
+        cpu.Reset();
+        cpu.ConnectDreamcast();
+
+        // MDCF_SetCondition, destAP (VMU in slot 0), originAP (Dreamcast), length (???), MFID_3_Clock
+        // Apparently this function is used to make the VMU beep. The first two bytes are meaningful, the second two are discarded(?)
+        // The first is a period, the second is a duty cycle, for PWM.
+        var setCondition = "0E 01 00 02 00 00 00 08 00 00 E0 C0\r\n"u8;
+        Queue<MapleMessage> inbound = [];
+        messageBroker.ScanAsciiHexFragment(asciiMessageBuilder: [], inbound, setCondition);
+        cpu.Run(ticksToRun: TimeSpan.TicksPerMillisecond);
+        var message = messageBroker.HandleMapleMessage(inbound.Dequeue());
+        Assert.False(message.HasValue); // no reply expected
+        Assert.True(cpu.SFRs.T1Cnt.ELDT1C);
+    }
+
+    [Fact]
     public void Fragment_01()
     {
         var rom = File.ReadAllBytes("Data/american_v1.05.bin");

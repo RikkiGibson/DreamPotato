@@ -21,7 +21,6 @@ public class Game1 : Game
     internal Configuration Configuration;
 
     internal readonly Vmu Vmu;
-    private readonly Display _display;
 
     // TODO: eventually, there should be UI to permit a non-constant scale.
     private const int VmuScale = 6;
@@ -88,7 +87,6 @@ public class Game1 : Game
             Vmu.InitializeDate(date);
 
         Vmu.StartMapleServer();
-        _display = new Display(Vmu._cpu);
         _vmuScreenData = new Color[Display.ScreenWidth * Display.ScreenHeight];
 
         LoadVmuFiles(gameFilePath, date: Configuration.AutoInitializeDate ? date : null);
@@ -322,7 +320,7 @@ public class Game1 : Game
     {
         GraphicsDevice.Clear(_colorPalette.Margin);
 
-        var screenData = _display.GetBytes();
+        var screenData = Vmu.Display.GetBytes();
         int i = 0;
         foreach (byte b in screenData)
         {
@@ -359,7 +357,7 @@ public class Game1 : Game
         // Draw icons
         int iconsYPos = vmuIsEjected ? TopMargin + ScaledHeight + VmuScale / 2 : TopMargin - VmuScale / 2;
         const int iconSpacing = VmuScale * 2;
-        var icons = _display.GetIcons();
+        var icons = Vmu.Display.GetIcons();
 
         var displayOn = Vmu._cpu.SFRs.Vccr.DisplayControl;
         if (displayOn)
