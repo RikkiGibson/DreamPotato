@@ -235,8 +235,20 @@ public class MapleMessageBroker
         switch (message.Type, message.Function)
         {
             case (MapleMessageType.SetCondition, MapleFunction.Clock):
+                // VMU beeps over maple are not supported.
+                // The biggest reason is that if the remote emulator pauses,
+                // we don't have any indication of when to stop producing a beep.
+                // Making the very high pitched CF oscillator beeps sound right is also a pain.
+                // It would realistically require pulling in a DSP library and/or spending a bunch of time with textbooks.
+                return default;
+            case (MapleMessageType.WriteBlock, MapleFunction.Clock):
+                // Update the VMU's real time clock
+                // This probably needs to forward to CPU, as ram state, not flash, needs to be updated.
+                // Also, it's probably not meaningful to implement this until keeping the clock running while docked is supported.
+                Logger.LogWarning($"(WriteBlock, Clock) not yet implemented", category: LogCategories.Maple);
+                return default; // No reply
             case (MapleMessageType.WriteBlock, MapleFunction.LCD):
-                // Cpu handles these message types.
+                // Cpu handles this message.
                 var written = _inboundCpuMessages.Writer.TryWrite(message);
                 Debug.Assert(written);
                 return default; // No reply

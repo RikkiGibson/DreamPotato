@@ -285,6 +285,7 @@ public class Cpu
         {
             // While connected to Dreamcast, we do not execute any VMU instructions.
             // Instead HandleMapleMessages handles everything that should be happening while in this state.
+            // TODO: we should at least keep ticking the base timer in this state.
             return ticksToRun;
         }
 
@@ -349,9 +350,6 @@ public class Cpu
             // Other message types are handled in MapleMessageBroker directly.
             switch (message.Type, message.Function)
             {
-                case (MapleMessageType.SetCondition, MapleFunction.Clock):
-                    handleSetConditionClock(message);
-                    break;
                 case (MapleMessageType.WriteBlock, MapleFunction.LCD):
                     handleWriteBlockLcd(message);
                     break;
@@ -359,15 +357,6 @@ public class Cpu
                     Debug.Fail($"Unhandled Maple message '({message.Type}, {message.Function})'");
                     Logger.LogError($"Unhandled Maple message '({message.Type}, {message.Function})'", category: LogCategories.Maple);
                     break;
-            }
-        }
-
-        void handleSetConditionClock(MapleMessage message)
-        {
-            if (message.AdditionalWords.Length != 1
-                || message.AdditionalWords[0] != 0)
-            {
-                Logger.LogWarning($"VMU beeps over Maple not implemented.", LogCategories.Maple);
             }
         }
 
