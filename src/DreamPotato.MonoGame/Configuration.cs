@@ -18,7 +18,8 @@ namespace DreamPotato.MonoGame;
 public record Configuration(
     bool AutoInitializeDate = true,
     bool AnyButtonWakesFromSleep = true,
-    int Volume = Audio.DefaultVolume)
+    int Volume = Audio.DefaultVolume,
+    [property: JsonConverter(typeof(JsonStringEnumConverter<DreamcastPort>))] DreamcastPort DreamcastPort = DreamcastPort.A)
 {
     private const string FileName = "configuration.json";
     private static string FilePath => Path.Combine(Vmu.DataFolder, FileName);

@@ -86,7 +86,7 @@ public class Game1 : Game
         if (Configuration.AutoInitializeDate)
             Vmu.InitializeDate(date);
 
-        Vmu.StartMapleServer();
+        Vmu.RestartMapleServer(Configuration.DreamcastPort);
         _vmuScreenData = new Color[Display.ScreenWidth * Display.ScreenHeight];
 
         LoadVmuFiles(gameFilePath, date: Configuration.AutoInitializeDate ? date : null);
@@ -177,6 +177,12 @@ public class Game1 : Game
     {
         _colorPalette = palette;
         Configuration = Configuration with { ColorPaletteName = palette.Name };
+    }
+
+    internal void Configuration_DreamcastPortChanged(DreamcastPort dreamcastPort)
+    {
+        Configuration = Configuration with { DreamcastPort = dreamcastPort };
+        Vmu.RestartMapleServer(dreamcastPort);
     }
 
     internal void Configuration_DoneEditing()

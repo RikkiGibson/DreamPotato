@@ -154,6 +154,8 @@ class UserInterface
             ImGui.OpenPopup("Reset?");
     }
 
+    private static readonly string[] AllDreamcastPortNames = Enum.GetNames<DreamcastPort>();
+
     private void LayoutSettings()
     {
         var configuration = _game.Configuration;
@@ -176,6 +178,7 @@ class UserInterface
             if (ImGui.Checkbox("Any button wakes from sleep", ref anyButtonWakesFromSleep))
                 _game.Configuration_AnyButtonWakesFromSleepChanged(anyButtonWakesFromSleep);
 
+            // Volume
             ImGui.Text("Volume");
             ImGui.SameLine();
 
@@ -186,18 +189,36 @@ class UserInterface
             if (configuration.Volume != sliderVolume)
                 _game.Configuration_VolumeChanged(sliderVolume);
 
-            ImGui.Text("Color Palette");
-            ImGui.SameLine();
+            // Color Palette
+            {
+                ImGui.Text("Color Palette");
+                ImGui.SameLine();
 
-            var palette = configuration.ColorPaletteName;
-            var paletteIndex = Array.IndexOf(ColorPalette.AllPaletteNames, palette);
-            var selectedIndex = paletteIndex == -1 ? 0 : paletteIndex;
-            ImGui.SetNextItemWidth(150);
-            ImGui.PushID("ColorPaletteCombo");
-            ImGui.Combo(label: "", ref selectedIndex, items: ColorPalette.AllPaletteNames, items_count: ColorPalette.AllPaletteNames.Length);
-            ImGui.PopID();
-            if (paletteIndex != selectedIndex)
-                _game.Configuration_PaletteChanged(ColorPalette.AllPalettes[selectedIndex]);
+                var palette = configuration.ColorPaletteName;
+                var paletteIndex = Array.IndexOf(ColorPalette.AllPaletteNames, palette);
+                var selectedIndex = paletteIndex == -1 ? 0 : paletteIndex;
+                ImGui.SetNextItemWidth(120);
+                ImGui.PushID("ColorPaletteCombo");
+                ImGui.Combo(label: "", ref selectedIndex, items: ColorPalette.AllPaletteNames, items_count: ColorPalette.AllPaletteNames.Length);
+                ImGui.PopID();
+                if (paletteIndex != selectedIndex)
+                    _game.Configuration_PaletteChanged(ColorPalette.AllPalettes[selectedIndex]);
+            }
+
+            // Dreamcast Port
+            {
+                ImGui.Text("Dreamcast controller port");
+                ImGui.SameLine();
+
+                var port = configuration.DreamcastPort;
+                var selectedIndex = (int)port;
+                ImGui.SetNextItemWidth(40);
+                ImGui.PushID("DreamcastPortCombo");
+                ImGui.Combo(label: "", ref selectedIndex, items: AllDreamcastPortNames, items_count: AllDreamcastPortNames.Length);
+                ImGui.PopID();
+                if ((int)port != selectedIndex)
+                    _game.Configuration_DreamcastPortChanged((DreamcastPort)selectedIndex);
+            }
 
             ImGui.EndPopup();
         }

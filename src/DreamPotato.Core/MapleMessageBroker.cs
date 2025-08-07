@@ -39,9 +39,10 @@ public class MapleMessageBroker
 
     /// <summary>Guarded by <see cref="_lock"/>.</summary>
     private SafeFileHandle? _vmuFileHandle;
+    private DreamcastPort _dreamcastPort;
 
     private Task? _serverTask;
-    private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+    private CancellationTokenSource? _cancellationTokenSource;
     public MapleMessageBroker(LogLevel minimumLogLevel)
     {
         Logger = new Logger(minimumLogLevel, LogCategories.Maple, _cpu: null);
@@ -51,16 +52,19 @@ public class MapleMessageBroker
 
     public void ShutdownServer()
     {
-        _cancellationTokenSource.Cancel();
+        _cancellationTokenSource?.Cancel();
+        _cancellationTokenSource = null;
         _serverTask = null;
     }
 
-    public void StartServer()
+    public void StartServer(DreamcastPort dreamcastPort)
     {
-        if (_serverTask != null || _cancellationTokenSource.IsCancellationRequested)
+        if (_serverTask != null || _cancellationTokenSource?.IsCancellationRequested == true)
             throw new InvalidOperationException();
 
-        _serverTask = Task.Run(() => SocketListenerEntryPoint(_cancellationTokenSource.Token));
+        _dreamcastPort = dreamcastPort;
+        _cancellationTokenSource = new CancellationTokenSource();
+        _serverTask = Task.Run(() => SocketListenerEntryPoint(dreamcastPort, _cancellationTokenSource.Token));
     }
 
     internal void Resync(bool vmuDocked, bool writeToMapleFlash, Span<byte> flash, SafeFileHandle? vmuFileHandle)
@@ -216,8 +220,8 @@ public class MapleMessageBroker
                 var reply = new MapleMessage()
                 {
                     Type = MapleMessageType.Ack,
-                    Recipient = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
-                    Sender = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
+                    Recipient = new MapleAddress { Port = _dreamcastPort, Slot = DreamcastSlot.Dreamcast },
+                    Sender = new MapleAddress { Port = _dreamcastPort, Slot = DreamcastSlot.Dreamcast },
                     Length = 0,
                     AdditionalWords = [],
                 };
@@ -272,8 +276,8 @@ public class MapleMessageBroker
             var reply = new MapleMessage()
             {
                 Type = MapleMessageType.Ack,
-                Recipient = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
-                Sender = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Slot1 },
+                Recipient = new MapleAddress { Port = _dreamcastPort, Slot = DreamcastSlot.Dreamcast },
+                Sender = new MapleAddress { Port = _dreamcastPort, Slot = DreamcastSlot.Slot1 },
                 Length = 0,
                 AdditionalWords = [],
             };
@@ -301,8 +305,8 @@ public class MapleMessageBroker
             var reply = new MapleMessage()
             {
                 Type = MapleMessageType.DataTransfer,
-                Recipient = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
-                Sender = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Slot1 },
+                Recipient = new MapleAddress { Port = _dreamcastPort, Slot = DreamcastSlot.Dreamcast },
+                Sender = new MapleAddress { Port = _dreamcastPort, Slot = DreamcastSlot.Slot1 },
                 Length = responseSize,
                 AdditionalWords = additionalWords
             };
@@ -320,8 +324,8 @@ public class MapleMessageBroker
                 return new MapleMessage()
                 {
                     Type = MapleMessageType.ErrorInvalidFlashAddress,
-                    Recipient = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
-                    Sender = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Slot1 },
+                    Recipient = new MapleAddress { Port = _dreamcastPort, Slot = DreamcastSlot.Dreamcast },
+                    Sender = new MapleAddress { Port = _dreamcastPort, Slot = DreamcastSlot.Slot1 },
                     Length = 0,
                     AdditionalWords = [],
                 };
@@ -351,8 +355,8 @@ public class MapleMessageBroker
             var reply = new MapleMessage()
             {
                 Type = MapleMessageType.Ack,
-                Recipient = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
-                Sender = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Slot1 },
+                Recipient = new MapleAddress { Port = _dreamcastPort, Slot = DreamcastSlot.Dreamcast },
+                Sender = new MapleAddress { Port = _dreamcastPort, Slot = DreamcastSlot.Slot1 },
                 Length = 0,
                 AdditionalWords = [],
             };
@@ -375,8 +379,8 @@ public class MapleMessageBroker
             var reply = new MapleMessage()
             {
                 Type = MapleMessageType.Ack,
-                Recipient = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast },
-                Sender = new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Slot1 },
+                Recipient = new MapleAddress { Port = _dreamcastPort, Slot = DreamcastSlot.Dreamcast },
+                Sender = new MapleAddress { Port = _dreamcastPort, Slot = DreamcastSlot.Slot1 },
                 Length = 0,
                 AdditionalWords = [],
             };
@@ -482,10 +486,10 @@ public class MapleMessageBroker
         }
     }
 
-    private async Task SocketListenerEntryPoint(CancellationToken cancellationToken)
+    private async Task SocketListenerEntryPoint(DreamcastPort dreamcastPort, CancellationToken cancellationToken)
     {
         using var listener = new Socket(SocketType.Stream, ProtocolType.Tcp);
-        listener.Bind(new IPEndPoint(IPAddress.Loopback, BasePort));
+        listener.Bind(new IPEndPoint(IPAddress.Loopback, BasePort + (int)dreamcastPort));
         listener.Listen(backlog: 1);
 
         while (true) // Accept a new client whenever one disconnects

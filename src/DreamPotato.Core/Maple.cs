@@ -48,7 +48,7 @@ internal record struct MapleMessage()
     }
 }
 
-enum DreamcastPort
+public enum DreamcastPort
 {
     A = 0,
     B = 1,
@@ -56,7 +56,7 @@ enum DreamcastPort
     D = 3,
 }
 
-enum DreamcastSlot
+public enum DreamcastSlot
 {
     // i.e. the Dreamcast itself is being addressed.
     Dreamcast = 0,

@@ -133,9 +133,12 @@ public class Vmu
         _cpu.VmuFileWriteStream = fileStream;
     }
 
-    public void StartMapleServer()
+    public void RestartMapleServer(DreamcastPort dreamcastPort)
     {
-        _cpu.MapleMessageBroker.StartServer();
+        if (_cpu.MapleMessageBroker.IsRunning)
+            _cpu.MapleMessageBroker.ShutdownServer();
+
+        _cpu.MapleMessageBroker.StartServer(dreamcastPort);
     }
 
     public bool IsServerConnected
