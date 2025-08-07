@@ -79,6 +79,10 @@ public class SpecialFunctionRegisters
             case Ids.Vtrbf:
                 return readWorkRam();
 
+            // General note:
+            // "breakpoint holders" are used in various parts of this codebase, because a conditional breakpoint in a hot path
+            // like the 'default' case of this method, makes the debugger run really slowly.
+            // And, having to insert or delete such holders and recompile+relaunch while investigating issues would be cumbersome.
             case Ids.P7:
                 { // breakpoint holder
                 }
@@ -191,6 +195,11 @@ public class SpecialFunctionRegisters
                 if (oldPcon.HaltMode && !newPcon.HaltMode)
                     _logger.LogTrace("Exiting halt mode", LogCategories.Halt);
 
+                goto default;
+
+            case Ids.P1:
+                { // breakpoint holder
+                }
                 goto default;
 
             case Ids.P7:

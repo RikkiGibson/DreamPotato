@@ -4,51 +4,71 @@ Table missing a game you are interested in? Something not working right that isn
 
 Statuses:
 - 🟢 No issues or virtually unnoticeable issues
-- 🟡 Playable but has issues
+- 🟡 but has issues
 - 🔴 Unplayable/broken
 
+## Commercial Games
 <table>
 <thead>
   <tr>
     <th>Name</th>
     <th>Status</th>
     <th>Description</th>
-  </tr></thead>
+  </tr>
+</thead>
 <tbody>
   <tr>
     <td>Chao Adventure (Sonic Adventure)</td>
-    <td>🟡 Playable</td>
-    <td>The basics appear to work. Some events look like they run faster than on real hardware. Not thoroughly tested.</td>
+    <td>🟡</td>
+    <td>The basics appear to work. Not thoroughly tested.</td>
+  </tr>
+  <tr>
+    <td>Chao Adventure 2 (Sonic Adventure 2)</td>
+    <td>🟡</td>
+    <td>The basics appear to work. Not thoroughly tested.</td>
   </tr>
   <tr>
     <td>Hello Kitty Diet Room (Hello Kitty: Otonaru Mail)</td>
-    <td>🟡 Playable</td>
+    <td>🟡</td>
     <td>Seems to work, but have not verified differences with real hardware. This game has virtually no English-language documentation.</td>
   </tr>
   <tr>
     <td>Pinta's Quest (Skies of Arcadia)</td>
-    <td>🟡 Playable</td>
+    <td>🟢</td>
     <td>Emulated speed is accurate enough that the same RNG manip timings used on real hardware work here.</td>
   </tr>
   <tr>
     <td>Power Stone Mini (Power Stone)</td>
-    <td>🔴 Broken</td>
-    <td>Gameplay and menus are unplayably slow.</td>
+    <td>🟡</td>
+    <td>Plays well, but have not verified differences with real hardware.</td>
   </tr>
+</tbody>
+</table>
+
+## Homebrew Games
+<table>
+<thead>
   <tr>
-    <td>memopad (homebrew)</td>
-    <td>🟡 Playable</td>
+    <th>Name</th>
+    <th>Status</th>
+    <th>Description</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td>memopad</td>
+    <td>🟡</td>
     <td>The cursor moves faster than on real hardware.</td>
   </tr>
   <tr>
-    <td>NvmU (NASU on the go!)</td>
-    <td>🟡 Playable</td>
-    <td>Plays fine, but have not verified differences with real hardware.</td>
+    <td>Mini Pacman by Tyro</td>
+    <td>🟡</td>
+    <td>Sound does not work. It seems like ELDT1C is never set. More investigation needed.</td>
   </tr>
   <tr>
-    <td></td>
-    <td></td>
-    <td></td>
+    <td>NvmU (NASU on the go!)</td>
+    <td>🟡</td>
+    <td>Plays well, but have not verified differences with real hardware.</td>
   </tr>
 </tbody>
 </table>
