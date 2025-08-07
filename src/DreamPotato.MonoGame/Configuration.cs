@@ -30,7 +30,7 @@ public record Configuration(
 
     public void Save()
     {
-        using var fileStream = File.Open(FilePath, FileMode.Truncate);
+        using var fileStream = File.Open(FilePath, FileMode.Create);
         JsonSerializer.Serialize(fileStream, this, ConfigurationJsonSerializerContext.Default.Configuration);
     }
 
