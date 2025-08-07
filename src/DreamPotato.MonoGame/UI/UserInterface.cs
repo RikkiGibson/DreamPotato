@@ -89,6 +89,8 @@ class UserInterface
                 }
             }
 
+            ImGui.Separator();
+
             if (ImGui.MenuItem("Quit"))
             {
                 _game.Exit();
@@ -112,6 +114,8 @@ class UserInterface
                 // Workaround to delay calling OpenPopup: https://github.com/ocornut/imgui/issues/331#issuecomment-751372071
                 doOpenResetModal = true;
             }
+
+            ImGui.Separator();
 
             if (ImGui.MenuItem("Settings"))
             {
@@ -154,7 +158,7 @@ class UserInterface
             ImGui.OpenPopup("Reset?");
     }
 
-    private static readonly string[] AllDreamcastPortNames = Enum.GetNames<DreamcastPort>();
+    private static readonly string[] AllDreamcastSlotNames = ["A1", "B1", "C1", "D1"];
 
     private void LayoutSettings()
     {
@@ -207,14 +211,14 @@ class UserInterface
 
             // Dreamcast Port
             {
-                ImGui.Text("Dreamcast controller port");
+                ImGui.Text("Dreamcast controller slot");
                 ImGui.SameLine();
 
                 var port = configuration.DreamcastPort;
                 var selectedIndex = (int)port;
                 ImGui.SetNextItemWidth(40);
-                ImGui.PushID("DreamcastPortCombo");
-                ImGui.Combo(label: "", ref selectedIndex, items: AllDreamcastPortNames, items_count: AllDreamcastPortNames.Length);
+                ImGui.PushID("DreamcastSlotCombo");
+                ImGui.Combo(label: "", ref selectedIndex, items: AllDreamcastSlotNames, items_count: AllDreamcastSlotNames.Length);
                 ImGui.PopID();
                 if ((int)port != selectedIndex)
                     _game.Configuration_DreamcastPortChanged((DreamcastPort)selectedIndex);
