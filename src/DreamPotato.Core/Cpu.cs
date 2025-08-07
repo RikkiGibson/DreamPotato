@@ -93,6 +93,12 @@ public class Cpu
     internal const ushort BaseTimerMax = 1 << 14;
     internal long BaseTimerTicksRemaining;
 
+    /// <summary>
+    /// This field tracks how far we are into the T0 prescaler count.
+    /// The T0 prescaler is pretty much just a timer that sits in front of T0 and sends T0 a tick when it overflows.
+    /// </summary>
+    internal byte T0Scale;
+
     internal Interrupts RequestedInterrupts;
     private InterruptServicingState _interruptServicingState;
 
@@ -750,17 +756,20 @@ public class Cpu
                 if (t0cnt is { T0lRun: false, T0hRun: false })
                     return;
 
-                // TODO: Power Stone Mini still running way too slowly.
-                // I think t1h interrupt is being generated way too frequently.
-                // need to review hardware docs and also try this game on real hardware.
-                // maybe a test program which counts t1 interrupts per base timer cycle (0.5s) would help here.
-                var scale = 0x100 - SFRs.T0Prr;
-                Debug.Assert(scale > 0);
-                var ticks = (ushort)(cycles * scale);
+                var t0Ticks = 0;
+                for (int i = 0; i < cycles; i++)
+                {
+                    T0Scale++;
+                    if (T0Scale == 0) // overflow
+                    {
+                        t0Ticks++;
+                        T0Scale = SFRs.T0Prr;
+                    }
+                }
 
                 var t0l = SFRs.T0L;
                 var t0h = SFRs.T0H;
-                for (var i = 0; i < ticks; i++)
+                for (var i = 0; i < t0Ticks; i++)
                 {
                     // tick t0l
                     bool t0lOverflow = false;
@@ -783,16 +792,9 @@ public class Cpu
                     // tick t0h
                     if (t0cnt.T0hRun)
                     {
-                        if (t0cnt.T0Long)
-                        {
-                            // 16-bit mode
-                            if (t0lOverflow)
-                                t0h++;
-                        }
-                        else
-                        {
+                        // Apply the tick either if in 8-bit mode, or in 16-bit mode and low byte overflowed
+                        if (!t0cnt.T0Long || t0lOverflow)
                             t0h++;
-                        }
 
                         if (t0h == 0)
                         {

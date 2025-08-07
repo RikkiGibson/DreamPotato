@@ -258,6 +258,12 @@ public class SpecialFunctionRegisters
             case Ids.T0Cnt:
                 var oldT0cnt = new T0Cnt(_rawMemory[address]);
                 var t0cnt = new T0Cnt(value);
+
+                // reload prescaler if went from fully disabled to either low or high enabled
+                if (!oldT0cnt.T0lRun && !oldT0cnt.T0hRun && (t0cnt.T0lRun || t0cnt.T0hRun))
+                    _cpu.T0Scale = T0Prr;
+
+                // reload timer for all that were newly enabled
                 if (oldT0cnt.T0lRun != t0cnt.T0lRun)
                     T0L = T0Lr;
 
