@@ -54,7 +54,6 @@ public class Game1 : Game
     private UserInterface _userInterface = null!;
 
     // Set in LoadContent()
-    private SpriteFont _font1 = null!;
     private DynamicSoundEffectInstance _dynamicSound = null!;
 
     // Dynamic state
@@ -197,7 +196,7 @@ public class Game1 : Game
         _iconClockTexture = Content.Load<Texture2D>("VMUIconClock");
         _iconIOTexture = Content.Load<Texture2D>("VMUIconIO");
         _iconSleepTexture = Content.Load<Texture2D>("VMUIconSleep");
-        _iconConnectedTexture = Content.Load<Texture2D>("swirl-icon-test1");
+        _iconConnectedTexture = Content.Load<Texture2D>("DreamcastConnectedIcon");
 
         _userInterface = new UserInterface(this);
         _userInterface.Initialize(_iconConnectedTexture);
@@ -219,7 +218,6 @@ public class Game1 : Game
 
     protected override void LoadContent()
     {
-        _font1 = Content.Load<SpriteFont>("MyMenuFont");
         _dynamicSound = new DynamicSoundEffectInstance(Audio.SampleRate, AudioChannels.Mono);
         _dynamicSound.Play();
         Vmu.Audio.AudioBufferReady += Audio_BufferReady;

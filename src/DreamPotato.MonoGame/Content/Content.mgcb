@@ -13,14 +13,7 @@
 
 #---------------------------------- Content ---------------------------------#
 
-#begin MyMenuFont.spritefont
-/importer:FontDescriptionImporter
-/processor:FontDescriptionProcessor
-/processorParam:PremultiplyAlpha=True
-/processorParam:TextureFormat=Compressed
-/build:MyMenuFont.spritefont
-
-#begin swirl-icon-test1.png
+#begin DreamcastConnectedIcon.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -30,7 +23,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:swirl-icon-test1.png
+/build:DreamcastConnectedIcon.png
 
 #begin VMUIconClock.png
 /importer:TextureImporter
@@ -43,18 +36,6 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:VMUIconClock.png
-
-#begin VMUIconConn.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:VMUIconConn.png
 
 #begin VMUIconFile.png
 /importer:TextureImporter
@@ -80,7 +61,7 @@
 /processorParam:TextureFormat=Color
 /build:VMUIconGame.png
 
-#begin VmuIconIO.png
+#begin VMUIconIO.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -90,7 +71,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:VmuIconIO.png
+/build:VMUIconIO.png;VMUIconIO.png
 
 #begin VMUIconSleep.png
 /importer:TextureImporter
