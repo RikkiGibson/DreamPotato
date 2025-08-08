@@ -70,7 +70,10 @@ public class MapleTests
         cpu.Run(ticksToRun: TimeSpan.TicksPerMillisecond);
         var message = messageBroker.HandleMapleMessage(inbound.Dequeue());
         Assert.False(message.HasValue); // no reply expected
-        Assert.True(cpu.SFRs.T1Cnt.ELDT1C);
+
+        // For now, maple beeps are ignored in DreamPotato
+        // We could consider doing these in future if, for example, we had connectivity to real Dreamcast hardware
+        Assert.False(cpu.SFRs.T1Cnt.ELDT1C);
     }
 
     [Fact]

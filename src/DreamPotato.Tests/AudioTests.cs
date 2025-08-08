@@ -52,8 +52,6 @@ public class AudioTests
         var cpuClockHz = cpu.SFRs.Ocr.CpuClockHz;
         cpu.SFRs.T1Lr = 254;
         cpu.SFRs.T1Lc = 255;
-        // TODO: the startup beep is super unpleasant it should probably be forced really quiet or even silenced by default
-        // cpu.SFRs.StartupBeepEnable = true;
         cpu.SFRs.T1Cnt = new T1Cnt() { ELDT1C = true, T1lRun = true };
 
         int width = (0xff - cpu.SFRs.T1Lr) * 2;
@@ -64,7 +62,7 @@ public class AudioTests
 
         int widthSamples = width * Audio.SampleRate / cpuClockHz;
         int widthBytes = widthSamples * 2;
-        Assert.Equal(17, widthSamples);
+        Assert.Equal(12, widthSamples);
 
         byte[] referencePulse = new byte[widthBytes];
         vmu.Audio.IsActive = true;

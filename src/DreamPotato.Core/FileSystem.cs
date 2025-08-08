@@ -225,7 +225,7 @@ internal class FileSystem(byte[] flash)
         directoryLastBlock[0x18] = (byte)sizeInBlocks; // Size in blocks
         directoryLastBlock[0x19] = 0;
 
-        directoryLastBlock[0x1a] = 1; // Location of the VMS header within the file. (Ignored for game files?) TODO: is this in blocks or in bytes?
+        directoryLastBlock[0x1a] = 1; // Location of the VMS header within the file. (Ignored for game files?)
         directoryLastBlock[0x1b] = 0;
 
         directoryLastBlock.Slice(0x1c, length: 4).Clear();

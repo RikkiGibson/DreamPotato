@@ -25,8 +25,6 @@ public class Display(Cpu cpu)
 
     public ReadOnlySpan<byte> GetBytes()
     {
-        // TODO: maybe could reduce CPU by returning a flag indicating whether display content has changed since last query
-        // This might also give us insight into the "effective framerate" of VMU apps
         Draw();
         return _bytes;
     }
@@ -45,8 +43,7 @@ public class Display(Cpu cpu)
         return icons;
     }
 
-    // TODO: make private, operate only on _bytes
-    public void Draw()
+    private void Draw()
     {
         if (!cpu.SFRs.Vccr.DisplayControl)
         {

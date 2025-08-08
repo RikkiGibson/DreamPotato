@@ -75,13 +75,12 @@ struct MapleAddress
     public DreamcastPort Port
     {
         get => (DreamcastPort)(_value >> 6);
-        // TODO: this is likely incorrect.
         set => _value = (byte)(((byte)value << 6) | (_value & ~0b1100_0000));
     }
     public DreamcastSlot Slot
     {
         get => (DreamcastSlot)(_value & 0b0001_1111);
-        // TODO: likely incorrect.
+        // TODO: verify correctness once "slot 2" support is implemented
         set => _value = (byte)((byte)value | _value & ~0b0001_1111);
     }
 
