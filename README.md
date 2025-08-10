@@ -15,12 +15,17 @@ See [compatibility.md](compatibility.md) for the current compatibility status of
 
 DreamPotato can connect to Flycast to support an experience similar to using a real Dreamcast and VMU together. Currently, trying this out requires building the [Flycast vmuconn branch](https://github.com/RikkiGibson/flycast/tree/vmuconn) from source.
 
-A few caveats:
-1. A controller needs to be plugged in to your PC, due to a hack/workaround being used for the Flycast prototype.
-2. Make sure you launch DreamPotato before Flycast, as DreamPotato runs the server side of the TCP connection.
-3. A valid VMU file must be opened manually as automatic initialization of the VMU flash storage isn't yet implemented.
-4. When the VMU is ejected, the BIOS puts it to sleep, you'll have to hit Sleep again before being able to do anything.
-5. In Chao Adventure, make sure you hit Mode to exit the game before inserting the VMU, or your progress may not be saved.
+Instructions:
+1) DreamPotato defaults to connecting to Port A. You can go into the settings and change this if you wish.
+    - The VMU also only connects to slot 1 of a given port currently. This limitation will hopefully be lifted in the future.
+2) Open the Flycast controller settings. Enable "Use Physical VMU Memory". Enable "Use Network Expansion Devices" for the controller port you want to use to connect.
+3) Once both Flycast and DreamPotato are running, start a game in Flycast. After a moment, the swirl icon should appear in the DreamPotato menu bar indicating things are connected.
+4) If you get disconnected, pause Flycast and hit the Connect button to reconnect.
+
+Additional notes/caveats:
+1) DreamPotato will "take over" all the expansion devices for a given controller. So, if you want to do stuff like copy between Flycast-managed and DreamPotato-managed VMUs, you'll have to put them in separate controllers.
+2) DreamPotato does not play sound while docked to a controller. You should leave the Flycast VMU sound setting enabled if you want that. (DreamPotato *does* play sound in standalone mode.)
+3) In Chao Adventure, you need to hit Mode to exit the game before inserting the VMU, or your progress may not be saved.
 
 ## Usage
 
