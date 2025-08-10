@@ -4,7 +4,7 @@ Table missing a game you are interested in? Something not working right that isn
 
 Statuses:
 - 🟢 No issues or virtually unnoticeable issues
-- 🟡 but has issues
+- 🟡 Playable but has issues
 - 🔴 Unplayable/broken
 
 ## Commercial Games
