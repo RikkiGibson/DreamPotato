@@ -143,6 +143,7 @@ Start:
 
 CountMode:
     ; setup counting mode
+    ; mov #%10100011, OCR ; select quartz clock /6
     mov #0, ticks0
     mov #0, ticks1
     mov #0, ticks2
@@ -167,6 +168,7 @@ CountMode:
 
 ReportMode:
     ; setup reporting
+	  ; mov #%10000001, OCR ; select RC clock /6
     bn t0lIsChangingFlag,0,.t0lIsNotChanging
     ld ticks2
     or #$80
