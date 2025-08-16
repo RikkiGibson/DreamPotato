@@ -242,8 +242,6 @@ public class Game1 : Game
         var keyboard = Keyboard.GetState();
         var gamepad = GamePad.GetState(PlayerIndex.One);
 
-        if (keyboard.IsKeyDown(Keys.Escape))
-            Exit();
 
         // Only respect a pause command if VMU is in the ejected state
         if (Vmu.IsEjected && _buttonChecker.IsNewlyPressed(VmuButton.Pause, _previousKeys, keyboard, _previousGamepad, gamepad))
@@ -254,7 +252,7 @@ public class Game1 : Game
             Vmu.SaveState(id: "0");
 
         if (_buttonChecker.IsNewlyPressed(VmuButton.LoadState, _previousKeys, keyboard, _previousGamepad, gamepad))
-            Vmu.LoadStateById(id: "0");
+            Vmu.LoadStateById(id: "0", saveOopsFile: true);
 
         var newP3 = new Core.SFRs.P3()
         {

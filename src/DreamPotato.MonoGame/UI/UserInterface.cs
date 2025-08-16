@@ -103,16 +103,44 @@ class UserInterface
         bool doOpenResetModal = false;
         if (ImGui.BeginMenu("Emulation"))
         {
-            var pauseResumeLabel = _game.Paused ? "Resume" : "Pause";
-            if (ImGui.MenuItem(pauseResumeLabel))
+            var isEjected = _game.Vmu.IsEjected;
+            using (new DisabledScope(disabled: !isEjected))
             {
-                _game.Paused = !_game.Paused;
+                if (ImGui.MenuItem(_game.Paused ? "Resume" : "Pause"))
+                {
+                    _game.Paused = !_game.Paused;
+                }
+
+                if (ImGui.MenuItem("Reset"))
+                {
+                    // Workaround to delay calling OpenPopup: https://github.com/ocornut/imgui/issues/331#issuecomment-751372071
+                    doOpenResetModal = true;
+                }
             }
 
-            if (ImGui.MenuItem("Reset"))
+            if (ImGui.MenuItem(isEjected ? "Dock VMU" : "Eject VMU"))
             {
-                // Workaround to delay calling OpenPopup: https://github.com/ocornut/imgui/issues/331#issuecomment-751372071
-                doOpenResetModal = true;
+                _game.Vmu.InsertOrEject();
+            }
+
+            ImGui.Separator();
+
+            using (new DisabledScope(disabled: !isEjected || _game.Vmu.LoadedFilePath is null))
+            {
+                if (ImGui.MenuItem("Save State"))
+                {
+                    _game.Vmu.SaveState("0");
+                }
+
+                if (ImGui.MenuItem("Load State"))
+                {
+                    _game.Vmu.LoadStateById("0", saveOopsFile: true);
+                }
+
+                if (ImGui.MenuItem("Undo Load State"))
+                {
+                    _game.Vmu.LoadOopsFile();
+                }
             }
 
             ImGui.Separator();
@@ -246,5 +274,27 @@ class UserInterface
 
             ImGui.EndPopup();
         }
+    }
+}
+
+/// <summary>
+/// Wraps a scope where UI elements should be disabled according to some condition.
+/// Note that these aren't re-entrant. Don't try to nest them.
+/// </summary>
+struct DisabledScope : IDisposable
+{
+    private readonly bool _disabled;
+
+    public DisabledScope(bool disabled)
+    {
+        _disabled = disabled;
+        if (disabled)
+            ImGui.BeginDisabled();
+    }
+
+    public void Dispose()
+    {
+        if (_disabled)
+            ImGui.EndDisabled();
     }
 }

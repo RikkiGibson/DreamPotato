@@ -162,20 +162,22 @@ public class Vmu
     public static readonly ReadOnlyMemory<byte> SaveStateHeaderBytes = Encoding.UTF8.GetBytes(SaveStateHeaderMessage);
     public const int SaveStateVersion = 2;
 
-    private string GetSaveStatePath(string id)
+    private string? GetSaveStatePath(string id)
     {
         if (string.IsNullOrEmpty(LoadedFilePath))
-            throw new InvalidOperationException();
+            return null;
 
         var filePath = $"{Path.GetFileNameWithoutExtension(LoadedFilePath)}_{id}.dpstate";
         return Path.Combine(DataFolder, filePath);
     }
 
-    public void SaveState(string id)
+    public bool SaveState(string id)
     {
+        if (!IsEjected || GetSaveStatePath(id) is not string filePath)
+            return false;
+
         // TODO: it feels like it would be reasonable to zip/unzip the state implicitly.
         // But, 194k is also not that hefty.
-        var filePath = GetSaveStatePath(id);
         Debug.Assert(filePath.StartsWith(DataFolder, StringComparison.Ordinal));
         Directory.CreateDirectory(DataFolder);
         using var writeStream = File.Create(filePath);
@@ -185,17 +187,32 @@ public class Vmu
         BinaryPrimitives.WriteInt32LittleEndian(bytes, SaveStateVersion);
         writeStream.Write(bytes);
         _cpu.SaveState(writeStream);
+        return true;
     }
 
-    public void LoadStateById(string id)
+    public bool SaveOopsFile() => SaveState("oops");
+    public bool LoadOopsFile() => LoadStateById("oops", saveOopsFile: false);
+
+    public bool LoadStateById(string id, bool saveOopsFile)
     {
         var filePath = GetSaveStatePath(id);
-        LoadStateFromPath(filePath);
+        if (filePath is null)
+            return false;
+
+        return LoadStateFromPath(filePath, saveOopsFile);
     }
 
-    public void LoadStateFromPath(string filePath)
+    public bool LoadStateFromPath(string filePath, bool saveOopsFile)
     {
-        // TODO: before overwriting current state, save it to an oops file
+        if (!IsEjected)
+            return false;
+
+        if (saveOopsFile)
+        {
+            if (!SaveOopsFile())
+                return false;
+        }
+
         try
         {
             using var readStream = File.OpenRead(filePath);
@@ -212,10 +229,12 @@ public class Vmu
                 throw new InvalidOperationException($"Unsupported save state version '{version}'");
 
             _cpu.LoadState(readStream);
+            return true;
         }
         catch (FileNotFoundException)
         {
             _cpu.Logger.LogError($"Could not load state at '{filePath}' because it was not found.");
+            return false;
         }
     }
 }
