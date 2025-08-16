@@ -212,9 +212,6 @@ public class Vmu
                 throw new InvalidOperationException($"Unsupported save state version '{version}'");
 
             _cpu.LoadState(readStream);
-
-            // TODO: it seems like loading the state, when the associated file is a '.vmu'/.bin', should also overwrite the vmu file on disk.
-            // The emu itself only writes the bytes indicated by the STF instructions. So if we don't do that, we could end up in inconsistent state.
         }
         catch (FileNotFoundException)
         {

@@ -202,6 +202,9 @@ public class Cpu
 
         readStream.ReadExactly(ROM);
         readStream.ReadExactly(Flash);
+        if (VmuFileHandle is not null)
+            RandomAccess.Write(VmuFileHandle, Flash, fileOffset: 0);
+
         InstructionBank = (InstructionBank)readStream.ReadByte();
         Memory.LoadState(readStream);
 

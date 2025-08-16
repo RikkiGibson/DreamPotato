@@ -3,7 +3,7 @@
 DreamPotato is a Dreamcast VMU emulator in currently in alpha. For the moment only Windows builds are available.
 
 > [!WARNING]
-> When opening a `.vmu` or `.bin` file, the emulator will modify the file on disk while running in order to persist changes, such as save file changes on the memory card or saving your progress in minigames.
+> When opening a `.vmu` or `.bin` file, the emulator will modify the file on disk while running in order to persist changes, such as save file changes on the memory card, saving your progress in minigames, or when using the Load State command.
 > Since the emulator is in alpha state, please make copies of any VMU files before loading them to avoid any chance of corrupting your saves.
 > `.vms` files opened in the emulator will not be modified.
 
