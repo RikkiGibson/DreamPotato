@@ -38,58 +38,66 @@ public record Configuration(
     {
         var path = FilePath;
         if (!File.Exists(path))
-            return Preset_DreamcastSimultaneous;
+            return Default;
 
         using var fileStream = File.OpenRead(path);
-        return JsonSerializer.Deserialize(fileStream, ConfigurationJsonSerializerContext.Default.Configuration) ?? Preset_DreamcastSimultaneous;
+        return JsonSerializer.Deserialize(fileStream, ConfigurationJsonSerializerContext.Default.Configuration) ?? Default;
     }
 
-    // NOTE: you may need to delete configuration.json from the build folder for changes to defaults to take effect.
-    public static Configuration Default = new Configuration()
-    {
-        ColorPaletteName = ColorPalette.White.Name,
-        KeyMappings = [
-            new KeyMapping { SourceKey = Keys.W, TargetButton = VmuButton.Up },
-            new KeyMapping { SourceKey = Keys.S, TargetButton = VmuButton.Down },
-            new KeyMapping { SourceKey = Keys.A, TargetButton = VmuButton.Left },
-            new KeyMapping { SourceKey = Keys.D, TargetButton = VmuButton.Right },
-            new KeyMapping { SourceKey = Keys.K, TargetButton = VmuButton.A },
-            new KeyMapping { SourceKey = Keys.L, TargetButton = VmuButton.B },
-            new KeyMapping { SourceKey = Keys.I, TargetButton = VmuButton.Mode },
-            new KeyMapping { SourceKey = Keys.J, TargetButton = VmuButton.Sleep },
+    public static readonly ImmutableArray<KeyMapping> KeyPreset_Default = [
+        new KeyMapping { SourceKey = Keys.W, TargetButton = VmuButton.Up },
+        new KeyMapping { SourceKey = Keys.S, TargetButton = VmuButton.Down },
+        new KeyMapping { SourceKey = Keys.A, TargetButton = VmuButton.Left },
+        new KeyMapping { SourceKey = Keys.D, TargetButton = VmuButton.Right },
+        new KeyMapping { SourceKey = Keys.K, TargetButton = VmuButton.A },
+        new KeyMapping { SourceKey = Keys.L, TargetButton = VmuButton.B },
+        new KeyMapping { SourceKey = Keys.I, TargetButton = VmuButton.Mode },
+        new KeyMapping { SourceKey = Keys.J, TargetButton = VmuButton.Sleep },
 
-            new KeyMapping { SourceKey = Keys.Insert, TargetButton = VmuButton.InsertEject },
+        new KeyMapping { SourceKey = Keys.Insert, TargetButton = VmuButton.InsertEject },
 
-            new KeyMapping { SourceKey = Keys.F5, TargetButton = VmuButton.SaveState },
-            new KeyMapping { SourceKey = Keys.F8, TargetButton = VmuButton.LoadState },
-            new KeyMapping { SourceKey = Keys.F10, TargetButton = VmuButton.Pause },
-            new KeyMapping { SourceKey = Keys.Tab, TargetButton = VmuButton.FastForward },
-        ],
-        ButtonMappings = [
-            new ButtonMapping { SourceButton = Buttons.DPadUp, TargetButton = VmuButton.Up },
-            new ButtonMapping { SourceButton = Buttons.DPadDown, TargetButton = VmuButton.Down },
-            new ButtonMapping { SourceButton = Buttons.DPadLeft, TargetButton = VmuButton.Left },
-            new ButtonMapping { SourceButton = Buttons.DPadRight, TargetButton = VmuButton.Right },
-            new ButtonMapping { SourceButton = Buttons.A, TargetButton = VmuButton.A },
-            new ButtonMapping { SourceButton = Buttons.B, TargetButton = VmuButton.B },
-            new ButtonMapping { SourceButton = Buttons.Start, TargetButton = VmuButton.Mode },
-            new ButtonMapping { SourceButton = Buttons.BigButton, TargetButton = VmuButton.Sleep },
-        ],
-    };
+        new KeyMapping { SourceKey = Keys.F5, TargetButton = VmuButton.SaveState },
+        new KeyMapping { SourceKey = Keys.F8, TargetButton = VmuButton.LoadState },
+        new KeyMapping { SourceKey = Keys.F10, TargetButton = VmuButton.Pause },
+        new KeyMapping { SourceKey = Keys.Tab, TargetButton = VmuButton.FastForward },
+    ];
+
+    public static readonly ImmutableArray<ButtonMapping> ButtonPreset_Default = [
+        new ButtonMapping { SourceButton = Buttons.DPadUp, TargetButton = VmuButton.Up },
+        new ButtonMapping { SourceButton = Buttons.DPadDown, TargetButton = VmuButton.Down },
+        new ButtonMapping { SourceButton = Buttons.DPadLeft, TargetButton = VmuButton.Left },
+        new ButtonMapping { SourceButton = Buttons.DPadRight, TargetButton = VmuButton.Right },
+        new ButtonMapping { SourceButton = Buttons.A, TargetButton = VmuButton.A },
+        new ButtonMapping { SourceButton = Buttons.B, TargetButton = VmuButton.B },
+        new ButtonMapping { SourceButton = Buttons.Start, TargetButton = VmuButton.Mode },
+        new ButtonMapping { SourceButton = Buttons.BigButton, TargetButton = VmuButton.Sleep },
+    ];
 
     /// <summary>Configuration suitable for controlling both Dreamcast and VMU using a single gamepad.</summary>
-    public static Configuration Preset_DreamcastSimultaneous = Default with
+    public static readonly ImmutableArray<ButtonMapping> ButtonPreset_DreamcastSimultaneous = [
+        new ButtonMapping { SourceButton = Buttons.RightThumbstickUp, TargetButton = VmuButton.Up },
+        new ButtonMapping { SourceButton = Buttons.RightThumbstickDown, TargetButton = VmuButton.Down },
+        new ButtonMapping { SourceButton = Buttons.RightThumbstickLeft, TargetButton = VmuButton.Left },
+        new ButtonMapping { SourceButton = Buttons.RightThumbstickRight, TargetButton = VmuButton.Right },
+        new ButtonMapping { SourceButton = Buttons.RightShoulder, TargetButton = VmuButton.A },
+        new ButtonMapping { SourceButton = Buttons.LeftShoulder, TargetButton = VmuButton.B },
+        new ButtonMapping { SourceButton = Buttons.Start, TargetButton = VmuButton.Mode },
+        new ButtonMapping { SourceButton = Buttons.Back, TargetButton = VmuButton.Sleep },
+    ];
+
+    public static readonly ImmutableArray<(string name, string description, ImmutableArray<ButtonMapping> mappings)> AllButtonPresets = [
+        ("Default", "General purpose preset", ButtonPreset_Default),
+        ("Sidecar", """
+            Allows mapping both Dreamcast and
+            VMU buttons to a single gamepad
+            """, ButtonPreset_DreamcastSimultaneous),
+    ];
+
+    public static readonly Configuration Default = new Configuration()
     {
-        ButtonMappings = [
-            new ButtonMapping { SourceButton = Buttons.RightThumbstickUp, TargetButton = VmuButton.Up },
-            new ButtonMapping { SourceButton = Buttons.RightThumbstickDown, TargetButton = VmuButton.Down },
-            new ButtonMapping { SourceButton = Buttons.RightThumbstickLeft, TargetButton = VmuButton.Left },
-            new ButtonMapping { SourceButton = Buttons.RightThumbstickRight, TargetButton = VmuButton.Right },
-            new ButtonMapping { SourceButton = Buttons.RightShoulder, TargetButton = VmuButton.A },
-            new ButtonMapping { SourceButton = Buttons.LeftShoulder, TargetButton = VmuButton.B },
-            new ButtonMapping { SourceButton = Buttons.RightStick, TargetButton = VmuButton.Mode },
-            new ButtonMapping { SourceButton = Buttons.Back, TargetButton = VmuButton.Sleep },
-        ],
+        ColorPaletteName = ColorPalette.White.Name,
+        KeyMappings = KeyPreset_Default,
+        ButtonMappings = ButtonPreset_Default,
     };
 }
 

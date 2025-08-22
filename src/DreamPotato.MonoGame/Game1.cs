@@ -10,6 +10,7 @@ using Microsoft.Xna.Framework.Input;
 using DreamPotato.Core;
 using DreamPotato.MonoGame.UI;
 using System.Linq;
+using System.Collections.Immutable;
 
 namespace DreamPotato.MonoGame;
 
@@ -186,6 +187,18 @@ public class Game1 : Game
 
     internal void Configuration_DoneEditing()
     {
+        Configuration.Save();
+    }
+
+    internal void Configuration_DoneEditingKeyMappings(ImmutableArray<KeyMapping> keyMappings)
+    {
+        Configuration = Configuration with { KeyMappings = keyMappings };
+        Configuration.Save();
+    }
+
+    internal void Configuration_DoneEditingButtonMappings(ImmutableArray<ButtonMapping> buttonMappings)
+    {
+        Configuration = Configuration with { ButtonMappings = buttonMappings };
         Configuration.Save();
     }
 

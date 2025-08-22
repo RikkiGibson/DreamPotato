@@ -1,7 +1,10 @@
 
 using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 
 using DreamPotato.Core;
 
@@ -9,6 +12,7 @@ using ImGuiNET;
 
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 
 using NativeFileDialogSharp;
 
@@ -23,6 +27,14 @@ class UserInterface
     private ImGuiRenderer _imGuiRenderer = null!;
     private Texture2D _userInterfaceTexture = null!;
     private nint _rawIconConnectedTexture;
+
+    private bool _pauseWhenClosed;
+
+    private int _editedMappingIndex = -1;
+    private List<KeyMapping>? _editingKeyMappings;
+    private List<ButtonMapping>? _editingButtonMappings;
+
+    private int _buttonPresetIndex = 0;
 
     public UserInterface(Game1 game)
     {
@@ -50,10 +62,41 @@ class UserInterface
         _imGuiRenderer.AfterLayout();
     }
 
+    private void Pause()
+    {
+        // TODO: if user presses insert/eject while in menus we can end up unpausing when we shouldn't.
+        _pauseWhenClosed = _game.Paused;
+        _game.Paused = true;
+    }
+
+    private void OpenPopupAndPause(string name)
+    {
+        Pause();
+        ImGui.OpenPopup(name);
+    }
+
+    private void Unpause()
+    {
+        _game.Paused = _pauseWhenClosed;
+    }
+
+    private void ClosePopupAndUnpause()
+    {
+        Unpause();
+        ImGui.CloseCurrentPopup();
+    }
+
     private void LayoutImpl()
     {
         LayoutMenuBar();
         LayoutSettings();
+
+        LayoutKeyMapping();
+        LayoutEditKey();
+
+        LayoutButtonMapping();
+        LayoutEditButton();
+
         LayoutResetModal();
     }
 
@@ -99,8 +142,8 @@ class UserInterface
             ImGui.EndMenu();
         }
 
-        bool doOpenSettings = false;
         bool doOpenResetModal = false;
+        bool doOpenSettings = false;
         if (ImGui.BeginMenu("Emulation"))
         {
             var isEjected = _game.Vmu.IsEjected;
@@ -143,12 +186,29 @@ class UserInterface
                 }
             }
 
-            ImGui.Separator();
+            ImGui.EndMenu();
+        }
 
-            if (ImGui.MenuItem("Settings"))
+        if (ImGui.BeginMenu("Settings"))
+        {
+            if (ImGui.MenuItem("General"))
             {
                 // Workaround to delay calling OpenPopup: https://github.com/ocornut/imgui/issues/331#issuecomment-751372071
                 doOpenSettings = true;
+            }
+
+            if (ImGui.MenuItem("Key Mapping"))
+            {
+                // Workaround to delay calling OpenPopup: https://github.com/ocornut/imgui/issues/331#issuecomment-751372071
+                Pause();
+                _editingKeyMappings = _game.Configuration.KeyMappings.ToList();
+            }
+
+            if (ImGui.MenuItem("Button Mapping"))
+            {
+                // Workaround to delay calling OpenPopup: https://github.com/ocornut/imgui/issues/331#issuecomment-751372071
+                Pause();
+                _editingButtonMappings = _game.Configuration.ButtonMappings.ToList();
             }
 
             if (ImGui.MenuItem("Open Data Folder"))
@@ -179,11 +239,11 @@ class UserInterface
 
         ImGui.EndMainMenuBar();
 
-        if (doOpenSettings)
-            ImGui.OpenPopup("Settings");
-
         if (doOpenResetModal)
-            ImGui.OpenPopup("Reset?");
+            OpenPopupAndPause("Reset?");
+
+        if (doOpenSettings)
+            OpenPopupAndPause("Settings");
     }
 
     private static readonly string[] AllDreamcastSlotNames = ["A1", "B1", "C1", "D1"];
@@ -192,13 +252,14 @@ class UserInterface
     {
         var configuration = _game.Configuration;
 
-        ImGui.SetNextWindowSize(Numerics.Vector2.Create(x: Game1.TotalScreenWidth * 8 / 10, y: Game1.TotalScreenHeight * 8 / 10));
+        // TODO: should not set this every frame. do it when calling OpenPopup or something
+        // ImGui.SetNextWindowSize(Numerics.Vector2.Create(x: Game1.TotalScreenWidth * 8 / 10, y: Game1.TotalScreenHeight * 8 / 10));
         if (ImGui.BeginPopupModal("Settings"))
         {
             if (ImGui.Button("Done"))
             {
                 _game.Configuration_DoneEditing();
-                ImGui.CloseCurrentPopup();
+                ClosePopupAndUnpause();
             }
 
             var autoInitializeDate = configuration.AutoInitializeDate;
@@ -256,6 +317,224 @@ class UserInterface
         }
     }
 
+    private void LayoutKeyMapping()
+    {
+        if (_editingKeyMappings is null)
+            return;
+
+        bool doOpenEditKey = false;
+
+        ImGui.Begin("Key Mappings", ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.Modal);
+        {
+            if (ImGui.Button("Save"))
+            {
+                _game.Configuration_DoneEditingKeyMappings(_editingKeyMappings.ToImmutableArray());
+                _editingKeyMappings = null;
+                Unpause();
+                ImGui.End();
+                return;
+            }
+
+            ImGui.SameLine();
+            if (ImGui.Button("Cancel"))
+            {
+                _editingKeyMappings = null;
+                Unpause();
+                ImGui.End();
+                return;
+            }
+
+            ImGui.SameLine();
+            if (ImGui.Button("Reset to Default"))
+            {
+                _editingKeyMappings = [.. Configuration.KeyPreset_Default];
+            }
+
+            if (ImGui.BeginTable("Key Mappings", columns: 2, ImGuiTableFlags.Borders))
+            {
+                ImGui.TableSetupColumn(label: "", flags: ImGuiTableColumnFlags.WidthFixed);
+                ImGui.TableSetupColumn(label: "", flags: ImGuiTableColumnFlags.WidthStretch);
+
+                for (int i = 0; i < _editingKeyMappings.Count; i++)
+                {
+                    ImGui.PushID(i);
+
+                    var mapping = _editingKeyMappings[i];
+                    ImGui.TableNextRow();
+                    ImGui.TableSetColumnIndex(0);
+                    ImGui.Text(mapping.TargetButton.ToString());
+
+                    ImGui.TableSetColumnIndex(1);
+                    if (ImGui.Button(mapping.SourceKey.ToString()))
+                    {
+                        _editedMappingIndex = i;
+                        doOpenEditKey = true;
+                    }
+
+                    ImGui.PopID();
+                }
+                ImGui.EndTable();
+            }
+
+            ImGui.End();
+        }
+
+        if (doOpenEditKey)
+            ImGui.OpenPopup("Edit Key");
+    }
+
+    private void LayoutButtonMapping()
+    {
+        if (_editingButtonMappings is null)
+            return;
+
+        bool doOpenEditKey = false;
+
+        ImGui.Begin("Button Mappings", ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.Modal);
+        {
+            if (ImGui.Button("Save"))
+            {
+                _game.Configuration_DoneEditingButtonMappings(_editingButtonMappings.ToImmutableArray());
+                _editingButtonMappings = null;
+                Unpause();
+                ImGui.End();
+                return;
+            }
+
+            ImGui.SameLine();
+            if (ImGui.Button("Cancel"))
+            {
+                _editingButtonMappings = null;
+                Unpause();
+                ImGui.End();
+                return;
+            }
+            ImGui.Separator();
+
+            ImGui.PushID("ButtonPresetCombo");
+            ImGui.SetNextItemWidth(80);
+            if (ImGui.BeginCombo(label: "", preview_value: Configuration.AllButtonPresets[_buttonPresetIndex].name))
+            {
+                for (int i = 0; i < Configuration.AllButtonPresets.Length; i++)
+                {
+                    if (ImGui.Selectable(Configuration.AllButtonPresets[i].name))
+                        _buttonPresetIndex = i;
+
+                    if (ImGui.BeginItemTooltip())
+                    {
+                        ImGui.Text(Configuration.AllButtonPresets[i].description);
+                        ImGui.EndTooltip();
+                    }
+                }
+
+                ImGui.EndCombo();
+            }
+
+            if (ImGui.BeginItemTooltip())
+            {
+                ImGui.Text(Configuration.AllButtonPresets[_buttonPresetIndex].description);
+                ImGui.EndTooltip();
+            }
+
+            ImGui.PopID();
+            ImGui.SameLine();
+
+            if (ImGui.Button("Apply Preset"))
+            {
+                var preset = Configuration.AllButtonPresets[_buttonPresetIndex].mappings;
+                _editingButtonMappings = [.. preset];
+            }
+
+            if (ImGui.BeginTable("Button Mappings", columns: 2, ImGuiTableFlags.Borders))
+            {
+                ImGui.TableSetupColumn(label: "", flags: ImGuiTableColumnFlags.WidthFixed);
+                ImGui.TableSetupColumn(label: "", flags: ImGuiTableColumnFlags.WidthStretch);
+
+                for (int i = 0; i < _editingButtonMappings.Count; i++)
+                {
+                    ImGui.PushID(i);
+
+                    var mapping = _editingButtonMappings[i];
+                    ImGui.TableNextRow();
+                    ImGui.TableSetColumnIndex(0);
+                    ImGui.Text(mapping.TargetButton.ToString());
+
+                    ImGui.TableSetColumnIndex(1);
+                    if (ImGui.Button(mapping.SourceButton.ToString()))
+                    {
+                        _editedMappingIndex = i;
+                        doOpenEditKey = true;
+                    }
+
+                    ImGui.PopID();
+                }
+                ImGui.EndTable();
+            }
+
+            ImGui.End();
+        }
+
+        if (doOpenEditKey)
+            ImGui.OpenPopup("Edit Button");
+    }
+
+    private void LayoutEditKey()
+    {
+        if (ImGui.BeginPopup("Edit Key"))
+        {
+            if (_editingKeyMappings is null)
+                throw new InvalidOperationException();
+
+            ImGui.Text($"Target button: {_editingKeyMappings[_editedMappingIndex].TargetButton}");
+            ImGui.Text("Press a key or press ESC to cancel.");
+
+            var keyboard = Keyboard.GetState();
+            if (keyboard.IsKeyDown(Keys.Escape))
+            {
+                ImGui.CloseCurrentPopup();
+            }
+            else if (keyboard.GetPressedKeyCount() != 0)
+            {
+                var key = keyboard.GetPressedKeys()[0];
+                _editingKeyMappings[_editedMappingIndex] = _editingKeyMappings[_editedMappingIndex] with { SourceKey = key };
+                ImGui.CloseCurrentPopup();
+            }
+
+            ImGui.EndPopup();
+        }
+    }
+
+    private void LayoutEditButton()
+    {
+        if (ImGui.BeginPopup("Edit Button"))
+        {
+            if (_editingButtonMappings is null)
+                throw new InvalidOperationException();
+
+            ImGui.Text($"Target button: {_editingButtonMappings[_editedMappingIndex].TargetButton}");
+            ImGui.Text("Press a button or press ESC to cancel.");
+
+            if (Keyboard.GetState().IsKeyDown(Keys.Escape))
+            {
+                ImGui.CloseCurrentPopup();
+                ImGui.EndPopup();
+                return;
+            }
+
+            var gamepad = GamePad.GetState(PlayerIndex.One);
+            var sourceButton = Enum.GetValues<Buttons>().FirstOrDefault(b => gamepad.IsButtonDown(b));
+            if (sourceButton == default)
+            {
+                ImGui.EndPopup();
+                return;
+            }
+
+            _editingButtonMappings[_editedMappingIndex] = _editingButtonMappings[_editedMappingIndex] with { SourceButton = sourceButton };
+            ImGui.CloseCurrentPopup();
+            ImGui.EndPopup();
+        }
+    }
+
     private void LayoutResetModal()
     {
         ImGui.SetNextWindowSize(Numerics.Vector2.Create(x: Game1.TotalScreenWidth * 3 / 4, y: Game1.TotalScreenHeight * 1 / 4));
@@ -265,12 +544,12 @@ class UserInterface
             if (ImGui.Button("Reset"))
             {
                 _game.Reset();
-                ImGui.CloseCurrentPopup();
+                ClosePopupAndUnpause();
             }
 
             ImGui.SameLine();
             if (ImGui.Button("Cancel"))
-                ImGui.CloseCurrentPopup();
+                ClosePopupAndUnpause();
 
             ImGui.EndPopup();
         }
