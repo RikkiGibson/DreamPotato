@@ -57,7 +57,7 @@ Key and button mappings can be changed in Settings -> Keyboard Config / Gamepad 
 
 ## Building
 
-- You'll need the [.NET 9 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/9.0) installed on your computer.
+- You'll need a [.NET 9 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/9.0) matching the version in [global.json](./global.json) installed on your computer.
 - Copy your `american_v1.05.bin` VMU ROM into `src/DreamPotato.MonoGame/Data/`.
 - Build everything: `dotnet build`.
 - Run the emulator: `dotnet run --project src/DreamPotato.MonoGame`.
