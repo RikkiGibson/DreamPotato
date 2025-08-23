@@ -422,7 +422,7 @@ class UserInterface
 
         bool doOpenEditKey = false;
 
-        ImGui.Begin("Button Config", ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.Modal);
+        ImGui.Begin("Gamepad Config", ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.Modal);
         {
             if (ImGui.Button("Save"))
             {
