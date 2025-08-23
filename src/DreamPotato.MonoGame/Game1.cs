@@ -50,6 +50,7 @@ public class Game1 : Game
     private Texture2D _iconIOTexture = null!;
     private Texture2D _iconSleepTexture = null!;
     private Texture2D _iconConnectedTexture = null!;
+    private Texture2D _iconAutoSaveTexture = null!;
 
     private ButtonChecker _buttonChecker = null!;
     private UserInterface _userInterface = null!;
@@ -212,9 +213,10 @@ public class Game1 : Game
         _iconIOTexture = Content.Load<Texture2D>("VMUIconIO");
         _iconSleepTexture = Content.Load<Texture2D>("VMUIconSleep");
         _iconConnectedTexture = Content.Load<Texture2D>("DreamcastConnectedIcon");
+        _iconAutoSaveTexture = Content.Load<Texture2D>("AutoSaveIcon");
 
         _userInterface = new UserInterface(this);
-        _userInterface.Initialize(_iconConnectedTexture);
+        _userInterface.Initialize(_iconConnectedTexture, _iconAutoSaveTexture);
         _graphics.ApplyChanges();
 
         if (Debugger.IsAttached)

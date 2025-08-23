@@ -13,6 +13,7 @@ public class Vmu
     public Audio Audio => _cpu.Audio;
     public Display Display => _cpu.Display;
     public string? LoadedFilePath { get; private set; }
+    public bool AutoSavingChanges => _cpu.VmuFileHandle != null;
 
     public Vmu()
     {
