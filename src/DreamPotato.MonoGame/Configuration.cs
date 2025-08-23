@@ -44,7 +44,7 @@ public record Configuration(
         return JsonSerializer.Deserialize(fileStream, ConfigurationJsonSerializerContext.Default.Configuration) ?? Default;
     }
 
-    public static readonly ImmutableArray<KeyMapping> KeyPreset_Default = [
+    public static readonly ImmutableArray<KeyMapping> KeyPreset_WASD = [
         new KeyMapping { SourceKey = Keys.W, TargetButton = VmuButton.Up },
         new KeyMapping { SourceKey = Keys.S, TargetButton = VmuButton.Down },
         new KeyMapping { SourceKey = Keys.A, TargetButton = VmuButton.Left },
@@ -62,6 +62,29 @@ public record Configuration(
         new KeyMapping { SourceKey = Keys.Tab, TargetButton = VmuButton.FastForward },
     ];
 
+    public static readonly ImmutableArray<KeyMapping> KeyPreset_Arrows = [
+        new KeyMapping { SourceKey = Keys.Up, TargetButton = VmuButton.Up },
+        new KeyMapping { SourceKey = Keys.Down, TargetButton = VmuButton.Down },
+        new KeyMapping { SourceKey = Keys.Left, TargetButton = VmuButton.Left },
+        new KeyMapping { SourceKey = Keys.Right, TargetButton = VmuButton.Right },
+        new KeyMapping { SourceKey = Keys.C, TargetButton = VmuButton.A },
+        new KeyMapping { SourceKey = Keys.X, TargetButton = VmuButton.B },
+        new KeyMapping { SourceKey = Keys.D, TargetButton = VmuButton.Mode },
+        new KeyMapping { SourceKey = Keys.S, TargetButton = VmuButton.Sleep },
+
+        new KeyMapping { SourceKey = Keys.Insert, TargetButton = VmuButton.InsertEject },
+
+        new KeyMapping { SourceKey = Keys.F5, TargetButton = VmuButton.SaveState },
+        new KeyMapping { SourceKey = Keys.F8, TargetButton = VmuButton.LoadState },
+        new KeyMapping { SourceKey = Keys.F10, TargetButton = VmuButton.Pause },
+        new KeyMapping { SourceKey = Keys.Tab, TargetButton = VmuButton.FastForward },
+    ];
+
+    public static readonly ImmutableArray<(string name, string description, ImmutableArray<KeyMapping> mappings)> AllKeyPresets = [
+        ("WASD", "Uses WASD for D-pad and IJKL for buttons", KeyPreset_WASD),
+        ("Arrows", "Uses arrows for D-pad and XCSD for buttons", KeyPreset_Arrows)
+    ];
+
     public static readonly ImmutableArray<ButtonMapping> ButtonPreset_Default = [
         new ButtonMapping { SourceButton = Buttons.DPadUp, TargetButton = VmuButton.Up },
         new ButtonMapping { SourceButton = Buttons.DPadDown, TargetButton = VmuButton.Down },
@@ -70,11 +93,11 @@ public record Configuration(
         new ButtonMapping { SourceButton = Buttons.A, TargetButton = VmuButton.A },
         new ButtonMapping { SourceButton = Buttons.B, TargetButton = VmuButton.B },
         new ButtonMapping { SourceButton = Buttons.Start, TargetButton = VmuButton.Mode },
-        new ButtonMapping { SourceButton = Buttons.BigButton, TargetButton = VmuButton.Sleep },
+        new ButtonMapping { SourceButton = Buttons.Back, TargetButton = VmuButton.Sleep },
     ];
 
     /// <summary>Configuration suitable for controlling both Dreamcast and VMU using a single gamepad.</summary>
-    public static readonly ImmutableArray<ButtonMapping> ButtonPreset_DreamcastSimultaneous = [
+    public static readonly ImmutableArray<ButtonMapping> ButtonPreset_Sidecar = [
         new ButtonMapping { SourceButton = Buttons.RightThumbstickUp, TargetButton = VmuButton.Up },
         new ButtonMapping { SourceButton = Buttons.RightThumbstickDown, TargetButton = VmuButton.Down },
         new ButtonMapping { SourceButton = Buttons.RightThumbstickLeft, TargetButton = VmuButton.Left },
@@ -90,13 +113,13 @@ public record Configuration(
         ("Sidecar", """
             Allows mapping both Dreamcast and
             VMU buttons to a single gamepad
-            """, ButtonPreset_DreamcastSimultaneous),
+            """, ButtonPreset_Sidecar),
     ];
 
     public static readonly Configuration Default = new Configuration()
     {
         ColorPaletteName = ColorPalette.White.Name,
-        KeyMappings = KeyPreset_Default,
+        KeyMappings = KeyPreset_WASD,
         ButtonMappings = ButtonPreset_Default,
     };
 }

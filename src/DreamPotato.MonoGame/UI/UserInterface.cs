@@ -35,6 +35,7 @@ class UserInterface
     private List<ButtonMapping>? _editingButtonMappings;
 
     private int _buttonPresetIndex = 0;
+    private int _keyPresetIndex = 0;
 
     public UserInterface(Game1 game)
     {
@@ -197,14 +198,14 @@ class UserInterface
                 doOpenSettings = true;
             }
 
-            if (ImGui.MenuItem("Key Mapping"))
+            if (ImGui.MenuItem("Keyboard Config"))
             {
                 // Workaround to delay calling OpenPopup: https://github.com/ocornut/imgui/issues/331#issuecomment-751372071
                 Pause();
                 _editingKeyMappings = _game.Configuration.KeyMappings.ToList();
             }
 
-            if (ImGui.MenuItem("Button Mapping"))
+            if (ImGui.MenuItem("Gamepad Config"))
             {
                 // Workaround to delay calling OpenPopup: https://github.com/ocornut/imgui/issues/331#issuecomment-751372071
                 Pause();
@@ -324,7 +325,7 @@ class UserInterface
 
         bool doOpenEditKey = false;
 
-        ImGui.Begin("Key Mappings", ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.Modal);
+        ImGui.Begin("Keyboard Config", ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.Modal);
         {
             if (ImGui.Button("Save"))
             {
@@ -344,11 +345,42 @@ class UserInterface
                 return;
             }
 
-            ImGui.SameLine();
-            if (ImGui.Button("Reset to Default"))
+            ImGui.SeparatorText("Presets");
+            ImGui.PushID("KeyPresetCombo");
+            ImGui.SetNextItemWidth(80);
+            if (ImGui.BeginCombo(label: "", preview_value: Configuration.AllKeyPresets[_keyPresetIndex].name))
             {
-                _editingKeyMappings = [.. Configuration.KeyPreset_Default];
+                for (int i = 0; i < Configuration.AllKeyPresets.Length; i++)
+                {
+                    if (ImGui.Selectable(Configuration.AllKeyPresets[i].name))
+                        _keyPresetIndex = i;
+
+                    if (ImGui.BeginItemTooltip())
+                    {
+                        ImGui.Text(Configuration.AllKeyPresets[i].description);
+                        ImGui.EndTooltip();
+                    }
+                }
+
+                ImGui.EndCombo();
             }
+
+            if (ImGui.BeginItemTooltip())
+            {
+                ImGui.Text(Configuration.AllKeyPresets[_keyPresetIndex].description);
+                ImGui.EndTooltip();
+            }
+
+            ImGui.PopID();
+            ImGui.SameLine();
+
+            if (ImGui.Button("Apply"))
+            {
+                var preset = Configuration.AllKeyPresets[_keyPresetIndex].mappings;
+                _editingKeyMappings = [.. preset];
+            }
+
+            ImGui.SeparatorText("Mappings");
 
             if (ImGui.BeginTable("Key Mappings", columns: 2, ImGuiTableFlags.Borders))
             {
@@ -390,7 +422,7 @@ class UserInterface
 
         bool doOpenEditKey = false;
 
-        ImGui.Begin("Button Mappings", ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.Modal);
+        ImGui.Begin("Button Config", ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.Modal);
         {
             if (ImGui.Button("Save"))
             {
@@ -409,8 +441,8 @@ class UserInterface
                 ImGui.End();
                 return;
             }
-            ImGui.Separator();
 
+            ImGui.SeparatorText("Presets");
             ImGui.PushID("ButtonPresetCombo");
             ImGui.SetNextItemWidth(80);
             if (ImGui.BeginCombo(label: "", preview_value: Configuration.AllButtonPresets[_buttonPresetIndex].name))
@@ -439,11 +471,13 @@ class UserInterface
             ImGui.PopID();
             ImGui.SameLine();
 
-            if (ImGui.Button("Apply Preset"))
+            if (ImGui.Button("Apply"))
             {
                 var preset = Configuration.AllButtonPresets[_buttonPresetIndex].mappings;
                 _editingButtonMappings = [.. preset];
             }
+
+            ImGui.SeparatorText("Mappings");
 
             if (ImGui.BeginTable("Button Mappings", columns: 2, ImGuiTableFlags.Borders))
             {

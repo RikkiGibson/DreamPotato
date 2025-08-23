@@ -193,12 +193,14 @@ public class Game1 : Game
     internal void Configuration_DoneEditingKeyMappings(ImmutableArray<KeyMapping> keyMappings)
     {
         Configuration = Configuration with { KeyMappings = keyMappings };
+        _buttonChecker = new ButtonChecker(Configuration);
         Configuration.Save();
     }
 
     internal void Configuration_DoneEditingButtonMappings(ImmutableArray<ButtonMapping> buttonMappings)
     {
         Configuration = Configuration with { ButtonMappings = buttonMappings };
+        _buttonChecker = new ButtonChecker(Configuration);
         Configuration.Save();
     }
 

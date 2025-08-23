@@ -47,27 +47,13 @@ Download the latest bits from the [Releases](https://github.com/RikkiGibson/Drea
 - F10 - Pause/Resume
 - Tab (hold) - Fast Forward
 
-### Default Gamepad Button Mappings
-
-Currently an unusual control scheme is used by default to make it easier to map the Dreamcast buttons and VMU buttons onto a single controller.
-
-- Right Thumbstick - Up/Left/Down/Right
-- Right Shoulder - A
-- Left Shoulder - B
-- Back - Sleep
-- Right Stick Press - Mode
-
-For the moment, if you build from source, you can change usages of `Preset_DreamcastSimultaneous` to `Default`, in order to use a normal button mapping. Just make sure to delete `configuration.json` from the output directory so that your new default is used.
-
 ### Configuration
 
-Button mapping is done by editing a json file by hand for now. Eventually a proper button mapping UI would be desirable of course.
-
-`"SourceKey"`/`"SourceButton"` means the key/button on your keyboard/gamepad you want to use. `TargetButton` means the emulated VMU button or emulator command you want to perform. See [Keys](https://docs.monogame.net/api/Microsoft.Xna.Framework.Input.Keys.html#fields) and [Buttons](https://docs.monogame.net/api/Microsoft.Xna.Framework.Input.Buttons.html) for source key/button names. See [enum VmuButton](src/DreamPotato.MonoGame/Configuration.cs) for target button names.
-
-Additional configuration options include:
+General configuration options include:
 - `AutoInitializeDate`: bool, default true. If true, skips the startup beep and date setup, and uses your computer's clock to initialize the VMU's clock. Specify false if you want to use the date setup sequence as you would when installing batteries with real hardware.
 - `AnyButtonWakesFromSleep`: bool, default true. If true, any button will wake the VMU from sleep. If false, only the sleep button will do that.
+
+Key and button mappings can be changed in Settings -> Keyboard Config / Gamepad Config.
 
 ## Building
 
