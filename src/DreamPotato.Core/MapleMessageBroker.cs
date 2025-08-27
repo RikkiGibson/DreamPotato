@@ -335,7 +335,7 @@ public class MapleMessageBroker
                 Logger.LogWarning($"Unexpected 'pt' value: {pt}", LogCategories.Maple);
 
             var startAddress = blockNumber * Memory.WorkRamSize + phaseNumber * Memory.WorkRamSize / 4;
-            var destSpan = _vmuFlashData.AsSpan(startAddress, Memory.WorkRamSize);
+            var destSpan = _vmuFlashData.AsSpan(startAddress, Memory.WorkRamSize / 4);
 
             for (int i = 0; i < writePayloadWordCount; i++)
             {
