@@ -29,6 +29,11 @@ public class Display(Cpu cpu)
         return _bytes;
     }
 
+    internal const int FileIconOffset = 1;
+    internal const int GameIconOffset = 2;
+    internal const int ClockIconOffset = 3;
+    internal const int FlashIconOffset = 4;
+
     public Icons GetIcons()
     {
         // LCD is shut off
@@ -36,10 +41,10 @@ public class Display(Cpu cpu)
             return Icons.None;
 
         var xram2 = cpu.Memory.Direct_AccessXram2();
-        var icons = ((Icons)xram2[1] & Icons.File)
-            | ((Icons)xram2[2] & Icons.Game)
-            | ((Icons)xram2[3] & Icons.Clock)
-            | ((Icons)xram2[4] & Icons.Flash);
+        var icons = ((Icons)xram2[FileIconOffset] & Icons.File)
+            | ((Icons)xram2[GameIconOffset] & Icons.Game)
+            | ((Icons)xram2[ClockIconOffset] & Icons.Clock)
+            | ((Icons)xram2[FlashIconOffset] & Icons.Flash);
         return icons;
     }
 

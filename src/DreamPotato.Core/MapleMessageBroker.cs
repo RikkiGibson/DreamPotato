@@ -348,6 +348,10 @@ public class MapleMessageBroker
                 RandomAccess.Write(_vmuFileHandle, destSpan, fileOffset: startAddress);
             }
 
+            // Also notify game thread so that we can flash the IO icon.
+            var written = _inboundCpuMessages.Writer.TryWrite(message);
+            Debug.Assert(written);
+
             var reply = new MapleMessage()
             {
                 Type = MapleMessageType.Ack,
@@ -371,6 +375,10 @@ public class MapleMessageBroker
                 if (phase != 4)
                     Logger.LogWarning($"Unexpected CompleteWrite phase: {phase}", LogCategories.Maple);
             }
+
+            // Also notify game thread so that we can flash the IO icon.
+            var written = _inboundCpuMessages.Writer.TryWrite(message);
+            Debug.Assert(written);
 
             var reply = new MapleMessage()
             {

@@ -70,6 +70,9 @@ public class Cpu
     /// <summary>NOTE: only 'TryReceiveMessage' and 'SendMessage' methods are safe to call from here.</summary>
     public readonly MapleMessageBroker MapleMessageBroker;
 
+    /// <summary>Decrements each frame and clears IO icon when reaching 0.</summary>
+    private int MapleIOIconTimeout;
+
     internal ushort Pc;
 
     /// <summary>
@@ -347,6 +350,13 @@ public class Cpu
 
     private void HandleMapleMessages()
     {
+        if (MapleIOIconTimeout > 0)
+        {
+            MapleIOIconTimeout--;
+            if (MapleIOIconTimeout == 0)
+                Memory.Direct_AccessXram2()[Display.FlashIconOffset] = 0;
+        }
+
         while (MapleMessageBroker.TryReceiveCpuMessage(out var message))
         {
             if (!SFRs.P7.DreamcastConnected)
@@ -361,6 +371,14 @@ public class Cpu
             {
                 case (MapleMessageType.WriteBlock, MapleFunction.LCD):
                     handleWriteBlockLcd(message);
+                    break;
+                case (MapleMessageType.WriteBlock, MapleFunction.Storage):
+                    // Indicate flash write
+                    MapleIOIconTimeout = 5;
+                    Memory.Direct_AccessXram2()[Display.FlashIconOffset] = (byte)Icons.Flash;
+                    break;
+                case (MapleMessageType.CompleteWrite, MapleFunction.Storage):
+                    // Do nothing, allow timeout counter to turn off flash icon.
                     break;
                 default:
                     Debug.Fail($"Unhandled Maple message '({message.Type}, {message.Function})'");
