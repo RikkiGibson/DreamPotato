@@ -27,7 +27,6 @@ class UserInterface
     private ImGuiRenderer _imGuiRenderer = null!;
     private Texture2D _userInterfaceTexture = null!;
     private nint _rawIconConnectedTexture;
-    private nint _rawAutoSaveTexture;
 
     private bool _pauseWhenClosed;
 
@@ -43,14 +42,13 @@ class UserInterface
         _game = game;
     }
 
-    internal void Initialize(Texture2D iconConnectedTexture, Texture2D iconAutoSaveTexture)
+    internal void Initialize(Texture2D iconConnectedTexture)
     {
         _imGuiRenderer = new ImGuiRenderer(_game);
         _imGuiRenderer.RebuildFontAtlas();
 
         _userInterfaceTexture = new Texture2D(_game.GraphicsDevice, Game1.TotalScreenWidth, Game1.TotalScreenHeight);
         _rawIconConnectedTexture = _imGuiRenderer.BindTexture(iconConnectedTexture);
-        _rawAutoSaveTexture = _imGuiRenderer.BindTexture(iconAutoSaveTexture);
     }
 
     internal void Layout(GameTime gameTime)
@@ -226,17 +224,6 @@ class UserInterface
             }
 
             ImGui.EndMenu();
-        }
-
-        if (_game.Vmu.AutoSavingChanges)
-        {
-            ImGui.Image(_rawAutoSaveTexture, new Numerics.Vector2(18));
-            if (ImGui.IsItemHovered())
-            {
-                ImGui.BeginTooltip();
-                ImGui.Text("VMU file changes auto-saved to disk");
-                ImGui.EndTooltip();
-            }
         }
 
         if (_game.Vmu.IsServerConnected)
