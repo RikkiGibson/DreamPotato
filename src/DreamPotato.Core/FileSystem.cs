@@ -53,6 +53,7 @@ internal class FileSystem(byte[] flash)
     {
         // Note that multi-byte values are little-endian encoded!
         Debug.Assert(flash.Length == Cpu.FlashSize);
+        Array.Clear(flash);
 
         initializeRootBlock();
         initializeFAT();

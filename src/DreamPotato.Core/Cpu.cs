@@ -28,7 +28,22 @@ public class Cpu
     internal Span<byte> FlashBank0 => Flash.AsSpan(0, FlashBankSize);
     internal Span<byte> FlashBank1 => Flash.AsSpan(FlashBankSize, FlashBankSize);
 
+#if DEBUG
     internal readonly InstructionMap InstructionMap = new();
+#endif
+
+    internal event Action? UnsavedChangesDetected;
+    internal bool HasUnsavedChanges
+    {
+        get;
+        set
+        {
+            var isNewUnsavedChanges = !field && value;
+            field = value;
+            if (isNewUnsavedChanges)
+                UnsavedChangesDetected?.Invoke();
+        }
+    }
 
     internal FileStream? VmuFileWriteStream
     {
@@ -148,7 +163,9 @@ public class Cpu
         _interruptServicingState = InterruptServicingState.Ready;
         _flashWriteUnlockSequence = 0;
         Memory.Reset();
+#if DEBUG
         InstructionMap.Clear();
+#endif
         SyncInstructionBank();
     }
 
@@ -707,7 +724,9 @@ public class Cpu
         }
 
         var inst = InstructionDecoder.Decode(CurrentROMBank, Pc);
+#if DEBUG
         InstructionMap[InstructionBank, Pc] = inst;
+#endif
         Logger.LogTrace($"{inst} Acc={SFRs.Acc:X} B={SFRs.B:X} C={SFRs.C:X} R2={ReadRam(2)}");
         switch (inst.Kind)
         {
@@ -1595,12 +1614,17 @@ public class Cpu
         {
             var a17 = a16 | (SFRs.FPR.FlashAddressBank ? InstructionBankSize : 0);
             Flash[a17] = value;
+#if DEBUG
             InstructionMap[InstructionBank, (ushort)a16] = default;
-
+#endif
             if (VmuFileHandle is not null)
             {
                 var absoluteAddress = (SFRs.FPR.FlashAddressBank ? (1 << 16) : 0) | a16;
                 RandomAccess.Write(VmuFileHandle, [value], absoluteAddress);
+            }
+            else
+            {
+                HasUnsavedChanges = true;
             }
 
             _flashWriteUnlockSequence++;

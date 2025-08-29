@@ -13,7 +13,13 @@ public class Vmu
     public Audio Audio => _cpu.Audio;
     public Display Display => _cpu.Display;
     public string? LoadedFilePath { get; private set; }
-    public bool AutoSavingChanges => _cpu.VmuFileHandle != null;
+
+    public bool HasUnsavedChanges => _cpu.HasUnsavedChanges;
+    public event Action UnsavedChangesDetected
+    {
+        add => _cpu.UnsavedChangesDetected += value;
+        remove => _cpu.UnsavedChangesDetected -= value;
+    }
 
     public Vmu()
     {
@@ -99,6 +105,8 @@ public class Vmu
         fileName = fileName.Substring(0, Math.Min(FileSystem.DirectoryEntryFileNameLength, fileName.Length));
         _fileSystem.WriteGameFile(gameData, fileName, fileSystemDate);
         LoadedFilePath = filePath;
+        _cpu.HasUnsavedChanges = false;
+        _cpu.VmuFileWriteStream = null;
 
         _cpu.ResyncMapleOutbound();
     }
@@ -122,6 +130,7 @@ public class Vmu
 
         fileStream.ReadExactly(_cpu.Flash);
         LoadedFilePath = filePath;
+        _cpu.HasUnsavedChanges = false;
         _cpu.VmuFileWriteStream = fileStream;
         _cpu.ResyncMapleOutbound();
     }

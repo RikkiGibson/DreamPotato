@@ -71,7 +71,6 @@ public class Game1 : Game
 
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
-        UpdateWindowTitle(gameFilePath);
 
         Configuration = Configuration.Load();
         Configuration.Save();
@@ -101,7 +100,7 @@ public class Game1 : Game
         }
 
         // Indicate that vms files are not auto saved
-        var prefix = vmsOrVmuFilePath.EndsWith("vms", StringComparison.OrdinalIgnoreCase)
+        var prefix = Vmu.HasUnsavedChanges
             ? "* "
             : "";
         Window.Title = $"{prefix}{Path.GetFileName(vmsOrVmuFilePath)} - DreamPotato";
@@ -129,8 +128,6 @@ public class Game1 : Game
 
     internal void LoadAndStartVmsOrVmuFile(string filePath)
     {
-        Paused = false;
-        UpdateWindowTitle(filePath);
         var extension = Path.GetExtension(filePath);
         if (extension.Equals(".vms", StringComparison.OrdinalIgnoreCase))
         {
@@ -145,6 +142,9 @@ public class Game1 : Game
         {
             throw new ArgumentException($"Cannot load '{filePath}' because it is not a '.vms', '.vmu', or '.bin' file.");
         }
+
+        Paused = false;
+        UpdateWindowTitle(filePath);
     }
 
     internal void SaveVmuFileAs(string vmuFilePath)
@@ -244,6 +244,12 @@ public class Game1 : Game
         _dynamicSound = new DynamicSoundEffectInstance(Audio.SampleRate, AudioChannels.Mono);
         _dynamicSound.Play();
         Vmu.Audio.AudioBufferReady += Audio_BufferReady;
+        Vmu.UnsavedChangesDetected += Vmu_UnsavedChangesDetected;
+    }
+
+    private void Vmu_UnsavedChangesDetected()
+    {
+        UpdateWindowTitle(Vmu.LoadedFilePath);
     }
 
     internal Point WindowSize
