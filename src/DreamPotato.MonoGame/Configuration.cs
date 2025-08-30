@@ -104,7 +104,7 @@ public record Configuration(
         new ButtonMapping { SourceButton = Buttons.RightThumbstickRight, TargetButton = VmuButton.Right },
         new ButtonMapping { SourceButton = Buttons.RightShoulder, TargetButton = VmuButton.A },
         new ButtonMapping { SourceButton = Buttons.LeftShoulder, TargetButton = VmuButton.B },
-        new ButtonMapping { SourceButton = Buttons.Start, TargetButton = VmuButton.Mode },
+        new ButtonMapping { SourceButton = Buttons.RightStick, TargetButton = VmuButton.Mode },
         new ButtonMapping { SourceButton = Buttons.Back, TargetButton = VmuButton.Sleep },
     ];
 

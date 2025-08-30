@@ -10,11 +10,11 @@ if (args.Length != 2)
 }
 
 var vmu1 = new Vmu();
-vmu1.LoadStateFromPath(args[0]);
+vmu1.LoadStateFromPath(args[0], saveOopsFile: false);
 var cpu1 = vmu1._cpu;
 
 var vmu2 = new Vmu();
-vmu2.LoadStateFromPath(args[1]);
+vmu2.LoadStateFromPath(args[1], saveOopsFile: false);
 var cpu2 = vmu2._cpu;
 
 // ROM
