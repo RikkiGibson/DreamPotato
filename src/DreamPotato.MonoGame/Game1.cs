@@ -88,7 +88,7 @@ public class Game1 : Game
         Vmu.RestartMapleServer(Configuration.DreamcastPort);
         _vmuScreenData = new Color[Display.ScreenWidth * Display.ScreenHeight];
 
-        LoadVmuFiles(gameFilePath, date: Configuration.AutoInitializeDate ? date : null);
+        LoadVmuFiles(gameFilePath);
     }
 
     internal void UpdateWindowTitle(string? vmsOrVmuFilePath)
@@ -106,7 +106,7 @@ public class Game1 : Game
         Window.Title = $"{prefix}{Path.GetFileName(vmsOrVmuFilePath)} - DreamPotato";
     }
 
-    private void LoadVmuFiles(string? vmsOrVmuFilePath, DateTimeOffset? date)
+    private void LoadVmuFiles(string? vmsOrVmuFilePath)
     {
         const string romFileName = "american_v1.05.bin";
         var romFilePath = Path.Combine(Vmu.DataFolder, romFileName);
@@ -281,7 +281,12 @@ public class Game1 : Game
             Vmu.SaveState(id: "0");
 
         if (_buttonChecker.IsNewlyPressed(VmuButton.LoadState, _previousKeys, keyboard, _previousGamepad, gamepad))
-            Vmu.LoadStateById(id: "0", saveOopsFile: true);
+        {
+            if (Vmu.LoadStateById(id: "0", saveOopsFile: true) is (false, var error))
+            {
+                _userInterface.ShowToast(error ?? $"An unknown error occurred in {nameof(Vmu.LoadStateById)}.");
+            }
+        }
 
         var newP3 = new Core.SFRs.P3()
         {

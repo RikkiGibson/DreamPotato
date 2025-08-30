@@ -37,6 +37,11 @@ class UserInterface
     private int _buttonPresetIndex = 0;
     private int _keyPresetIndex = 0;
 
+    private string? _toastMessage;
+    private int _toastDisplayFrames;
+    private const int ToastMaxDisplayFrames = 2 * 60;
+    private const int ToastBeginFadeoutFrames = 30;
+
     public UserInterface(Game1 game)
     {
         _game = game;
@@ -76,6 +81,12 @@ class UserInterface
         ImGui.OpenPopup(name);
     }
 
+    internal void ShowToast(string message)
+    {
+        _toastMessage = message;
+        _toastDisplayFrames = ToastMaxDisplayFrames;
+    }
+
     private void Unpause()
     {
         _game.Paused = _pauseWhenClosed;
@@ -99,6 +110,33 @@ class UserInterface
         LayoutEditButton();
 
         LayoutResetModal();
+
+        LayoutToast();
+    }
+
+    private void LayoutToast()
+    {
+        if (_toastDisplayFrames == 0)
+            return;
+
+        _toastDisplayFrames--;
+
+        var doFadeout = _toastDisplayFrames < ToastBeginFadeoutFrames;
+        if (doFadeout)
+            ImGui.PushStyleVar(ImGuiStyleVar.Alpha, ((float)_toastDisplayFrames) / ToastBeginFadeoutFrames);
+
+        var textSize = ImGui.CalcTextSize(_toastMessage, wrapWidth: Game1.TotalScreenWidth);
+        ImGui.SetNextWindowPos(new Numerics.Vector2(x: 2, y: Game1.TotalScreenHeight - textSize.Y - 20));
+        ImGui.SetNextWindowSize(textSize + new Numerics.Vector2(10, 20));
+        if (ImGui.Begin("Toast", ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoInputs | ImGuiWindowFlags.NoScrollbar))
+        {
+            ImGui.TextWrapped(_toastMessage);
+        }
+
+        ImGui.End();
+
+        if (doFadeout)
+            ImGui.PopStyleVar();
     }
 
     private void LayoutMenuBar()
@@ -178,7 +216,10 @@ class UserInterface
 
                 if (ImGui.MenuItem("Load State"))
                 {
-                    _game.Vmu.LoadStateById("0", saveOopsFile: true);
+                    if (_game.Vmu.LoadStateById(id: "0", saveOopsFile: true) is (false, var error))
+                    {
+                        ShowToast(error ?? $"An unknown error occurred in '{nameof(Vmu.LoadStateById)}'.");
+                    }
                 }
 
                 if (ImGui.MenuItem("Undo Load State"))

@@ -86,6 +86,7 @@ public class Cpu
     public readonly MapleMessageBroker MapleMessageBroker;
 
     /// <summary>Decrements each frame and clears IO icon when reaching 0.</summary>
+    /// <remarks>Irrelevant for save states because only used while docked.</remarks>
     private int MapleIOIconTimeout;
 
     internal ushort Pc;
@@ -187,6 +188,7 @@ public class Cpu
         writeInt64(buffer, StepCycleTicksPerSecondRemainder);
         writeUInt16(buffer, BaseTimer);
         writeInt64(buffer, BaseTimerTicksRemaining);
+        writeStream.WriteByte(T0Scale);
         writeUInt16(buffer, (ushort)RequestedInterrupts);
         writeStream.WriteByte((byte)_interruptServicingState);
         for (int i = 0; i < _servicingInterrupts.Length; i++)
@@ -234,6 +236,7 @@ public class Cpu
         StepCycleTicksPerSecondRemainder = readInt64(buffer);
         BaseTimer = readUInt16(buffer);
         BaseTimerTicksRemaining = readInt64(buffer);
+        T0Scale = (byte)readStream.ReadByte();
         RequestedInterrupts = (Interrupts)readUInt16(buffer);
         _interruptServicingState = (InterruptServicingState)readStream.ReadByte();
         for (int i = 0; i < _servicingInterrupts.Length; i++)

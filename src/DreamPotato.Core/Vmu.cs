@@ -170,20 +170,17 @@ public class Vmu
     public static string DataFolder => Path.Combine(AppContext.BaseDirectory, "Data");
     public const string SaveStateHeaderMessage = "DreamPotatoSaveState";
     public static readonly ReadOnlyMemory<byte> SaveStateHeaderBytes = Encoding.UTF8.GetBytes(SaveStateHeaderMessage);
-    public const int SaveStateVersion = 2;
+    public const int SaveStateVersion = 3;
 
-    private string? GetSaveStatePath(string id)
+    private static string GetSaveStatePath(string loadedFilePath, string id)
     {
-        if (string.IsNullOrEmpty(LoadedFilePath))
-            return null;
-
-        var filePath = $"{Path.GetFileNameWithoutExtension(LoadedFilePath)}_{id}.dpstate";
+        var filePath = $"{Path.GetFileNameWithoutExtension(loadedFilePath)}_{id}.dpstate";
         return Path.Combine(DataFolder, filePath);
     }
 
     public bool SaveState(string id)
     {
-        if (!IsEjected || GetSaveStatePath(id) is not string filePath)
+        if (!IsEjected || LoadedFilePath is null ||  GetSaveStatePath(LoadedFilePath, id) is not string filePath)
             return false;
 
         // TODO: it feels like it would be reasonable to zip/unzip the state implicitly.
@@ -201,26 +198,29 @@ public class Vmu
     }
 
     public bool SaveOopsFile() => SaveState("oops");
-    public bool LoadOopsFile() => LoadStateById("oops", saveOopsFile: false);
+    public (bool success, string? error) LoadOopsFile() => LoadStateById("oops", saveOopsFile: false);
 
-    public bool LoadStateById(string id, bool saveOopsFile)
+    public (bool success, string? error) LoadStateById(string id, bool saveOopsFile)
     {
-        var filePath = GetSaveStatePath(id);
+        if (LoadedFilePath is null)
+            return (success: false, error: "Cannot load state because no VMU/VMS file is currently open.");
+
+        var filePath = GetSaveStatePath(LoadedFilePath, id);
         if (filePath is null)
-            return false;
+            return (success: false, "");
 
         return LoadStateFromPath(filePath, saveOopsFile);
     }
 
-    public bool LoadStateFromPath(string filePath, bool saveOopsFile)
+    public (bool success, string? error) LoadStateFromPath(string filePath, bool saveOopsFile)
     {
         if (!IsEjected)
-            return false;
+            return (false, error: "Cannot load state while docked.");
 
         if (saveOopsFile)
         {
             if (!SaveOopsFile())
-                return false;
+                return (false, "Cannot load state because oops file could not be saved.");
         }
 
         try
@@ -230,21 +230,20 @@ public class Vmu
             byte[] buffer = new byte[SaveStateHeaderBytes.Length];
             readStream.ReadExactly(buffer);
             if (!buffer.SequenceEqual(SaveStateHeaderBytes.Span))
-                throw new InvalidOperationException($"Unsupported save state. Bad header data: '{Encoding.UTF8.GetString(buffer)}'");
+                return (success: false, $"Unsupported save state. Bad header data: '{Encoding.UTF8.GetString(buffer)}'");
 
             byte[] versionBytes = new byte[4];
             readStream.ReadExactly(versionBytes);
             int version = BinaryPrimitives.ReadInt32LittleEndian(versionBytes);
             if (version != SaveStateVersion)
-                throw new InvalidOperationException($"Unsupported save state version '{version}'");
+                return (success: false, $"Unsupported save state version '{version}'. Version '{SaveStateVersion}' needed.");
 
             _cpu.LoadState(readStream);
-            return true;
+            return (true, null);
         }
         catch (FileNotFoundException)
         {
-            _cpu.Logger.LogError($"Could not load state at '{filePath}' because it was not found.");
-            return false;
+            return (false, $"Could not load state because '{filePath}' was not found.");
         }
     }
 }
