@@ -5,6 +5,8 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text;
 
 using DreamPotato.Core;
 
@@ -27,6 +29,7 @@ class UserInterface
     private ImGuiRenderer _imGuiRenderer = null!;
     private Texture2D _userInterfaceTexture = null!;
     private nint _rawIconConnectedTexture;
+    private GCHandle _iniFilenameHandle;
 
     private bool _pauseWhenClosed;
 
@@ -51,6 +54,18 @@ class UserInterface
     {
         _imGuiRenderer = new ImGuiRenderer(_game);
         _imGuiRenderer.RebuildFontAtlas();
+
+        unsafe
+        {
+            // Note: if we supported tearing down the UserInterface then we would want to take care to dispose of the handle.
+            var iniFilename = Encoding.UTF8.GetBytes($"{AppContext.BaseDirectory}/Data/imgui.ini\0");
+            _iniFilenameHandle = GCHandle.Alloc(iniFilename, GCHandleType.Pinned);
+            fixed (byte* ptr = iniFilename)
+            {
+                // Using the ptr where it will outlive the fixed block is only fine because we hold a GCHandle with type Pinned for it.
+                ImGui.GetIO().NativePtr->IniFilename = ptr;
+            }
+        }
 
         _userInterfaceTexture = new Texture2D(_game.GraphicsDevice, Game1.TotalScreenWidth, Game1.TotalScreenHeight);
         _rawIconConnectedTexture = _imGuiRenderer.BindTexture(iconConnectedTexture);
