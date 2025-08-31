@@ -13,7 +13,7 @@ See [compatibility.md](compatibility.md) for the current compatibility status of
 
 [Demo Video](https://www.youtube.com/watch?v=EN8Y3UX_TDM)
 
-DreamPotato can connect to Flycast to support an experience similar to using a real Dreamcast and VMU together. Currently, trying this out requires building the [Flycast vmuconn branch](https://github.com/RikkiGibson/flycast/tree/vmuconn) from source.
+DreamPotato can connect to Flycast to support an experience similar to using a real Dreamcast and VMU together. Builds of the [Flycast vmuconn branch](https://github.com/RikkiGibson/flycast/tree/vmuconn) are available under [Releases](https://github.com/RikkiGibson/DreamPotato/releases) alongside DreamPotato itself.
 
 Instructions:
 1) DreamPotato defaults to connecting to Port A. You can go into the settings and change this if you wish.
