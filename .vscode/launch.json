@@ -5,22 +5,25 @@
     "version": "0.2.0",
     "configurations": [
       {
-        "name": "C#: DreamPotato.MonoGame Debug with args",
-        "type": "coreclr",
-        "request": "launch",
-        "preLaunchTask": "dotnet: build DreamPotato.MonoGame.csproj",
-        "program": "${workspaceFolder}/artifacts/bin/DreamPotato.MonoGame/Debug/DreamPotato.MonoGame.exe",
-        // "args": ["<path-to-vms-or-vmu-file>"],
-        "cwd": "${workspaceFolder}",
-        "stopAtEntry": false,
-        "console": "internalConsole"
-      },
-
-      {
         "name": "C#: DreamPotato.MonoGame Debug",
         "type": "dotnet",
         "request": "launch",
         "projectPath": "${workspaceFolder}/src/DreamPotato.MonoGame/DreamPotato.MonoGame.csproj"
+      },
+
+      {
+        "name": "C#: DreamPotato.MonoGame Debug with args",
+        "type": "coreclr",
+        "request": "launch",
+        "preLaunchTask": "dotnet: build DreamPotato.MonoGame.csproj",
+        "program": "${workspaceFolder}/artifacts/bin/DreamPotato.MonoGame/debug/DreamPotato",
+        "windows": {
+          "program": "${workspaceFolder}/artifacts/bin/DreamPotato.MonoGame/Debug/DreamPotato.exe",
+        },
+        // "args": ["<path-to-vms-or-vmu-file>"],
+        "cwd": "${workspaceFolder}",
+        "stopAtEntry": false,
+        "console": "internalConsole"
       },
 
       {
