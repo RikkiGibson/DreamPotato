@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -45,9 +46,29 @@ class UserInterface
     private const int ToastMaxDisplayFrames = 2 * 60;
     private const int ToastBeginFadeoutFrames = 30;
 
+    private readonly string _displayVersion;
+    private readonly string _commitId;
+
     public UserInterface(Game1 game)
     {
         _game = game;
+        var versionAttribute = typeof(UserInterface).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+        if (versionAttribute is null)
+        {
+            _displayVersion = "?";
+            _commitId = "?";
+        }
+        else
+        {
+            var informationalVersion = versionAttribute.InformationalVersion;
+            var plusIndex = informationalVersion.IndexOf('+');
+            _displayVersion = plusIndex == -1 ? informationalVersion : informationalVersion[..plusIndex];
+
+            var commitStartIndex = plusIndex + 1;
+            const int commitMaxDisplayLength = 7;
+            var commitLength = Math.Min(commitMaxDisplayLength, informationalVersion.Length - commitStartIndex);
+            _commitId = plusIndex == -1 ? "?" : informationalVersion.Substring(commitStartIndex, length: commitLength);
+        }
     }
 
     internal void Initialize(Texture2D iconConnectedTexture)
@@ -278,6 +299,18 @@ class UserInterface
                     }
                 }.Start();
             }
+
+            ImGui.EndMenu();
+        }
+
+        if (ImGui.BeginMenu("About"))
+        {
+            ImGui.Text($"Version: {_displayVersion}");
+            ImGui.Text($"Commit: {_commitId}");
+            ImGui.Separator();
+
+            if (ImGui.MenuItem("Copy to clipboard"))
+                ImGui.SetClipboardText($"{_displayVersion} ({_commitId})");
 
             ImGui.EndMenu();
         }
