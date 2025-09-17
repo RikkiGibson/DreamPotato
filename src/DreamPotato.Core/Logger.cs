@@ -35,9 +35,11 @@ public class Logger(LogLevel _minimumLogLevel, LogCategories _categories, Cpu? _
     private int _nextMessageIndex = 0;
 
     // TODO: CallerFilePath, CallerLineNumber
+    [Conditional("DEBUG")]
     public void LogTrace(string s, LogCategories category = LogCategories.General)
         => LogCore(LogLevel.Trace, $"{s}", category);
 
+    [Conditional("DEBUG")]
     public void LogTrace(DefaultInterpolatedStringHandler handler, LogCategories category = LogCategories.General)
         => LogCore(LogLevel.Trace, handler, category);
 
