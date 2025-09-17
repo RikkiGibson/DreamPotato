@@ -9,7 +9,7 @@ namespace DreamPotato.Core;
 /// <summary>
 /// The information we know about an instruction originating solely from the code, and not any cpu state.
 /// </summary>
-record struct Instruction(ushort Offset, Operation Operation, ushort Arg0 = default, ushort Arg1 = default, ushort Arg2 = default)
+record struct Instruction(ushort Offset, Operation Operation, ushort Arg0 = default, ushort Arg1 = default, ushort Arg2 = default) : ISpanFormattable
 {
     public bool HasValue => Operation is not null;
 
@@ -91,5 +91,115 @@ record struct Instruction(ushort Offset, Operation Operation, ushort Arg0 = defa
         builder.Append($"{displayValue:X}");
         if (displayValue > 9)
             builder.Append("H");
+    }
+
+    private bool DisplayArgument(Parameter param, ushort arg, Span<char> destination, ref int charsWrittenSoFar)
+    {
+        if (param.Kind == ParameterKind.D9 && (arg & 0x100) != 0)
+        {
+            var registerName = SpecialFunctionRegisterIds.GetName((byte)arg);
+            if (registerName is not null)
+            {
+                if (!registerName.TryCopyTo(destination[charsWrittenSoFar..]))
+                {
+                    charsWrittenSoFar = 0;
+                    return false;
+                }
+
+                charsWrittenSoFar += registerName.Length;
+            }
+        }
+
+        var prefix = param.Kind switch
+        {
+            ParameterKind.I8 => "#",
+            ParameterKind.Ri => "@R",
+            _ => ""
+        };
+
+        if (!prefix.TryCopyTo(destination[charsWrittenSoFar..]))
+        {
+            charsWrittenSoFar = 0;
+            return false;
+        }
+
+        charsWrittenSoFar += prefix.Length;
+
+        var displayValue = param.Kind switch
+        {
+            ParameterKind.R8 => Offset + Operation.Size + (sbyte)arg,
+            ParameterKind.R16 => Offset + arg,
+            ParameterKind.A8 => (Offset & 0xff00) | arg,
+            ParameterKind.A12 => (Offset & 0xf000) | arg,
+            _ => arg
+        };
+
+        if (!destination[charsWrittenSoFar..].TryWrite($"{displayValue:X}", out var charsWritten1))
+        {
+            charsWrittenSoFar = 0;
+            return false;
+        }
+
+        charsWrittenSoFar += charsWritten1;
+
+        if (displayValue > 9)
+        {
+            if (!"H".TryCopyTo(destination[charsWrittenSoFar..]))
+            {
+                charsWrittenSoFar = 0;
+                return false;
+            }
+
+            charsWrittenSoFar += "H".Length;
+        }
+
+        return true;
+    }
+
+    public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider? provider)
+    {
+        if (!HasValue)
+        {
+            charsWritten = 0;
+            return true;
+        }
+
+        if (Parameters.IsEmpty)
+        {
+            return Enum.TryFormat(Operation.Kind, destination, out charsWritten, format);
+        }
+
+        if (!destination.TryWrite($"{Operation.Kind} ", out charsWritten))
+        {
+            return false;
+        }
+
+        var parameters = Parameters;
+        for (var i = 0; i < parameters.Length; i++)
+        {
+            if (!DisplayArgument(parameters[i], GetArgument(i), destination, ref charsWritten))
+            {
+                charsWritten = 0;
+                return false;
+            }
+
+            if (i != parameters.Length - 1)
+            {
+                if (!destination[charsWritten..].TryWrite($", ", out var charsWritten1))
+                {
+                    charsWritten = 0;
+                    return false;
+                }
+
+                charsWritten += charsWritten1;
+            }
+        }
+
+        return true;
+    }
+
+    public string ToString(string? format, IFormatProvider? formatProvider)
+    {
+        throw new NotImplementedException();
     }
 }

@@ -284,7 +284,6 @@ public class MapleMessageBroker
         {
             var blockNumber = message.AdditionalWords[1] >> 24 & 0xff;
             var startAddress = blockNumber * Memory.WorkRamSize;
-            var responseBytes = _vmuFlashData.AsSpan(startAddress, Memory.WorkRamSize);
 
             // TODO: verify phase and pt are zero
 
@@ -293,9 +292,14 @@ public class MapleMessageBroker
             var additionalWords = new int[responseSize];
             additionalWords[0] = (int)MapleFunction.Storage;
             additionalWords[1] = message.AdditionalWords[1];
-            for (int i = 0; i < Memory.WorkRamSize / 4; i++)
+
+            lock (_lock)
             {
-                additionalWords[i + 2] = BinaryPrimitives.ReadInt32LittleEndian(responseBytes[(i * 4)..((i + 1) * 4)]);
+                var responseBytes = _vmuFlashData.AsSpan(startAddress, Memory.WorkRamSize);
+                for (int i = 0; i < Memory.WorkRamSize / 4; i++)
+                {
+                    additionalWords[i + 2] = BinaryPrimitives.ReadInt32LittleEndian(responseBytes[(i * 4)..((i + 1) * 4)]);
+                }
             }
 
             var reply = new MapleMessage()
@@ -335,17 +339,20 @@ public class MapleMessageBroker
                 Logger.LogWarning($"Unexpected 'pt' value: {pt}", LogCategories.Maple);
 
             var startAddress = blockNumber * Memory.WorkRamSize + phaseNumber * Memory.WorkRamSize / 4;
-            var destSpan = _vmuFlashData.AsSpan(startAddress, Memory.WorkRamSize / 4);
 
-            for (int i = 0; i < writePayloadWordCount; i++)
+            lock (_lock)
             {
-                BinaryPrimitives.WriteInt32LittleEndian(destSpan[(i * 4)..((i + 1) * 4)], message.AdditionalWords[i + 2]);
-            }
+                var destSpan = _vmuFlashData.AsSpan(startAddress, Memory.WorkRamSize / 4);
+                for (int i = 0; i < writePayloadWordCount; i++)
+                {
+                    BinaryPrimitives.WriteInt32LittleEndian(destSpan[(i * 4)..((i + 1) * 4)], message.AdditionalWords[i + 2]);
+                }
 
-            if (_vmuFileHandle is not null)
-            {
-                Logger.LogDebug($"Writing to VMU file at address 0x{startAddress:X}", LogCategories.Maple);
-                RandomAccess.Write(_vmuFileHandle, destSpan, fileOffset: startAddress);
+                if (_vmuFileHandle is not null)
+                {
+                    Logger.LogDebug($"Writing to VMU file at address 0x{startAddress:X}", LogCategories.Maple);
+                    RandomAccess.Write(_vmuFileHandle, destSpan, fileOffset: startAddress);
+                }
             }
 
             // Also notify game thread so that we can flash the IO icon.
