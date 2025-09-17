@@ -449,7 +449,7 @@ public class MapleMessageBroker
         byte[] rawSocketBuffer = new byte[MaxMaplePacketSize * 4];
         while (true)
         {
-            var receivedLen = await clientSocket.ReceiveAsync(rawSocketBuffer, SocketFlags.None, cancellationToken);
+            var receivedLen = await clientSocket.ReceiveAsync(rawSocketBuffer, cancellationToken);
             if (receivedLen <= 0)
             {
                 // disconnected
