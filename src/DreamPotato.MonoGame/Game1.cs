@@ -93,17 +93,15 @@ public class Game1 : Game
 
     internal void UpdateWindowTitle(string? vmsOrVmuFilePath)
     {
-        if (vmsOrVmuFilePath is null)
-        {
-            Window.Title = "DreamPotato";
-            return;
-        }
-
-        // Indicate that vms files are not auto saved
-        var prefix = Vmu.HasUnsavedChanges
+        var star = Vmu.HasUnsavedChanges
             ? "* "
             : "";
-        Window.Title = $"{prefix}{Path.GetFileName(vmsOrVmuFilePath)} - DreamPotato";
+
+        var fileDesc = vmsOrVmuFilePath is null
+            ? ""
+            : $"{Path.GetFileName(vmsOrVmuFilePath)} - ";
+
+        Window.Title = $"{star}{fileDesc}DreamPotato";
     }
 
     private void LoadVmuFiles(string? vmsOrVmuFilePath)
@@ -124,6 +122,13 @@ public class Game1 : Game
         {
             LoadAndStartVmsOrVmuFile(vmsOrVmuFilePath);
         }
+    }
+
+    internal void LoadNewVmu()
+    {
+        Vmu.LoadNewVmu(date: DateTime.Now, autoInitializeRTCDate: Configuration.AutoInitializeDate);
+        Paused = false;
+        UpdateWindowTitle(vmsOrVmuFilePath: null);
     }
 
     internal void LoadAndStartVmsOrVmuFile(string filePath)

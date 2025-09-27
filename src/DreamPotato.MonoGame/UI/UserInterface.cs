@@ -180,6 +180,13 @@ class UserInterface
         ImGui.BeginMainMenuBar();
         if (ImGui.BeginMenu("File"))
         {
+            if (ImGui.MenuItem("New VMU"))
+            {
+                // TODO: add modals to confirm destructive commands on unsaved VMUs
+                // new, open, quit
+                _game.LoadNewVmu();
+            }
+
             if (ImGui.MenuItem("Open VMS (Game)"))
             {
                 var result = Dialog.FileOpen("vms", defaultPath: null);

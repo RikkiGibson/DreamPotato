@@ -396,6 +396,7 @@ public class Cpu
                     // Indicate flash write
                     MapleIOIconTimeout = 5;
                     Memory.Direct_AccessXram2()[Display.FlashIconOffset] = (byte)Icons.Flash;
+                    HasUnsavedChanges = true;
                     break;
                 case (MapleMessageType.CompleteWrite, MapleFunction.Storage):
                     // Do nothing, allow timeout counter to turn off flash icon.
