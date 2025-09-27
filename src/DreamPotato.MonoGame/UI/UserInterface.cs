@@ -23,6 +23,13 @@ using Numerics = System.Numerics;
 
 namespace DreamPotato.MonoGame.UI;
 
+internal enum ExitConfirmationState
+{
+    None,
+    ShowDialog,
+    Confirmed,
+}
+
 class UserInterface
 {
     private readonly Game1 _game;
@@ -48,6 +55,8 @@ class UserInterface
 
     private readonly string _displayVersion;
     private readonly string _commitId;
+
+    internal ExitConfirmationState ExitConfirmationState { get; private set; }
 
     public UserInterface(Game1 game)
     {
@@ -104,8 +113,18 @@ class UserInterface
         _imGuiRenderer.AfterLayout();
     }
 
+    /// <summary>Show a modal asking user to confirm exit because there are unsaved changes</summary>
+    internal void ShowConfirmExitDialog()
+    {
+        Pause();
+        ExitConfirmationState = ExitConfirmationState.ShowDialog;
+    }
+
     private void Pause()
     {
+        if (_game.Paused)
+            return;
+
         // TODO: if user presses insert/eject while in menus we can end up unpausing when we shouldn't.
         _pauseWhenClosed = _game.Paused;
         _game.Paused = true;
@@ -146,6 +165,7 @@ class UserInterface
         LayoutEditButton();
 
         LayoutResetModal();
+        LayoutConfirmExitDialog();
 
         LayoutToast();
     }
@@ -681,6 +701,31 @@ class UserInterface
                 ClosePopupAndUnpause();
 
             ImGui.EndPopup();
+        }
+    }
+
+    private void LayoutConfirmExitDialog()
+    {
+        if (ExitConfirmationState != ExitConfirmationState.ShowDialog)
+            return;
+
+        ImGui.Begin("Exit without saving?", ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.Modal);
+        {
+            ImGui.Text("Unsaved progress will be lost.");
+            if (ImGui.Button("Exit"))
+            {
+                ExitConfirmationState = ExitConfirmationState.Confirmed;
+                _game.Exit();
+            }
+
+            ImGui.SameLine();
+            if (ImGui.Button("Cancel"))
+            {
+                ExitConfirmationState = ExitConfirmationState.None;
+                Unpause();
+            }
+
+            ImGui.End();
         }
     }
 }

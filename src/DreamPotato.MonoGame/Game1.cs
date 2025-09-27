@@ -91,6 +91,17 @@ public class Game1 : Game
         LoadVmuFiles(gameFilePath);
     }
 
+    protected override void OnExiting(object sender, ExitingEventArgs args)
+    {
+        if (Vmu.HasUnsavedChanges && _userInterface.ExitConfirmationState != ExitConfirmationState.Confirmed)
+        {
+            args.Cancel = true;
+            _userInterface.ShowConfirmExitDialog();
+        }
+
+        base.OnExiting(sender, args);
+    }
+
     internal void UpdateWindowTitle(string? vmsOrVmuFilePath)
     {
         var star = Vmu.HasUnsavedChanges
