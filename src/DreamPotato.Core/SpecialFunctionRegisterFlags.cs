@@ -322,6 +322,142 @@ public struct Vccr
     }
 }
 
+/// <summary>SIO0 control register. VMD-103</summary>
+public struct Scon0
+{
+    private byte _value;
+
+    public Scon0(byte value) => _value = value;
+    public static explicit operator byte(Scon0 value) => value._value;
+
+    public bool PolarityControl
+    {
+        get => BitHelpers.ReadBit(_value, bit: 7);
+        set => BitHelpers.WriteBit(ref _value, bit: 7, value);
+    }
+
+    public bool OverrunFlag
+    {
+        get => BitHelpers.ReadBit(_value, bit: 6);
+        set => BitHelpers.WriteBit(ref _value, bit: 6, value);
+    }
+
+    /// <summary>
+    /// Transfer bit length control.
+    /// If true, continuous transfer is used; otherwise 8-bit transfer is used.
+    /// </summary>
+    public bool ContinuousTransfer
+    {
+        get => BitHelpers.ReadBit(_value, bit: 4);
+        set => BitHelpers.WriteBit(ref _value, bit: 4, value);
+    }
+
+    /// <summary>
+    /// 0: Stop transfer
+    /// 1: Start transfer
+    /// </summary>
+    public bool TransferControl
+    {
+        get => BitHelpers.ReadBit(_value, bit: 3);
+        set => BitHelpers.WriteBit(ref _value, bit: 3, value);
+    }
+
+    /// <summary>
+    /// LSB/MSB sequence select.
+    /// 0: LSB first
+    /// 1: MSB first
+    /// </summary>
+    public bool LSBFirstSequence
+    {
+        get => BitHelpers.ReadBit(_value, bit: 2);
+        set => BitHelpers.WriteBit(ref _value, bit: 2, value);
+    }
+
+    /// <summary>
+    /// 0: Transfer in progress
+    /// 1: Transfer ended
+    /// </summary>
+    public bool TransferEndFlag
+    {
+        get => BitHelpers.ReadBit(_value, bit: 1);
+        set => BitHelpers.WriteBit(ref _value, bit: 1, value);
+    }
+
+    /// <summary>
+    /// Controls generation of <see cref="Interrupts.SIO0" />.
+    /// </summary>
+    public bool InterruptEnable
+    {
+        get => BitHelpers.ReadBit(_value, bit: 0);
+        set => BitHelpers.WriteBit(ref _value, bit: 0, value);
+    }
+}
+
+/// <summary>SIO1 control register. VMD-103</summary>
+public struct Scon1
+{
+    private byte _value;
+
+    public Scon1(byte value) => _value = value;
+    public static explicit operator byte(Scon1 value) => value._value;
+
+    public bool OverrunFlag
+    {
+        get => BitHelpers.ReadBit(_value, bit: 6);
+        set => BitHelpers.WriteBit(ref _value, bit: 6, value);
+    }
+
+    /// <summary>
+    /// Transfer bit length control.
+    /// If true, continuous transfer is used; otherwise 8-bit transfer is used.
+    /// </summary>
+    public bool ContinuousTransfer
+    {
+        get => BitHelpers.ReadBit(_value, bit: 4);
+        set => BitHelpers.WriteBit(ref _value, bit: 4, value);
+    }
+
+    /// <summary>
+    /// 0: Stop transfer
+    /// 1: Start transfer
+    /// </summary>
+    public bool TransferControl
+    {
+        get => BitHelpers.ReadBit(_value, bit: 3);
+        set => BitHelpers.WriteBit(ref _value, bit: 3, value);
+    }
+
+    /// <summary>
+    /// LSB/MSB sequence select.
+    /// 0: LSB first
+    /// 1: MSB first
+    /// </summary>
+    public bool LSBFirstSequence
+    {
+        get => BitHelpers.ReadBit(_value, bit: 2);
+        set => BitHelpers.WriteBit(ref _value, bit: 2, value);
+    }
+
+    /// <summary>
+    /// 0: Transfer in progress
+    /// 1: Transfer ended
+    /// </summary>
+    public bool TransferEndFlag
+    {
+        get => BitHelpers.ReadBit(_value, bit: 1);
+        set => BitHelpers.WriteBit(ref _value, bit: 1, value);
+    }
+
+    /// <summary>
+    /// Controls generation of <see cref="Interrupts.SIO1" />.
+    /// </summary>
+    public bool InterruptEnable
+    {
+        get => BitHelpers.ReadBit(_value, bit: 0);
+        set => BitHelpers.WriteBit(ref _value, bit: 0, value);
+    }
+}
+
 /// <summary>Port 1 latch. PWM (sound), serial I/O. VMD-50</summary>
 public struct P1
 {
