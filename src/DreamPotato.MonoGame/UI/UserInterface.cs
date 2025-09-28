@@ -290,6 +290,8 @@ class UserInterface
 
             ImGui.Separator();
 
+            // TODO: list recently opened VMU files?
+
             if (ImGui.MenuItem("Quit"))
                 _game.Exit();
 

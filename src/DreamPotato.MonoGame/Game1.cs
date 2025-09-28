@@ -20,6 +20,7 @@ public class Game1 : Game
     private readonly Color[] _vmuScreenData;
     private ColorPalette _colorPalette;
     internal Configuration Configuration;
+    internal RecentFilesInfo RecentFilesInfo;
 
     internal readonly Vmu Vmu;
 
@@ -75,6 +76,8 @@ public class Game1 : Game
         Configuration = Configuration.Load();
         Configuration.Save();
 
+        RecentFilesInfo = RecentFilesInfo.Load();
+
         _colorPalette = ColorPalette.AllPalettes.FirstOrDefault(palette => palette.Name == Configuration.ColorPaletteName) ?? ColorPalette.AllPalettes[0];
 
         Vmu = new Vmu();
@@ -129,6 +132,7 @@ public class Game1 : Game
             throw new InvalidOperationException($"'{romFileName}' must be included in '{Vmu.DataFolder}'.", ex);
         }
 
+        vmsOrVmuFilePath ??= RecentFilesInfo.RecentFiles.FirstOrDefault();
         if (vmsOrVmuFilePath != null)
         {
             LoadAndStartVmsOrVmuFile(vmsOrVmuFilePath);
@@ -140,6 +144,8 @@ public class Game1 : Game
         Vmu.LoadNewVmu(date: DateTime.Now, autoInitializeRTCDate: Configuration.AutoInitializeDate);
         Paused = false;
         UpdateWindowTitle(vmsOrVmuFilePath: null);
+        RecentFilesInfo = RecentFilesInfo.PrependRecentFile(newRecentFile: null);
+        RecentFilesInfo.Save();
     }
 
     internal void LoadAndStartVmsOrVmuFile(string filePath)
@@ -161,6 +167,8 @@ public class Game1 : Game
 
         Paused = false;
         UpdateWindowTitle(filePath);
+        RecentFilesInfo = RecentFilesInfo.PrependRecentFile(filePath);
+        RecentFilesInfo.Save();
     }
 
     internal void SaveVmuFileAs(string vmuFilePath)
