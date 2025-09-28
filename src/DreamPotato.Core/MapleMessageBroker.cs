@@ -449,7 +449,7 @@ public class MapleMessageBroker
         byte[] rawSocketBuffer = new byte[MaxMaplePacketSize * 4];
         while (true)
         {
-            var receivedLen = await clientSocket.ReceiveAsync(rawSocketBuffer, SocketFlags.None, cancellationToken);
+            var receivedLen = await clientSocket.ReceiveAsync(rawSocketBuffer, cancellationToken);
             if (receivedLen <= 0)
             {
                 // disconnected
@@ -493,7 +493,7 @@ public class MapleMessageBroker
     private async Task SocketListenerEntryPoint(DreamcastPort dreamcastPort, CancellationToken cancellationToken)
     {
         using var listener = new Socket(SocketType.Stream, ProtocolType.Tcp);
-        listener.Bind(new IPEndPoint(IPAddress.Loopback, BasePort + (int)dreamcastPort));
+        listener.Bind(new IPEndPoint(IPAddress.IPv6Loopback, BasePort + (int)dreamcastPort));
         listener.Listen(backlog: 1);
 
         while (true) // Accept a new client whenever one disconnects

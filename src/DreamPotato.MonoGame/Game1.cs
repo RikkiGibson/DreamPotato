@@ -91,19 +91,28 @@ public class Game1 : Game
         LoadVmuFiles(gameFilePath);
     }
 
-    internal void UpdateWindowTitle(string? vmsOrVmuFilePath)
+    protected override void OnExiting(object sender, ExitingEventArgs args)
     {
-        if (vmsOrVmuFilePath is null)
+        if (Vmu.HasUnsavedChanges && _userInterface.ExitConfirmationState != ExitConfirmationState.Confirmed)
         {
-            Window.Title = "DreamPotato";
-            return;
+            args.Cancel = true;
+            _userInterface.ShowConfirmExitDialog();
         }
 
-        // Indicate that vms files are not auto saved
-        var prefix = Vmu.HasUnsavedChanges
+        base.OnExiting(sender, args);
+    }
+
+    internal void UpdateWindowTitle(string? vmsOrVmuFilePath)
+    {
+        var star = Vmu.HasUnsavedChanges
             ? "* "
             : "";
-        Window.Title = $"{prefix}{Path.GetFileName(vmsOrVmuFilePath)} - DreamPotato";
+
+        var fileDesc = vmsOrVmuFilePath is null
+            ? ""
+            : $"{Path.GetFileName(vmsOrVmuFilePath)} - ";
+
+        Window.Title = $"{star}{fileDesc}DreamPotato";
     }
 
     private void LoadVmuFiles(string? vmsOrVmuFilePath)
@@ -124,6 +133,13 @@ public class Game1 : Game
         {
             LoadAndStartVmsOrVmuFile(vmsOrVmuFilePath);
         }
+    }
+
+    internal void LoadNewVmu()
+    {
+        Vmu.LoadNewVmu(date: DateTime.Now, autoInitializeRTCDate: Configuration.AutoInitializeDate);
+        Paused = false;
+        UpdateWindowTitle(vmsOrVmuFilePath: null);
     }
 
     internal void LoadAndStartVmsOrVmuFile(string filePath)

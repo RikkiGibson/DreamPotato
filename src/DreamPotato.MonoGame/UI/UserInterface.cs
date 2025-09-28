@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -21,6 +22,13 @@ using NativeFileDialogSharp;
 using Numerics = System.Numerics;
 
 namespace DreamPotato.MonoGame.UI;
+
+internal enum ExitConfirmationState
+{
+    None,
+    ShowDialog,
+    Confirmed,
+}
 
 class UserInterface
 {
@@ -45,9 +53,31 @@ class UserInterface
     private const int ToastMaxDisplayFrames = 2 * 60;
     private const int ToastBeginFadeoutFrames = 30;
 
+    private readonly string _displayVersion;
+    private readonly string _commitId;
+
+    internal ExitConfirmationState ExitConfirmationState { get; private set; }
+
     public UserInterface(Game1 game)
     {
         _game = game;
+        var versionAttribute = typeof(UserInterface).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+        if (versionAttribute is null)
+        {
+            _displayVersion = "?";
+            _commitId = "?";
+        }
+        else
+        {
+            var informationalVersion = versionAttribute.InformationalVersion;
+            var plusIndex = informationalVersion.IndexOf('+');
+            _displayVersion = plusIndex == -1 ? informationalVersion : informationalVersion[..plusIndex];
+
+            var commitStartIndex = plusIndex + 1;
+            const int commitMaxDisplayLength = 7;
+            var commitLength = Math.Min(commitMaxDisplayLength, informationalVersion.Length - commitStartIndex);
+            _commitId = plusIndex == -1 ? "?" : informationalVersion.Substring(commitStartIndex, length: commitLength);
+        }
     }
 
     internal void Initialize(Texture2D iconConnectedTexture)
@@ -83,8 +113,18 @@ class UserInterface
         _imGuiRenderer.AfterLayout();
     }
 
+    /// <summary>Show a modal asking user to confirm exit because there are unsaved changes</summary>
+    internal void ShowConfirmExitDialog()
+    {
+        Pause();
+        ExitConfirmationState = ExitConfirmationState.ShowDialog;
+    }
+
     private void Pause()
     {
+        if (_game.Paused)
+            return;
+
         // TODO: if user presses insert/eject while in menus we can end up unpausing when we shouldn't.
         _pauseWhenClosed = _game.Paused;
         _game.Paused = true;
@@ -125,6 +165,7 @@ class UserInterface
         LayoutEditButton();
 
         LayoutResetModal();
+        LayoutConfirmExitDialog();
 
         LayoutToast();
     }
@@ -159,6 +200,13 @@ class UserInterface
         ImGui.BeginMainMenuBar();
         if (ImGui.BeginMenu("File"))
         {
+            if (ImGui.MenuItem("New VMU"))
+            {
+                // TODO: add modals to confirm destructive commands on unsaved VMUs
+                // new, open, quit
+                _game.LoadNewVmu();
+            }
+
             if (ImGui.MenuItem("Open VMS (Game)"))
             {
                 var result = Dialog.FileOpen("vms", defaultPath: null);
@@ -278,6 +326,18 @@ class UserInterface
                     }
                 }.Start();
             }
+
+            ImGui.EndMenu();
+        }
+
+        if (ImGui.BeginMenu("About"))
+        {
+            ImGui.Text($"Version: {_displayVersion}");
+            ImGui.Text($"Commit: {_commitId}");
+            ImGui.Separator();
+
+            if (ImGui.MenuItem("Copy to clipboard"))
+                ImGui.SetClipboardText($"{_displayVersion} ({_commitId})");
 
             ImGui.EndMenu();
         }
@@ -641,6 +701,31 @@ class UserInterface
                 ClosePopupAndUnpause();
 
             ImGui.EndPopup();
+        }
+    }
+
+    private void LayoutConfirmExitDialog()
+    {
+        if (ExitConfirmationState != ExitConfirmationState.ShowDialog)
+            return;
+
+        ImGui.Begin("Exit without saving?", ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.Modal);
+        {
+            ImGui.Text("Unsaved progress will be lost.");
+            if (ImGui.Button("Exit"))
+            {
+                ExitConfirmationState = ExitConfirmationState.Confirmed;
+                _game.Exit();
+            }
+
+            ImGui.SameLine();
+            if (ImGui.Button("Cancel"))
+            {
+                ExitConfirmationState = ExitConfirmationState.None;
+                Unpause();
+            }
+
+            ImGui.End();
         }
     }
 }

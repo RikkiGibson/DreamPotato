@@ -84,6 +84,18 @@ public class Vmu
             InitializeDate(date.GetValueOrDefault());
     }
 
+    public void LoadNewVmu(DateTimeOffset date, bool autoInitializeRTCDate)
+    {
+        LoadedFilePath = null;
+        Reset(autoInitializeRTCDate ? date : null);
+        InitializeFlash(date);
+
+        LoadedFilePath = null;
+        _cpu.HasUnsavedChanges = false;
+        _cpu.VmuFileWriteStream = null;
+        _cpu.ResyncMapleOutbound();
+    }
+
     public void LoadGameVms(string filePath, DateTimeOffset? date)
     {
         if (!filePath.EndsWith(".vms", StringComparison.OrdinalIgnoreCase))

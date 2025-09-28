@@ -544,10 +544,10 @@ public class SpecialFunctionRegisters
     }
 
     /// <summary>SIO0 control register. VMD-108</summary>
-    public byte Scon0
+    public Scon0 Scon0
     {
-        get => Read(Ids.Scon0);
-        set => Write(Ids.Scon0, value);
+        get => new(Read(Ids.Scon0));
+        set => Write(Ids.Scon0, (byte)value);
     }
 
     /// <summary>SIO0 buffer. VMD-113</summary>
@@ -557,7 +557,11 @@ public class SpecialFunctionRegisters
         set => Write(Ids.Sbuf0, value);
     }
 
-    /// <summary>SIO0 baud rate generator. VMD-113</summary>
+    /// <summary>
+    /// SIO0 baud rate generator. VMD-113
+    /// Controls the transfer rate when internal clock is used for the transfer clock.
+    /// Transfer rate TSBR = (256 - SBR) * 2 * Tcyc
+    /// </summary>
     public byte Sbr
     {
         get => Read(Ids.Sbr);
@@ -565,10 +569,10 @@ public class SpecialFunctionRegisters
     }
 
     /// <summary>SIO1 control register. VMD-111</summary>
-    public byte Scon1
+    public Scon1 Scon1
     {
-        get => Read(Ids.Scon1);
-        set => Write(Ids.Scon1, value);
+        get => new(Read(Ids.Scon1));
+        set => Write(Ids.Scon1, (byte)value);
     }
 
     /// <summary>SIO1 buffer. VMD-113</summary>
