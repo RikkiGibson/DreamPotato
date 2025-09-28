@@ -23,11 +23,40 @@ using Numerics = System.Numerics;
 
 namespace DreamPotato.MonoGame.UI;
 
-internal enum ExitConfirmationState
+enum ConfirmationState
 {
     None,
     ShowDialog,
     Confirmed,
+}
+
+enum PendingCommandKind
+{
+    None,
+    NewVmu,
+    OpenVms,
+    OpenVmu,
+    Exit
+}
+
+readonly struct PendingCommand
+{
+    private PendingCommand(ConfirmationState confirmationState, PendingCommandKind kind)
+    {
+        // If we are showing dialog or confirming something, there needs to be an actual command
+        if (confirmationState is not ConfirmationState.None && kind is PendingCommandKind.None)
+            throw new ArgumentException(null, nameof(kind));
+
+        State = confirmationState;
+        Kind = kind;
+    }
+
+    public ConfirmationState State { get; }
+    public PendingCommandKind Kind { get; }
+    public string? FilePath { get; }
+
+    public static PendingCommand ShowDialog(PendingCommandKind kind) => new(ConfirmationState.ShowDialog, kind);
+    public PendingCommand Confirmed() => new(ConfirmationState.Confirmed, Kind);
 }
 
 class UserInterface
@@ -56,7 +85,7 @@ class UserInterface
     private readonly string _displayVersion;
     private readonly string _commitId;
 
-    internal ExitConfirmationState ExitConfirmationState { get; private set; }
+    internal PendingCommand PendingCommand { get; private set; }
 
     public UserInterface(Game1 game)
     {
@@ -113,11 +142,11 @@ class UserInterface
         _imGuiRenderer.AfterLayout();
     }
 
-    /// <summary>Show a modal asking user to confirm exit because there are unsaved changes</summary>
-    internal void ShowConfirmExitDialog()
+    /// <summary>Show a modal asking user to confirm a "destructive" command</summary>
+    internal void ShowConfirmCommandDialog(PendingCommandKind commandKind)
     {
         Pause();
-        ExitConfirmationState = ExitConfirmationState.ShowDialog;
+        PendingCommand = PendingCommand.ShowDialog(commandKind);
     }
 
     private void Pause()
@@ -128,6 +157,47 @@ class UserInterface
         // TODO: if user presses insert/eject while in menus we can end up unpausing when we shouldn't.
         _pauseWhenClosed = _game.Paused;
         _game.Paused = true;
+    }
+
+    internal void NewVmu()
+    {
+        if (_game.Vmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.NewVmu, State: ConfirmationState.Confirmed })
+        {
+            ShowConfirmCommandDialog(PendingCommandKind.NewVmu);
+            return;
+        }
+
+        _game.LoadNewVmu();
+    }
+
+    internal void OpenVmsDialog()
+    {
+        if (_game.Vmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.OpenVms, State: ConfirmationState.Confirmed })
+        {
+            ShowConfirmCommandDialog(PendingCommandKind.OpenVms);
+            return;
+        }
+
+        var result = Dialog.FileOpen("vms", defaultPath: null);
+        if (result.IsOk)
+        {
+            _game.LoadAndStartVmsOrVmuFile(result.Path);
+        }
+    }
+
+    internal void OpenVmuDialog()
+    {
+        if (_game.Vmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.OpenVmu, State: ConfirmationState.Confirmed })
+        {
+            ShowConfirmCommandDialog(PendingCommandKind.OpenVmu);
+            return;
+        }
+
+        var result = Dialog.FileOpen("vmu,bin", defaultPath: null);
+        if (result.IsOk)
+        {
+            _game.LoadAndStartVmsOrVmuFile(result.Path);
+        }
     }
 
     private void OpenPopupAndPause(string name)
@@ -165,7 +235,7 @@ class UserInterface
         LayoutEditButton();
 
         LayoutResetModal();
-        LayoutConfirmExitDialog();
+        LayoutPendingCommandDialog();
 
         LayoutToast();
     }
@@ -201,29 +271,13 @@ class UserInterface
         if (ImGui.BeginMenu("File"))
         {
             if (ImGui.MenuItem("New VMU"))
-            {
-                // TODO: add modals to confirm destructive commands on unsaved VMUs
-                // new, open, quit
-                _game.LoadNewVmu();
-            }
+                NewVmu();
 
             if (ImGui.MenuItem("Open VMS (Game)"))
-            {
-                var result = Dialog.FileOpen("vms", defaultPath: null);
-                if (result.IsOk)
-                {
-                    _game.LoadAndStartVmsOrVmuFile(result.Path);
-                }
-            }
+                OpenVmsDialog();
 
             if (ImGui.MenuItem("Open VMU (Memory Card)"))
-            {
-                var result = Dialog.FileOpen("vmu,bin", defaultPath: null);
-                if (result.IsOk)
-                {
-                    _game.LoadAndStartVmsOrVmuFile(result.Path);
-                }
-            }
+                OpenVmuDialog();
 
             if (ImGui.MenuItem("Save As"))
             {
@@ -237,9 +291,7 @@ class UserInterface
             ImGui.Separator();
 
             if (ImGui.MenuItem("Quit"))
-            {
                 _game.Exit();
-            }
 
             ImGui.EndMenu();
         }
@@ -704,28 +756,70 @@ class UserInterface
         }
     }
 
-    private void LayoutConfirmExitDialog()
+    private void LayoutPendingCommandDialog()
     {
-        if (ExitConfirmationState != ExitConfirmationState.ShowDialog)
+        if (PendingCommand.State is not ConfirmationState.ShowDialog)
             return;
 
-        ImGui.Begin("Exit without saving?", ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.Modal);
+        var title = PendingCommand.Kind switch
+        {
+            PendingCommandKind.NewVmu => "Create new VMU without saving?",
+            PendingCommandKind.OpenVms => "Open VMS without saving",
+            PendingCommandKind.OpenVmu => "Open VMU without saving?",
+            PendingCommandKind.Exit => "Exit without saving?",
+            _ => throw new InvalidOperationException(),
+        };
+
+        ImGui.Begin(title, ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.Modal | ImGuiWindowFlags.NoResize);
         {
             ImGui.Text("Unsaved progress will be lost.");
-            if (ImGui.Button("Exit"))
+
+            var confirmLabel = PendingCommand.Kind switch
             {
-                ExitConfirmationState = ExitConfirmationState.Confirmed;
-                _game.Exit();
+                PendingCommandKind.NewVmu => "Create",
+                PendingCommandKind.OpenVms => "Open",
+                PendingCommandKind.OpenVmu => "Open",
+                PendingCommandKind.Exit => "Exit",
+                _ => throw new InvalidOperationException(),
+            };
+
+            if (ImGui.Button(confirmLabel))
+            {
+                PendingCommand = PendingCommand.Confirmed();
+                performCommand();
+                PendingCommand = default;
             }
 
             ImGui.SameLine();
             if (ImGui.Button("Cancel"))
             {
-                ExitConfirmationState = ExitConfirmationState.None;
+                PendingCommand = default;
                 Unpause();
             }
 
             ImGui.End();
+        }
+
+        void performCommand()
+        {
+            Debug.Assert(PendingCommand.State == ConfirmationState.Confirmed);
+            switch (PendingCommand.Kind)
+            {
+                case PendingCommandKind.Exit:
+                    _game.Exit();
+                    break;
+                case PendingCommandKind.NewVmu:
+                    NewVmu();
+                    break;
+                case PendingCommandKind.OpenVms:
+                    OpenVmsDialog();
+                    break;
+                case PendingCommandKind.OpenVmu:
+                    OpenVmuDialog();
+                    break;
+                default:
+                    throw new InvalidOperationException();
+            }
         }
     }
 }

@@ -93,10 +93,10 @@ public class Game1 : Game
 
     protected override void OnExiting(object sender, ExitingEventArgs args)
     {
-        if (Vmu.HasUnsavedChanges && _userInterface.ExitConfirmationState != ExitConfirmationState.Confirmed)
+        if (Vmu.HasUnsavedChanges && _userInterface.PendingCommand is not { Kind: PendingCommandKind.Exit, State: ConfirmationState.Confirmed })
         {
             args.Cancel = true;
-            _userInterface.ShowConfirmExitDialog();
+            _userInterface.ShowConfirmCommandDialog(PendingCommandKind.Exit);
         }
 
         base.OnExiting(sender, args);
