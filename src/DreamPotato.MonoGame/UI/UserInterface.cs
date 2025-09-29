@@ -766,7 +766,7 @@ class UserInterface
         var title = PendingCommand.Kind switch
         {
             PendingCommandKind.NewVmu => "Create new VMU without saving?",
-            PendingCommandKind.OpenVms => "Open VMS without saving",
+            PendingCommandKind.OpenVms => "Open VMS without saving?",
             PendingCommandKind.OpenVmu => "Open VMU without saving?",
             PendingCommandKind.Exit => "Exit without saving?",
             _ => throw new InvalidOperationException(),
