@@ -359,17 +359,20 @@ public class Game1 : Game
 
         Vmu._cpu.SFRs.P3 = newP3;
 
+        _previousKeys = keyboard;
+        _previousGamepad = gamepad;
+
         var rate = Paused ? 0 :
-            _buttonChecker.IsPressed(VmuButton.FastForward, keyboard, gamepad) ? gameTime.ElapsedGameTime.Ticks * 2 :
+            IsFastForwarding ? gameTime.ElapsedGameTime.Ticks * 2 :
             gameTime.ElapsedGameTime.Ticks;
 
         Vmu._cpu.Run(rate);
 
-        _previousKeys = keyboard;
-        _previousGamepad = gamepad;
-
         base.Update(gameTime);
     }
+
+    internal bool IsFastForwarding
+        => _buttonChecker.IsPressed(VmuButton.FastForward, _previousKeys, _previousGamepad);
 
     private void Audio_BufferReady(Audio.AudioBufferReadyEventArgs args)
     {

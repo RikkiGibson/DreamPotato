@@ -237,7 +237,27 @@ class UserInterface
         LayoutResetModal();
         LayoutPendingCommandDialog();
 
+        LayoutFastForwardOrPauseIndicator();
         LayoutToast();
+    }
+
+    private void LayoutFastForwardOrPauseIndicator()
+    {
+        var message = _game.Paused ? "||" :
+            _game.IsFastForwarding ? ">>" :
+            null;
+        if (message is null)
+            return;
+
+        var textSize = ImGui.CalcTextSize(message, wrapWidth: Game1.TotalScreenWidth);
+        ImGui.SetNextWindowPos(new Numerics.Vector2(x: 2, y: Game1.TotalScreenHeight - textSize.Y - 20));
+        ImGui.SetNextWindowSize(textSize + new Numerics.Vector2(10, 20));
+        if (ImGui.Begin("FastForwardOrPauseIndicator", ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoInputs | ImGuiWindowFlags.NoScrollbar))
+        {
+            ImGui.TextWrapped(message);
+        }
+
+        ImGui.End();
     }
 
     private void LayoutToast()
