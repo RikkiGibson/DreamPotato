@@ -7,9 +7,15 @@ DreamPotato is a Dreamcast VMU emulator in currently in beta. For the moment onl
 > Consider making copies of VMU files before using them to avoid any chance of corrupting your saves.
 > `.vms` files opened in the emulator will not be modified.
 
+[Download Latest Release](https://github.com/RikkiGibson/DreamPotato/releases/latest)
+
 See [compatibility.md](compatibility.md) for the current compatibility status of various games.
 
-## Flycast Integration Prototype
+![System Clock](./docs/images/clock.png)
+![Power Stone Mini](./docs/images/power-stone-mini.png)
+![Sonic Adventure (Dreamcast integration)](./docs/images/sonic-adventure.png)
+
+## Flycast Integration
 
 [Demo Video](https://www.youtube.com/watch?v=EN8Y3UX_TDM)
 
