@@ -13,6 +13,7 @@ public class Vmu
     public Audio Audio => _cpu.Audio;
     public Display Display => _cpu.Display;
     public string? LoadedFilePath { get; private set; }
+    public (byte a, byte r, byte g, byte b) Color => _fileSystem.VmuColor;
 
     public bool HasUnsavedChanges => _cpu.HasUnsavedChanges;
     public event Action UnsavedChangesDetected

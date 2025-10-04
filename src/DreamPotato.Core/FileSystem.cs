@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Drawing;
+using System.Numerics;
 using System.Text;
 
 namespace DreamPotato.Core;
@@ -49,6 +51,23 @@ internal class FileSystem(byte[] flash)
     const int FAT_LastInFileLsb = 0xfa;
     const int FAT_LastInFileMsb = 0xff;
 
+    // offsets for color data within the root block
+    const int UsingCustomColor = 0x10;
+    const int ColorBlue = 0x11;
+    const int ColorGreen = 0x12;
+    const int ColorRed = 0x13;
+    const int ColorAlpha = 0x14;
+
+    public (byte a, byte r, byte g, byte b) VmuColor
+    {
+        get
+        {
+            var rootBlock = GetBlock(RootBlockId);
+            // TODO: what if UsingCustomColor != 1?
+            return (rootBlock[ColorAlpha], rootBlock[ColorRed], rootBlock[ColorGreen], rootBlock[ColorBlue]);
+        }
+    }
+
     public void InitializeFileSystem(DateTimeOffset date)
     {
         // Note that multi-byte values are little-endian encoded!
@@ -67,11 +86,11 @@ internal class FileSystem(byte[] flash)
                 rootBlock[i] = Magic;
 
             // 0x10-0x30: Volume label (VMU stores the color here).
-            rootBlock[0x10] = 0x01; // Using custom volume color
-            rootBlock[0x11] = 0xff; // blue
-            rootBlock[0x12] = 0xff; // green
-            rootBlock[0x13] = 0xff; // red
-            rootBlock[0x14] = 0x64; // alpha
+            rootBlock[UsingCustomColor] = 0x01;
+            rootBlock[ColorBlue] = 0xff;
+            rootBlock[ColorGreen] = 0xff;
+            rootBlock[ColorRed] = 0xff;
+            rootBlock[ColorAlpha] = 0x64;
             rootBlock[0x15..0x30].Clear();
 
             // 0x30-0x38: Timestamp
@@ -180,13 +199,13 @@ internal class FileSystem(byte[] flash)
     public void WriteGameFile(ReadOnlySpan<byte> gameFileData, string filename, DateTimeOffset date)
     {
         if (gameFileData.Length == 0)
-            throw new ArgumentException(nameof(gameFileData));
+            throw new ArgumentException(null, paramName: nameof(gameFileData));
 
         if (gameFileData.Length > Cpu.InstructionBankSize)
-            throw new ArgumentException(nameof(gameFileData));
+            throw new ArgumentException(null, paramName: nameof(gameFileData));
 
         if (filename.Length > DirectoryEntryFileNameLength)
-            throw new ArgumentException(nameof(filename));
+            throw new ArgumentException(null, paramName: nameof(filename));
 
         // Game data itself must be written to start of bank 0
         gameFileData.CopyTo(flash);
