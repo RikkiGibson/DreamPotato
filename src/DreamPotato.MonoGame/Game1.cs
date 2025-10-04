@@ -105,15 +105,15 @@ public class Game1 : Game
         base.OnExiting(sender, args);
     }
 
-    internal void UpdateWindowTitle(string? vmsOrVmuFilePath)
+    internal void UpdateWindowTitle()
     {
         var star = Vmu.HasUnsavedChanges
             ? "* "
             : "";
 
-        var fileDesc = vmsOrVmuFilePath is null
+        var fileDesc = Vmu.LoadedFilePath is null
             ? ""
-            : $"{Path.GetFileName(vmsOrVmuFilePath)} - ";
+            : $"{Path.GetFileName(Vmu.LoadedFilePath)} - ";
 
         Window.Title = $"{star}{fileDesc}DreamPotato";
     }
@@ -143,7 +143,7 @@ public class Game1 : Game
     {
         Vmu.LoadNewVmu(date: DateTime.Now, autoInitializeRTCDate: Configuration.AutoInitializeDate);
         Paused = false;
-        UpdateWindowTitle(vmsOrVmuFilePath: null);
+        UpdateWindowTitle();
         RecentFilesInfo = RecentFilesInfo.PrependRecentFile(newRecentFile: null);
         RecentFilesInfo.Save();
     }
@@ -166,7 +166,7 @@ public class Game1 : Game
         }
 
         Paused = false;
-        UpdateWindowTitle(filePath);
+        UpdateWindowTitle();
         RecentFilesInfo = RecentFilesInfo.PrependRecentFile(filePath);
         RecentFilesInfo.Save();
     }
@@ -180,8 +180,10 @@ public class Game1 : Game
             vmuFilePath = Path.ChangeExtension(vmuFilePath, ".vmu");
         }
 
-        UpdateWindowTitle(vmuFilePath);
         Vmu.SaveVmuAs(vmuFilePath);
+        UpdateWindowTitle();
+        RecentFilesInfo = RecentFilesInfo.PrependRecentFile(vmuFilePath);
+        RecentFilesInfo.Save();
     }
 
     internal void Reset()
@@ -273,7 +275,7 @@ public class Game1 : Game
 
     private void Vmu_UnsavedChangesDetected()
     {
-        UpdateWindowTitle(Vmu.LoadedFilePath);
+        UpdateWindowTitle();
     }
 
     internal Point WindowSize

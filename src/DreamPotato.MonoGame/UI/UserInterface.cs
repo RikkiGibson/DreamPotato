@@ -809,7 +809,6 @@ class UserInterface
             {
                 PendingCommand = PendingCommand.Confirmed();
                 performCommand();
-                PendingCommand = default;
             }
 
             ImGui.SameLine();
@@ -829,15 +828,21 @@ class UserInterface
             {
                 case PendingCommandKind.Exit:
                     _game.Exit();
+                    // Ideally, we always reset the PendingCommand state after 'performCommand()'.
+                    // But, OnExiting is not called until after this tick.
+                    // So, we specifically need to keep PendingCommand around for this command.
                     break;
                 case PendingCommandKind.NewVmu:
                     NewVmu();
+                    PendingCommand = default;
                     break;
                 case PendingCommandKind.OpenVms:
                     OpenVmsDialog();
+                    PendingCommand = default;
                     break;
                 case PendingCommandKind.OpenVmu:
                     OpenVmuDialog();
+                    PendingCommand = default;
                     break;
                 default:
                     throw new InvalidOperationException();
