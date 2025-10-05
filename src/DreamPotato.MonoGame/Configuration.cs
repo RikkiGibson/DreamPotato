@@ -18,7 +18,9 @@ namespace DreamPotato.MonoGame;
 public record Configuration(
     bool AutoInitializeDate = true,
     bool AnyButtonWakesFromSleep = true,
+    bool PreserveAspectRatio = true,
     int Volume = Audio.DefaultVolume,
+    ViewportSize? ViewportSize = null,
     [property: JsonConverter(typeof(JsonStringEnumConverter<DreamcastPort>))] DreamcastPort DreamcastPort = DreamcastPort.A)
 {
     private const string FileName = "configuration.json";
@@ -27,6 +29,9 @@ public record Configuration(
     public string? ColorPaletteName { get; init; }
     public ImmutableArray<KeyMapping> KeyMappings { get; init; }
     public ImmutableArray<ButtonMapping> ButtonMappings { get; init; }
+
+    public ViewportSize ViewportSize { get; init; } = ViewportSize ?? new ViewportSize(Width: Game1.MinWidth * 2, Height: Game1.TotalContentHeight * 2 + Game1.MenuBarHeight);
+    public WindowPosition? WindowPosition { get; init; }
 
     public void Save()
     {
@@ -219,6 +224,10 @@ public struct ButtonMapping
     public Buttons SourceButton { get; set; }
     public VmuButton TargetButton { get; set; }
 }
+
+/// <summary>Size of the rendered content (i.e. not including the operating system menu bar.)</summary>
+public record ViewportSize(int Width, int Height);
+public record WindowPosition(int X, int Y);
 
 [JsonSourceGenerationOptions(WriteIndented = true)]
 [JsonSerializable(typeof(Configuration))]

@@ -64,7 +64,6 @@ class UserInterface
     private readonly Game1 _game;
 
     private ImGuiRenderer _imGuiRenderer = null!;
-    private Texture2D _userInterfaceTexture = null!;
     private nint _rawIconConnectedTexture;
     private GCHandle _iniFilenameHandle;
 
@@ -126,7 +125,6 @@ class UserInterface
             }
         }
 
-        _userInterfaceTexture = new Texture2D(_game.GraphicsDevice, Game1.TotalScreenWidth, Game1.TotalScreenHeight);
         _rawIconConnectedTexture = _imGuiRenderer.BindTexture(iconConnectedTexture);
     }
 
@@ -249,8 +247,9 @@ class UserInterface
         if (message is null)
             return;
 
-        var textSize = ImGui.CalcTextSize(message, wrapWidth: Game1.TotalScreenWidth);
-        ImGui.SetNextWindowPos(new Numerics.Vector2(x: 2, y: Game1.TotalScreenHeight - textSize.Y - 20));
+        var textSize = ImGui.CalcTextSize(message, wrapWidth: Game1.TotalContentWidth);
+        var windowHeight = _game.GraphicsDevice.Viewport.Height;
+        ImGui.SetNextWindowPos(new Numerics.Vector2(x: 2, y: windowHeight - textSize.Y - 20));
         ImGui.SetNextWindowSize(textSize + new Numerics.Vector2(10, 20));
         if (ImGui.Begin("FastForwardOrPauseIndicator", ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoInputs | ImGuiWindowFlags.NoScrollbar))
         {
@@ -271,8 +270,9 @@ class UserInterface
         if (doFadeout)
             ImGui.PushStyleVar(ImGuiStyleVar.Alpha, ((float)_toastDisplayFrames) / ToastBeginFadeoutFrames);
 
-        var textSize = ImGui.CalcTextSize(_toastMessage, wrapWidth: Game1.TotalScreenWidth);
-        ImGui.SetNextWindowPos(new Numerics.Vector2(x: 2, y: Game1.TotalScreenHeight - textSize.Y - 20));
+        var textSize = ImGui.CalcTextSize(_toastMessage, wrapWidth: Game1.TotalContentWidth);
+        var windowHeight = _game.GraphicsDevice.Viewport.Height;
+        ImGui.SetNextWindowPos(new Numerics.Vector2(x: 2, y: windowHeight - textSize.Y - 20));
         ImGui.SetNextWindowSize(textSize + new Numerics.Vector2(10, 20));
         if (ImGui.Begin("Toast", ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoInputs | ImGuiWindowFlags.NoScrollbar))
         {
@@ -401,6 +401,25 @@ class UserInterface
                 }.Start();
             }
 
+            if (ImGui.BeginMenu("Set Window Size"))
+            {
+                var currentMultiple = _game.GetWindowSizeMultiple();
+
+                if (ImGui.MenuItem("3x (144x96)", enabled: currentMultiple != 1))
+                    _game.SetWindowSizeMultiple(1);
+
+                if (ImGui.MenuItem("6x (288x192)", enabled: currentMultiple != 2))
+                    _game.SetWindowSizeMultiple(2);
+
+                if (ImGui.MenuItem("9x (432x288)", enabled: currentMultiple != 3))
+                    _game.SetWindowSizeMultiple(3);
+
+                if (ImGui.MenuItem("12x (576x384)", enabled: currentMultiple != 4))
+                    _game.SetWindowSizeMultiple(4);
+
+                ImGui.EndMenu();
+            }
+
             ImGui.EndMenu();
         }
 
@@ -440,10 +459,6 @@ class UserInterface
 
     private void LayoutSettings()
     {
-        var configuration = _game.Configuration;
-
-        // TODO: should not set this every frame. do it when calling OpenPopup or something
-        // ImGui.SetNextWindowSize(Numerics.Vector2.Create(x: Game1.TotalScreenWidth * 8 / 10, y: Game1.TotalScreenHeight * 8 / 10));
         if (ImGui.BeginPopupModal("Settings"))
         {
             if (ImGui.Button("Done"))
@@ -452,6 +467,7 @@ class UserInterface
                 ClosePopupAndUnpause();
             }
 
+            var configuration = _game.Configuration;
             var autoInitializeDate = configuration.AutoInitializeDate;
             if (ImGui.Checkbox("Auto-initialize date on startup", ref autoInitializeDate))
                 _game.Configuration_AutoInitializeDateChanged(autoInitializeDate);
@@ -460,6 +476,11 @@ class UserInterface
             var anyButtonWakesFromSleep = configuration.AnyButtonWakesFromSleep;
             if (ImGui.Checkbox("Any button wakes from sleep", ref anyButtonWakesFromSleep))
                 _game.Configuration_AnyButtonWakesFromSleepChanged(anyButtonWakesFromSleep);
+
+
+            var preserveAspectRatio = configuration.PreserveAspectRatio;
+            if (ImGui.Checkbox("Preserve aspect ratio", ref preserveAspectRatio))
+                _game.Configuration_PreserveAspectRatioChanged(preserveAspectRatio);
 
             // Volume
             ImGui.Text("Volume");
@@ -760,8 +781,7 @@ class UserInterface
 
     private void LayoutResetModal()
     {
-        ImGui.SetNextWindowSize(Numerics.Vector2.Create(x: Game1.TotalScreenWidth * 3 / 4, y: Game1.TotalScreenHeight * 1 / 4));
-        if (ImGui.BeginPopupModal("Reset?"))
+        if (ImGui.BeginPopupModal("Reset?", ImGuiWindowFlags.NoResize))
         {
             ImGui.Text("Unsaved progress will be lost.");
             if (ImGui.Button("Reset"))
