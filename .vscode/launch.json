@@ -20,7 +20,7 @@
         "windows": {
           "program": "${workspaceFolder}/artifacts/bin/DreamPotato.MonoGame/Debug/DreamPotato.exe",
         },
-        // "args": ["<path-to-vms-or-vmu-file>"],
+        // "args": ["path-to-vms-or-vmu-file"],
         "cwd": "${workspaceFolder}",
         "stopAtEntry": false,
         "console": "internalConsole"

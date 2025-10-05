@@ -20,28 +20,32 @@ public class Game1 : Game
     private readonly Color[] _vmuScreenData;
     private ColorPalette _colorPalette;
     internal Configuration Configuration;
+    internal RecentFilesInfo RecentFilesInfo;
 
     internal readonly Vmu Vmu;
 
-    // TODO: eventually, there should be UI to permit a non-constant scale.
-    private const int VmuScale = 6;
-    private const int ScaledWidth = Display.ScreenWidth * VmuScale;
-    private const int ScaledHeight = Display.ScreenHeight * VmuScale;
+    private const int MinVmuScale = 3;
+    private const int ScaledWidth = Display.ScreenWidth * MinVmuScale;
+    private const int ScaledHeight = Display.ScreenHeight * MinVmuScale;
 
-    private const int IconSize = 64;
+    private const int IconSize = 32;
 
-    private const int MenuBarHeight = 20;
-    private const int TopMargin = VmuScale * 2 + MenuBarHeight;
-    private const int SideMargin = VmuScale * 3;
-    private const int BottomMargin = VmuScale * 12;
+    internal const int MenuBarHeight = 20;
+    private const int TopMargin = MinVmuScale * 2;
+    private const int SideMargin = MinVmuScale * 3;
+    private const int BottomMargin = MinVmuScale * 12;
 
-    internal const int TotalScreenWidth = ScaledWidth + SideMargin * 2;
-    internal const int TotalScreenHeight = ScaledHeight + TopMargin + BottomMargin;
+    internal const int TotalContentWidth = ScaledWidth + SideMargin * 2;
+    internal const int TotalContentHeight = ScaledHeight + TopMargin + BottomMargin;
+
+    internal const int MinWidth = TotalContentWidth;
+    internal const int MinHeight = TotalContentHeight + MenuBarHeight;
 
     private const int SleepToggleInsertEjectFrameCount = 60; // 1 second
 
     // Set in Initialize()
     private SpriteBatch _spriteBatch = null!;
+    private Matrix _spriteTransformMatrix;
     private Texture2D _vmuScreenTexture = null!;
 
     private Texture2D _iconFileTexture = null!;
@@ -65,15 +69,22 @@ public class Game1 : Game
 
     public Game1(string? gameFilePath)
     {
+        Configuration = Configuration.Load();
+        Configuration.Save();
+
         _graphics = new GraphicsDeviceManager(this);
-        _graphics.PreferredBackBufferWidth = TotalScreenWidth;
-        _graphics.PreferredBackBufferHeight = TotalScreenHeight;
+        var windowSize = Configuration.ViewportSize;
+        _graphics.PreferredBackBufferWidth = windowSize.Width;
+        _graphics.PreferredBackBufferHeight = windowSize.Height;
+
+        Window.AllowUserResizing = true;
+        Window.ClientSizeChanged += Window_ClientSizeChanged;
 
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
 
-        Configuration = Configuration.Load();
-        Configuration.Save();
+
+        RecentFilesInfo = RecentFilesInfo.Load();
 
         _colorPalette = ColorPalette.AllPalettes.FirstOrDefault(palette => palette.Name == Configuration.ColorPaletteName) ?? ColorPalette.AllPalettes[0];
 
@@ -93,24 +104,34 @@ public class Game1 : Game
 
     protected override void OnExiting(object sender, ExitingEventArgs args)
     {
-        if (Vmu.HasUnsavedChanges && _userInterface.ExitConfirmationState != ExitConfirmationState.Confirmed)
+        if (Vmu.HasUnsavedChanges && _userInterface.PendingCommand is not { Kind: PendingCommandKind.Exit, State: ConfirmationState.Confirmed })
         {
             args.Cancel = true;
-            _userInterface.ShowConfirmExitDialog();
+            _userInterface.ShowConfirmCommandDialog(PendingCommandKind.Exit);
         }
+
+        // Save window size and position on exit
+        var viewport = _graphics.GraphicsDevice.Viewport;
+        var position = Window.Position;
+        Configuration = Configuration with
+        {
+            ViewportSize = new ViewportSize(viewport.Width, viewport.Height),
+            WindowPosition = new WindowPosition(position.X, position.Y)
+        };
+        Configuration.Save();
 
         base.OnExiting(sender, args);
     }
 
-    internal void UpdateWindowTitle(string? vmsOrVmuFilePath)
+    internal void UpdateWindowTitle()
     {
         var star = Vmu.HasUnsavedChanges
             ? "* "
             : "";
 
-        var fileDesc = vmsOrVmuFilePath is null
+        var fileDesc = Vmu.LoadedFilePath is null
             ? ""
-            : $"{Path.GetFileName(vmsOrVmuFilePath)} - ";
+            : $"{Path.GetFileName(Vmu.LoadedFilePath)} - ";
 
         Window.Title = $"{star}{fileDesc}DreamPotato";
     }
@@ -129,6 +150,7 @@ public class Game1 : Game
             throw new InvalidOperationException($"'{romFileName}' must be included in '{Vmu.DataFolder}'.", ex);
         }
 
+        vmsOrVmuFilePath ??= RecentFilesInfo.RecentFiles.FirstOrDefault();
         if (vmsOrVmuFilePath != null)
         {
             LoadAndStartVmsOrVmuFile(vmsOrVmuFilePath);
@@ -139,7 +161,9 @@ public class Game1 : Game
     {
         Vmu.LoadNewVmu(date: DateTime.Now, autoInitializeRTCDate: Configuration.AutoInitializeDate);
         Paused = false;
-        UpdateWindowTitle(vmsOrVmuFilePath: null);
+        UpdateWindowTitle();
+        RecentFilesInfo = RecentFilesInfo.PrependRecentFile(newRecentFile: null);
+        RecentFilesInfo.Save();
     }
 
     internal void LoadAndStartVmsOrVmuFile(string filePath)
@@ -160,7 +184,9 @@ public class Game1 : Game
         }
 
         Paused = false;
-        UpdateWindowTitle(filePath);
+        UpdateWindowTitle();
+        RecentFilesInfo = RecentFilesInfo.PrependRecentFile(filePath);
+        RecentFilesInfo.Save();
     }
 
     internal void SaveVmuFileAs(string vmuFilePath)
@@ -172,8 +198,10 @@ public class Game1 : Game
             vmuFilePath = Path.ChangeExtension(vmuFilePath, ".vmu");
         }
 
-        UpdateWindowTitle(vmuFilePath);
         Vmu.SaveVmuAs(vmuFilePath);
+        UpdateWindowTitle();
+        RecentFilesInfo = RecentFilesInfo.PrependRecentFile(vmuFilePath);
+        RecentFilesInfo.Save();
     }
 
     internal void Reset()
@@ -189,6 +217,12 @@ public class Game1 : Game
     internal void Configuration_AnyButtonWakesFromSleepChanged(bool newValue)
     {
         Configuration = Configuration with { AnyButtonWakesFromSleep = newValue };
+    }
+
+    internal void Configuration_PreserveAspectRatioChanged(bool newValue)
+    {
+        Configuration = Configuration with { PreserveAspectRatio = newValue };
+        UpdateScaleMatrix();
     }
 
     internal void Configuration_VolumeChanged(int newVolume)
@@ -239,12 +273,13 @@ public class Game1 : Game
 
         _userInterface = new UserInterface(this);
         _userInterface.Initialize(_iconConnectedTexture);
-        _graphics.ApplyChanges();
+        UpdateScaleMatrix();
 
-        if (Debugger.IsAttached)
+        if (Configuration.WindowPosition is { } windowPosition)
         {
-            // create window out of the way
-            Window.Position = new Point(x: 2200, y: 600);
+            var windowSize = Window.ClientBounds.Size;
+            if (_graphics.GraphicsDevice.DisplayMode.TitleSafeArea.Intersects(new Rectangle(windowPosition.X, windowPosition.Y, windowSize.X, windowSize.Y)))
+                Window.Position = new Point(windowPosition.X, windowPosition.Y);
         }
 
         _spriteBatch = new SpriteBatch(GraphicsDevice);
@@ -263,23 +298,75 @@ public class Game1 : Game
         Vmu.UnsavedChangesDetected += Vmu_UnsavedChangesDetected;
     }
 
-    private void Vmu_UnsavedChangesDetected()
+    private void Window_ClientSizeChanged(object? sender, EventArgs e)
     {
-        UpdateWindowTitle(Vmu.LoadedFilePath);
+        var viewport = _graphics.GraphicsDevice.Viewport;
+        if (viewport.Width < MinWidth || viewport.Height < MinHeight)
+            SetWindowSizeMultiple(multiple: 1);
+
+        UpdateScaleMatrix();
     }
 
-    internal Point WindowSize
+    private void UpdateScaleMatrix()
     {
-        get
+        // Apply transforms:
+        // - scale based on window size
+        // - translate horizontally to ensure our content is centered
+        // - translate vertically to ensure content is below menu bar
+
+        // MinVmuScale is 3, and this is the base scale used for drawing.
+        // But, we want to support 4x, 5x, etc. as the user resizes the window.
+        // Therefore, get a scale based on the screen size, and round it down to the nearest 1/3 on each axis.
+        float widthScale = (float)Math.Floor(
+            (float)_graphics.GraphicsDevice.Viewport.Width / TotalContentWidth * MinVmuScale) / MinVmuScale;
+        float heightScale = (float)Math.Floor(
+            (float)(_graphics.GraphicsDevice.Viewport.Height - MenuBarHeight) / TotalContentHeight * MinVmuScale) / MinVmuScale;
+
+        float minScale = Math.Min(widthScale, heightScale);
+        Matrix scaleTransform = Configuration.PreserveAspectRatio
+            ? Matrix.CreateScale(minScale, minScale, 1)
+            : Matrix.CreateScale(widthScale, heightScale, 1);
+        _spriteTransformMatrix = scaleTransform * Matrix.CreateTranslation(xPosition: getTransformXPosition(), yPosition: MenuBarHeight, 1);
+
+        float getTransformXPosition()
         {
-            return Window.ClientBounds.Size;
+            float scale = Configuration.PreserveAspectRatio ? minScale : widthScale;
+            float idealWidth = scale * TotalContentWidth;
+            float actualWidth = _graphics.GraphicsDevice.Viewport.Width;
+
+            // Center the content horizontally, by shifting it over
+            // |--------| actual
+            // __|----|__ ideal
+            // We are calculating the quantity denoted by '__' in the above sketch
+            // Since we're using nearest neighbor scaling, we need to round to nearest integer, to keep it from looking blocky.
+            return (float)Math.Round((actualWidth - idealWidth) / 2);
         }
-        set
-        {
-            _graphics.PreferredBackBufferWidth = value.X;
-            _graphics.PreferredBackBufferHeight = value.Y;
-            _graphics.ApplyChanges();
-        }
+    }
+
+    private void Vmu_UnsavedChangesDetected()
+    {
+        UpdateWindowTitle();
+    }
+
+    internal int? GetWindowSizeMultiple()
+    {
+        var viewport = _graphics.GraphicsDevice.Viewport;
+        if (viewport.Width % TotalContentWidth != 0)
+            return null;
+
+        if ((viewport.Height - MenuBarHeight) % TotalContentHeight != 0)
+            return null;
+
+        return viewport.Width / TotalContentWidth;
+    }
+
+    /// <summary>Sets a window size which is a multiple of <see cref="MinWidth"/>.</summary>
+    internal void SetWindowSizeMultiple(int multiple)
+    {
+        _graphics.PreferredBackBufferWidth = TotalContentWidth * multiple;
+        _graphics.PreferredBackBufferHeight = TotalContentHeight * multiple + MenuBarHeight;
+        _graphics.ApplyChanges();
+        UpdateScaleMatrix();
     }
 
     protected override void Update(GameTime gameTime)
@@ -351,17 +438,20 @@ public class Game1 : Game
 
         Vmu._cpu.SFRs.P3 = newP3;
 
+        _previousKeys = keyboard;
+        _previousGamepad = gamepad;
+
         var rate = Paused ? 0 :
-            _buttonChecker.IsPressed(VmuButton.FastForward, keyboard, gamepad) ? gameTime.ElapsedGameTime.Ticks * 2 :
+            IsFastForwarding ? gameTime.ElapsedGameTime.Ticks * 2 :
             gameTime.ElapsedGameTime.Ticks;
 
         Vmu._cpu.Run(rate);
 
-        _previousKeys = keyboard;
-        _previousGamepad = gamepad;
-
         base.Update(gameTime);
     }
+
+    internal bool IsFastForwarding
+        => _buttonChecker.IsPressed(VmuButton.FastForward, _previousKeys, _previousGamepad);
 
     private void Audio_BufferReady(Audio.AudioBufferReadyEventArgs args)
     {
@@ -387,8 +477,8 @@ public class Game1 : Game
         }
         _vmuScreenTexture.SetData(_vmuScreenData);
 
-        // Use nearest neighbor scaling
-        _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+        // Use nearest neighbor scaling for the screen content
+        _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: _spriteTransformMatrix);
 
         var vmuIsEjected = Vmu.IsEjected;
         var screenSize = new Point(x: ScaledWidth, y: ScaledHeight);
@@ -405,10 +495,16 @@ public class Game1 : Game
             origin: default,
             effects: vmuIsEjected ? SpriteEffects.None : (SpriteEffects.FlipHorizontally | SpriteEffects.FlipVertically),
             layerDepth: 0);
+        _spriteBatch.End();
 
         // Draw icons
-        int iconsYPos = vmuIsEjected ? TopMargin + ScaledHeight + VmuScale / 2 : TopMargin - VmuScale / 2;
-        const int iconSpacing = VmuScale * 2;
+        // If we are at an even multiple of the base screen size, or, if the screen is just huge, use nearest neighbor scaling
+        var iconsSamplerState = Math.Floor(_spriteTransformMatrix.Down.Y) == _spriteTransformMatrix.Down.Y || _spriteTransformMatrix.Down.Y < -3
+            ? SamplerState.PointClamp
+            : SamplerState.LinearWrap;
+        _spriteBatch.Begin(samplerState: iconsSamplerState, transformMatrix: _spriteTransformMatrix);
+        int iconsYPos = vmuIsEjected ? TopMargin + ScaledHeight + MinVmuScale / 2 : TopMargin - MinVmuScale / 2;
+        const int iconSpacing = MinVmuScale * 2;
         var icons = Vmu.Display.GetIcons();
 
         var displayOn = Vmu._cpu.SFRs.Vccr.DisplayControl;

@@ -23,11 +23,40 @@ using Numerics = System.Numerics;
 
 namespace DreamPotato.MonoGame.UI;
 
-internal enum ExitConfirmationState
+enum ConfirmationState
 {
     None,
     ShowDialog,
     Confirmed,
+}
+
+enum PendingCommandKind
+{
+    None,
+    NewVmu,
+    OpenVms,
+    OpenVmu,
+    Exit
+}
+
+readonly struct PendingCommand
+{
+    private PendingCommand(ConfirmationState confirmationState, PendingCommandKind kind)
+    {
+        // If we are showing dialog or confirming something, there needs to be an actual command
+        if (confirmationState is not ConfirmationState.None && kind is PendingCommandKind.None)
+            throw new ArgumentException(null, nameof(kind));
+
+        State = confirmationState;
+        Kind = kind;
+    }
+
+    public ConfirmationState State { get; }
+    public PendingCommandKind Kind { get; }
+    public string? FilePath { get; }
+
+    public static PendingCommand ShowDialog(PendingCommandKind kind) => new(ConfirmationState.ShowDialog, kind);
+    public PendingCommand Confirmed() => new(ConfirmationState.Confirmed, Kind);
 }
 
 class UserInterface
@@ -35,7 +64,6 @@ class UserInterface
     private readonly Game1 _game;
 
     private ImGuiRenderer _imGuiRenderer = null!;
-    private Texture2D _userInterfaceTexture = null!;
     private nint _rawIconConnectedTexture;
     private GCHandle _iniFilenameHandle;
 
@@ -56,7 +84,7 @@ class UserInterface
     private readonly string _displayVersion;
     private readonly string _commitId;
 
-    internal ExitConfirmationState ExitConfirmationState { get; private set; }
+    internal PendingCommand PendingCommand { get; private set; }
 
     public UserInterface(Game1 game)
     {
@@ -97,7 +125,6 @@ class UserInterface
             }
         }
 
-        _userInterfaceTexture = new Texture2D(_game.GraphicsDevice, Game1.TotalScreenWidth, Game1.TotalScreenHeight);
         _rawIconConnectedTexture = _imGuiRenderer.BindTexture(iconConnectedTexture);
     }
 
@@ -113,11 +140,11 @@ class UserInterface
         _imGuiRenderer.AfterLayout();
     }
 
-    /// <summary>Show a modal asking user to confirm exit because there are unsaved changes</summary>
-    internal void ShowConfirmExitDialog()
+    /// <summary>Show a modal asking user to confirm a "destructive" command</summary>
+    internal void ShowConfirmCommandDialog(PendingCommandKind commandKind)
     {
         Pause();
-        ExitConfirmationState = ExitConfirmationState.ShowDialog;
+        PendingCommand = PendingCommand.ShowDialog(commandKind);
     }
 
     private void Pause()
@@ -128,6 +155,47 @@ class UserInterface
         // TODO: if user presses insert/eject while in menus we can end up unpausing when we shouldn't.
         _pauseWhenClosed = _game.Paused;
         _game.Paused = true;
+    }
+
+    internal void NewVmu()
+    {
+        if (_game.Vmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.NewVmu, State: ConfirmationState.Confirmed })
+        {
+            ShowConfirmCommandDialog(PendingCommandKind.NewVmu);
+            return;
+        }
+
+        _game.LoadNewVmu();
+    }
+
+    internal void OpenVmsDialog()
+    {
+        if (_game.Vmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.OpenVms, State: ConfirmationState.Confirmed })
+        {
+            ShowConfirmCommandDialog(PendingCommandKind.OpenVms);
+            return;
+        }
+
+        var result = Dialog.FileOpen("vms", defaultPath: null);
+        if (result.IsOk)
+        {
+            _game.LoadAndStartVmsOrVmuFile(result.Path);
+        }
+    }
+
+    internal void OpenVmuDialog()
+    {
+        if (_game.Vmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.OpenVmu, State: ConfirmationState.Confirmed })
+        {
+            ShowConfirmCommandDialog(PendingCommandKind.OpenVmu);
+            return;
+        }
+
+        var result = Dialog.FileOpen("vmu,bin", defaultPath: null);
+        if (result.IsOk)
+        {
+            _game.LoadAndStartVmsOrVmuFile(result.Path);
+        }
     }
 
     private void OpenPopupAndPause(string name)
@@ -165,9 +233,30 @@ class UserInterface
         LayoutEditButton();
 
         LayoutResetModal();
-        LayoutConfirmExitDialog();
+        LayoutPendingCommandDialog();
 
+        LayoutFastForwardOrPauseIndicator();
         LayoutToast();
+    }
+
+    private void LayoutFastForwardOrPauseIndicator()
+    {
+        var message = _game.Paused ? "||" :
+            _game.IsFastForwarding ? ">>" :
+            null;
+        if (message is null)
+            return;
+
+        var textSize = ImGui.CalcTextSize(message, wrapWidth: Game1.TotalContentWidth);
+        var windowHeight = _game.GraphicsDevice.Viewport.Height;
+        ImGui.SetNextWindowPos(new Numerics.Vector2(x: 2, y: windowHeight - textSize.Y - 20));
+        ImGui.SetNextWindowSize(textSize + new Numerics.Vector2(10, 20));
+        if (ImGui.Begin("FastForwardOrPauseIndicator", ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoInputs | ImGuiWindowFlags.NoScrollbar))
+        {
+            ImGui.TextWrapped(message);
+        }
+
+        ImGui.End();
     }
 
     private void LayoutToast()
@@ -181,8 +270,9 @@ class UserInterface
         if (doFadeout)
             ImGui.PushStyleVar(ImGuiStyleVar.Alpha, ((float)_toastDisplayFrames) / ToastBeginFadeoutFrames);
 
-        var textSize = ImGui.CalcTextSize(_toastMessage, wrapWidth: Game1.TotalScreenWidth);
-        ImGui.SetNextWindowPos(new Numerics.Vector2(x: 2, y: Game1.TotalScreenHeight - textSize.Y - 20));
+        var textSize = ImGui.CalcTextSize(_toastMessage, wrapWidth: Game1.TotalContentWidth);
+        var windowHeight = _game.GraphicsDevice.Viewport.Height;
+        ImGui.SetNextWindowPos(new Numerics.Vector2(x: 2, y: windowHeight - textSize.Y - 20));
         ImGui.SetNextWindowSize(textSize + new Numerics.Vector2(10, 20));
         if (ImGui.Begin("Toast", ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoInputs | ImGuiWindowFlags.NoScrollbar))
         {
@@ -201,29 +291,13 @@ class UserInterface
         if (ImGui.BeginMenu("File"))
         {
             if (ImGui.MenuItem("New VMU"))
-            {
-                // TODO: add modals to confirm destructive commands on unsaved VMUs
-                // new, open, quit
-                _game.LoadNewVmu();
-            }
+                NewVmu();
 
             if (ImGui.MenuItem("Open VMS (Game)"))
-            {
-                var result = Dialog.FileOpen("vms", defaultPath: null);
-                if (result.IsOk)
-                {
-                    _game.LoadAndStartVmsOrVmuFile(result.Path);
-                }
-            }
+                OpenVmsDialog();
 
             if (ImGui.MenuItem("Open VMU (Memory Card)"))
-            {
-                var result = Dialog.FileOpen("vmu,bin", defaultPath: null);
-                if (result.IsOk)
-                {
-                    _game.LoadAndStartVmsOrVmuFile(result.Path);
-                }
-            }
+                OpenVmuDialog();
 
             if (ImGui.MenuItem("Save As"))
             {
@@ -236,10 +310,10 @@ class UserInterface
 
             ImGui.Separator();
 
+            // TODO: list recently opened VMU files?
+
             if (ImGui.MenuItem("Quit"))
-            {
                 _game.Exit();
-            }
 
             ImGui.EndMenu();
         }
@@ -327,6 +401,25 @@ class UserInterface
                 }.Start();
             }
 
+            if (ImGui.BeginMenu("Set Window Size"))
+            {
+                var currentMultiple = _game.GetWindowSizeMultiple();
+
+                if (ImGui.MenuItem("3x (144x96)", enabled: currentMultiple != 1))
+                    _game.SetWindowSizeMultiple(1);
+
+                if (ImGui.MenuItem("6x (288x192)", enabled: currentMultiple != 2))
+                    _game.SetWindowSizeMultiple(2);
+
+                if (ImGui.MenuItem("9x (432x288)", enabled: currentMultiple != 3))
+                    _game.SetWindowSizeMultiple(3);
+
+                if (ImGui.MenuItem("12x (576x384)", enabled: currentMultiple != 4))
+                    _game.SetWindowSizeMultiple(4);
+
+                ImGui.EndMenu();
+            }
+
             ImGui.EndMenu();
         }
 
@@ -366,10 +459,6 @@ class UserInterface
 
     private void LayoutSettings()
     {
-        var configuration = _game.Configuration;
-
-        // TODO: should not set this every frame. do it when calling OpenPopup or something
-        // ImGui.SetNextWindowSize(Numerics.Vector2.Create(x: Game1.TotalScreenWidth * 8 / 10, y: Game1.TotalScreenHeight * 8 / 10));
         if (ImGui.BeginPopupModal("Settings"))
         {
             if (ImGui.Button("Done"))
@@ -378,6 +467,7 @@ class UserInterface
                 ClosePopupAndUnpause();
             }
 
+            var configuration = _game.Configuration;
             var autoInitializeDate = configuration.AutoInitializeDate;
             if (ImGui.Checkbox("Auto-initialize date on startup", ref autoInitializeDate))
                 _game.Configuration_AutoInitializeDateChanged(autoInitializeDate);
@@ -386,6 +476,11 @@ class UserInterface
             var anyButtonWakesFromSleep = configuration.AnyButtonWakesFromSleep;
             if (ImGui.Checkbox("Any button wakes from sleep", ref anyButtonWakesFromSleep))
                 _game.Configuration_AnyButtonWakesFromSleepChanged(anyButtonWakesFromSleep);
+
+
+            var preserveAspectRatio = configuration.PreserveAspectRatio;
+            if (ImGui.Checkbox("Preserve aspect ratio", ref preserveAspectRatio))
+                _game.Configuration_PreserveAspectRatioChanged(preserveAspectRatio);
 
             // Volume
             ImGui.Text("Volume");
@@ -686,8 +781,7 @@ class UserInterface
 
     private void LayoutResetModal()
     {
-        ImGui.SetNextWindowSize(Numerics.Vector2.Create(x: Game1.TotalScreenWidth * 3 / 4, y: Game1.TotalScreenHeight * 1 / 4));
-        if (ImGui.BeginPopupModal("Reset?"))
+        if (ImGui.BeginPopupModal("Reset?", ImGuiWindowFlags.NoResize))
         {
             ImGui.Text("Unsaved progress will be lost.");
             if (ImGui.Button("Reset"))
@@ -704,28 +798,75 @@ class UserInterface
         }
     }
 
-    private void LayoutConfirmExitDialog()
+    private void LayoutPendingCommandDialog()
     {
-        if (ExitConfirmationState != ExitConfirmationState.ShowDialog)
+        if (PendingCommand.State is not ConfirmationState.ShowDialog)
             return;
 
-        ImGui.Begin("Exit without saving?", ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.Modal);
+        var title = PendingCommand.Kind switch
+        {
+            PendingCommandKind.NewVmu => "Create new VMU without saving?",
+            PendingCommandKind.OpenVms => "Open VMS without saving?",
+            PendingCommandKind.OpenVmu => "Open VMU without saving?",
+            PendingCommandKind.Exit => "Exit without saving?",
+            _ => throw new InvalidOperationException(),
+        };
+
+        ImGui.Begin(title, ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.Modal | ImGuiWindowFlags.NoResize);
         {
             ImGui.Text("Unsaved progress will be lost.");
-            if (ImGui.Button("Exit"))
+
+            var confirmLabel = PendingCommand.Kind switch
             {
-                ExitConfirmationState = ExitConfirmationState.Confirmed;
-                _game.Exit();
+                PendingCommandKind.NewVmu => "Create",
+                PendingCommandKind.OpenVms => "Open",
+                PendingCommandKind.OpenVmu => "Open",
+                PendingCommandKind.Exit => "Exit",
+                _ => throw new InvalidOperationException(),
+            };
+
+            if (ImGui.Button(confirmLabel))
+            {
+                PendingCommand = PendingCommand.Confirmed();
+                performCommand();
             }
 
             ImGui.SameLine();
             if (ImGui.Button("Cancel"))
             {
-                ExitConfirmationState = ExitConfirmationState.None;
+                PendingCommand = default;
                 Unpause();
             }
 
             ImGui.End();
+        }
+
+        void performCommand()
+        {
+            Debug.Assert(PendingCommand.State == ConfirmationState.Confirmed);
+            switch (PendingCommand.Kind)
+            {
+                case PendingCommandKind.Exit:
+                    _game.Exit();
+                    // Ideally, we always reset the PendingCommand state after 'performCommand()'.
+                    // But, OnExiting is not called until after this tick.
+                    // So, we specifically need to keep PendingCommand around for this command.
+                    break;
+                case PendingCommandKind.NewVmu:
+                    NewVmu();
+                    PendingCommand = default;
+                    break;
+                case PendingCommandKind.OpenVms:
+                    OpenVmsDialog();
+                    PendingCommand = default;
+                    break;
+                case PendingCommandKind.OpenVmu:
+                    OpenVmuDialog();
+                    PendingCommand = default;
+                    break;
+                default:
+                    throw new InvalidOperationException();
+            }
         }
     }
 }
