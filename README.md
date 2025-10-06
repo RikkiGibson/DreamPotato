@@ -11,9 +11,11 @@ DreamPotato is a Dreamcast VMU emulator in currently in beta. For the moment onl
 
 See [compatibility.md](compatibility.md) for the current compatibility status of various games.
 
-<img width="270px" alt="System Clock" src="./docs/images/clock.png" />
-<img width="270px" alt="Power Stone Mini" src="./docs/images/power-stone-mini.png" />
-<img width="270px" alt="Sonic Adventure (Dreamcast integration)" src="./docs/images/sonic-adventure.png" />
+<div>
+    <img width="270px" alt="System Clock" src="./docs/images/clock.png" />
+    <img width="270px" alt="Power Stone Mini" src="./docs/images/power-stone-mini.png" />
+    <img width="270px" alt="Sonic Adventure (Dreamcast integration)" src="./docs/images/sonic-adventure.png" />
+</div>
 
 ## Flycast Integration
 

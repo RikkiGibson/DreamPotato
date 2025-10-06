@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.1.0-beta-3] - 2025-10-05
+
+- Support resizing the window
+- Add setting "Preserve Aspect Ratio" to control whether content is stretched when resizing
+- Add menu commands to set integer-multiple window size
+
 ## [0.1.0-beta-2] - 2025-10-03
 
 - Efficiency improvements
