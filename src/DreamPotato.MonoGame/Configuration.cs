@@ -30,7 +30,7 @@ public record Configuration(
     public ImmutableArray<KeyMapping> KeyMappings { get; init; }
     public ImmutableArray<ButtonMapping> ButtonMappings { get; init; }
 
-    public ViewportSize ViewportSize { get; init; } = ViewportSize ?? new ViewportSize(Width: Game1.MinWidth * 2, Height: Game1.TotalContentHeight * 2 + Game1.MenuBarHeight);
+    public ViewportSize ViewportSize { get; init; } = ViewportSize ?? new ViewportSize(Width: VmuPresenter.TotalContentWidth * 2, Height: VmuPresenter.TotalContentHeight * 2 + Game1.MenuBarHeight);
     public WindowPosition? WindowPosition { get; init; }
 
     public void Save()

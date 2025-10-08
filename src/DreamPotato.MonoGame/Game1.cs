@@ -22,72 +22,15 @@ public class Game1 : Game
     internal Configuration Configuration;
     internal RecentFilesInfo RecentFilesInfo;
 
-<<<<<<< HEAD
-    internal Vmu Vmu;
-||||||| 62158ec
     internal readonly Vmu Vmu;
-
-    // TODO: eventually, there should be UI to permit a non-constant scale.
-    private const int VmuScale = 6;
-    private const int ScaledWidth = Display.ScreenWidth * VmuScale;
-    private const int ScaledHeight = Display.ScreenHeight * VmuScale;
-
-    private const int IconSize = 64;
-
-    private const int MenuBarHeight = 20;
-    private const int TopMargin = VmuScale * 2 + MenuBarHeight;
-    private const int SideMargin = VmuScale * 3;
-    private const int BottomMargin = VmuScale * 12;
-
-    internal const int TotalScreenWidth = ScaledWidth + SideMargin * 2;
-    internal const int TotalScreenHeight = ScaledHeight + TopMargin + BottomMargin;
-=======
-    internal readonly Vmu Vmu;
-
-    private const int MinVmuScale = 3;
-    private const int ScaledWidth = Display.ScreenWidth * MinVmuScale;
-    private const int ScaledHeight = Display.ScreenHeight * MinVmuScale;
-
-    private const int IconSize = 32;
 
     internal const int MenuBarHeight = 20;
-    private const int TopMargin = MinVmuScale * 2;
-    private const int SideMargin = MinVmuScale * 3;
-    private const int BottomMargin = MinVmuScale * 12;
-
-    internal const int TotalContentWidth = ScaledWidth + SideMargin * 2;
-    internal const int TotalContentHeight = ScaledHeight + TopMargin + BottomMargin;
-
-    internal const int MinWidth = TotalContentWidth;
-    internal const int MinHeight = TotalContentHeight + MenuBarHeight;
->>>>>>> main
 
     private const int SleepToggleInsertEjectFrameCount = 60; // 1 second
 
     // Set in Initialize()
     private SpriteBatch _spriteBatch = null!;
-<<<<<<< HEAD
     private VmuPresenter _vmuSlot1Presenter = null!;
-||||||| 62158ec
-    private Texture2D _vmuScreenTexture = null!;
-
-    private Texture2D _iconFileTexture = null!;
-    private Texture2D _iconGameTexture = null!;
-    private Texture2D _iconClockTexture = null!;
-    private Texture2D _iconIOTexture = null!;
-    private Texture2D _iconSleepTexture = null!;
-    private Texture2D _iconConnectedTexture = null!;
-=======
-    private Matrix _spriteTransformMatrix;
-    private Texture2D _vmuScreenTexture = null!;
-
-    private Texture2D _iconFileTexture = null!;
-    private Texture2D _iconGameTexture = null!;
-    private Texture2D _iconClockTexture = null!;
-    private Texture2D _iconIOTexture = null!;
-    private Texture2D _iconSleepTexture = null!;
-    private Texture2D _iconConnectedTexture = null!;
->>>>>>> main
 
     private ButtonChecker _buttonChecker = null!;
     private UserInterface _userInterface = null!;
@@ -101,29 +44,18 @@ public class Game1 : Game
     internal bool Paused;
     internal int SleepHeldFrameCount;
 
-    internal const int TotalScreenWidth = VmuPresenter.TotalScreenWidth;
-    internal const int TotalScreenHeight = VmuPresenter.TotalScreenHeight * 2;
-
     public Game1(string? gameFilePath)
     {
         Configuration = Configuration.Load();
         Configuration.Save();
 
         _graphics = new GraphicsDeviceManager(this);
-<<<<<<< HEAD
-        _graphics.PreferredBackBufferWidth = TotalScreenWidth;
-        _graphics.PreferredBackBufferHeight = TotalScreenHeight; // TODO configurable
-||||||| 62158ec
-        _graphics.PreferredBackBufferWidth = TotalScreenWidth;
-        _graphics.PreferredBackBufferHeight = TotalScreenHeight;
-=======
         var windowSize = Configuration.ViewportSize;
         _graphics.PreferredBackBufferWidth = windowSize.Width;
         _graphics.PreferredBackBufferHeight = windowSize.Height;
 
         Window.AllowUserResizing = true;
         Window.ClientSizeChanged += Window_ClientSizeChanged;
->>>>>>> main
 
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
@@ -320,16 +252,9 @@ public class Game1 : Game
         };
 
         _userInterface = new UserInterface(this);
-<<<<<<< HEAD
         _userInterface.Initialize(textures.IconConnectedTexture);
-        _graphics.ApplyChanges();
-||||||| 62158ec
-        _userInterface.Initialize(_iconConnectedTexture);
-        _graphics.ApplyChanges();
-=======
-        _userInterface.Initialize(_iconConnectedTexture);
+        _vmuSlot1Presenter = new VmuPresenter(Vmu, textures, _graphics) { ColorPalette = _colorPalette };
         UpdateScaleMatrix();
->>>>>>> main
 
         if (Configuration.WindowPosition is { } windowPosition)
         {
@@ -339,8 +264,6 @@ public class Game1 : Game
         }
 
         _spriteBatch = new SpriteBatch(GraphicsDevice);
-        // TODO: color palette needs to be synced when it changes
-        _vmuSlot1Presenter = new VmuPresenter(Vmu, textures, _graphics) { ColorPalette = _colorPalette };
 
         _buttonChecker = new ButtonChecker(Configuration);
 
@@ -357,8 +280,10 @@ public class Game1 : Game
 
     private void Window_ClientSizeChanged(object? sender, EventArgs e)
     {
+        // TODO: when the size changes, send the VmuPresenter a message,
+        // which indicates what region of the screen is reserved for it, allowing it to update its own transform matrix internally.
         var viewport = _graphics.GraphicsDevice.Viewport;
-        if (viewport.Width < MinWidth || viewport.Height < MinHeight)
+        if (viewport.Width < VmuPresenter.TotalContentWidth || viewport.Height < (VmuPresenter.TotalContentHeight + MenuBarHeight))
             SetWindowSizeMultiple(multiple: 1);
 
         UpdateScaleMatrix();
@@ -366,38 +291,11 @@ public class Game1 : Game
 
     private void UpdateScaleMatrix()
     {
-        // Apply transforms:
-        // - scale based on window size
-        // - translate horizontally to ensure our content is centered
         // - translate vertically to ensure content is below menu bar
-
-        // MinVmuScale is 3, and this is the base scale used for drawing.
-        // But, we want to support 4x, 5x, etc. as the user resizes the window.
-        // Therefore, get a scale based on the screen size, and round it down to the nearest 1/3 on each axis.
-        float widthScale = (float)Math.Floor(
-            (float)_graphics.GraphicsDevice.Viewport.Width / TotalContentWidth * MinVmuScale) / MinVmuScale;
-        float heightScale = (float)Math.Floor(
-            (float)(_graphics.GraphicsDevice.Viewport.Height - MenuBarHeight) / TotalContentHeight * MinVmuScale) / MinVmuScale;
-
-        float minScale = Math.Min(widthScale, heightScale);
-        Matrix scaleTransform = Configuration.PreserveAspectRatio
-            ? Matrix.CreateScale(minScale, minScale, 1)
-            : Matrix.CreateScale(widthScale, heightScale, 1);
-        _spriteTransformMatrix = scaleTransform * Matrix.CreateTranslation(xPosition: getTransformXPosition(), yPosition: MenuBarHeight, 1);
-
-        float getTransformXPosition()
-        {
-            float scale = Configuration.PreserveAspectRatio ? minScale : widthScale;
-            float idealWidth = scale * TotalContentWidth;
-            float actualWidth = _graphics.GraphicsDevice.Viewport.Width;
-
-            // Center the content horizontally, by shifting it over
-            // |--------| actual
-            // __|----|__ ideal
-            // We are calculating the quantity denoted by '__' in the above sketch
-            // Since we're using nearest neighbor scaling, we need to round to nearest integer, to keep it from looking blocky.
-            return (float)Math.Round((actualWidth - idealWidth) / 2);
-        }
+        var baseTransform = Matrix.CreateTranslation(xPosition: 0, yPosition: MenuBarHeight, 1);
+        var viewport = _graphics.GraphicsDevice.Viewport;
+        var targetSize = new Point(x: viewport.Width, y: viewport.Height - MenuBarHeight);
+        _vmuSlot1Presenter.UpdateScaleMatrix(baseTransform, targetSize, Configuration.PreserveAspectRatio);
     }
 
     private void Vmu_UnsavedChangesDetected()
@@ -408,20 +306,20 @@ public class Game1 : Game
     internal int? GetWindowSizeMultiple()
     {
         var viewport = _graphics.GraphicsDevice.Viewport;
-        if (viewport.Width % TotalContentWidth != 0)
+        if (viewport.Width % VmuPresenter.TotalContentWidth != 0)
             return null;
 
-        if ((viewport.Height - MenuBarHeight) % TotalContentHeight != 0)
+        if ((viewport.Height - MenuBarHeight) % VmuPresenter.TotalContentHeight != 0)
             return null;
 
-        return viewport.Width / TotalContentWidth;
+        return viewport.Width / VmuPresenter.TotalContentWidth;
     }
 
     /// <summary>Sets a window size which is a multiple of <see cref="MinWidth"/>.</summary>
     internal void SetWindowSizeMultiple(int multiple)
     {
-        _graphics.PreferredBackBufferWidth = TotalContentWidth * multiple;
-        _graphics.PreferredBackBufferHeight = TotalContentHeight * multiple + MenuBarHeight;
+        _graphics.PreferredBackBufferWidth = VmuPresenter.TotalContentWidth * multiple;
+        _graphics.PreferredBackBufferHeight = VmuPresenter.TotalContentHeight * multiple + MenuBarHeight;
         _graphics.ApplyChanges();
         UpdateScaleMatrix();
     }
@@ -518,171 +416,9 @@ public class Game1 : Game
     protected override void Draw(GameTime gameTime)
     {
         GraphicsDevice.Clear(_colorPalette.Margin);
-<<<<<<< HEAD
-        _vmuSlot1Presenter.Draw();
-||||||| 62158ec
-
-        var screenData = Vmu.Display.GetBytes();
-        int i = 0;
-        foreach (byte b in screenData)
-        {
-            _vmuScreenData[i++] = ReadColor(b, 7);
-            _vmuScreenData[i++] = ReadColor(b, 6);
-            _vmuScreenData[i++] = ReadColor(b, 5);
-            _vmuScreenData[i++] = ReadColor(b, 4);
-            _vmuScreenData[i++] = ReadColor(b, 3);
-            _vmuScreenData[i++] = ReadColor(b, 2);
-            _vmuScreenData[i++] = ReadColor(b, 1);
-            _vmuScreenData[i++] = ReadColor(b, 0);
-        }
-        _vmuScreenTexture.SetData(_vmuScreenData);
-
-        // Use nearest neighbor scaling
-        _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-
-        var vmuIsEjected = Vmu.IsEjected;
-        var screenSize = new Point(x: ScaledWidth, y: ScaledHeight);
-        var screenRectangle = vmuIsEjected
-            ? new Rectangle(new Point(x: SideMargin, y: TopMargin), screenSize)
-            : new Rectangle(location: new Point(x: SideMargin, y: TopMargin + IconSize), screenSize);
-
-        _spriteBatch.Draw(
-            _vmuScreenTexture,
-            destinationRectangle: screenRectangle,
-            sourceRectangle: null,
-            color: Color.White,
-            rotation: 0,
-            origin: default,
-            effects: vmuIsEjected ? SpriteEffects.None : (SpriteEffects.FlipHorizontally | SpriteEffects.FlipVertically),
-            layerDepth: 0);
-
-        // Draw icons
-        int iconsYPos = vmuIsEjected ? TopMargin + ScaledHeight + VmuScale / 2 : TopMargin - VmuScale / 2;
-        const int iconSpacing = VmuScale * 2;
-        var icons = Vmu.Display.GetIcons();
-
-        var displayOn = Vmu._cpu.SFRs.Vccr.DisplayControl;
-        if (displayOn)
-        {
-            drawIcon(_iconFileTexture, ordinal: 0, enabled: (icons & Icons.File) != 0);
-            drawIcon(_iconGameTexture, ordinal: 1, enabled: (icons & Icons.Game) != 0);
-            drawIcon(_iconClockTexture, ordinal: 2, enabled: (icons & Icons.Clock) != 0);
-            drawIcon(_iconIOTexture, ordinal: 3, enabled: (icons & Icons.Flash) != 0);
-        }
-        else
-        {
-            drawIcon(_iconSleepTexture, ordinal: 3, enabled: true);
-        }
-
-        void drawIcon(Texture2D texture, int ordinal, bool enabled)
-        {
-            const int maxPosition = 3;
-            Debug.Assert(ordinal is >= 0 and <= maxPosition);
-
-            var iconColor = enabled ? _colorPalette.Icon1 : _colorPalette.Icon0;
-            var iconSize = new Point(IconSize);
-            var iconRectangle = vmuIsEjected
-                ? new Rectangle(location: new Point(x: SideMargin + iconSpacing * ordinal + IconSize * ordinal, y: iconsYPos), iconSize)
-                : new Rectangle(location: new Point(x: SideMargin + iconSpacing * (maxPosition - ordinal) + IconSize * (maxPosition - ordinal), y: iconsYPos), iconSize);
-
-            _spriteBatch.Draw(
-                texture,
-                destinationRectangle: iconRectangle,
-                sourceRectangle: null,
-                color: iconColor,
-                rotation: 0,
-                origin: default,
-                effects: vmuIsEjected ? SpriteEffects.None : (SpriteEffects.FlipHorizontally | SpriteEffects.FlipVertically),
-                layerDepth: 0);
-        }
-
-        _spriteBatch.End();
-
-=======
-
-        var screenData = Vmu.Display.GetBytes();
-        int i = 0;
-        foreach (byte b in screenData)
-        {
-            _vmuScreenData[i++] = ReadColor(b, 7);
-            _vmuScreenData[i++] = ReadColor(b, 6);
-            _vmuScreenData[i++] = ReadColor(b, 5);
-            _vmuScreenData[i++] = ReadColor(b, 4);
-            _vmuScreenData[i++] = ReadColor(b, 3);
-            _vmuScreenData[i++] = ReadColor(b, 2);
-            _vmuScreenData[i++] = ReadColor(b, 1);
-            _vmuScreenData[i++] = ReadColor(b, 0);
-        }
-        _vmuScreenTexture.SetData(_vmuScreenData);
-
-        // Use nearest neighbor scaling for the screen content
-        _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: _spriteTransformMatrix);
-
-        var vmuIsEjected = Vmu.IsEjected;
-        var screenSize = new Point(x: ScaledWidth, y: ScaledHeight);
-        var screenRectangle = vmuIsEjected
-            ? new Rectangle(new Point(x: SideMargin, y: TopMargin), screenSize)
-            : new Rectangle(location: new Point(x: SideMargin, y: TopMargin + IconSize), screenSize);
-
-        _spriteBatch.Draw(
-            _vmuScreenTexture,
-            destinationRectangle: screenRectangle,
-            sourceRectangle: null,
-            color: Color.White,
-            rotation: 0,
-            origin: default,
-            effects: vmuIsEjected ? SpriteEffects.None : (SpriteEffects.FlipHorizontally | SpriteEffects.FlipVertically),
-            layerDepth: 0);
-        _spriteBatch.End();
-
-        // Draw icons
-        // If we are at an even multiple of the base screen size, or, if the screen is just huge, use nearest neighbor scaling
-        var iconsSamplerState = Math.Floor(_spriteTransformMatrix.Down.Y) == _spriteTransformMatrix.Down.Y || _spriteTransformMatrix.Down.Y < -3
-            ? SamplerState.PointClamp
-            : SamplerState.LinearWrap;
-        _spriteBatch.Begin(samplerState: iconsSamplerState, transformMatrix: _spriteTransformMatrix);
-        int iconsYPos = vmuIsEjected ? TopMargin + ScaledHeight + MinVmuScale / 2 : TopMargin - MinVmuScale / 2;
-        const int iconSpacing = MinVmuScale * 2;
-        var icons = Vmu.Display.GetIcons();
-
-        var displayOn = Vmu._cpu.SFRs.Vccr.DisplayControl;
-        if (displayOn)
-        {
-            drawIcon(_iconFileTexture, ordinal: 0, enabled: (icons & Icons.File) != 0);
-            drawIcon(_iconGameTexture, ordinal: 1, enabled: (icons & Icons.Game) != 0);
-            drawIcon(_iconClockTexture, ordinal: 2, enabled: (icons & Icons.Clock) != 0);
-            drawIcon(_iconIOTexture, ordinal: 3, enabled: (icons & Icons.Flash) != 0);
-        }
-        else
-        {
-            drawIcon(_iconSleepTexture, ordinal: 3, enabled: true);
-        }
-
-        void drawIcon(Texture2D texture, int ordinal, bool enabled)
-        {
-            const int maxPosition = 3;
-            Debug.Assert(ordinal is >= 0 and <= maxPosition);
-
-            var iconColor = enabled ? _colorPalette.Icon1 : _colorPalette.Icon0;
-            var iconSize = new Point(IconSize);
-            var iconRectangle = vmuIsEjected
-                ? new Rectangle(location: new Point(x: SideMargin + iconSpacing * ordinal + IconSize * ordinal, y: iconsYPos), iconSize)
-                : new Rectangle(location: new Point(x: SideMargin + iconSpacing * (maxPosition - ordinal) + IconSize * (maxPosition - ordinal), y: iconsYPos), iconSize);
-
-            _spriteBatch.Draw(
-                texture,
-                destinationRectangle: iconRectangle,
-                sourceRectangle: null,
-                color: iconColor,
-                rotation: 0,
-                origin: default,
-                effects: vmuIsEjected ? SpriteEffects.None : (SpriteEffects.FlipHorizontally | SpriteEffects.FlipVertically),
-                layerDepth: 0);
-        }
-
-        _spriteBatch.End();
-
->>>>>>> main
+        // TODO: no vmu content is being drawn at all.
+        // Don't know why right now.
+        _vmuSlot1Presenter.Draw(_spriteBatch);
         _userInterface.Layout(gameTime);
 
         base.Draw(gameTime);

@@ -247,9 +247,9 @@ class UserInterface
         if (message is null)
             return;
 
-        var textSize = ImGui.CalcTextSize(message, wrapWidth: Game1.TotalContentWidth);
-        var windowHeight = _game.GraphicsDevice.Viewport.Height;
-        ImGui.SetNextWindowPos(new Numerics.Vector2(x: 2, y: windowHeight - textSize.Y - 20));
+        var viewport = _game.GraphicsDevice.Viewport;
+        var textSize = ImGui.CalcTextSize(message, wrapWidth: viewport.Width);
+        ImGui.SetNextWindowPos(new Numerics.Vector2(x: 2, y: viewport.Height - textSize.Y - Game1.MenuBarHeight));
         ImGui.SetNextWindowSize(textSize + new Numerics.Vector2(10, 20));
         if (ImGui.Begin("FastForwardOrPauseIndicator", ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoInputs | ImGuiWindowFlags.NoScrollbar))
         {
@@ -270,9 +270,10 @@ class UserInterface
         if (doFadeout)
             ImGui.PushStyleVar(ImGuiStyleVar.Alpha, ((float)_toastDisplayFrames) / ToastBeginFadeoutFrames);
 
-        var textSize = ImGui.CalcTextSize(_toastMessage, wrapWidth: Game1.TotalContentWidth);
-        var windowHeight = _game.GraphicsDevice.Viewport.Height;
-        ImGui.SetNextWindowPos(new Numerics.Vector2(x: 2, y: windowHeight - textSize.Y - 20));
+        var viewport = _game.GraphicsDevice.Viewport;
+        var textSize = ImGui.CalcTextSize(_toastMessage, wrapWidth: viewport.Width);
+        // TODO probably userinterface should own the const MenuBarHeight
+        ImGui.SetNextWindowPos(new Numerics.Vector2(x: 2, y: viewport.Height - textSize.Y - Game1.MenuBarHeight));
         ImGui.SetNextWindowSize(textSize + new Numerics.Vector2(10, 20));
         if (ImGui.Begin("Toast", ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoInputs | ImGuiWindowFlags.NoScrollbar))
         {
