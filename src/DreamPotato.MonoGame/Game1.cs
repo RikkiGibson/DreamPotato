@@ -291,11 +291,11 @@ public class Game1 : Game
 
     private void UpdateScaleMatrix()
     {
-        // - translate vertically to ensure content is below menu bar
-        var baseTransform = Matrix.CreateTranslation(xPosition: 0, yPosition: MenuBarHeight, 1);
         var viewport = _graphics.GraphicsDevice.Viewport;
-        var targetSize = new Point(x: viewport.Width, y: viewport.Height - MenuBarHeight);
-        _vmuSlot1Presenter.UpdateScaleMatrix(baseTransform, targetSize, Configuration.PreserveAspectRatio);
+        var targetRectangle = viewport.Bounds;
+        targetRectangle.Height -= MenuBarHeight;
+        targetRectangle.Y += MenuBarHeight;
+        _vmuSlot1Presenter.UpdateScaleMatrix(targetRectangle, Configuration.PreserveAspectRatio);
     }
 
     private void Vmu_UnsavedChangesDetected()
@@ -416,8 +416,6 @@ public class Game1 : Game
     protected override void Draw(GameTime gameTime)
     {
         GraphicsDevice.Clear(_colorPalette.Margin);
-        // TODO: no vmu content is being drawn at all.
-        // Don't know why right now.
         _vmuSlot1Presenter.Draw(_spriteBatch);
         _userInterface.Layout(gameTime);
 

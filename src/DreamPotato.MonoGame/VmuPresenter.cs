@@ -36,11 +36,10 @@ class VmuPresenter(Vmu Vmu, IconTextures IconTextures, GraphicsDeviceManager Gra
     private const int TopMargin = MinVmuScale * 2;
 
     private const int SideMargin = MinVmuScale * 3;
-    private const int BorderMargin = SideMargin;
     private const int BottomMargin = MinVmuScale * 12;
 
-    internal const int TotalContentWidth = ScaledWidth + SideMargin * 2 + BorderMargin * 2;
-    internal const int TotalContentHeight = ScaledHeight + TopMargin + BottomMargin + BorderMargin * 2;
+    internal const int TotalContentWidth = ScaledWidth + SideMargin * 2;
+    internal const int TotalContentHeight = ScaledHeight + TopMargin + BottomMargin;
 
     internal void Draw(SpriteBatch _spriteBatch)
     {
@@ -61,13 +60,6 @@ class VmuPresenter(Vmu Vmu, IconTextures IconTextures, GraphicsDeviceManager Gra
 
         // Use nearest neighbor scaling for the screen content
         _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: _spriteTransformMatrix);
-
-        var borderColor = Vmu.Color;
-        _vmuBorderTexture.SetData([new Color(borderColor.r, borderColor.g, borderColor.b, borderColor.a)]);
-        _spriteBatch.Draw(_vmuBorderTexture, destinationRectangle: new Rectangle(x: 0, y: 0, width: TotalContentWidth, height: TotalContentHeight), color: Color.LightGray);
-
-        _vmuMarginTexture.SetData([ColorPalette.Margin]);
-        _spriteBatch.Draw(_vmuMarginTexture, destinationRectangle: new Rectangle(x: BorderMargin, y: BorderMargin, width: TotalContentWidth - BorderMargin * 2, height: TotalContentHeight - BorderMargin * 2), color: Color.White);
 
         var vmuIsEjected = Vmu.IsEjected;
         var screenSize = new Point(x: ScaledWidth, y: ScaledHeight);
@@ -117,8 +109,8 @@ class VmuPresenter(Vmu Vmu, IconTextures IconTextures, GraphicsDeviceManager Gra
             var iconColor = enabled ? ColorPalette.Icon1 : ColorPalette.Icon0;
             var iconSize = new Point(IconSize);
             var iconRectangle = vmuIsEjected
-                ? new Rectangle(location: new Point(x: SideMargin + BorderMargin + iconSpacing * ordinal + IconSize * ordinal, y: iconsYPos), iconSize)
-                : new Rectangle(location: new Point(x: SideMargin + BorderMargin + iconSpacing * (maxPosition - ordinal) + IconSize * (maxPosition - ordinal), y: iconsYPos), iconSize);
+                ? new Rectangle(location: new Point(x: SideMargin + iconSpacing * ordinal + IconSize * ordinal, y: iconsYPos), iconSize)
+                : new Rectangle(location: new Point(x: SideMargin + iconSpacing * (maxPosition - ordinal) + IconSize * (maxPosition - ordinal), y: iconsYPos), iconSize);
 
             _spriteBatch.Draw(
                 texture,
@@ -139,8 +131,8 @@ class VmuPresenter(Vmu Vmu, IconTextures IconTextures, GraphicsDeviceManager Gra
         }
     }
 
-    /// <summary>Takes a base transform, which indicates where on screen to draw, and saves an updated transform, which indicates how to utilize the space given by `targetSize`.</summary>
-    internal void UpdateScaleMatrix(Matrix baseTransform, Point targetSize, bool preserveAspectRatio)
+    /// <summary>Update internal transform matrix in order to draw the VMU within 'targetRectangle'.</summary>
+    internal void UpdateScaleMatrix(Rectangle targetRectangle, bool preserveAspectRatio)
     {
         // Apply transforms:
         // - scale based on window size
@@ -150,17 +142,17 @@ class VmuPresenter(Vmu Vmu, IconTextures IconTextures, GraphicsDeviceManager Gra
         // But, we want to support 4x, 5x, etc. as the user resizes the window.
         // Therefore, get a scale based on the screen size, and round it down to the nearest 1/3 on each axis.
         float widthScale = (float)Math.Floor(
-            (float)targetSize.X / TotalContentWidth * MinVmuScale) / MinVmuScale;
+            (float)targetRectangle.Width / TotalContentWidth * MinVmuScale) / MinVmuScale;
         float heightScale = (float)Math.Floor(
-            (float)targetSize.Y / TotalContentHeight * MinVmuScale) / MinVmuScale;
+            (float)targetRectangle.Height / TotalContentHeight * MinVmuScale) / MinVmuScale;
 
         float minScale = Math.Min(widthScale, heightScale);
         Matrix scaleTransform = preserveAspectRatio
             ? Matrix.CreateScale(minScale, minScale, 1)
             : Matrix.CreateScale(widthScale, heightScale, 1);
-        _spriteTransformMatrix = baseTransform * scaleTransform * Matrix.CreateTranslation(xPosition: getTransformXPosition(), yPosition: 0, 1);
+        _spriteTransformMatrix = scaleTransform * getTranslationTransform();
 
-        float getTransformXPosition()
+        Matrix getTranslationTransform()
         {
             float scale = preserveAspectRatio ? minScale : widthScale;
             float idealWidth = scale * TotalContentWidth;
@@ -170,7 +162,8 @@ class VmuPresenter(Vmu Vmu, IconTextures IconTextures, GraphicsDeviceManager Gra
             // __|----|__ ideal
             // We are calculating the quantity denoted by '__' in the above sketch
             // Since we're using nearest neighbor scaling, we need to round to nearest integer, to keep it from looking blocky.
-            return (float)Math.Round((targetSize.X - idealWidth) / 2);
+            var xPosition = targetRectangle.X + (float)Math.Round((targetRectangle.Width - idealWidth) / 2);
+            return Matrix.CreateTranslation(xPosition, yPosition: targetRectangle.Y, zPosition: 0);
         }
     }
 }
