@@ -1,5 +1,13 @@
 # Change Log
 
+## [0.1.0-beta-4] - TBD
+
+- Preserve the docked/ejected state between runs
+- Allow saving/loading state while docked
+    - Saving state while docked can be useful before loading rewards from a minigame into a Dreamcast game, just in case something goes wrong.
+    - Note that the docked/ejected state is restored when loading state based on the save-state contents.
+    - Loading DreamPotato state while docked also causes Flycast to behave as if the memory card was removed and re-inserted.
+
 ## [0.1.0-beta-3] - 2025-10-05
 
 - Support resizing the window

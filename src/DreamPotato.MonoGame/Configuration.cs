@@ -21,6 +21,7 @@ public record Configuration(
     bool PreserveAspectRatio = true,
     int Volume = Audio.DefaultVolume,
     ViewportSize? ViewportSize = null,
+    VmuConnectionState VmuConnectionState = VmuConnectionState.None,
     [property: JsonConverter(typeof(JsonStringEnumConverter<DreamcastPort>))] DreamcastPort DreamcastPort = DreamcastPort.A)
 {
     private const string FileName = "configuration.json";
@@ -209,6 +210,16 @@ public enum VmuButton
     FastForward,
     LoadState,
     SaveState,
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter<VmuConnectionState>))]
+public enum VmuConnectionState
+{
+    None,
+    Slot1Docked,
+    Slot2Docked,
+    Slot1And2Docked,
+    VmuToVmuConnection,
 }
 
 public struct KeyMapping

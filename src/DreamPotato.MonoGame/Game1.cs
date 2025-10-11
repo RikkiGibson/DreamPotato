@@ -76,8 +76,8 @@ public class Game1 : Game
             Vmu.InitializeDate(date);
 
         Vmu.RestartMapleServer(Configuration.DreamcastPort);
-
         LoadVmuFiles(gameFilePath);
+        Vmu.DockOrEject(connect: Configuration.VmuConnectionState is VmuConnectionState.Slot1Docked or VmuConnectionState.Slot1And2Docked);
     }
 
     protected override void OnExiting(object sender, ExitingEventArgs args)
@@ -94,7 +94,8 @@ public class Game1 : Game
         Configuration = Configuration with
         {
             ViewportSize = new ViewportSize(viewport.Width, viewport.Height),
-            WindowPosition = new WindowPosition(position.X, position.Y)
+            WindowPosition = new WindowPosition(position.X, position.Y),
+            VmuConnectionState = Vmu.IsDocked ? VmuConnectionState.Slot1Docked : VmuConnectionState.None,
         };
         Configuration.Save();
 
@@ -330,9 +331,8 @@ public class Game1 : Game
         var keyboard = Keyboard.GetState();
         var gamepad = GamePad.GetState(PlayerIndex.One);
 
-
         // Only respect a pause command if VMU is in the ejected state
-        if (Vmu.IsEjected && _buttonChecker.IsNewlyPressed(VmuButton.Pause, _previousKeys, keyboard, _previousGamepad, gamepad))
+        if (!Vmu.IsDocked && _buttonChecker.IsNewlyPressed(VmuButton.Pause, _previousKeys, keyboard, _previousGamepad, gamepad))
             Paused = !Paused;
 
         // TODO: system for selecting save slots etc
@@ -381,8 +381,8 @@ public class Game1 : Game
             SleepHeldFrameCount = -1;
 
             // force unpause when vmu is inserted, as we need to more directly/forcefully manage the vmu state/execution.
-            Vmu.InsertOrEject();
-            if (!Vmu.IsEjected)
+            Vmu.DockOrEject();
+            if (Vmu.IsDocked)
                 Paused = false;
         }
 

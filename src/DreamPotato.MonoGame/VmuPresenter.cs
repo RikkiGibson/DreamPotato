@@ -61,7 +61,7 @@ class VmuPresenter(Vmu Vmu, IconTextures IconTextures, GraphicsDeviceManager Gra
         // Use nearest neighbor scaling for the screen content
         _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: _spriteTransformMatrix);
 
-        var vmuIsEjected = Vmu.IsEjected;
+        var vmuIsEjected = !Vmu.IsDocked;
         var screenSize = new Point(x: ScaledWidth, y: ScaledHeight);
         var screenRectangle = vmuIsEjected
             ? new Rectangle(new Point(x: SideMargin, y: TopMargin), screenSize)

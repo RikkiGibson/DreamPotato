@@ -173,13 +173,16 @@ public class Vmu
         }
     }
 
-    public bool IsEjected => !_cpu.SFRs.P7.DreamcastConnected;
+    /// <summary>Indicates whether the VMU is docked in the Dreamcast controller.</summary>
+    public bool IsDocked => _cpu.SFRs.P7.DreamcastConnected;
 
-    // Toggle the inserted/ejected state.
-    public void InsertOrEject()
-    {
-        _cpu.ConnectDreamcast(connect: IsEjected);
-    }
+    // Toggle the docked/ejected state.
+    public void DockOrEject()
+        => _cpu.ConnectDreamcast(connect: !IsDocked);
+
+    // Dock or eject depending on a bool argument.
+    public void DockOrEject(bool connect)
+        => _cpu.ConnectDreamcast(connect);
 
     public static string DataFolder => Path.Combine(AppContext.BaseDirectory, "Data");
     public const string SaveStateHeaderMessage = "DreamPotatoSaveState";
@@ -194,7 +197,7 @@ public class Vmu
 
     public bool SaveState(string id)
     {
-        if (!IsEjected || LoadedFilePath is null ||  GetSaveStatePath(LoadedFilePath, id) is not string filePath)
+        if (LoadedFilePath is null ||  GetSaveStatePath(LoadedFilePath, id) is not string filePath)
             return false;
 
         // TODO: it feels like it would be reasonable to zip/unzip the state implicitly.
@@ -228,9 +231,6 @@ public class Vmu
 
     public (bool success, string? error) LoadStateFromPath(string filePath, bool saveOopsFile)
     {
-        if (!IsEjected)
-            return (false, error: "Cannot load state while docked.");
-
         if (saveOopsFile)
         {
             if (!SaveOopsFile())

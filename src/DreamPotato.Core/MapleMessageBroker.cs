@@ -88,7 +88,10 @@ public class MapleMessageBroker
 
             _vmuFileHandle = vmuFileHandle;
 
-            if (dockedChanged && _clientSocket is { })
+            // Dreamcast needs to be notified, if either the docked state changed,
+            // or, if caller is asking to write outbound to Maple,
+            // in which case the local flash memory content has changed.
+            if ((dockedChanged || writeToMapleFlash) && _clientSocket is { })
             {
                 // Send a message telling client to re-query devices
                 var message = new MapleMessage() { Type = (MapleMessageType)0xff, Sender = new MapleAddress(0xff), Recipient = new MapleAddress(0xff), Length = 0xff, AdditionalWords = [] };

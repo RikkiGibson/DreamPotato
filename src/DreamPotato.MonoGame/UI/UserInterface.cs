@@ -323,8 +323,8 @@ class UserInterface
         bool doOpenSettings = false;
         if (ImGui.BeginMenu("Emulation"))
         {
-            var isEjected = _game.Vmu.IsEjected;
-            using (new DisabledScope(disabled: !isEjected))
+            var isDocked = _game.Vmu.IsDocked;
+            using (new DisabledScope(disabled: isDocked))
             {
                 if (ImGui.MenuItem(_game.Paused ? "Resume" : "Pause"))
                 {
@@ -338,14 +338,14 @@ class UserInterface
                 }
             }
 
-            if (ImGui.MenuItem(isEjected ? "Dock VMU" : "Eject VMU"))
+            if (ImGui.MenuItem(isDocked ? "Eject VMU" : "Dock VMU"))
             {
-                _game.Vmu.InsertOrEject();
+                _game.Vmu.DockOrEject();
             }
 
             ImGui.Separator();
 
-            using (new DisabledScope(disabled: !isEjected || _game.Vmu.LoadedFilePath is null))
+            using (new DisabledScope(_game.Vmu.LoadedFilePath is null))
             {
                 if (ImGui.MenuItem("Save State"))
                 {
