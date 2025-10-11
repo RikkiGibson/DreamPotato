@@ -159,7 +159,7 @@ class UserInterface
 
     internal void NewVmu()
     {
-        if (_game.Vmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.NewVmu, State: ConfirmationState.Confirmed })
+        if (_game.PrimaryVmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.NewVmu, State: ConfirmationState.Confirmed })
         {
             ShowConfirmCommandDialog(PendingCommandKind.NewVmu);
             return;
@@ -170,7 +170,7 @@ class UserInterface
 
     internal void OpenVmsDialog()
     {
-        if (_game.Vmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.OpenVms, State: ConfirmationState.Confirmed })
+        if (_game.PrimaryVmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.OpenVms, State: ConfirmationState.Confirmed })
         {
             ShowConfirmCommandDialog(PendingCommandKind.OpenVms);
             return;
@@ -179,13 +179,13 @@ class UserInterface
         var result = Dialog.FileOpen("vms", defaultPath: null);
         if (result.IsOk)
         {
-            _game.LoadAndStartVmsOrVmuFile(result.Path);
+            _game.LoadAndStartVmsOrVmuFile(_game.PrimaryVmu, result.Path);
         }
     }
 
     internal void OpenVmuDialog()
     {
-        if (_game.Vmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.OpenVmu, State: ConfirmationState.Confirmed })
+        if (_game.PrimaryVmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.OpenVmu, State: ConfirmationState.Confirmed })
         {
             ShowConfirmCommandDialog(PendingCommandKind.OpenVmu);
             return;
@@ -194,7 +194,7 @@ class UserInterface
         var result = Dialog.FileOpen("vmu,bin", defaultPath: null);
         if (result.IsOk)
         {
-            _game.LoadAndStartVmsOrVmuFile(result.Path);
+            _game.LoadAndStartVmsOrVmuFile(_game.PrimaryVmu, result.Path);
         }
     }
 
@@ -323,7 +323,7 @@ class UserInterface
         bool doOpenSettings = false;
         if (ImGui.BeginMenu("Emulation"))
         {
-            var isDocked = _game.Vmu.IsDocked;
+            var isDocked = _game.PrimaryVmu.IsDocked;
             using (new DisabledScope(disabled: isDocked))
             {
                 if (ImGui.MenuItem(_game.Paused ? "Resume" : "Pause"))
@@ -340,21 +340,21 @@ class UserInterface
 
             if (ImGui.MenuItem(isDocked ? "Eject VMU" : "Dock VMU"))
             {
-                _game.Vmu.DockOrEject();
+                _game.PrimaryVmu.DockOrEject();
             }
 
             ImGui.Separator();
 
-            using (new DisabledScope(_game.Vmu.LoadedFilePath is null))
+            using (new DisabledScope(_game.PrimaryVmu.LoadedFilePath is null))
             {
                 if (ImGui.MenuItem("Save State"))
                 {
-                    _game.Vmu.SaveState("0");
+                    _game.PrimaryVmu.SaveState("0");
                 }
 
                 if (ImGui.MenuItem("Load State"))
                 {
-                    if (_game.Vmu.LoadStateById(id: "0", saveOopsFile: true) is (false, var error))
+                    if (_game.PrimaryVmu.LoadStateById(id: "0", saveOopsFile: true) is (false, var error))
                     {
                         ShowToast(error ?? $"An unknown error occurred in '{nameof(Vmu.LoadStateById)}'.");
                     }
@@ -362,7 +362,7 @@ class UserInterface
 
                 if (ImGui.MenuItem("Undo Load State"))
                 {
-                    _game.Vmu.LoadOopsFile();
+                    _game.PrimaryVmu.LoadOopsFile();
                 }
             }
 
@@ -436,7 +436,7 @@ class UserInterface
             ImGui.EndMenu();
         }
 
-        if (_game.Vmu.IsServerConnected)
+        if (_game.PrimaryVmu.IsServerConnected)
         {
             ImGui.Image(_rawIconConnectedTexture, new Numerics.Vector2(18));
             if (ImGui.IsItemHovered())

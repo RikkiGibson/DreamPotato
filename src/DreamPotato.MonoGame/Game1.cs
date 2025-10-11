@@ -21,10 +21,10 @@ public class Game1 : Game
     internal Configuration Configuration;
     internal RecentFilesInfo RecentFilesInfo;
 
-    internal readonly Vmu Vmu;
+    internal Vmu PrimaryVmu { get; }
 
     /// <summary>Used only for the slot 2 VMU and only when configuration says to use both slot 1 and 2.</summary>
-    internal Vmu? SecondaryVmu;
+    internal Vmu? SecondaryVmu { get; private set; }
 
     internal const int MenuBarHeight = 20;
 
@@ -32,7 +32,8 @@ public class Game1 : Game
 
     // Set in Initialize()
     private SpriteBatch _spriteBatch = null!;
-    private VmuPresenter _vmuSlot1Presenter = null!;
+    private VmuPresenter _primaryVmuPresenter = null!;
+    private VmuPresenter _secondaryVmuPresenter = null!;
 
     private ButtonChecker _buttonChecker = null!;
     private UserInterface _userInterface = null!;
@@ -67,22 +68,31 @@ public class Game1 : Game
 
         _colorPalette = ColorPalette.AllPalettes.FirstOrDefault(palette => palette.Name == Configuration.ColorPaletteName) ?? ColorPalette.AllPalettes[0];
 
-        Vmu = new Vmu();
-        Vmu.Audio.Volume = Configuration.Volume;
-
         var date = DateTime.Now;
-        Vmu.InitializeFlash(date);
-        if (Configuration.AutoInitializeDate)
-            Vmu.InitializeDate(date);
 
-        Vmu.RestartMapleServer(Configuration.DreamcastPort);
-        LoadVmuFiles(gameFilePath);
-        Vmu.DockOrEject(connect: Configuration.VmuConnectionState is VmuConnectionState.Slot1Docked or VmuConnectionState.Slot1And2Docked);
+        PrimaryVmu = new Vmu();
+        initializeVmu(PrimaryVmu);
+        PrimaryVmu.DockOrEject(connect: Configuration.VmuConnectionState is VmuConnectionState.Slot1Docked or VmuConnectionState.Slot1And2Docked);
+        LoadVmuFiles(PrimaryVmu, gameFilePath, RecentFilesInfo);
+
+        SecondaryVmu = new Vmu();
+        initializeVmu(SecondaryVmu);
+        SecondaryVmu.DockOrEject(connect: Configuration.VmuConnectionState is VmuConnectionState.Slot2Docked or VmuConnectionState.Slot1And2Docked);
+
+        void initializeVmu(Vmu vmu)
+        {
+            vmu.Audio.Volume = Configuration.Volume;
+            vmu.InitializeFlash(date);
+            if (Configuration.AutoInitializeDate)
+                vmu.InitializeDate(date);
+
+            vmu.RestartMapleServer(Configuration.DreamcastPort);
+        }
     }
 
     protected override void OnExiting(object sender, ExitingEventArgs args)
     {
-        if (Vmu.HasUnsavedChanges && _userInterface.PendingCommand is not { Kind: PendingCommandKind.Exit, State: ConfirmationState.Confirmed })
+        if (PrimaryVmu.HasUnsavedChanges && _userInterface.PendingCommand is not { Kind: PendingCommandKind.Exit, State: ConfirmationState.Confirmed })
         {
             args.Cancel = true;
             _userInterface.ShowConfirmCommandDialog(PendingCommandKind.Exit);
@@ -95,7 +105,7 @@ public class Game1 : Game
         {
             ViewportSize = new ViewportSize(viewport.Width, viewport.Height),
             WindowPosition = new WindowPosition(position.X, position.Y),
-            VmuConnectionState = Vmu.IsDocked ? VmuConnectionState.Slot1Docked : VmuConnectionState.None,
+            VmuConnectionState = PrimaryVmu.IsDocked ? VmuConnectionState.Slot1Docked : VmuConnectionState.None,
         };
         Configuration.Save();
 
@@ -104,58 +114,58 @@ public class Game1 : Game
 
     internal void UpdateWindowTitle()
     {
-        var star = Vmu.HasUnsavedChanges
+        var star = PrimaryVmu.HasUnsavedChanges
             ? "* "
             : "";
 
-        var fileDesc = Vmu.LoadedFilePath is null
+        var fileDesc = PrimaryVmu.LoadedFilePath is null
             ? ""
-            : $"{Path.GetFileName(Vmu.LoadedFilePath)} - ";
+            : $"{Path.GetFileName(PrimaryVmu.LoadedFilePath)} - ";
 
         Window.Title = $"{star}{fileDesc}DreamPotato";
     }
 
-    private void LoadVmuFiles(string? vmsOrVmuFilePath)
+    private void LoadVmuFiles(Vmu vmu, string? vmsOrVmuFilePath, RecentFilesInfo? recentFilesInfo)
     {
         const string romFileName = "american_v1.05.bin";
         var romFilePath = Path.Combine(Vmu.DataFolder, romFileName);
         try
         {
             var bios = File.ReadAllBytes(romFilePath);
-            bios.AsSpan().CopyTo(Vmu._cpu.ROM);
+            bios.AsSpan().CopyTo(vmu._cpu.ROM);
         }
         catch (FileNotFoundException ex)
         {
             throw new InvalidOperationException($"'{romFileName}' must be included in '{Vmu.DataFolder}'.", ex);
         }
 
-        vmsOrVmuFilePath ??= RecentFilesInfo.RecentFiles.FirstOrDefault();
+        vmsOrVmuFilePath ??= recentFilesInfo?.RecentFiles.FirstOrDefault();
         if (vmsOrVmuFilePath != null)
         {
-            LoadAndStartVmsOrVmuFile(vmsOrVmuFilePath);
+            LoadAndStartVmsOrVmuFile(vmu, vmsOrVmuFilePath);
         }
     }
 
     internal void LoadNewVmu()
     {
-        Vmu.LoadNewVmu(date: DateTime.Now, autoInitializeRTCDate: Configuration.AutoInitializeDate);
+        PrimaryVmu.LoadNewVmu(date: DateTime.Now, autoInitializeRTCDate: Configuration.AutoInitializeDate);
         Paused = false;
         UpdateWindowTitle();
         RecentFilesInfo = RecentFilesInfo.PrependRecentFile(newRecentFile: null);
         RecentFilesInfo.Save();
     }
 
-    internal void LoadAndStartVmsOrVmuFile(string filePath)
+    internal void LoadAndStartVmsOrVmuFile(Vmu vmu, string filePath)
     {
         var extension = Path.GetExtension(filePath);
         if (extension.Equals(".vms", StringComparison.OrdinalIgnoreCase))
         {
-            Vmu.LoadGameVms(filePath, DateTime.Now);
+            vmu.LoadGameVms(filePath, DateTime.Now);
         }
         else if (extension.Equals(".vmu", StringComparison.OrdinalIgnoreCase)
             || extension.Equals(".bin", StringComparison.OrdinalIgnoreCase))
         {
-            Vmu.LoadVmu(filePath, DateTime.Now);
+            vmu.LoadVmu(filePath, DateTime.Now);
         }
         else
         {
@@ -163,6 +173,7 @@ public class Game1 : Game
         }
 
         Paused = false;
+        // TODO(spi): what to do with these for secondary VMU?
         UpdateWindowTitle();
         RecentFilesInfo = RecentFilesInfo.PrependRecentFile(filePath);
         RecentFilesInfo.Save();
@@ -177,7 +188,7 @@ public class Game1 : Game
             vmuFilePath = Path.ChangeExtension(vmuFilePath, ".vmu");
         }
 
-        Vmu.SaveVmuAs(vmuFilePath);
+        PrimaryVmu.SaveVmuAs(vmuFilePath);
         UpdateWindowTitle();
         RecentFilesInfo = RecentFilesInfo.PrependRecentFile(vmuFilePath);
         RecentFilesInfo.Save();
@@ -185,7 +196,7 @@ public class Game1 : Game
 
     internal void Reset()
     {
-        Vmu.Reset(Configuration.AutoInitializeDate ? DateTimeOffset.Now : null);
+        PrimaryVmu.Reset(Configuration.AutoInitializeDate ? DateTimeOffset.Now : null);
     }
 
     internal void Configuration_AutoInitializeDateChanged(bool newValue)
@@ -206,7 +217,7 @@ public class Game1 : Game
 
     internal void Configuration_VolumeChanged(int newVolume)
     {
-        Vmu.Audio.Volume = newVolume;
+        PrimaryVmu.Audio.Volume = newVolume;
         Configuration = Configuration with { Volume = newVolume };
     }
 
@@ -219,7 +230,7 @@ public class Game1 : Game
     internal void Configuration_DreamcastPortChanged(DreamcastPort dreamcastPort)
     {
         Configuration = Configuration with { DreamcastPort = dreamcastPort };
-        Vmu.RestartMapleServer(dreamcastPort);
+        PrimaryVmu.RestartMapleServer(dreamcastPort);
     }
 
     internal void Configuration_DoneEditing()
@@ -255,7 +266,10 @@ public class Game1 : Game
 
         _userInterface = new UserInterface(this);
         _userInterface.Initialize(textures.IconConnectedTexture);
-        _vmuSlot1Presenter = new VmuPresenter(Vmu, textures, _graphics) { ColorPalette = _colorPalette };
+        _primaryVmuPresenter = new VmuPresenter(PrimaryVmu, textures, _graphics) { ColorPalette = _colorPalette };
+
+        // TODO(spi): configuration for when to actually have a secondary vmu
+        _secondaryVmuPresenter = new VmuPresenter(SecondaryVmu!, textures, _graphics) { ColorPalette = _colorPalette };
         UpdateScaleMatrix();
 
         if (Configuration.WindowPosition is { } windowPosition)
@@ -276,8 +290,8 @@ public class Game1 : Game
     {
         _dynamicSound = new DynamicSoundEffectInstance(Audio.SampleRate, AudioChannels.Mono);
         _dynamicSound.Play();
-        Vmu.Audio.AudioBufferReady += Audio_BufferReady;
-        Vmu.UnsavedChangesDetected += Vmu_UnsavedChangesDetected;
+        PrimaryVmu.Audio.AudioBufferReady += Audio_BufferReady;
+        PrimaryVmu.UnsavedChangesDetected += Vmu_UnsavedChangesDetected;
     }
 
     private void Window_ClientSizeChanged(object? sender, EventArgs e)
@@ -294,10 +308,25 @@ public class Game1 : Game
     private void UpdateScaleMatrix()
     {
         var viewport = _graphics.GraphicsDevice.Viewport;
-        var targetRectangle = viewport.Bounds;
-        targetRectangle.Height -= MenuBarHeight;
-        targetRectangle.Y += MenuBarHeight;
-        _vmuSlot1Presenter.UpdateScaleMatrix(targetRectangle, Configuration.PreserveAspectRatio);
+        var contentRectangle = viewport.Bounds;
+        contentRectangle.Height -= MenuBarHeight;
+        contentRectangle.Y += MenuBarHeight;
+
+        // Prefer a horizontal layout for multiple VMUs, when the viewport is proportionally wider than the VMU content dimensions.
+        // Otherwise, prefer a vertical layout.
+        var layoutHorizontal = (float)contentRectangle.Height / VmuPresenter.TotalContentHeight
+            < (float)contentRectangle.Width / VmuPresenter.TotalContentWidth;
+
+        var slot1Rectangle = layoutHorizontal
+            ? contentRectangle with { Width = contentRectangle.Width / 2 }
+            : contentRectangle with { Height = contentRectangle.Height / 2 };
+
+        var slot2Rectangle = layoutHorizontal
+            ? contentRectangle with { Width = contentRectangle.Width / 2, X = slot1Rectangle.X + slot1Rectangle.Width }
+            : contentRectangle with { Height = contentRectangle.Height / 2, Y = slot1Rectangle.Y + slot1Rectangle.Height };
+
+        _primaryVmuPresenter.UpdateScaleMatrix(slot1Rectangle, Configuration.PreserveAspectRatio);
+        _secondaryVmuPresenter.UpdateScaleMatrix(slot2Rectangle, Configuration.PreserveAspectRatio);
     }
 
     private void Vmu_UnsavedChangesDetected()
@@ -331,19 +360,21 @@ public class Game1 : Game
         var keyboard = Keyboard.GetState();
         var gamepad = GamePad.GetState(PlayerIndex.One);
 
+        // TODO: most operations which are performed on a single VMU, should be extracted to VmuPresenter.
+
         // Only respect a pause command if VMU is in the ejected state
-        if (!Vmu.IsDocked && _buttonChecker.IsNewlyPressed(VmuButton.Pause, _previousKeys, keyboard, _previousGamepad, gamepad))
+        if (!PrimaryVmu.IsDocked && _buttonChecker.IsNewlyPressed(VmuButton.Pause, _previousKeys, keyboard, _previousGamepad, gamepad))
             Paused = !Paused;
 
         // TODO: system for selecting save slots etc
         if (_buttonChecker.IsNewlyPressed(VmuButton.SaveState, _previousKeys, keyboard, _previousGamepad, gamepad))
-            Vmu.SaveState(id: "0");
+            PrimaryVmu.SaveState(id: "0");
 
         if (_buttonChecker.IsNewlyPressed(VmuButton.LoadState, _previousKeys, keyboard, _previousGamepad, gamepad))
         {
-            if (Vmu.LoadStateById(id: "0", saveOopsFile: true) is (false, var error))
+            if (PrimaryVmu.LoadStateById(id: "0", saveOopsFile: true) is (false, var error))
             {
-                _userInterface.ShowToast(error ?? $"An unknown error occurred in {nameof(Vmu.LoadStateById)}.");
+                _userInterface.ShowToast(error ?? $"An unknown error occurred in {nameof(PrimaryVmu.LoadStateById)}.");
             }
         }
 
@@ -381,18 +412,18 @@ public class Game1 : Game
             SleepHeldFrameCount = -1;
 
             // force unpause when vmu is inserted, as we need to more directly/forcefully manage the vmu state/execution.
-            Vmu.DockOrEject();
-            if (Vmu.IsDocked)
+            PrimaryVmu.DockOrEject();
+            if (PrimaryVmu.IsDocked)
                 Paused = false;
         }
 
         // Let any button press wake the VMU from sleep
-        if (Configuration.AnyButtonWakesFromSleep && !Vmu._cpu.SFRs.Vccr.DisplayControl && (byte)newP3 != 0xff)
+        if (Configuration.AnyButtonWakesFromSleep && !PrimaryVmu._cpu.SFRs.Vccr.DisplayControl && (byte)newP3 != 0xff)
         {
             newP3 = newP3 with { ButtonSleep = false };
         }
 
-        Vmu._cpu.SFRs.P3 = newP3;
+        PrimaryVmu._cpu.SFRs.P3 = newP3;
 
         _previousKeys = keyboard;
         _previousGamepad = gamepad;
@@ -401,7 +432,7 @@ public class Game1 : Game
             IsFastForwarding ? gameTime.ElapsedGameTime.Ticks * 2 :
             gameTime.ElapsedGameTime.Ticks;
 
-        Vmu._cpu.Run(rate);
+        PrimaryVmu._cpu.Run(rate);
 
         base.Update(gameTime);
     }
@@ -417,7 +448,8 @@ public class Game1 : Game
     protected override void Draw(GameTime gameTime)
     {
         GraphicsDevice.Clear(_colorPalette.Margin);
-        _vmuSlot1Presenter.Draw(_spriteBatch);
+        _primaryVmuPresenter.Draw(_spriteBatch);
+        _secondaryVmuPresenter.Draw(_spriteBatch);
         _userInterface.Layout(gameTime);
 
         base.Draw(gameTime);

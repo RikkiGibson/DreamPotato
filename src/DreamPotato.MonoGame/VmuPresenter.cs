@@ -154,16 +154,22 @@ class VmuPresenter(Vmu Vmu, IconTextures IconTextures, GraphicsDeviceManager Gra
 
         Matrix getTranslationTransform()
         {
-            float scale = preserveAspectRatio ? minScale : widthScale;
-            float idealWidth = scale * TotalContentWidth;
-
             // Center the content horizontally, by shifting it over
             // |--------| actual
             // __|----|__ ideal
             // We are calculating the quantity denoted by '__' in the above sketch
             // Since we're using nearest neighbor scaling, we need to round to nearest integer, to keep it from looking blocky.
+            float idealWidthScale = preserveAspectRatio ? minScale : widthScale;
+            float idealWidth = idealWidthScale * TotalContentWidth;
             var xPosition = targetRectangle.X + (float)Math.Round((targetRectangle.Width - idealWidth) / 2);
-            return Matrix.CreateTranslation(xPosition, yPosition: targetRectangle.Y, zPosition: 0);
+
+            // Do the same process for the vertical position
+            // TODO(spi): consider if vertical centering is desirable here or just limiting the height of the 'targetRectangle' would be better
+            float idealHeightScale = preserveAspectRatio ? minScale : heightScale;
+            float idealHeight = idealHeightScale * TotalContentHeight;
+            var yPosition = targetRectangle.Y + (float)Math.Round((targetRectangle.Height - idealHeight) / 2);
+
+            return Matrix.CreateTranslation(xPosition, yPosition, zPosition: 0);
         }
     }
 }
