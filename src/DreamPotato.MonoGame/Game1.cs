@@ -17,12 +17,14 @@ namespace DreamPotato.MonoGame;
 public class Game1 : Game
 {
     private readonly GraphicsDeviceManager _graphics;
-    private readonly Color[] _vmuScreenData;
     private ColorPalette _colorPalette;
     internal Configuration Configuration;
     internal RecentFilesInfo RecentFilesInfo;
 
     internal readonly Vmu Vmu;
+
+    /// <summary>Used only for the slot 2 VMU and only when configuration says to use both slot 1 and 2.</summary>
+    internal Vmu? SecondaryVmu;
 
     internal const int MenuBarHeight = 20;
 
@@ -74,7 +76,6 @@ public class Game1 : Game
             Vmu.InitializeDate(date);
 
         Vmu.RestartMapleServer(Configuration.DreamcastPort);
-        _vmuScreenData = new Color[Display.ScreenWidth * Display.ScreenHeight];
 
         LoadVmuFiles(gameFilePath);
     }
@@ -280,12 +281,12 @@ public class Game1 : Game
 
     private void Window_ClientSizeChanged(object? sender, EventArgs e)
     {
-        // TODO: when the size changes, send the VmuPresenter a message,
-        // which indicates what region of the screen is reserved for it, allowing it to update its own transform matrix internally.
-        var viewport = _graphics.GraphicsDevice.Viewport;
-        if (viewport.Width < VmuPresenter.TotalContentWidth || viewport.Height < (VmuPresenter.TotalContentHeight + MenuBarHeight))
-            SetWindowSizeMultiple(multiple: 1);
+        const int MinHeight = VmuPresenter.TotalContentHeight + MenuBarHeight;
 
+        var viewport = _graphics.GraphicsDevice.Viewport;
+        _graphics.PreferredBackBufferWidth = Math.Max(viewport.Width, VmuPresenter.TotalContentWidth);
+        _graphics.PreferredBackBufferHeight = Math.Max(viewport.Height, MinHeight);
+        _graphics.ApplyChanges();
         UpdateScaleMatrix();
     }
 
