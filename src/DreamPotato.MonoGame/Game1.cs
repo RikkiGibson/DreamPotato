@@ -140,7 +140,7 @@ public class Game1 : Game
         }
 
         vmsOrVmuFilePath ??= recentFilesInfo?.RecentFiles.FirstOrDefault();
-        if (vmsOrVmuFilePath != null)
+        if (vmsOrVmuFilePath != null && File.Exists(vmsOrVmuFilePath))
         {
             LoadAndStartVmsOrVmuFile(vmu, vmsOrVmuFilePath);
         }
