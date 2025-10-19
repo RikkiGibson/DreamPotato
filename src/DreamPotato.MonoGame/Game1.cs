@@ -230,6 +230,7 @@ public class Game1 : Game
         var windowSize = Configuration.ViewportSize;
         _graphics.PreferredBackBufferWidth = windowSize.Width;
         _graphics.PreferredBackBufferHeight = windowSize.Height;
+        _graphics.ApplyChanges();
 
         var textures = new IconTextures
         {
@@ -244,20 +245,17 @@ public class Game1 : Game
         _userInterface = new UserInterface(this);
         _userInterface.Initialize(textures.IconConnectedTexture);
 
-
         var date = DateTime.Now;
         var primaryVmu = new Vmu();
         initializeVmu(primaryVmu);
         primaryVmu.DockOrEject(connect: Configuration.VmuConnectionState is VmuConnectionState.PrimaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
         RecentFilesInfo = RecentFilesInfo.Load();
-        LoadVmuFiles(primaryVmu, _initialFilePath ?? RecentFilesInfo.PrimaryVmuMostRecent);
 
         // TODO: share/pass in a MapleMessageBroker for 2 VMUs
         var secondaryVmu = new Vmu();
         initializeVmu(secondaryVmu);
         secondaryVmu.DockOrEject(connect: Configuration.VmuConnectionState is VmuConnectionState.SecondaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
 
-        // TODO: delay creating VMUs, until we have graphics, so I/O failures etc can surface as dialogs
         var colorPalette = ColorPalette.AllPalettes.FirstOrDefault(palette => palette.Name == Configuration.ColorPaletteName) ?? ColorPalette.AllPalettes[0];
         _primaryVmuPresenter = new VmuPresenter(primaryVmu, textures, _graphics) { ColorPalette = colorPalette };
         _secondaryVmuPresenter = new VmuPresenter(secondaryVmu, textures, _graphics) { ColorPalette = colorPalette };
@@ -265,11 +263,13 @@ public class Game1 : Game
 
         if (Configuration.WindowPosition is { } windowPosition)
         {
+            // Do not move the window to the saved position, if doing so would put us outside the bounds of the current display configuration.
             var windowRect = Window.ClientBounds.Size;
             if (_graphics.GraphicsDevice.DisplayMode.TitleSafeArea.Intersects(new Rectangle(windowPosition.X, windowPosition.Y, windowRect.X, windowRect.Y)))
                 Window.Position = new Point(windowPosition.X, windowPosition.Y);
         }
 
+        LoadVmuFiles(primaryVmu, _initialFilePath ?? RecentFilesInfo.PrimaryVmuMostRecent);
         _spriteBatch = new SpriteBatch(GraphicsDevice);
         _buttonChecker = new ButtonChecker(Configuration);
 
@@ -288,9 +288,6 @@ public class Game1 : Game
 
     protected override void LoadContent()
     {
-        _dynamicSound = new DynamicSoundEffectInstance(Audio.SampleRate, AudioChannels.Mono);
-        _dynamicSound.Play();
-        PrimaryVmu.Audio.AudioBufferReady += Audio_BufferReady;
         PrimaryVmu.UnsavedChangesDetected += Vmu_UnsavedChangesDetected;
     }
 
@@ -445,11 +442,6 @@ public class Game1 : Game
 
     internal bool IsFastForwarding
         => _buttonChecker.IsPressed(VmuButton.FastForward, _previousKeys, _previousGamepad);
-
-    private void Audio_BufferReady(Audio.AudioBufferReadyEventArgs args)
-    {
-        _dynamicSound.SubmitBuffer(args.Buffer, args.Start, args.Length);
-    }
 
     protected override void Draw(GameTime gameTime)
     {

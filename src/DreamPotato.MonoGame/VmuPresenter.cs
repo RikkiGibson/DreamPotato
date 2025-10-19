@@ -7,23 +7,24 @@ using System.Diagnostics;
 using DreamPotato.Core;
 
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 
 /// <summary>
 /// Exposes a <see cref="Vmu"/> and drawing methods.
 /// </summary>
-class VmuPresenter(Vmu Vmu, IconTextures IconTextures, GraphicsDeviceManager Graphics)
+class VmuPresenter
 {
     private readonly Color[] _vmuScreenData = new Color[Display.ScreenWidth * Display.ScreenHeight];
+    private readonly DynamicSoundEffectInstance _dynamicSound;
     internal required ColorPalette ColorPalette { get; set; }
 
-    internal readonly Vmu Vmu = Vmu;
-    internal readonly IconTextures IconTextures = IconTextures;
-    internal readonly GraphicsDeviceManager Graphics = Graphics;
-    internal readonly SpriteBatch _spriteBatch = new SpriteBatch(Graphics.GraphicsDevice);
-    internal readonly Texture2D _vmuScreenTexture = new Texture2D(Graphics.GraphicsDevice, Display.ScreenWidth, Display.ScreenHeight);
-    internal readonly Texture2D _vmuBorderTexture = new Texture2D(Graphics.GraphicsDevice, 1, 1);
-    internal readonly Texture2D _vmuMarginTexture = new Texture2D(Graphics.GraphicsDevice, 1, 1);
+    internal readonly Vmu Vmu;
+    internal readonly IconTextures IconTextures;
+    internal readonly GraphicsDeviceManager Graphics;
+    internal readonly Texture2D _vmuScreenTexture;
+    internal readonly Texture2D _vmuBorderTexture;
+    internal readonly Texture2D _vmuMarginTexture;
 
     private Matrix _spriteTransformMatrix;
 
@@ -41,7 +42,21 @@ class VmuPresenter(Vmu Vmu, IconTextures IconTextures, GraphicsDeviceManager Gra
     internal const int TotalContentWidth = ScaledWidth + SideMargin * 2;
     internal const int TotalContentHeight = ScaledHeight + TopMargin + BottomMargin;
 
-    internal void Draw(SpriteBatch _spriteBatch)
+    public VmuPresenter(Vmu vmu, IconTextures iconTextures, GraphicsDeviceManager graphics)
+    {
+        Vmu = vmu;
+        IconTextures = iconTextures;
+        Graphics = graphics;
+        _vmuScreenTexture = new Texture2D(graphics.GraphicsDevice, Display.ScreenWidth, Display.ScreenHeight);
+        _vmuBorderTexture = new Texture2D(graphics.GraphicsDevice, 1, 1);
+        _vmuMarginTexture = new Texture2D(graphics.GraphicsDevice, 1, 1);
+
+        _dynamicSound = new DynamicSoundEffectInstance(Audio.SampleRate, AudioChannels.Mono);
+        _dynamicSound.Play();
+        vmu.Audio.AudioBufferReady += Audio_BufferReady;
+    }
+
+    internal void Draw(SpriteBatch spriteBatch)
     {
         var screenData = Vmu.Display.GetBytes();
         int i = 0;
@@ -59,7 +74,7 @@ class VmuPresenter(Vmu Vmu, IconTextures IconTextures, GraphicsDeviceManager Gra
         _vmuScreenTexture.SetData(_vmuScreenData);
 
         // Use nearest neighbor scaling for the screen content
-        _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: _spriteTransformMatrix);
+        spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: _spriteTransformMatrix);
 
         var vmuIsEjected = !Vmu.IsDocked;
         var screenSize = new Point(x: ScaledWidth, y: ScaledHeight);
@@ -67,7 +82,7 @@ class VmuPresenter(Vmu Vmu, IconTextures IconTextures, GraphicsDeviceManager Gra
             ? new Rectangle(new Point(x: SideMargin, y: TopMargin), screenSize)
             : new Rectangle(location: new Point(x: SideMargin, y: TopMargin + IconSize), screenSize);
 
-        _spriteBatch.Draw(
+        spriteBatch.Draw(
             _vmuScreenTexture,
             destinationRectangle: screenRectangle,
             sourceRectangle: null,
@@ -76,14 +91,14 @@ class VmuPresenter(Vmu Vmu, IconTextures IconTextures, GraphicsDeviceManager Gra
             origin: default,
             effects: vmuIsEjected ? SpriteEffects.None : (SpriteEffects.FlipHorizontally | SpriteEffects.FlipVertically),
             layerDepth: 0);
-        _spriteBatch.End();
+        spriteBatch.End();
 
         // Draw icons
         // If we are at an even multiple of the base screen size, or, if the screen is just huge, use nearest neighbor scaling
         var iconsSamplerState = Math.Floor(_spriteTransformMatrix.Down.Y) == _spriteTransformMatrix.Down.Y || _spriteTransformMatrix.Down.Y < -3
             ? SamplerState.PointClamp
             : SamplerState.LinearWrap;
-        _spriteBatch.Begin(samplerState: iconsSamplerState, transformMatrix: _spriteTransformMatrix);
+        spriteBatch.Begin(samplerState: iconsSamplerState, transformMatrix: _spriteTransformMatrix);
         int iconsYPos = vmuIsEjected ? TopMargin + ScaledHeight + MinVmuScale / 2 : TopMargin - MinVmuScale / 2;
         const int iconSpacing = MinVmuScale * 2;
         var icons = Vmu.Display.GetIcons();
@@ -112,7 +127,7 @@ class VmuPresenter(Vmu Vmu, IconTextures IconTextures, GraphicsDeviceManager Gra
                 ? new Rectangle(location: new Point(x: SideMargin + iconSpacing * ordinal + IconSize * ordinal, y: iconsYPos), iconSize)
                 : new Rectangle(location: new Point(x: SideMargin + iconSpacing * (maxPosition - ordinal) + IconSize * (maxPosition - ordinal), y: iconsYPos), iconSize);
 
-            _spriteBatch.Draw(
+            spriteBatch.Draw(
                 texture,
                 destinationRectangle: iconRectangle,
                 sourceRectangle: null,
@@ -123,7 +138,7 @@ class VmuPresenter(Vmu Vmu, IconTextures IconTextures, GraphicsDeviceManager Gra
                 layerDepth: 0);
         }
 
-        _spriteBatch.End();
+        spriteBatch.End();
 
         Color ReadColor(byte b, byte bitAddress)
         {
@@ -171,5 +186,10 @@ class VmuPresenter(Vmu Vmu, IconTextures IconTextures, GraphicsDeviceManager Gra
 
             return Matrix.CreateTranslation(xPosition, yPosition, zPosition: 0);
         }
+    }
+
+    private void Audio_BufferReady(Audio.AudioBufferReadyEventArgs args)
+    {
+        _dynamicSound.SubmitBuffer(args.Buffer, args.Start, args.Length);
     }
 }

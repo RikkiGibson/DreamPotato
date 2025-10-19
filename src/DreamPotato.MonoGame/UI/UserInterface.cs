@@ -53,7 +53,6 @@ readonly struct PendingCommand
 
     public ConfirmationState State { get; }
     public PendingCommandKind Kind { get; }
-    public string? FilePath { get; }
 
     public static PendingCommand ShowDialog(PendingCommandKind kind) => new(ConfirmationState.ShowDialog, kind);
     public PendingCommand Confirmed() => new(ConfirmationState.Confirmed, Kind);
