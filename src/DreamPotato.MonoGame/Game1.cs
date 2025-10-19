@@ -56,6 +56,72 @@ public class Game1 : Game
         _initialFilePath = gameFilePath;
     }
 
+    [MemberNotNull(nameof(_spriteBatch), nameof(_primaryVmuPresenter), nameof(_secondaryVmuPresenter), nameof(_buttonChecker), nameof(_userInterface), nameof(Configuration), nameof(RecentFilesInfo))]
+    protected override void Initialize()
+    {
+        Configuration = Configuration.Load();
+        Configuration.Save();
+
+        var windowSize = Configuration.ViewportSize;
+        _graphics.PreferredBackBufferWidth = windowSize.Width;
+        _graphics.PreferredBackBufferHeight = windowSize.Height;
+        _graphics.ApplyChanges();
+
+        var textures = new IconTextures
+        {
+            IconFileTexture = Content.Load<Texture2D>("VMUIconFile"),
+            IconGameTexture = Content.Load<Texture2D>("VMUIconGame"),
+            IconClockTexture = Content.Load<Texture2D>("VMUIconClock"),
+            IconIOTexture = Content.Load<Texture2D>("VMUIconIO"),
+            IconSleepTexture = Content.Load<Texture2D>("VMUIconSleep"),
+            IconConnectedTexture = Content.Load<Texture2D>("DreamcastConnectedIcon"),
+        };
+
+        _userInterface = new UserInterface(this);
+        _userInterface.Initialize(textures.IconConnectedTexture);
+
+        var date = DateTime.Now;
+        var primaryVmu = new Vmu();
+        initializeVmu(primaryVmu);
+        primaryVmu.DockOrEject(connect: Configuration.VmuConnectionState is VmuConnectionState.PrimaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
+        primaryVmu.UnsavedChangesDetected += Vmu_UnsavedChangesDetected;
+        RecentFilesInfo = RecentFilesInfo.Load();
+
+        // TODO: share/pass in a MapleMessageBroker for 2 VMUs
+        var secondaryVmu = new Vmu();
+        initializeVmu(secondaryVmu);
+        secondaryVmu.DockOrEject(connect: Configuration.VmuConnectionState is VmuConnectionState.SecondaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
+
+        var colorPalette = ColorPalette.AllPalettes.FirstOrDefault(palette => palette.Name == Configuration.ColorPaletteName) ?? ColorPalette.AllPalettes[0];
+        _primaryVmuPresenter = new VmuPresenter(primaryVmu, textures, _graphics) { ColorPalette = colorPalette };
+        _secondaryVmuPresenter = new VmuPresenter(secondaryVmu, textures, _graphics) { ColorPalette = colorPalette };
+        UpdateScaleMatrix();
+
+        if (Configuration.WindowPosition is { } windowPosition)
+        {
+            // Do not move the window to the saved position, if doing so would put us outside the bounds of the current display configuration.
+            var windowRect = Window.ClientBounds.Size;
+            if (_graphics.GraphicsDevice.DisplayMode.TitleSafeArea.Intersects(new Rectangle(windowPosition.X, windowPosition.Y, windowRect.X, windowRect.Y)))
+                Window.Position = new Point(windowPosition.X, windowPosition.Y);
+        }
+
+        LoadVmuFiles(primaryVmu, _initialFilePath ?? RecentFilesInfo.PrimaryVmuMostRecent);
+        _spriteBatch = new SpriteBatch(GraphicsDevice);
+        _buttonChecker = new ButtonChecker(Configuration);
+
+        base.Initialize();
+
+        void initializeVmu(Vmu vmu)
+        {
+            vmu.Audio.Volume = Configuration.Volume;
+            vmu.InitializeFlash(date);
+            if (Configuration.AutoInitializeDate)
+                vmu.InitializeDate(date);
+
+            vmu.RestartMapleServer(Configuration.DreamcastPort);
+        }
+    }
+
     protected override void OnExiting(object sender, ExitingEventArgs args)
     {
         if (PrimaryVmu.HasUnsavedChanges && _userInterface.PendingCommand is not { Kind: PendingCommandKind.Exit, State: ConfirmationState.Confirmed })
@@ -219,72 +285,6 @@ public class Game1 : Game
         Configuration = Configuration with { ButtonMappings = buttonMappings };
         _buttonChecker = new ButtonChecker(Configuration);
         Configuration.Save();
-    }
-
-    [MemberNotNull(nameof(_spriteBatch), nameof(_primaryVmuPresenter), nameof(_secondaryVmuPresenter), nameof(_buttonChecker), nameof(_userInterface), nameof(Configuration), nameof(RecentFilesInfo))]
-    protected override void Initialize()
-    {
-        Configuration = Configuration.Load();
-        Configuration.Save();
-
-        var windowSize = Configuration.ViewportSize;
-        _graphics.PreferredBackBufferWidth = windowSize.Width;
-        _graphics.PreferredBackBufferHeight = windowSize.Height;
-        _graphics.ApplyChanges();
-
-        var textures = new IconTextures
-        {
-            IconFileTexture = Content.Load<Texture2D>("VMUIconFile"),
-            IconGameTexture = Content.Load<Texture2D>("VMUIconGame"),
-            IconClockTexture = Content.Load<Texture2D>("VMUIconClock"),
-            IconIOTexture = Content.Load<Texture2D>("VMUIconIO"),
-            IconSleepTexture = Content.Load<Texture2D>("VMUIconSleep"),
-            IconConnectedTexture = Content.Load<Texture2D>("DreamcastConnectedIcon"),
-        };
-
-        _userInterface = new UserInterface(this);
-        _userInterface.Initialize(textures.IconConnectedTexture);
-
-        var date = DateTime.Now;
-        var primaryVmu = new Vmu();
-        initializeVmu(primaryVmu);
-        primaryVmu.DockOrEject(connect: Configuration.VmuConnectionState is VmuConnectionState.PrimaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
-        primaryVmu.UnsavedChangesDetected += Vmu_UnsavedChangesDetected;
-        RecentFilesInfo = RecentFilesInfo.Load();
-
-        // TODO: share/pass in a MapleMessageBroker for 2 VMUs
-        var secondaryVmu = new Vmu();
-        initializeVmu(secondaryVmu);
-        secondaryVmu.DockOrEject(connect: Configuration.VmuConnectionState is VmuConnectionState.SecondaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
-
-        var colorPalette = ColorPalette.AllPalettes.FirstOrDefault(palette => palette.Name == Configuration.ColorPaletteName) ?? ColorPalette.AllPalettes[0];
-        _primaryVmuPresenter = new VmuPresenter(primaryVmu, textures, _graphics) { ColorPalette = colorPalette };
-        _secondaryVmuPresenter = new VmuPresenter(secondaryVmu, textures, _graphics) { ColorPalette = colorPalette };
-        UpdateScaleMatrix();
-
-        if (Configuration.WindowPosition is { } windowPosition)
-        {
-            // Do not move the window to the saved position, if doing so would put us outside the bounds of the current display configuration.
-            var windowRect = Window.ClientBounds.Size;
-            if (_graphics.GraphicsDevice.DisplayMode.TitleSafeArea.Intersects(new Rectangle(windowPosition.X, windowPosition.Y, windowRect.X, windowRect.Y)))
-                Window.Position = new Point(windowPosition.X, windowPosition.Y);
-        }
-
-        LoadVmuFiles(primaryVmu, _initialFilePath ?? RecentFilesInfo.PrimaryVmuMostRecent);
-        _spriteBatch = new SpriteBatch(GraphicsDevice);
-        _buttonChecker = new ButtonChecker(Configuration);
-
-        base.Initialize();
-
-        void initializeVmu(Vmu vmu)
-        {
-            vmu.Audio.Volume = Configuration.Volume;
-            vmu.InitializeFlash(date);
-            if (Configuration.AutoInitializeDate)
-                vmu.InitializeDate(date);
-
-            vmu.RestartMapleServer(Configuration.DreamcastPort);
-        }
     }
 
     private void Window_ClientSizeChanged(object? sender, EventArgs e)
