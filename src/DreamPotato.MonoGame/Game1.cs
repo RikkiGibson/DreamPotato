@@ -25,23 +25,21 @@ public class Game1 : Game
 
     internal const int MenuBarHeight = 20;
 
-    private const int SleepToggleInsertEjectFrameCount = 60; // 1 second
 
     // Set in Initialize()
     internal Configuration Configuration = null!;
+    internal ColorPalette ColorPalette = null!;
     internal RecentFilesInfo RecentFilesInfo = null!;
     private SpriteBatch _spriteBatch = null!;
     private VmuPresenter _primaryVmuPresenter = null!;
     private VmuPresenter _secondaryVmuPresenter = null!;
 
-    private ButtonChecker _buttonChecker = null!;
     private UserInterface _userInterface = null!;
 
     // Dynamic state
     private KeyboardState _previousKeys;
     private GamePadState _previousGamepad;
     internal bool Paused;
-    internal int SleepHeldFrameCount;
 
     public Game1(string? gameFilePath)
     {
@@ -53,11 +51,12 @@ public class Game1 : Game
         _initialFilePath = gameFilePath;
     }
 
-    [MemberNotNull(nameof(_spriteBatch), nameof(_primaryVmuPresenter), nameof(_secondaryVmuPresenter), nameof(_buttonChecker), nameof(_userInterface), nameof(Configuration), nameof(RecentFilesInfo))]
+    [MemberNotNull(nameof(_spriteBatch), nameof(_primaryVmuPresenter), nameof(_secondaryVmuPresenter), nameof(_userInterface), nameof(Configuration), nameof(ColorPalette), nameof(RecentFilesInfo))]
     protected override void Initialize()
     {
         Configuration = Configuration.Load();
         Configuration.Save();
+        ColorPalette = ColorPalette.AllPalettes.FirstOrDefault(palette => palette.Name == Configuration.ColorPaletteName) ?? ColorPalette.AllPalettes[0];
 
         var windowSize = Configuration.ViewportSize;
         _graphics.PreferredBackBufferWidth = windowSize.Width;
@@ -89,9 +88,8 @@ public class Game1 : Game
         initializeVmu(secondaryVmu);
         secondaryVmu.DockOrEject(connect: Configuration.VmuConnectionState is VmuConnectionState.SecondaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
 
-        var colorPalette = ColorPalette.AllPalettes.FirstOrDefault(palette => palette.Name == Configuration.ColorPaletteName) ?? ColorPalette.AllPalettes[0];
-        _primaryVmuPresenter = new VmuPresenter(primaryVmu, textures, _graphics) { ColorPalette = colorPalette };
-        _secondaryVmuPresenter = new VmuPresenter(secondaryVmu, textures, _graphics) { ColorPalette = colorPalette };
+        _primaryVmuPresenter = new VmuPresenter(this, primaryVmu, textures, _graphics, Configuration.PrimaryInput);
+        _secondaryVmuPresenter = new VmuPresenter(this, secondaryVmu, textures, _graphics, Configuration.SecondaryInput);
         UpdateScaleMatrix();
 
         if (Configuration.WindowPosition is { } windowPosition)
@@ -104,7 +102,6 @@ public class Game1 : Game
 
         LoadVmuFiles(primaryVmu, _initialFilePath ?? RecentFilesInfo.PrimaryVmuMostRecent);
         _spriteBatch = new SpriteBatch(GraphicsDevice);
-        _buttonChecker = new ButtonChecker(Configuration.PrimaryInput);
 
         base.Initialize();
 
@@ -242,8 +239,7 @@ public class Game1 : Game
     internal void Configuration_PaletteChanged(ColorPalette palette)
     {
         Configuration = Configuration with { ColorPaletteName = palette.Name };
-        _primaryVmuPresenter.ColorPalette = palette;
-        _secondaryVmuPresenter.ColorPalette = palette;
+        ColorPalette = palette;
     }
 
     internal void Configuration_DreamcastPortChanged(DreamcastPort dreamcastPort)
@@ -273,14 +269,14 @@ public class Game1 : Game
     internal void Configuration_DoneEditingKeyMappings(ImmutableArray<KeyMapping> keyMappings)
     {
         Configuration = Configuration with { PrimaryInput = Configuration.PrimaryInput with { KeyMappings = keyMappings } };
-        _buttonChecker = new ButtonChecker(Configuration.PrimaryInput);
+        _primaryVmuPresenter.UpdateButtonChecker(Configuration.PrimaryInput);
         Configuration.Save();
     }
 
     internal void Configuration_DoneEditingButtonMappings(ImmutableArray<ButtonMapping> buttonMappings)
     {
         Configuration = Configuration with { PrimaryInput = Configuration.PrimaryInput with { ButtonMappings = buttonMappings } };
-        _buttonChecker = new ButtonChecker(Configuration.PrimaryInput);
+        _primaryVmuPresenter.UpdateButtonChecker(Configuration.PrimaryInput);
         Configuration.Save();
     }
 
@@ -359,14 +355,15 @@ public class Game1 : Game
         // TODO: most operations which are performed on a single VMU, should be extracted to VmuPresenter.
 
         // Only respect a pause command if VMU is in the ejected state
-        if (!PrimaryVmu.IsDocked && _buttonChecker.IsNewlyPressed(VmuButton.Pause, _previousKeys, keyboard, _previousGamepad, gamepad))
+        var buttonChecker = _primaryVmuPresenter.ButtonChecker;
+        if (!PrimaryVmu.IsDocked && buttonChecker.IsNewlyPressed(VmuButton.Pause, _previousKeys, keyboard, _previousGamepad, gamepad))
             Paused = !Paused;
 
         // TODO: system for selecting save slots etc
-        if (_buttonChecker.IsNewlyPressed(VmuButton.SaveState, _previousKeys, keyboard, _previousGamepad, gamepad))
+        if (buttonChecker.IsNewlyPressed(VmuButton.SaveState, _previousKeys, keyboard, _previousGamepad, gamepad))
             PrimaryVmu.SaveState(id: "0");
 
-        if (_buttonChecker.IsNewlyPressed(VmuButton.LoadState, _previousKeys, keyboard, _previousGamepad, gamepad))
+        if (buttonChecker.IsNewlyPressed(VmuButton.LoadState, _previousKeys, keyboard, _previousGamepad, gamepad))
         {
             if (PrimaryVmu.LoadStateById(id: "0", saveOopsFile: true) is (false, var error))
             {
@@ -374,71 +371,21 @@ public class Game1 : Game
             }
         }
 
-        var newP3 = new Core.SFRs.P3()
-        {
-            Up = !_buttonChecker.IsPressed(VmuButton.Up, keyboard, gamepad),
-            Down = !_buttonChecker.IsPressed(VmuButton.Down, keyboard, gamepad),
-            Left = !_buttonChecker.IsPressed(VmuButton.Left, keyboard, gamepad),
-            Right = !_buttonChecker.IsPressed(VmuButton.Right, keyboard, gamepad),
-            ButtonA = !_buttonChecker.IsPressed(VmuButton.A, keyboard, gamepad),
-            ButtonB = !_buttonChecker.IsPressed(VmuButton.B, keyboard, gamepad),
-            ButtonSleep = !_buttonChecker.IsPressed(VmuButton.Sleep, keyboard, gamepad),
-            ButtonMode = !_buttonChecker.IsPressed(VmuButton.Mode, keyboard, gamepad),
-        };
-
-        // Holding sleep can be used to toggle insert/eject
-        if (!newP3.ButtonSleep)
-        {
-            if (SleepHeldFrameCount != -1)
-            {
-                // Sleep button held and frame counter not in post-toggle position
-                SleepHeldFrameCount++;
-            }
-        }
-        else
-        {
-            // Sleep button up. Reset sleep counter.
-            SleepHeldFrameCount = 0;
-        }
-
-        if (SleepHeldFrameCount >= SleepToggleInsertEjectFrameCount
-            || _buttonChecker.IsNewlyPressed(VmuButton.InsertEject, _previousKeys, keyboard, _previousGamepad, gamepad))
-        {
-            // Do not toggle insert/eject via sleep until sleep button is released and re-pressed
-            SleepHeldFrameCount = -1;
-
-            // force unpause when vmu is inserted, as we need to more directly/forcefully manage the vmu state/execution.
-            PrimaryVmu.DockOrEject();
-            if (PrimaryVmu.IsDocked)
-                Paused = false;
-        }
-
-        // Let any button press wake the VMU from sleep
-        if (Configuration.AnyButtonWakesFromSleep && !PrimaryVmu._cpu.SFRs.Vccr.DisplayControl && (byte)newP3 != 0xff)
-        {
-            newP3 = newP3 with { ButtonSleep = false };
-        }
-
-        PrimaryVmu._cpu.SFRs.P3 = newP3;
+        _primaryVmuPresenter.Update(gameTime, _previousKeys, _previousGamepad, keyboard, gamepad);
+        if (PrimaryVmu.IsDocked)
+            Paused = false;
 
         _previousKeys = keyboard;
         _previousGamepad = gamepad;
-
-        var rate = Paused ? 0 :
-            IsFastForwarding ? gameTime.ElapsedGameTime.Ticks * 2 :
-            gameTime.ElapsedGameTime.Ticks;
-
-        PrimaryVmu._cpu.Run(rate);
-
         base.Update(gameTime);
     }
 
     internal bool IsFastForwarding
-        => _buttonChecker.IsPressed(VmuButton.FastForward, _previousKeys, _previousGamepad);
+        => _primaryVmuPresenter.ButtonChecker.IsPressed(VmuButton.FastForward, _previousKeys, _previousGamepad);
 
     protected override void Draw(GameTime gameTime)
     {
-        GraphicsDevice.Clear(_primaryVmuPresenter.ColorPalette.Margin);
+        GraphicsDevice.Clear(ColorPalette.Margin);
         _primaryVmuPresenter.Draw(_spriteBatch);
         if (UseSecondaryVmu)
             _secondaryVmuPresenter.Draw(_spriteBatch);

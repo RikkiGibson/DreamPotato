@@ -3,21 +3,29 @@ namespace DreamPotato.MonoGame;
 
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 
 using DreamPotato.Core;
 
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 
 /// <summary>
 /// Exposes a <see cref="Vmu"/> and drawing methods.
 /// </summary>
 class VmuPresenter
 {
+    private readonly Game1 _game1;
+    private Configuration Configuration => _game1.Configuration;
+    private ColorPalette ColorPalette => _game1.ColorPalette;
+    private bool Paused => _game1.Paused;
+    private bool IsFastForwarding => _game1.IsFastForwarding;
+
     private readonly Color[] _vmuScreenData = new Color[Display.ScreenWidth * Display.ScreenHeight];
     private readonly DynamicSoundEffectInstance _dynamicSound;
-    internal required ColorPalette ColorPalette { get; set; }
+    internal ButtonChecker ButtonChecker { get; private set; }
 
     internal readonly Vmu Vmu;
     internal readonly IconTextures IconTextures;
@@ -27,6 +35,7 @@ class VmuPresenter
     internal readonly Texture2D _vmuMarginTexture;
 
     private Matrix _spriteTransformMatrix;
+    private int SleepHeldFrameCount;
 
     private const int MinVmuScale = 3;
     private const int ScaledWidth = Display.ScreenWidth * MinVmuScale;
@@ -42,11 +51,14 @@ class VmuPresenter
     internal const int TotalContentWidth = ScaledWidth + SideMargin * 2;
     internal const int TotalContentHeight = ScaledHeight + TopMargin + BottomMargin;
 
-    public VmuPresenter(Vmu vmu, IconTextures iconTextures, GraphicsDeviceManager graphics)
+    public VmuPresenter(Game1 game1, Vmu vmu, IconTextures iconTextures, GraphicsDeviceManager graphics, InputMappings inputMappings)
     {
+        _game1 = game1;
         Vmu = vmu;
         IconTextures = iconTextures;
         Graphics = graphics;
+        UpdateButtonChecker(inputMappings);
+
         _vmuScreenTexture = new Texture2D(graphics.GraphicsDevice, Display.ScreenWidth, Display.ScreenHeight);
         _vmuBorderTexture = new Texture2D(graphics.GraphicsDevice, 1, 1);
         _vmuMarginTexture = new Texture2D(graphics.GraphicsDevice, 1, 1);
@@ -54,6 +66,66 @@ class VmuPresenter
         _dynamicSound = new DynamicSoundEffectInstance(Audio.SampleRate, AudioChannels.Mono);
         _dynamicSound.Play();
         vmu.Audio.AudioBufferReady += Audio_BufferReady;
+    }
+
+    [MemberNotNull(nameof(MonoGame.ButtonChecker))]
+    internal void UpdateButtonChecker(InputMappings inputMappings)
+    {
+        ButtonChecker = new ButtonChecker(inputMappings);
+    }
+
+    internal void Update(GameTime gameTime, KeyboardState previousKeys, GamePadState previousGamepad, KeyboardState keyboard, GamePadState gamepad)
+    {
+        var newP3 = new Core.SFRs.P3()
+        {
+            Up = !ButtonChecker.IsPressed(VmuButton.Up, keyboard, gamepad),
+            Down = !ButtonChecker.IsPressed(VmuButton.Down, keyboard, gamepad),
+            Left = !ButtonChecker.IsPressed(VmuButton.Left, keyboard, gamepad),
+            Right = !ButtonChecker.IsPressed(VmuButton.Right, keyboard, gamepad),
+            ButtonA = !ButtonChecker.IsPressed(VmuButton.A, keyboard, gamepad),
+            ButtonB = !ButtonChecker.IsPressed(VmuButton.B, keyboard, gamepad),
+            ButtonSleep = !ButtonChecker.IsPressed(VmuButton.Sleep, keyboard, gamepad),
+            ButtonMode = !ButtonChecker.IsPressed(VmuButton.Mode, keyboard, gamepad),
+        };
+
+        // Holding sleep can be used to toggle insert/eject
+        const int SleepToggleInsertEjectFrameCount = 60; // 1 second
+        if (!newP3.ButtonSleep)
+        {
+            if (SleepHeldFrameCount != -1)
+            {
+                // Sleep button held and frame counter not in post-toggle position
+                SleepHeldFrameCount++;
+            }
+        }
+        else
+        {
+            // Sleep button up. Reset sleep counter.
+            SleepHeldFrameCount = 0;
+        }
+
+        if (SleepHeldFrameCount >= SleepToggleInsertEjectFrameCount
+            || ButtonChecker.IsNewlyPressed(VmuButton.InsertEject, previousKeys, keyboard, previousGamepad, gamepad))
+        {
+            // Do not toggle insert/eject via sleep until sleep button is released and re-pressed
+            SleepHeldFrameCount = -1;
+
+            Vmu.DockOrEject();
+        }
+
+        // Let any button press wake the VMU from sleep
+        if (Configuration.AnyButtonWakesFromSleep && !Vmu._cpu.SFRs.Vccr.DisplayControl && (byte)newP3 != 0xff)
+        {
+            newP3 = newP3 with { ButtonSleep = false };
+        }
+
+        Vmu._cpu.SFRs.P3 = newP3;
+
+        var rate = Paused ? 0 :
+            IsFastForwarding ? gameTime.ElapsedGameTime.Ticks * 2 :
+            gameTime.ElapsedGameTime.Ticks;
+
+        Vmu._cpu.Run(rate);
     }
 
     internal void Draw(SpriteBatch spriteBatch)
