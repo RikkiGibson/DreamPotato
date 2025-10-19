@@ -11,26 +11,25 @@ using DreamPotato.Core;
 using DreamPotato.MonoGame.UI;
 using System.Linq;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 
 namespace DreamPotato.MonoGame;
 
 public class Game1 : Game
 {
     private readonly GraphicsDeviceManager _graphics;
-    private ColorPalette _colorPalette;
-    internal Configuration Configuration;
-    internal RecentFilesInfo RecentFilesInfo;
+    private readonly string? _initialFilePath;
 
-    internal Vmu PrimaryVmu { get; }
-
-    /// <summary>Used only for the slot 2 VMU and only when configuration says to use both slot 1 and 2.</summary>
-    internal Vmu? SecondaryVmu { get; private set; }
+    internal Vmu PrimaryVmu => _primaryVmuPresenter.Vmu;
+    internal bool UseSecondaryVmu => Configuration.ExpansionSlots == ExpansionSlots.Slot1And2;
 
     internal const int MenuBarHeight = 20;
 
     private const int SleepToggleInsertEjectFrameCount = 60; // 1 second
 
     // Set in Initialize()
+    internal Configuration Configuration = null!;
+    internal RecentFilesInfo RecentFilesInfo = null!;
     private SpriteBatch _spriteBatch = null!;
     private VmuPresenter _primaryVmuPresenter = null!;
     private VmuPresenter _secondaryVmuPresenter = null!;
@@ -49,48 +48,12 @@ public class Game1 : Game
 
     public Game1(string? gameFilePath)
     {
-        Configuration = Configuration.Load();
-        Configuration.Save();
-
         _graphics = new GraphicsDeviceManager(this);
-        var windowSize = Configuration.ViewportSize;
-        _graphics.PreferredBackBufferWidth = windowSize.Width;
-        _graphics.PreferredBackBufferHeight = windowSize.Height;
-
         Window.AllowUserResizing = true;
         Window.ClientSizeChanged += Window_ClientSizeChanged;
-
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
-
-
-        RecentFilesInfo = RecentFilesInfo.Load();
-
-        _colorPalette = ColorPalette.AllPalettes.FirstOrDefault(palette => palette.Name == Configuration.ColorPaletteName) ?? ColorPalette.AllPalettes[0];
-
-        var date = DateTime.Now;
-
-        PrimaryVmu = new Vmu();
-        initializeVmu(PrimaryVmu);
-        PrimaryVmu.DockOrEject(connect: Configuration.VmuConnectionState is VmuConnectionState.Slot1Docked or VmuConnectionState.Slot1And2Docked);
-        LoadVmuFiles(PrimaryVmu, gameFilePath, RecentFilesInfo);
-
-        if (Configuration.ExpansionSlots == ExpansionSlots.Slot1And2)
-        {
-            SecondaryVmu = new Vmu();
-            initializeVmu(SecondaryVmu);
-            SecondaryVmu.DockOrEject(connect: Configuration.VmuConnectionState is VmuConnectionState.Slot2Docked or VmuConnectionState.Slot1And2Docked);
-        }
-
-        void initializeVmu(Vmu vmu)
-        {
-            vmu.Audio.Volume = Configuration.Volume;
-            vmu.InitializeFlash(date);
-            if (Configuration.AutoInitializeDate)
-                vmu.InitializeDate(date);
-
-            vmu.RestartMapleServer(Configuration.DreamcastPort);
-        }
+        _initialFilePath = gameFilePath;
     }
 
     protected override void OnExiting(object sender, ExitingEventArgs args)
@@ -108,7 +71,7 @@ public class Game1 : Game
         {
             ViewportSize = new ViewportSize(viewport.Width, viewport.Height),
             WindowPosition = new WindowPosition(position.X, position.Y),
-            VmuConnectionState = PrimaryVmu.IsDocked ? VmuConnectionState.Slot1Docked : VmuConnectionState.None,
+            VmuConnectionState = PrimaryVmu.IsDocked ? VmuConnectionState.PrimaryDocked : VmuConnectionState.None,
         };
         Configuration.Save();
 
@@ -128,7 +91,7 @@ public class Game1 : Game
         Window.Title = $"{star}{fileDesc}DreamPotato";
     }
 
-    private void LoadVmuFiles(Vmu vmu, string? vmsOrVmuFilePath, RecentFilesInfo? recentFilesInfo)
+    private void LoadVmuFiles(Vmu vmu, string? vmsOrVmuFilePath)
     {
         vmu.LoadRom();
         vmsOrVmuFilePath ??= RecentFilesInfo.RecentFiles.FirstOrDefault();
@@ -143,7 +106,7 @@ public class Game1 : Game
         PrimaryVmu.LoadNewVmu(date: DateTime.Now, autoInitializeRTCDate: Configuration.AutoInitializeDate);
         Paused = false;
         UpdateWindowTitle();
-        RecentFilesInfo = RecentFilesInfo.PrependRecentFile(newRecentFile: null);
+        RecentFilesInfo = RecentFilesInfo.AddPrimaryVmuRecentFile(newRecentFile: null);
         RecentFilesInfo.Save();
     }
 
@@ -167,7 +130,7 @@ public class Game1 : Game
         Paused = false;
         // TODO(spi): what to do with these for secondary VMU?
         UpdateWindowTitle();
-        RecentFilesInfo = RecentFilesInfo.PrependRecentFile(filePath);
+        RecentFilesInfo = RecentFilesInfo.AddPrimaryVmuRecentFile(filePath);
         RecentFilesInfo.Save();
     }
 
@@ -182,7 +145,7 @@ public class Game1 : Game
 
         PrimaryVmu.SaveVmuAs(vmuFilePath);
         UpdateWindowTitle();
-        RecentFilesInfo = RecentFilesInfo.PrependRecentFile(vmuFilePath);
+        RecentFilesInfo = RecentFilesInfo.AddPrimaryVmuRecentFile(vmuFilePath);
         RecentFilesInfo.Save();
     }
 
@@ -215,7 +178,6 @@ public class Game1 : Game
 
     internal void Configuration_PaletteChanged(ColorPalette palette)
     {
-        _colorPalette = palette;
         Configuration = Configuration with { ColorPaletteName = palette.Name };
         _primaryVmuPresenter.ColorPalette = palette;
         _secondaryVmuPresenter.ColorPalette = palette;
@@ -230,7 +192,6 @@ public class Game1 : Game
     internal void Configuration_ExpansionSlotsChanged(ExpansionSlots expansionSlots)
     {
         var oldExpansionSlots = Configuration.ExpansionSlots;
-        SecondaryVmu = expansionSlots != ExpansionSlots.Slot1And2 ? null : _secondaryVmuPresenter.Vmu;
         Configuration = Configuration with { ExpansionSlots = expansionSlots };
         var oldWasUsingBothSlots = oldExpansionSlots == ExpansionSlots.Slot1And2;
         if (oldWasUsingBothSlots != (expansionSlots == ExpansionSlots.Slot1And2))
@@ -260,8 +221,16 @@ public class Game1 : Game
         Configuration.Save();
     }
 
+    [MemberNotNull(nameof(_spriteBatch), nameof(_primaryVmuPresenter), nameof(_secondaryVmuPresenter), nameof(_buttonChecker), nameof(_userInterface), nameof(Configuration), nameof(RecentFilesInfo))]
     protected override void Initialize()
     {
+        Configuration = Configuration.Load();
+        Configuration.Save();
+
+        var windowSize = Configuration.ViewportSize;
+        _graphics.PreferredBackBufferWidth = windowSize.Width;
+        _graphics.PreferredBackBufferHeight = windowSize.Height;
+
         var textures = new IconTextures
         {
             IconFileTexture = Content.Load<Texture2D>("VMUIconFile"),
@@ -275,23 +244,46 @@ public class Game1 : Game
         _userInterface = new UserInterface(this);
         _userInterface.Initialize(textures.IconConnectedTexture);
 
+
+        var date = DateTime.Now;
+        var primaryVmu = new Vmu();
+        initializeVmu(primaryVmu);
+        primaryVmu.DockOrEject(connect: Configuration.VmuConnectionState is VmuConnectionState.PrimaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
+        RecentFilesInfo = RecentFilesInfo.Load();
+        LoadVmuFiles(primaryVmu, _initialFilePath ?? RecentFilesInfo.PrimaryVmuMostRecent);
+
+        // TODO: share/pass in a MapleMessageBroker for 2 VMUs
+        var secondaryVmu = new Vmu();
+        initializeVmu(secondaryVmu);
+        secondaryVmu.DockOrEject(connect: Configuration.VmuConnectionState is VmuConnectionState.SecondaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
+
         // TODO: delay creating VMUs, until we have graphics, so I/O failures etc can surface as dialogs
-        _primaryVmuPresenter = new VmuPresenter(PrimaryVmu, textures, _graphics) { ColorPalette = _colorPalette };
-        _secondaryVmuPresenter = new VmuPresenter(SecondaryVmu!, textures, _graphics) { ColorPalette = _colorPalette };
+        var colorPalette = ColorPalette.AllPalettes.FirstOrDefault(palette => palette.Name == Configuration.ColorPaletteName) ?? ColorPalette.AllPalettes[0];
+        _primaryVmuPresenter = new VmuPresenter(primaryVmu, textures, _graphics) { ColorPalette = colorPalette };
+        _secondaryVmuPresenter = new VmuPresenter(secondaryVmu, textures, _graphics) { ColorPalette = colorPalette };
         UpdateScaleMatrix();
 
         if (Configuration.WindowPosition is { } windowPosition)
         {
-            var windowSize = Window.ClientBounds.Size;
-            if (_graphics.GraphicsDevice.DisplayMode.TitleSafeArea.Intersects(new Rectangle(windowPosition.X, windowPosition.Y, windowSize.X, windowSize.Y)))
+            var windowRect = Window.ClientBounds.Size;
+            if (_graphics.GraphicsDevice.DisplayMode.TitleSafeArea.Intersects(new Rectangle(windowPosition.X, windowPosition.Y, windowRect.X, windowRect.Y)))
                 Window.Position = new Point(windowPosition.X, windowPosition.Y);
         }
 
         _spriteBatch = new SpriteBatch(GraphicsDevice);
-
         _buttonChecker = new ButtonChecker(Configuration);
 
         base.Initialize();
+
+        void initializeVmu(Vmu vmu)
+        {
+            vmu.Audio.Volume = Configuration.Volume;
+            vmu.InitializeFlash(date);
+            if (Configuration.AutoInitializeDate)
+                vmu.InitializeDate(date);
+
+            vmu.RestartMapleServer(Configuration.DreamcastPort);
+        }
     }
 
     protected override void LoadContent()
@@ -320,7 +312,7 @@ public class Game1 : Game
         contentRectangle.Height -= MenuBarHeight;
         contentRectangle.Y += MenuBarHeight;
 
-        if (SecondaryVmu is null)
+        if (!UseSecondaryVmu)
         {
             _primaryVmuPresenter.UpdateScaleMatrix(contentRectangle, Configuration.PreserveAspectRatio);
             return;
@@ -461,9 +453,9 @@ public class Game1 : Game
 
     protected override void Draw(GameTime gameTime)
     {
-        GraphicsDevice.Clear(_colorPalette.Margin);
+        GraphicsDevice.Clear(_primaryVmuPresenter.ColorPalette.Margin);
         _primaryVmuPresenter.Draw(_spriteBatch);
-        if (SecondaryVmu != null)
+        if (UseSecondaryVmu)
             _secondaryVmuPresenter.Draw(_spriteBatch);
 
         _userInterface.Layout(gameTime);

@@ -217,9 +217,9 @@ public enum VmuButton
 public enum VmuConnectionState
 {
     None,
-    Slot1Docked,
-    Slot2Docked,
-    Slot1And2Docked,
+    PrimaryDocked,
+    SecondaryDocked,
+    PrimaryAndSecondaryDocked,
     VmuToVmuConnection,
 }
 
