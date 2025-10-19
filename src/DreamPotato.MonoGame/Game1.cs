@@ -249,6 +249,7 @@ public class Game1 : Game
         var primaryVmu = new Vmu();
         initializeVmu(primaryVmu);
         primaryVmu.DockOrEject(connect: Configuration.VmuConnectionState is VmuConnectionState.PrimaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
+        primaryVmu.UnsavedChangesDetected += Vmu_UnsavedChangesDetected;
         RecentFilesInfo = RecentFilesInfo.Load();
 
         // TODO: share/pass in a MapleMessageBroker for 2 VMUs
@@ -284,11 +285,6 @@ public class Game1 : Game
 
             vmu.RestartMapleServer(Configuration.DreamcastPort);
         }
-    }
-
-    protected override void LoadContent()
-    {
-        PrimaryVmu.UnsavedChangesDetected += Vmu_UnsavedChangesDetected;
     }
 
     private void Window_ClientSizeChanged(object? sender, EventArgs e)
