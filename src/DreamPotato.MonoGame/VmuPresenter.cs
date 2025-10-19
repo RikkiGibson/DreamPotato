@@ -264,4 +264,7 @@ class VmuPresenter
     {
         _dynamicSound.SubmitBuffer(args.Buffer, args.Start, args.Length);
     }
+
+    internal void UpdateVolume(int volume)
+        => Vmu.Audio.Volume = volume;
 }

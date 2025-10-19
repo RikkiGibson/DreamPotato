@@ -153,6 +153,10 @@ public class Audio
     /// </summary>
     internal void AddPulse(int cpuClockHz, bool value)
     {
+        // Audio playback is disabled. Don't bother synthesizing audio
+        if (Volume == 0)
+            return;
+
         if (cpuClockHz is not (OscillatorHz.Quartz / 6) or (OscillatorHz.Quartz / 12))
         {
             _logger.LogWarning($"Bad pulse hz! {cpuClockHz}", LogCategories.Audio);

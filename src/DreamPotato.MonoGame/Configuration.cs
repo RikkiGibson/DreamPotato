@@ -20,6 +20,7 @@ public record Configuration(
     bool AnyButtonWakesFromSleep = true,
     bool PreserveAspectRatio = true,
     int Volume = Audio.DefaultVolume,
+    bool EnableSecondaryVmuAudio = false,
     string? ColorPaletteName = null,
     InputMappings? PrimaryInput = null,
     InputMappings? SecondaryInput = null,

@@ -540,6 +540,13 @@ class UserInterface
                     _game.Configuration_ExpansionSlotsChanged((ExpansionSlots)selectedIndex);
             }
 
+            if (_game.Configuration.ExpansionSlots == ExpansionSlots.Slot1And2)
+            {
+                var enableSecondaryVmuAudio = configuration.EnableSecondaryVmuAudio;
+                if (ImGui.Checkbox("Enable Secondary VMU Audio", ref enableSecondaryVmuAudio))
+                    _game.Configuration_EnableSecondaryVmuAudioChanged(enableSecondaryVmuAudio);
+            }
+
             ImGui.EndPopup();
         }
 

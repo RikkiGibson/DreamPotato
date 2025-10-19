@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
@@ -79,6 +77,7 @@ public class Game1 : Game
         var date = DateTime.Now;
         var primaryVmu = new Vmu();
         initializeVmu(primaryVmu);
+        primaryVmu.Audio.Volume = Configuration.Volume;
         primaryVmu.DockOrEject(connect: Configuration.VmuConnectionState is VmuConnectionState.PrimaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
         primaryVmu.UnsavedChangesDetected += Vmu_UnsavedChangesDetected;
         RecentFilesInfo = RecentFilesInfo.Load();
@@ -91,6 +90,7 @@ public class Game1 : Game
         _primaryVmuPresenter = new VmuPresenter(this, primaryVmu, textures, _graphics, Configuration.PrimaryInput);
         _secondaryVmuPresenter = new VmuPresenter(this, secondaryVmu, textures, _graphics, Configuration.SecondaryInput);
         UpdateScaleMatrix();
+        UpdateAudioVolume();
 
         if (Configuration.WindowPosition is { } windowPosition)
         {
@@ -101,13 +101,13 @@ public class Game1 : Game
         }
 
         LoadVmuFiles(primaryVmu, _initialFilePath ?? RecentFilesInfo.PrimaryVmuMostRecent);
+        LoadVmuFiles(secondaryVmu, _initialFilePath ?? RecentFilesInfo.SecondaryVmuMostRecent);
         _spriteBatch = new SpriteBatch(GraphicsDevice);
 
         base.Initialize();
 
         void initializeVmu(Vmu vmu)
         {
-            vmu.Audio.Volume = Configuration.Volume;
             vmu.InitializeFlash(date);
             if (Configuration.AutoInitializeDate)
                 vmu.InitializeDate(date);
@@ -232,8 +232,8 @@ public class Game1 : Game
 
     internal void Configuration_VolumeChanged(int newVolume)
     {
-        PrimaryVmu.Audio.Volume = newVolume;
         Configuration = Configuration with { Volume = newVolume };
+        UpdateAudioVolume();
     }
 
     internal void Configuration_PaletteChanged(ColorPalette palette)
@@ -259,6 +259,12 @@ public class Game1 : Game
         // TODO: maple server needs to be able to operate independently of a single VMU
         // That implies contents of 2 VMUs need to be able to be stored/sync'd separately.
         // PrimaryVmu.RestartMapleServer(expansionSlots);
+    }
+
+    internal void Configuration_EnableSecondaryVmuAudioChanged(bool newValue)
+    {
+        Configuration = Configuration with { EnableSecondaryVmuAudio = newValue };
+        UpdateAudioVolume();
     }
 
     internal void Configuration_DoneEditing()
@@ -321,6 +327,13 @@ public class Game1 : Game
         _secondaryVmuPresenter.UpdateScaleMatrix(slot2Rectangle, Configuration.PreserveAspectRatio);
     }
 
+    private void UpdateAudioVolume()
+    {
+        var volume = Configuration.Volume;
+        _primaryVmuPresenter.Vmu.Audio.Volume = volume;
+        _secondaryVmuPresenter.Vmu.Audio.Volume = Configuration.EnableSecondaryVmuAudio ? volume : 0;
+    }
+
     private void Vmu_UnsavedChangesDetected()
     {
         UpdateWindowTitle();
@@ -374,6 +387,9 @@ public class Game1 : Game
         _primaryVmuPresenter.Update(gameTime, _previousKeys, _previousGamepad, keyboard, gamepad);
         if (PrimaryVmu.IsDocked)
             Paused = false;
+
+        if (UseSecondaryVmu)
+            _secondaryVmuPresenter.Update(gameTime, _previousKeys, _previousGamepad, keyboard, gamepad);
 
         _previousKeys = keyboard;
         _previousGamepad = gamepad;
