@@ -22,6 +22,7 @@ public record Configuration(
     int Volume = Audio.DefaultVolume,
     ViewportSize? ViewportSize = null,
     VmuConnectionState VmuConnectionState = VmuConnectionState.None,
+    ExpansionSlots ExpansionSlots = ExpansionSlots.Slot1,
     [property: JsonConverter(typeof(JsonStringEnumConverter<DreamcastPort>))] DreamcastPort DreamcastPort = DreamcastPort.A)
 {
     private const string FileName = "configuration.json";
@@ -220,6 +221,15 @@ public enum VmuConnectionState
     Slot2Docked,
     Slot1And2Docked,
     VmuToVmuConnection,
+}
+
+/// <summary>Which expansion slots are being used</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<ExpansionSlots>))]
+public enum ExpansionSlots
+{
+    Slot1 = 0,
+    Slot2 = 1,
+    Slot1And2 = 2,
 }
 
 public struct KeyMapping

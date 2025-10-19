@@ -75,9 +75,12 @@ public class Game1 : Game
         PrimaryVmu.DockOrEject(connect: Configuration.VmuConnectionState is VmuConnectionState.Slot1Docked or VmuConnectionState.Slot1And2Docked);
         LoadVmuFiles(PrimaryVmu, gameFilePath, RecentFilesInfo);
 
-        SecondaryVmu = new Vmu();
-        initializeVmu(SecondaryVmu);
-        SecondaryVmu.DockOrEject(connect: Configuration.VmuConnectionState is VmuConnectionState.Slot2Docked or VmuConnectionState.Slot1And2Docked);
+        if (Configuration.ExpansionSlots == ExpansionSlots.Slot1And2)
+        {
+            SecondaryVmu = new Vmu();
+            initializeVmu(SecondaryVmu);
+            SecondaryVmu.DockOrEject(connect: Configuration.VmuConnectionState is VmuConnectionState.Slot2Docked or VmuConnectionState.Slot1And2Docked);
+        }
 
         void initializeVmu(Vmu vmu)
         {
@@ -214,12 +217,28 @@ public class Game1 : Game
     {
         _colorPalette = palette;
         Configuration = Configuration with { ColorPaletteName = palette.Name };
+        _primaryVmuPresenter.ColorPalette = palette;
+        _secondaryVmuPresenter.ColorPalette = palette;
     }
 
     internal void Configuration_DreamcastPortChanged(DreamcastPort dreamcastPort)
     {
         Configuration = Configuration with { DreamcastPort = dreamcastPort };
         PrimaryVmu.RestartMapleServer(dreamcastPort);
+    }
+
+    internal void Configuration_ExpansionSlotsChanged(ExpansionSlots expansionSlots)
+    {
+        var oldExpansionSlots = Configuration.ExpansionSlots;
+        SecondaryVmu = expansionSlots != ExpansionSlots.Slot1And2 ? null : _secondaryVmuPresenter.Vmu;
+        Configuration = Configuration with { ExpansionSlots = expansionSlots };
+        var oldWasUsingBothSlots = oldExpansionSlots == ExpansionSlots.Slot1And2;
+        if (oldWasUsingBothSlots != (expansionSlots == ExpansionSlots.Slot1And2))
+            UpdateScaleMatrix();
+
+        // TODO: maple server needs to be able to operate independently of a single VMU
+        // That implies contents of 2 VMUs need to be able to be stored/sync'd separately.
+        // PrimaryVmu.RestartMapleServer(expansionSlots);
     }
 
     internal void Configuration_DoneEditing()
@@ -255,9 +274,9 @@ public class Game1 : Game
 
         _userInterface = new UserInterface(this);
         _userInterface.Initialize(textures.IconConnectedTexture);
-        _primaryVmuPresenter = new VmuPresenter(PrimaryVmu, textures, _graphics) { ColorPalette = _colorPalette };
 
-        // TODO(spi): configuration for when to actually have a secondary vmu
+        // TODO: delay creating VMUs, until we have graphics, so I/O failures etc can surface as dialogs
+        _primaryVmuPresenter = new VmuPresenter(PrimaryVmu, textures, _graphics) { ColorPalette = _colorPalette };
         _secondaryVmuPresenter = new VmuPresenter(SecondaryVmu!, textures, _graphics) { ColorPalette = _colorPalette };
         UpdateScaleMatrix();
 
@@ -300,6 +319,12 @@ public class Game1 : Game
         var contentRectangle = viewport.Bounds;
         contentRectangle.Height -= MenuBarHeight;
         contentRectangle.Y += MenuBarHeight;
+
+        if (SecondaryVmu is null)
+        {
+            _primaryVmuPresenter.UpdateScaleMatrix(contentRectangle, Configuration.PreserveAspectRatio);
+            return;
+        }
 
         // Prefer a horizontal layout for multiple VMUs, when the viewport is proportionally wider than the VMU content dimensions.
         // Otherwise, prefer a vertical layout.
@@ -438,7 +463,9 @@ public class Game1 : Game
     {
         GraphicsDevice.Clear(_colorPalette.Margin);
         _primaryVmuPresenter.Draw(_spriteBatch);
-        _secondaryVmuPresenter.Draw(_spriteBatch);
+        if (SecondaryVmu != null)
+            _secondaryVmuPresenter.Draw(_spriteBatch);
+
         _userInterface.Layout(gameTime);
 
         base.Draw(gameTime);

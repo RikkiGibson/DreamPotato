@@ -456,7 +456,8 @@ class UserInterface
             OpenPopupAndPause("Settings");
     }
 
-    private static readonly string[] AllDreamcastSlotNames = ["A1", "B1", "C1", "D1"];
+    private static readonly string[] AllDreamcastSlotNames = ["A", "B", "C", "D"];
+    private static readonly string[] AllExpansionSlotNames = ["Slot 1", "Slot 2", "Slot 1 and 2"];
 
     private void LayoutSettings()
     {
@@ -502,7 +503,7 @@ class UserInterface
                 var palette = configuration.ColorPaletteName;
                 var paletteIndex = Array.IndexOf(ColorPalette.AllPaletteNames, palette);
                 var selectedIndex = paletteIndex == -1 ? 0 : paletteIndex;
-                ImGui.SetNextItemWidth(120);
+                ImGui.SetNextItemWidth(CalcComboWidth(ColorPalette.AllPaletteNames[1]));
                 ImGui.PushID("ColorPaletteCombo");
                 ImGui.Combo(label: "", ref selectedIndex, items: ColorPalette.AllPaletteNames, items_count: ColorPalette.AllPaletteNames.Length);
                 ImGui.PopID();
@@ -512,20 +513,41 @@ class UserInterface
 
             // Dreamcast Port
             {
-                ImGui.Text("Dreamcast controller slot");
+                ImGui.Text("Dreamcast controller port");
                 ImGui.SameLine();
 
                 var port = configuration.DreamcastPort;
                 var selectedIndex = (int)port;
-                ImGui.SetNextItemWidth(40);
-                ImGui.PushID("DreamcastSlotCombo");
+                ImGui.SetNextItemWidth(CalcComboWidth(longestItem: AllDreamcastSlotNames[0]));
+                ImGui.PushID("DreamcastPortCombo");
                 ImGui.Combo(label: "", ref selectedIndex, items: AllDreamcastSlotNames, items_count: AllDreamcastSlotNames.Length);
                 ImGui.PopID();
                 if ((int)port != selectedIndex)
                     _game.Configuration_DreamcastPortChanged((DreamcastPort)selectedIndex);
             }
 
+            // Slot Configuration
+            {
+                ImGui.Text("Use Expansion Slots");
+                ImGui.SameLine();
+
+                var expansionSlots = configuration.ExpansionSlots;
+                var selectedIndex = (int)expansionSlots;
+                ImGui.SetNextItemWidth(CalcComboWidth(longestItem: AllExpansionSlotNames[2]));
+                ImGui.PushID("ExpansionSlotCombo");
+                ImGui.Combo(label: "", ref selectedIndex, items: AllExpansionSlotNames, items_count: AllExpansionSlotNames.Length);
+                ImGui.PopID();
+                if ((int)expansionSlots != selectedIndex)
+                    _game.Configuration_ExpansionSlotsChanged((ExpansionSlots)selectedIndex);
+            }
+
             ImGui.EndPopup();
+        }
+
+        static float CalcComboWidth(string longestItem)
+        {
+            // text size + padding + arrow button size
+            return ImGui.CalcTextSize(longestItem).X + ImGui.GetStyle().FramePadding.X * 2.0f + ImGui.GetFrameHeight();
         }
     }
 
