@@ -84,6 +84,22 @@ public class Vmu
             InitializeDate(date.GetValueOrDefault());
     }
 
+    public void LoadRom()
+    {
+        try
+        {
+            var filePath = Path.Combine(DataFolder, RomFileName);
+            var bios = File.ReadAllBytes(filePath);
+            if (bios.Length != Cpu.InstructionBankSize)
+                throw new ArgumentException($"VMU ROM '{filePath}' needs to be exactly 64KB in size.", nameof(filePath));
+            bios.AsSpan().CopyTo(_cpu.ROM);
+        }
+        catch (FileNotFoundException ex)
+        {
+            throw new InvalidOperationException($"'{RomFileName}' must be included in '{DataFolder}'.", ex);
+        }
+    }
+
     public void LoadNewVmu(DateTimeOffset date, bool autoInitializeRTCDate)
     {
         LoadedFilePath = null;
@@ -181,6 +197,7 @@ public class Vmu
     }
 
     public static string DataFolder => Path.Combine(AppContext.BaseDirectory, "Data");
+    public const string RomFileName = "american_v1.05.bin";
     public const string SaveStateHeaderMessage = "DreamPotatoSaveState";
     public static readonly ReadOnlyMemory<byte> SaveStateHeaderBytes = Encoding.UTF8.GetBytes(SaveStateHeaderMessage);
     public const int SaveStateVersion = 3;
