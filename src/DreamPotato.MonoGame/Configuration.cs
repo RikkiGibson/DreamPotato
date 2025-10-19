@@ -20,6 +20,9 @@ public record Configuration(
     bool AnyButtonWakesFromSleep = true,
     bool PreserveAspectRatio = true,
     int Volume = Audio.DefaultVolume,
+    string? ColorPaletteName = null,
+    InputMappings? PrimaryInput = null,
+    InputMappings? SecondaryInput = null,
     ViewportSize? ViewportSize = null,
     VmuConnectionState VmuConnectionState = VmuConnectionState.None,
     ExpansionSlots ExpansionSlots = ExpansionSlots.Slot1,
@@ -28,9 +31,9 @@ public record Configuration(
     private const string FileName = "configuration.json";
     private static string FilePath => Path.Combine(Vmu.DataFolder, FileName);
 
-    public string? ColorPaletteName { get; init; }
-    public ImmutableArray<KeyMapping> KeyMappings { get; init; }
-    public ImmutableArray<ButtonMapping> ButtonMappings { get; init; }
+    public string ColorPaletteName { get; init; } = ColorPaletteName ?? ColorPalette.White.Name;
+    public InputMappings PrimaryInput { get; init; } = PrimaryInput ?? DefaultPrimaryInput;
+    public InputMappings SecondaryInput { get; init; } = SecondaryInput ?? DefaultSecondaryInput;
 
     public ViewportSize ViewportSize { get; init; } = ViewportSize ?? new ViewportSize(Width: VmuPresenter.TotalContentWidth * 2, Height: VmuPresenter.TotalContentHeight * 2 + Game1.MenuBarHeight);
     public WindowPosition? WindowPosition { get; init; }
@@ -115,27 +118,46 @@ public record Configuration(
         new ButtonMapping { SourceButton = Buttons.Back, TargetButton = VmuButton.Sleep },
     ];
 
+    public static readonly ImmutableArray<ButtonMapping> ButtonPreset_Unmapped = [
+        new ButtonMapping { SourceButton = Buttons.None, TargetButton = VmuButton.Up },
+        new ButtonMapping { SourceButton = Buttons.None, TargetButton = VmuButton.Down },
+        new ButtonMapping { SourceButton = Buttons.None, TargetButton = VmuButton.Left },
+        new ButtonMapping { SourceButton = Buttons.None, TargetButton = VmuButton.Right },
+        new ButtonMapping { SourceButton = Buttons.None, TargetButton = VmuButton.A },
+        new ButtonMapping { SourceButton = Buttons.None, TargetButton = VmuButton.B },
+        new ButtonMapping { SourceButton = Buttons.None, TargetButton = VmuButton.Mode },
+        new ButtonMapping { SourceButton = Buttons.None, TargetButton = VmuButton.Sleep },
+    ];
+
     public static readonly ImmutableArray<(string name, string description, ImmutableArray<ButtonMapping> mappings)> AllButtonPresets = [
         ("Default", "General purpose preset", ButtonPreset_Default),
         ("Sidecar", """
             Allows mapping both Dreamcast and
             VMU buttons to a single gamepad
             """, ButtonPreset_Sidecar),
+        ("Unmapped", "Do not use a gamepad", ButtonPreset_Sidecar),
     ];
 
-    public static readonly Configuration Default = new Configuration()
+    private static readonly InputMappings DefaultPrimaryInput = new InputMappings()
     {
-        ColorPaletteName = ColorPalette.White.Name,
         KeyMappings = KeyPreset_WASD,
         ButtonMappings = ButtonPreset_Default,
     };
+
+    private static readonly InputMappings DefaultSecondaryInput = new InputMappings()
+    {
+        KeyMappings = KeyPreset_Arrows,
+        ButtonMappings = ButtonPreset_Unmapped
+    };
+
+    public static readonly Configuration Default = new Configuration();
 }
 
 internal class ButtonChecker
 {
     private readonly Dictionary<VmuButton, (List<Keys> Keys, List<Buttons> Buttons)> Mappings;
 
-    public ButtonChecker(Configuration configuration)
+    public ButtonChecker(InputMappings mappings)
     {
         Mappings = [];
         foreach (var value in Enum.GetValues<VmuButton>())
@@ -143,10 +165,10 @@ internal class ButtonChecker
             Mappings.Add(value, ([], []));
         }
 
-        foreach (var mapping in configuration.KeyMappings)
+        foreach (var mapping in mappings.KeyMappings)
             Mappings[mapping.TargetButton].Keys.Add(mapping.SourceKey);
 
-        foreach (var mapping in configuration.ButtonMappings)
+        foreach (var mapping in mappings.ButtonMappings)
             Mappings[mapping.TargetButton].Buttons.Add(mapping.SourceButton);
     }
 
@@ -244,6 +266,12 @@ public struct ButtonMapping
     [JsonConverter(typeof(JsonStringEnumConverter<Buttons>))]
     public Buttons SourceButton { get; set; }
     public VmuButton TargetButton { get; set; }
+}
+
+public record InputMappings
+{
+    public required ImmutableArray<KeyMapping> KeyMappings { get; init; }
+    public required ImmutableArray<ButtonMapping> ButtonMappings { get; init; }
 }
 
 /// <summary>Size of the rendered content (i.e. not including the operating system menu bar.)</summary>

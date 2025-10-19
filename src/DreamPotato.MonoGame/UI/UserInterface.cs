@@ -380,14 +380,14 @@ class UserInterface
             {
                 // Workaround to delay calling OpenPopup: https://github.com/ocornut/imgui/issues/331#issuecomment-751372071
                 Pause();
-                _editingKeyMappings = _game.Configuration.KeyMappings.ToList();
+                _editingKeyMappings = _game.Configuration.PrimaryInput.KeyMappings.ToList();
             }
 
             if (ImGui.MenuItem("Gamepad Config"))
             {
                 // Workaround to delay calling OpenPopup: https://github.com/ocornut/imgui/issues/331#issuecomment-751372071
                 Pause();
-                _editingButtonMappings = _game.Configuration.ButtonMappings.ToList();
+                _editingButtonMappings = _game.Configuration.PrimaryInput.ButtonMappings.ToList();
             }
 
             if (ImGui.MenuItem("Open Data Folder"))

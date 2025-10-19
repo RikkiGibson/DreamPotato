@@ -37,9 +37,6 @@ public class Game1 : Game
     private ButtonChecker _buttonChecker = null!;
     private UserInterface _userInterface = null!;
 
-    // Set in LoadContent()
-    private DynamicSoundEffectInstance _dynamicSound = null!;
-
     // Dynamic state
     private KeyboardState _previousKeys;
     private GamePadState _previousGamepad;
@@ -107,7 +104,7 @@ public class Game1 : Game
 
         LoadVmuFiles(primaryVmu, _initialFilePath ?? RecentFilesInfo.PrimaryVmuMostRecent);
         _spriteBatch = new SpriteBatch(GraphicsDevice);
-        _buttonChecker = new ButtonChecker(Configuration);
+        _buttonChecker = new ButtonChecker(Configuration.PrimaryInput);
 
         base.Initialize();
 
@@ -275,15 +272,15 @@ public class Game1 : Game
 
     internal void Configuration_DoneEditingKeyMappings(ImmutableArray<KeyMapping> keyMappings)
     {
-        Configuration = Configuration with { KeyMappings = keyMappings };
-        _buttonChecker = new ButtonChecker(Configuration);
+        Configuration = Configuration with { PrimaryInput = Configuration.PrimaryInput with { KeyMappings = keyMappings } };
+        _buttonChecker = new ButtonChecker(Configuration.PrimaryInput);
         Configuration.Save();
     }
 
     internal void Configuration_DoneEditingButtonMappings(ImmutableArray<ButtonMapping> buttonMappings)
     {
-        Configuration = Configuration with { ButtonMappings = buttonMappings };
-        _buttonChecker = new ButtonChecker(Configuration);
+        Configuration = Configuration with { PrimaryInput = Configuration.PrimaryInput with { ButtonMappings = buttonMappings } };
+        _buttonChecker = new ButtonChecker(Configuration.PrimaryInput);
         Configuration.Save();
     }
 
