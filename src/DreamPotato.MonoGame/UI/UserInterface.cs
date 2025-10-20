@@ -36,12 +36,13 @@ enum PendingCommandKind
     NewVmu,
     OpenVms,
     OpenVmu,
+    Reset,
     Exit
 }
 
 readonly struct PendingCommand
 {
-    private PendingCommand(ConfirmationState confirmationState, PendingCommandKind kind)
+    private PendingCommand(ConfirmationState confirmationState, PendingCommandKind kind, Vmu? vmu)
     {
         // If we are showing dialog or confirming something, there needs to be an actual command
         if (confirmationState is not ConfirmationState.None && kind is PendingCommandKind.None)
@@ -49,13 +50,15 @@ readonly struct PendingCommand
 
         State = confirmationState;
         Kind = kind;
+        Vmu = vmu;
     }
 
     public ConfirmationState State { get; }
     public PendingCommandKind Kind { get; }
+    public Vmu? Vmu { get; }
 
-    public static PendingCommand ShowDialog(PendingCommandKind kind) => new(ConfirmationState.ShowDialog, kind);
-    public PendingCommand Confirmed() => new(ConfirmationState.Confirmed, Kind);
+    public static PendingCommand ShowDialog(PendingCommandKind kind, Vmu? vmu) => new(ConfirmationState.ShowDialog, kind, vmu);
+    public PendingCommand Confirmed() => new(ConfirmationState.Confirmed, Kind, Vmu);
 }
 
 class UserInterface
@@ -71,6 +74,7 @@ class UserInterface
     private int _editedMappingIndex = -1;
     private List<KeyMapping>? _editingKeyMappings;
     private List<ButtonMapping>? _editingButtonMappings;
+    private Vmu? _editingMappingTargetVmu;
 
     private int _buttonPresetIndex = 0;
     private int _keyPresetIndex = 0;
@@ -140,10 +144,10 @@ class UserInterface
     }
 
     /// <summary>Show a modal asking user to confirm a "destructive" command</summary>
-    internal void ShowConfirmCommandDialog(PendingCommandKind commandKind)
+    internal void ShowConfirmCommandDialog(PendingCommandKind commandKind, Vmu? vmu)
     {
         Pause();
-        PendingCommand = PendingCommand.ShowDialog(commandKind);
+        PendingCommand = PendingCommand.ShowDialog(commandKind, vmu);
     }
 
     private void Pause()
@@ -156,45 +160,56 @@ class UserInterface
         _game.Paused = true;
     }
 
-    internal void NewVmu()
+    internal void NewVmu(Vmu vmu)
     {
-        if (_game.PrimaryVmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.NewVmu, State: ConfirmationState.Confirmed })
+        if (vmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.NewVmu, State: ConfirmationState.Confirmed })
         {
-            ShowConfirmCommandDialog(PendingCommandKind.NewVmu);
+            ShowConfirmCommandDialog(PendingCommandKind.NewVmu, vmu);
             return;
         }
 
-        _game.LoadNewVmu();
+        _game.LoadNewVmu(vmu);
     }
 
-    internal void OpenVmsDialog()
+    internal void OpenVmsDialog(Vmu vmu)
     {
-        if (_game.PrimaryVmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.OpenVms, State: ConfirmationState.Confirmed })
+        if (vmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.OpenVms, State: ConfirmationState.Confirmed })
         {
-            ShowConfirmCommandDialog(PendingCommandKind.OpenVms);
+            ShowConfirmCommandDialog(PendingCommandKind.OpenVms, vmu);
             return;
         }
 
         var result = Dialog.FileOpen("vms", defaultPath: null);
         if (result.IsOk)
         {
-            _game.LoadAndStartVmsOrVmuFile(_game.PrimaryVmu, result.Path);
+            _game.LoadAndStartVmsOrVmuFile(vmu, result.Path);
         }
     }
 
-    internal void OpenVmuDialog()
+    internal void OpenVmuDialog(Vmu vmu)
     {
-        if (_game.PrimaryVmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.OpenVmu, State: ConfirmationState.Confirmed })
+        if (vmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.OpenVmu, State: ConfirmationState.Confirmed })
         {
-            ShowConfirmCommandDialog(PendingCommandKind.OpenVmu);
+            ShowConfirmCommandDialog(PendingCommandKind.OpenVmu, vmu);
             return;
         }
 
         var result = Dialog.FileOpen("vmu,bin", defaultPath: null);
         if (result.IsOk)
         {
-            _game.LoadAndStartVmsOrVmuFile(_game.PrimaryVmu, result.Path);
+            _game.LoadAndStartVmsOrVmuFile(vmu, result.Path);
         }
+    }
+
+    internal void Reset(Vmu vmu)
+    {
+        if (PendingCommand is not { Kind: PendingCommandKind.Reset, State: ConfirmationState.Confirmed })
+        {
+            ShowConfirmCommandDialog(PendingCommandKind.Reset, vmu);
+            return;
+        }
+
+        _game.Reset(vmu);
     }
 
     private void OpenPopupAndPause(string name)
@@ -222,7 +237,7 @@ class UserInterface
 
     private void LayoutImpl()
     {
-        LayoutMenuBar();
+        LayoutPrimaryMenuBar();
         LayoutSecondaryMenuBar();
 
         LayoutSettings();
@@ -233,7 +248,6 @@ class UserInterface
         LayoutButtonMapping();
         LayoutEditButton();
 
-        LayoutResetModal();
         LayoutPendingCommandDialog();
 
         LayoutFastForwardOrPauseIndicator();
@@ -287,32 +301,14 @@ class UserInterface
             ImGui.PopStyleVar();
     }
 
-    private void LayoutMenuBar()
+    private void LayoutPrimaryMenuBar()
     {
+        var vmu = _game.PrimaryVmu;
         ImGui.BeginMainMenuBar();
         if (ImGui.BeginMenu("File"))
         {
-            if (ImGui.MenuItem("New VMU"))
-                NewVmu();
-
-            if (ImGui.MenuItem("Open VMS (Game)"))
-                OpenVmsDialog();
-
-            if (ImGui.MenuItem("Open VMU (Memory Card)"))
-                OpenVmuDialog();
-
-            if (ImGui.MenuItem("Save As"))
-            {
-                var result = Dialog.FileSave(filterList: "vmu,bin", defaultPath: null);
-                if (result.IsOk)
-                {
-                    _game.SaveVmuFileAs(result.Path);
-                }
-            }
-
+            LayoutNewOpenSaveMenuItems(vmu);
             ImGui.Separator();
-
-            // TODO: list recently opened VMU files?
 
             if (ImGui.MenuItem("Quit"))
                 _game.Exit();
@@ -320,42 +316,34 @@ class UserInterface
             ImGui.EndMenu();
         }
 
-        bool doOpenResetModal = false;
         bool doOpenSettings = false;
         if (ImGui.BeginMenu("Emulation"))
         {
-            var isDocked = _game.PrimaryVmu.IsDocked;
+            var isDocked = vmu.IsDocked;
             using (new DisabledScope(disabled: isDocked))
             {
                 if (ImGui.MenuItem(_game.Paused ? "Resume" : "Pause"))
-                {
                     _game.Paused = !_game.Paused;
-                }
 
                 if (ImGui.MenuItem("Reset"))
-                {
-                    // Workaround to delay calling OpenPopup: https://github.com/ocornut/imgui/issues/331#issuecomment-751372071
-                    doOpenResetModal = true;
-                }
+                    Reset(vmu);
             }
 
             if (ImGui.MenuItem(isDocked ? "Eject VMU" : "Dock VMU"))
-            {
-                _game.PrimaryVmu.DockOrEject();
-            }
+                vmu.DockOrEject();
 
             ImGui.Separator();
 
-            using (new DisabledScope(_game.PrimaryVmu.LoadedFilePath is null))
+            using (new DisabledScope(vmu.LoadedFilePath is null))
             {
                 if (ImGui.MenuItem("Save State"))
                 {
-                    _game.PrimaryVmu.SaveState("0");
+                    vmu.SaveState("0");
                 }
 
                 if (ImGui.MenuItem("Load State"))
                 {
-                    if (_game.PrimaryVmu.LoadStateById(id: "0", saveOopsFile: true) is (false, var error))
+                    if (vmu.LoadStateById(id: "0", saveOopsFile: true) is (false, var error))
                     {
                         ShowToast(error ?? $"An unknown error occurred in '{nameof(Vmu.LoadStateById)}'.");
                     }
@@ -363,7 +351,7 @@ class UserInterface
 
                 if (ImGui.MenuItem("Undo Load State"))
                 {
-                    _game.PrimaryVmu.LoadOopsFile();
+                    vmu.LoadOopsFile();
                 }
             }
 
@@ -383,6 +371,7 @@ class UserInterface
                 // Workaround to delay calling OpenPopup: https://github.com/ocornut/imgui/issues/331#issuecomment-751372071
                 Pause();
                 _editingKeyMappings = _game.Configuration.PrimaryInput.KeyMappings.ToList();
+                _editingMappingTargetVmu = vmu;
             }
 
             if (ImGui.MenuItem("Gamepad Config"))
@@ -390,6 +379,7 @@ class UserInterface
                 // Workaround to delay calling OpenPopup: https://github.com/ocornut/imgui/issues/331#issuecomment-751372071
                 Pause();
                 _editingButtonMappings = _game.Configuration.PrimaryInput.ButtonMappings.ToList();
+                _editingMappingTargetVmu = vmu;
             }
 
             if (ImGui.MenuItem("Open Data Folder"))
@@ -450,16 +440,13 @@ class UserInterface
 
         ImGui.EndMainMenuBar();
 
-        if (doOpenResetModal)
-            OpenPopupAndPause("Reset?");
-
         if (doOpenSettings)
             OpenPopupAndPause("Settings");
     }
 
     private void LayoutSecondaryMenuBar()
     {
-        if (!_game.UseSecondaryVmu)
+        if (_game.SecondaryVmu is not { } vmu)
             return;
 
         var rectangle = _game.SecondaryMenuBarRectangle;
@@ -467,16 +454,81 @@ class UserInterface
         ImGui.SetNextWindowSize(new Numerics.Vector2(rectangle.Width, rectangle.Height));
         ImGui.Begin("SecondaryMenuWindow", ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.MenuBar | ImGuiWindowFlags.NoSavedSettings);
         ImGui.BeginMenuBar();
+        if (ImGui.BeginMenu(vmu.HasUnsavedChanges ? "* File" : "File"))
         {
-            if (ImGui.BeginMenu("File1"))
+            if (vmu.LoadedFilePath is not null)
             {
-                ImGui.MenuItem($"hello");
-                ImGui.EndMenu();
+                ImGui.Text(Path.GetFileName(vmu.LoadedFilePath.AsSpan()));
+                ImGui.Separator();
             }
 
-            ImGui.EndMenuBar();
+            LayoutNewOpenSaveMenuItems(vmu);
+            ImGui.EndMenu();
         }
+
+        if (ImGui.BeginMenu("Emulation"))
+        {
+            if (ImGui.MenuItem(vmu.IsDocked ? "Eject VMU" : "Dock VMU"))
+                vmu.DockOrEject();
+
+            ImGui.EndMenu();
+        }
+
+        if (ImGui.BeginMenu("Settings"))
+        {
+            var configuration = _game.Configuration;
+            var muteSecondaryVmuAudio = configuration.MuteSecondaryVmuAudio;
+            ImGui.PushStyleVarY(ImGuiStyleVar.FramePadding, 0);
+            if (ImGui.Checkbox("Mute Audio", ref muteSecondaryVmuAudio))
+                _game.Configuration_MuteSecondaryVmuAudioChanged(muteSecondaryVmuAudio);
+
+            ImGui.PopStyleVar();
+            ImGui.Separator();
+
+            if (ImGui.MenuItem("Keyboard Config"))
+            {
+                // Workaround to delay calling OpenPopup: https://github.com/ocornut/imgui/issues/331#issuecomment-751372071
+                Pause();
+                _editingKeyMappings = _game.Configuration.SecondaryInput.KeyMappings.ToList();
+                _editingMappingTargetVmu = vmu;
+            }
+
+            if (ImGui.MenuItem("Gamepad Config"))
+            {
+                // Workaround to delay calling OpenPopup: https://github.com/ocornut/imgui/issues/331#issuecomment-751372071
+                Pause();
+                _editingButtonMappings = _game.Configuration.SecondaryInput.ButtonMappings.ToList();
+                _editingMappingTargetVmu = vmu;
+            }
+
+            ImGui.EndMenu();
+        }
+
+        ImGui.EndMenuBar();
         ImGui.End();
+    }
+
+    private void LayoutNewOpenSaveMenuItems(Vmu vmu)
+    {
+        if (ImGui.MenuItem("New VMU"))
+            NewVmu(vmu);
+
+        if (ImGui.MenuItem("Open VMS (Game)"))
+            OpenVmsDialog(vmu);
+
+        if (ImGui.MenuItem("Open VMU (Memory Card)"))
+            OpenVmuDialog(vmu);
+
+        if (ImGui.MenuItem("Save As"))
+        {
+            var result = Dialog.FileSave(filterList: "vmu,bin", defaultPath: null);
+            if (result.IsOk)
+            {
+                _game.SaveVmuFileAs(vmu, result.Path);
+            }
+        }
+
+        // TODO: list recently opened VMU files?
     }
 
     private static readonly string[] AllDreamcastSlotNames = ["A", "B", "C", "D"];
@@ -564,13 +616,6 @@ class UserInterface
                     _game.Configuration_ExpansionSlotsChanged((ExpansionSlots)selectedIndex);
             }
 
-            if (_game.Configuration.ExpansionSlots == ExpansionSlots.Slot1And2)
-            {
-                var enableSecondaryVmuAudio = configuration.EnableSecondaryVmuAudio;
-                if (ImGui.Checkbox("Enable Secondary VMU Audio", ref enableSecondaryVmuAudio))
-                    _game.Configuration_EnableSecondaryVmuAudioChanged(enableSecondaryVmuAudio);
-            }
-
             ImGui.EndPopup();
         }
 
@@ -592,7 +637,7 @@ class UserInterface
         {
             if (ImGui.Button("Save"))
             {
-                _game.Configuration_DoneEditingKeyMappings(_editingKeyMappings.ToImmutableArray());
+                _game.Configuration_DoneEditingKeyMappings(_editingKeyMappings.ToImmutableArray(), forPrimary: _editingMappingTargetVmu == _game.PrimaryVmu);
                 _editingKeyMappings = null;
                 Unpause();
                 ImGui.End();
@@ -689,7 +734,7 @@ class UserInterface
         {
             if (ImGui.Button("Save"))
             {
-                _game.Configuration_DoneEditingButtonMappings(_editingButtonMappings.ToImmutableArray());
+                _game.Configuration_DoneEditingButtonMappings(_editingButtonMappings.ToImmutableArray(), forPrimary: _editingMappingTargetVmu == _game.PrimaryVmu);
                 _editingButtonMappings = null;
                 Unpause();
                 ImGui.End();
@@ -832,25 +877,6 @@ class UserInterface
         }
     }
 
-    private void LayoutResetModal()
-    {
-        if (ImGui.BeginPopupModal("Reset?", ImGuiWindowFlags.NoResize))
-        {
-            ImGui.Text("Unsaved progress will be lost.");
-            if (ImGui.Button("Reset"))
-            {
-                _game.Reset();
-                ClosePopupAndUnpause();
-            }
-
-            ImGui.SameLine();
-            if (ImGui.Button("Cancel"))
-                ClosePopupAndUnpause();
-
-            ImGui.EndPopup();
-        }
-    }
-
     private void LayoutPendingCommandDialog()
     {
         if (PendingCommand.State is not ConfirmationState.ShowDialog)
@@ -861,6 +887,7 @@ class UserInterface
             PendingCommandKind.NewVmu => "Create new VMU without saving?",
             PendingCommandKind.OpenVms => "Open VMS without saving?",
             PendingCommandKind.OpenVmu => "Open VMU without saving?",
+            PendingCommandKind.Reset => "Reset?",
             PendingCommandKind.Exit => "Exit without saving?",
             _ => throw new InvalidOperationException(),
         };
@@ -874,6 +901,7 @@ class UserInterface
                 PendingCommandKind.NewVmu => "Create",
                 PendingCommandKind.OpenVms => "Open",
                 PendingCommandKind.OpenVmu => "Open",
+                PendingCommandKind.Reset => "Reset",
                 PendingCommandKind.Exit => "Exit",
                 _ => throw new InvalidOperationException(),
             };
@@ -905,16 +933,20 @@ class UserInterface
                     // But, OnExiting is not called until after this tick.
                     // So, we specifically need to keep PendingCommand around for this command.
                     break;
+                case PendingCommandKind.Reset:
+                    Reset(PendingCommand.Vmu ?? throw new InvalidOperationException());
+                    PendingCommand = default;
+                    break;
                 case PendingCommandKind.NewVmu:
-                    NewVmu();
+                    NewVmu(PendingCommand.Vmu ?? throw new InvalidOperationException());
                     PendingCommand = default;
                     break;
                 case PendingCommandKind.OpenVms:
-                    OpenVmsDialog();
+                    OpenVmsDialog(PendingCommand.Vmu ?? throw new InvalidOperationException());
                     PendingCommand = default;
                     break;
                 case PendingCommandKind.OpenVmu:
-                    OpenVmuDialog();
+                    OpenVmuDialog(PendingCommand.Vmu ?? throw new InvalidOperationException());
                     PendingCommand = default;
                     break;
                 default:

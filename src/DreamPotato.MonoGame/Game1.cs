@@ -19,7 +19,10 @@ public class Game1 : Game
     private readonly string? _initialFilePath;
 
     internal Vmu PrimaryVmu => _primaryVmuPresenter.Vmu;
+
+    [MemberNotNullWhen(true, nameof(SecondaryVmu))]
     internal bool UseSecondaryVmu => Configuration.ExpansionSlots == ExpansionSlots.Slot1And2;
+    internal Vmu? SecondaryVmu => UseSecondaryVmu ? _secondaryVmuPresenter.Vmu : null;
 
     internal const int MenuBarHeight = 20;
 
@@ -121,10 +124,11 @@ public class Game1 : Game
 
     protected override void OnExiting(object sender, ExitingEventArgs args)
     {
-        if (PrimaryVmu.HasUnsavedChanges && _userInterface.PendingCommand is not { Kind: PendingCommandKind.Exit, State: ConfirmationState.Confirmed })
+        if ((PrimaryVmu.HasUnsavedChanges || SecondaryVmu?.HasUnsavedChanges == true)
+            && _userInterface.PendingCommand is not { Kind: PendingCommandKind.Exit, State: ConfirmationState.Confirmed })
         {
             args.Cancel = true;
-            _userInterface.ShowConfirmCommandDialog(PendingCommandKind.Exit);
+            _userInterface.ShowConfirmCommandDialog(PendingCommandKind.Exit, vmu: null);
         }
 
         // Save window size and position on exit
@@ -164,9 +168,9 @@ public class Game1 : Game
         }
     }
 
-    internal void LoadNewVmu()
+    internal void LoadNewVmu(Vmu vmu)
     {
-        PrimaryVmu.LoadNewVmu(date: DateTime.Now, autoInitializeRTCDate: Configuration.AutoInitializeDate);
+        vmu.LoadNewVmu(date: DateTime.Now, autoInitializeRTCDate: Configuration.AutoInitializeDate);
         Paused = false;
         UpdateWindowTitle();
         RecentFilesInfo = RecentFilesInfo.AddPrimaryVmuRecentFile(newRecentFile: null);
@@ -197,7 +201,7 @@ public class Game1 : Game
         RecentFilesInfo.Save();
     }
 
-    internal void SaveVmuFileAs(string vmuFilePath)
+    internal void SaveVmuFileAs(Vmu vmu, string vmuFilePath)
     {
         var extension = Path.GetExtension(vmuFilePath);
         if (!extension.Equals(".vmu", StringComparison.OrdinalIgnoreCase)
@@ -206,15 +210,16 @@ public class Game1 : Game
             vmuFilePath = Path.ChangeExtension(vmuFilePath, ".vmu");
         }
 
-        PrimaryVmu.SaveVmuAs(vmuFilePath);
+        vmu.SaveVmuAs(vmuFilePath);
         UpdateWindowTitle();
         RecentFilesInfo = RecentFilesInfo.AddPrimaryVmuRecentFile(vmuFilePath);
         RecentFilesInfo.Save();
     }
 
-    internal void Reset()
+    internal void Reset(Vmu vmu)
     {
-        PrimaryVmu.Reset(Configuration.AutoInitializeDate ? DateTimeOffset.Now : null);
+        vmu.Reset(Configuration.AutoInitializeDate ? DateTimeOffset.Now : null);
+        Paused = false;
     }
 
     internal void Configuration_AutoInitializeDateChanged(bool newValue)
@@ -264,9 +269,9 @@ public class Game1 : Game
         // PrimaryVmu.RestartMapleServer(expansionSlots);
     }
 
-    internal void Configuration_EnableSecondaryVmuAudioChanged(bool newValue)
+    internal void Configuration_MuteSecondaryVmuAudioChanged(bool newValue)
     {
-        Configuration = Configuration with { EnableSecondaryVmuAudio = newValue };
+        Configuration = Configuration with { MuteSecondaryVmuAudio = newValue };
         UpdateAudioVolume();
     }
 
@@ -275,17 +280,35 @@ public class Game1 : Game
         Configuration.Save();
     }
 
-    internal void Configuration_DoneEditingKeyMappings(ImmutableArray<KeyMapping> keyMappings)
+    internal void Configuration_DoneEditingKeyMappings(ImmutableArray<KeyMapping> keyMappings, bool forPrimary)
     {
-        Configuration = Configuration with { PrimaryInput = Configuration.PrimaryInput with { KeyMappings = keyMappings } };
-        _primaryVmuPresenter.UpdateButtonChecker(Configuration.PrimaryInput);
+        if (forPrimary)
+        {
+            Configuration = Configuration with { PrimaryInput = Configuration.PrimaryInput with { KeyMappings = keyMappings } };
+            _primaryVmuPresenter.UpdateButtonChecker(Configuration.PrimaryInput);
+        }
+        else
+        {
+            Configuration = Configuration with { SecondaryInput = Configuration.SecondaryInput with { KeyMappings = keyMappings } };
+            _secondaryVmuPresenter.UpdateButtonChecker(Configuration.SecondaryInput);
+        }
+
         Configuration.Save();
     }
 
-    internal void Configuration_DoneEditingButtonMappings(ImmutableArray<ButtonMapping> buttonMappings)
+    internal void Configuration_DoneEditingButtonMappings(ImmutableArray<ButtonMapping> buttonMappings, bool forPrimary)
     {
-        Configuration = Configuration with { PrimaryInput = Configuration.PrimaryInput with { ButtonMappings = buttonMappings } };
-        _primaryVmuPresenter.UpdateButtonChecker(Configuration.PrimaryInput);
+        if (forPrimary)
+        {
+            Configuration = Configuration with { PrimaryInput = Configuration.PrimaryInput with { ButtonMappings = buttonMappings } };
+            _primaryVmuPresenter.UpdateButtonChecker(Configuration.PrimaryInput);
+        }
+        else
+        {
+            Configuration = Configuration with { SecondaryInput = Configuration.SecondaryInput with { ButtonMappings = buttonMappings } };
+            _secondaryVmuPresenter.UpdateButtonChecker(Configuration.SecondaryInput);
+        }
+
         Configuration.Save();
     }
 
@@ -345,7 +368,7 @@ public class Game1 : Game
     {
         var volume = Configuration.Volume;
         _primaryVmuPresenter.Vmu.Audio.Volume = volume;
-        _secondaryVmuPresenter.Vmu.Audio.Volume = Configuration.EnableSecondaryVmuAudio ? volume : 0;
+        _secondaryVmuPresenter.Vmu.Audio.Volume = Configuration.MuteSecondaryVmuAudio ? 0 : volume;
     }
 
     private void Vmu_UnsavedChangesDetected()
