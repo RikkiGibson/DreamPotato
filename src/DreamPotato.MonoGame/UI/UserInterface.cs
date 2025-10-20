@@ -560,7 +560,7 @@ class UserInterface
     }
 
     private static readonly string[] AllDreamcastSlotNames = ["A", "B", "C", "D"];
-    private static readonly string[] AllExpansionSlotNames = ["Slot 1", "Slot 2", "Slot 1 and 2"];
+    private static readonly string[] AllExpansionSlotNames = ["Slot 1", "Slot 2", "Slot 1+2"];
 
     private void LayoutSettings()
     {

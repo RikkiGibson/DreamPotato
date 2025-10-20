@@ -44,6 +44,8 @@ public class Game1 : Game
 
     /// <summary>Note: comprises the whole screen region which secondary VMU menus can expand into.</summary>
     internal Rectangle SecondaryMenuBarRectangle;
+    /// <summary>Only meaningful when <see cref="UseSecondaryVmu"/> is true.</summary>
+    internal bool IsHorizontalLayout;
 
     public Game1(string? gameFilePath)
     {
@@ -338,10 +340,10 @@ public class Game1 : Game
 
         // Prefer a horizontal layout for multiple VMUs, when the viewport is proportionally wider than the VMU content dimensions.
         // Otherwise, prefer a vertical layout.
-        var useHorizontalLayout = (float)contentRectangle.Height / VmuPresenter.TotalContentHeight
-            < (float)contentRectangle.Width / VmuPresenter.TotalContentWidth;
+        IsHorizontalLayout = Configuration.PreserveAspectRatio &&
+            (float)contentRectangle.Height / VmuPresenter.TotalContentHeight < (float)contentRectangle.Width / VmuPresenter.TotalContentWidth;
 
-        (var slot1Rectangle, SecondaryMenuBarRectangle, var slot2Rectangle) = useHorizontalLayout ? layoutHorizontal(contentRectangle) : layoutVertical(contentRectangle);
+        (var slot1Rectangle, SecondaryMenuBarRectangle, var slot2Rectangle) = IsHorizontalLayout ? layoutHorizontal(contentRectangle) : layoutVertical(contentRectangle);
 
         _primaryVmuPresenter.UpdateScaleMatrix(slot1Rectangle, Configuration.PreserveAspectRatio);
         _secondaryVmuPresenter.UpdateScaleMatrix(slot2Rectangle, Configuration.PreserveAspectRatio);
@@ -378,11 +380,19 @@ public class Game1 : Game
 
     internal int? GetWindowSizeMultiple()
     {
+        // The automatic commands always use a vertical layout, so, we are never "at an integer size multiple" in a horizontal layout.
+        if (UseSecondaryVmu && IsHorizontalLayout)
+            return null;
+
         var viewport = _graphics.GraphicsDevice.Viewport;
+
+        // ensure width is an even multiple of 'baseWidth'
         if (viewport.Width % VmuPresenter.TotalContentWidth != 0)
             return null;
 
-        if ((viewport.Height - MenuBarHeight) % VmuPresenter.TotalContentHeight != 0)
+        var multiple = UseSecondaryVmu ? 2 : 1;
+        var baseVmuContentHeight = multiple * VmuPresenter.TotalContentHeight;
+        if ((viewport.Height - multiple * MenuBarHeight) % baseVmuContentHeight != 0)
             return null;
 
         return viewport.Width / VmuPresenter.TotalContentWidth;
