@@ -136,7 +136,7 @@ public record Configuration(
             Allows mapping both Dreamcast and
             VMU buttons to a single gamepad
             """, ButtonPreset_Sidecar),
-        ("Unmapped", "Do not use a gamepad", ButtonPreset_Sidecar),
+        ("Unmapped", "Do not use a gamepad", ButtonPreset_Unmapped),
     ];
 
     private static readonly InputMappings DefaultPrimaryInput = new InputMappings()
