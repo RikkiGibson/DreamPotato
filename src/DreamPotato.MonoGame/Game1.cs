@@ -39,6 +39,9 @@ public class Game1 : Game
     private GamePadState _previousGamepad;
     internal bool Paused;
 
+    /// <summary>Note: comprises the whole screen region which secondary VMU menus can expand into.</summary>
+    internal Rectangle SecondaryMenuBarRectangle;
+
     public Game1(string? gameFilePath)
     {
         _graphics = new GraphicsDeviceManager(this);
@@ -312,19 +315,30 @@ public class Game1 : Game
 
         // Prefer a horizontal layout for multiple VMUs, when the viewport is proportionally wider than the VMU content dimensions.
         // Otherwise, prefer a vertical layout.
-        var layoutHorizontal = (float)contentRectangle.Height / VmuPresenter.TotalContentHeight
+        var useHorizontalLayout = (float)contentRectangle.Height / VmuPresenter.TotalContentHeight
             < (float)contentRectangle.Width / VmuPresenter.TotalContentWidth;
 
-        var slot1Rectangle = layoutHorizontal
-            ? contentRectangle with { Width = contentRectangle.Width / 2 }
-            : contentRectangle with { Height = contentRectangle.Height / 2 };
-
-        var slot2Rectangle = layoutHorizontal
-            ? contentRectangle with { Width = contentRectangle.Width / 2, X = slot1Rectangle.X + slot1Rectangle.Width }
-            : contentRectangle with { Height = contentRectangle.Height / 2, Y = slot1Rectangle.Y + slot1Rectangle.Height };
+        (var slot1Rectangle, SecondaryMenuBarRectangle, var slot2Rectangle) = useHorizontalLayout ? layoutHorizontal(contentRectangle) : layoutVertical(contentRectangle);
 
         _primaryVmuPresenter.UpdateScaleMatrix(slot1Rectangle, Configuration.PreserveAspectRatio);
         _secondaryVmuPresenter.UpdateScaleMatrix(slot2Rectangle, Configuration.PreserveAspectRatio);
+
+        static (Rectangle slot1Rectangle, Rectangle secondaryMenuBarRectangle, Rectangle slot2Rectangle) layoutHorizontal(Rectangle contentRectangle)
+        {
+            var slot1Rectangle = contentRectangle with { Width = contentRectangle.Width / 2 };
+            var secondaryMenuBarRectangle = new Rectangle(x: slot1Rectangle.X + slot1Rectangle.Width, y: 0, width: slot1Rectangle.Width, height: MenuBarHeight + slot1Rectangle.Height);
+            var slot2Rectangle = contentRectangle with { Width = contentRectangle.Width / 2, X = slot1Rectangle.X + slot1Rectangle.Width };
+            return (slot1Rectangle, secondaryMenuBarRectangle, slot2Rectangle);
+        }
+
+        static (Rectangle slot1Rectangle, Rectangle secondaryMenuBarRectangle, Rectangle slot2Rectangle) layoutVertical(Rectangle contentRectangle)
+        {
+            // When a vertical layout is used, extra space needs to be reserved for a 2nd menu bar
+            var slot1Rectangle = contentRectangle with { Height = (contentRectangle.Height - MenuBarHeight) / 2 };
+            var secondaryMenuBarRectangle = new Rectangle(x: 0, y: slot1Rectangle.Y + slot1Rectangle.Height, width: slot1Rectangle.Width, height: MenuBarHeight + slot1Rectangle.Height);
+            var slot2Rectangle = contentRectangle with { Height = slot1Rectangle.Height, Y = secondaryMenuBarRectangle.Y + MenuBarHeight };
+            return (slot1Rectangle, secondaryMenuBarRectangle, slot2Rectangle);
+        }
     }
 
     private void UpdateAudioVolume()
@@ -355,7 +369,8 @@ public class Game1 : Game
     internal void SetWindowSizeMultiple(int multiple)
     {
         _graphics.PreferredBackBufferWidth = VmuPresenter.TotalContentWidth * multiple;
-        _graphics.PreferredBackBufferHeight = VmuPresenter.TotalContentHeight * multiple + MenuBarHeight;
+        var vmuCount = UseSecondaryVmu ? 2 : 1;
+        _graphics.PreferredBackBufferHeight = vmuCount * (VmuPresenter.TotalContentHeight * multiple + MenuBarHeight);
         _graphics.ApplyChanges();
         UpdateScaleMatrix();
     }

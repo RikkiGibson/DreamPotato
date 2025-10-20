@@ -223,6 +223,8 @@ class UserInterface
     private void LayoutImpl()
     {
         LayoutMenuBar();
+        LayoutSecondaryMenuBar();
+
         LayoutSettings();
 
         LayoutKeyMapping();
@@ -453,6 +455,28 @@ class UserInterface
 
         if (doOpenSettings)
             OpenPopupAndPause("Settings");
+    }
+
+    private void LayoutSecondaryMenuBar()
+    {
+        if (!_game.UseSecondaryVmu)
+            return;
+
+        var rectangle = _game.SecondaryMenuBarRectangle;
+        ImGui.SetNextWindowPos(new Numerics.Vector2(rectangle.X, rectangle.Y));
+        ImGui.SetNextWindowSize(new Numerics.Vector2(rectangle.Width, rectangle.Height));
+        ImGui.Begin("SecondaryMenuWindow", ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.MenuBar | ImGuiWindowFlags.NoSavedSettings);
+        ImGui.BeginMenuBar();
+        {
+            if (ImGui.BeginMenu("File1"))
+            {
+                ImGui.MenuItem($"hello");
+                ImGui.EndMenu();
+            }
+
+            ImGui.EndMenuBar();
+        }
+        ImGui.End();
     }
 
     private static readonly string[] AllDreamcastSlotNames = ["A", "B", "C", "D"];
