@@ -494,6 +494,9 @@ class UserInterface
 
         if (ImGui.BeginMenu("Emulation"))
         {
+            if (ImGui.MenuItem("Reset"))
+                Reset(vmu);
+
             if (ImGui.MenuItem(vmu.IsDocked ? "Eject VMU" : "Dock VMU"))
                 vmu.DockOrEject();
 
@@ -504,13 +507,10 @@ class UserInterface
         {
             var configuration = _game.Configuration;
             var muteSecondaryVmuAudio = configuration.MuteSecondaryVmuAudio;
-            ImGui.PushStyleVarY(ImGuiStyleVar.FramePadding, 0);
-            if (ImGui.Checkbox("Mute Audio", ref muteSecondaryVmuAudio))
+            if (Checkbox("Mute Audio", ref muteSecondaryVmuAudio, paddingY: 0))
                 _game.Configuration_MuteSecondaryVmuAudioChanged(muteSecondaryVmuAudio);
 
-            ImGui.PopStyleVar();
             ImGui.Separator();
-
             if (ImGui.MenuItem("Keyboard Config"))
             {
                 // Workaround to delay calling OpenPopup: https://github.com/ocornut/imgui/issues/331#issuecomment-751372071
@@ -530,6 +530,14 @@ class UserInterface
 
         ImGui.EndMenuBar();
         ImGui.End();
+    }
+
+    private bool Checkbox(string label, ref bool v, float paddingY)
+    {
+        ImGui.PushStyleVarY(ImGuiStyleVar.FramePadding, paddingY);
+        var changed = ImGui.Checkbox(label, ref v);
+        ImGui.PopStyleVar();
+        return changed;
     }
 
     private void LayoutNewOpenSaveMenuItems(Vmu vmu)
@@ -570,17 +578,17 @@ class UserInterface
 
             var configuration = _game.Configuration;
             var autoInitializeDate = configuration.AutoInitializeDate;
-            if (ImGui.Checkbox("Auto-initialize date on startup", ref autoInitializeDate))
+            if (Checkbox("Auto-initialize date on startup", ref autoInitializeDate, paddingY: 1))
                 _game.Configuration_AutoInitializeDateChanged(autoInitializeDate);
 
 
             var anyButtonWakesFromSleep = configuration.AnyButtonWakesFromSleep;
-            if (ImGui.Checkbox("Any button wakes from sleep", ref anyButtonWakesFromSleep))
+            if (Checkbox("Any button wakes from sleep", ref anyButtonWakesFromSleep, paddingY: 1))
                 _game.Configuration_AnyButtonWakesFromSleepChanged(anyButtonWakesFromSleep);
 
 
             var preserveAspectRatio = configuration.PreserveAspectRatio;
-            if (ImGui.Checkbox("Preserve aspect ratio", ref preserveAspectRatio))
+            if (Checkbox("Preserve aspect ratio", ref preserveAspectRatio, paddingY: 1))
                 _game.Configuration_PreserveAspectRatioChanged(preserveAspectRatio);
 
             // Volume
@@ -923,7 +931,9 @@ class UserInterface
             PendingCommandKind.NewVmu => "Create new VMU without saving?",
             PendingCommandKind.OpenVms => "Open VMS without saving?",
             PendingCommandKind.OpenVmu => "Open VMU without saving?",
-            PendingCommandKind.Reset => "Reset?",
+            PendingCommandKind.Reset when !_game.UseSecondaryVmu => "Reset?",
+            PendingCommandKind.Reset when PendingCommand.Vmu == _game.PrimaryVmu => "Reset slot 1?",
+            PendingCommandKind.Reset => "Reset slot 2?",
             PendingCommandKind.Exit => "Exit without saving?",
             _ => throw new InvalidOperationException(),
         };
