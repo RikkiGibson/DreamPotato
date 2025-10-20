@@ -396,14 +396,12 @@ class UserInterface
 
             if (ImGui.MenuItem("Keyboard Config"))
             {
-                // Workaround to delay calling OpenPopup: https://github.com/ocornut/imgui/issues/331#issuecomment-751372071
                 Pause();
                 _mappingEditState = MappingEditState.EditKeyMappings(_game.Configuration.PrimaryInput.KeyMappings, vmu);
             }
 
             if (ImGui.MenuItem("Gamepad Config"))
             {
-                // Workaround to delay calling OpenPopup: https://github.com/ocornut/imgui/issues/331#issuecomment-751372071
                 Pause();
                 _mappingEditState = MappingEditState.EditButtonMappings(_game.Configuration.PrimaryInput.ButtonMappings, vmu);
             }
@@ -513,14 +511,12 @@ class UserInterface
             ImGui.Separator();
             if (ImGui.MenuItem("Keyboard Config"))
             {
-                // Workaround to delay calling OpenPopup: https://github.com/ocornut/imgui/issues/331#issuecomment-751372071
                 Pause();
                 _mappingEditState = MappingEditState.EditKeyMappings(_game.Configuration.SecondaryInput.KeyMappings, vmu);
             }
 
             if (ImGui.MenuItem("Gamepad Config"))
             {
-                // Workaround to delay calling OpenPopup: https://github.com/ocornut/imgui/issues/331#issuecomment-751372071
                 Pause();
                 _mappingEditState = MappingEditState.EditButtonMappings(_game.Configuration.SecondaryInput.ButtonMappings, vmu);
             }
