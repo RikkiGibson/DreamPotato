@@ -262,9 +262,25 @@ public class Game1 : Game
     {
         var oldExpansionSlots = Configuration.ExpansionSlots;
         Configuration = Configuration with { ExpansionSlots = expansionSlots };
-        var oldWasUsingBothSlots = oldExpansionSlots == ExpansionSlots.Slot1And2;
-        if (oldWasUsingBothSlots != (expansionSlots == ExpansionSlots.Slot1And2))
+        var usingBothSlots = expansionSlots == ExpansionSlots.Slot1And2;
+        if (usingBothSlots != (oldExpansionSlots == ExpansionSlots.Slot1And2))
+        {
+            // When going from a single slot to 2 slots or vice-versa, automatically adjust the window size
+            if (usingBothSlots)
+            {
+                _graphics.PreferredBackBufferHeight *= 2;
+            }
+            else
+            {
+                if (IsHorizontalLayout)
+                    _graphics.PreferredBackBufferWidth /= 2;
+                else
+                    _graphics.PreferredBackBufferHeight /= 2;
+            }
+
+            _graphics.ApplyChanges();
             UpdateScaleMatrix();
+        }
 
         // TODO: maple server needs to be able to operate independently of a single VMU
         // That implies contents of 2 VMUs need to be able to be stored/sync'd separately.
