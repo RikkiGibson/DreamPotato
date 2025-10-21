@@ -61,8 +61,8 @@ public enum DreamcastSlot
     // i.e. the Dreamcast itself is being addressed.
     Dreamcast = 0,
 
-    Slot1 = 1,
-    Slot2 = 2,
+    Slot1 = 1 << 0,
+    Slot2 = 1 << 1,
 }
 
 struct MapleAddress

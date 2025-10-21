@@ -11,6 +11,7 @@ namespace DreamPotato.Core;
 public class Cpu
 {
     public Logger Logger { get; }
+    internal DreamcastSlot DreamcastSlot;
 
     // VMD-35: Accumulator and all registers are mapped to RAM.
     // VMD-38: Memory
@@ -135,19 +136,14 @@ public class Cpu
 
     internal int _flashWriteUnlockSequence;
 
-    public Cpu()
+    public Cpu(MapleMessageBroker? mapleMessageBroker = null)
     {
-#if DEBUG
-        var logLevel = LogLevel.Trace;
-#else
-        var logLevel = LogLevel.Warning;
-#endif
         var categories = LogCategories.General;
-        Logger = new Logger(logLevel, categories, this);
+        Logger = new Logger(LogLevel.Default, categories, this);
         Memory = new Memory(this, Logger);
         Audio = new Audio(this, Logger);
         Display = new Display(this);
-        MapleMessageBroker = new MapleMessageBroker(logLevel);
+        MapleMessageBroker = mapleMessageBroker ?? new MapleMessageBroker(LogLevel.Default);
         SetInstructionBank(InstructionBank.ROM);
     }
 
@@ -349,21 +345,21 @@ public class Cpu
                 ticks += StepTicks();
         }
 
-        MapleMessageBroker.Resync(vmuDocked, writeToMapleFlash: vmuDocked, Flash, VmuFileHandle);
+        MapleMessageBroker.Resync(DreamcastSlot, vmuDocked, writeToMapleFlash: vmuDocked, Flash, VmuFileHandle);
     }
 
     /// <summary>Update the <see cref="MapleMessageBroker"/> from <see cref="Flash"/> regardless of whether VMU is currently docked.</summary>
     internal void ResyncMapleOutbound()
     {
         bool vmuDocked = SFRs.P7.DreamcastConnected;
-        MapleMessageBroker.Resync(vmuDocked, writeToMapleFlash: true, Flash, VmuFileHandle);
+        MapleMessageBroker.Resync(DreamcastSlot, vmuDocked, writeToMapleFlash: true, Flash, VmuFileHandle);
     }
 
     /// <summary>Update <see cref="Flash"/> from <see cref="MapleMessageBroker"/> regardless of whether VMU is currently docked.</summary>
     internal void ResyncMapleInbound()
     {
         bool vmuDocked = SFRs.P7.DreamcastConnected;
-        MapleMessageBroker.Resync(vmuDocked, writeToMapleFlash: false, Flash, VmuFileHandle);
+        MapleMessageBroker.Resync(DreamcastSlot, vmuDocked, writeToMapleFlash: false, Flash, VmuFileHandle);
     }
 
     private void HandleMapleMessages()
@@ -375,7 +371,7 @@ public class Cpu
                 Memory.Direct_AccessXram2()[Display.FlashIconOffset] = 0;
         }
 
-        while (MapleMessageBroker.TryReceiveCpuMessage(out var message))
+        while (MapleMessageBroker.TryReceiveCpuMessage(DreamcastSlot, out var message))
         {
             if (!SFRs.P7.DreamcastConnected)
             {

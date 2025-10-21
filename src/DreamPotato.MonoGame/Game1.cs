@@ -10,6 +10,7 @@ using DreamPotato.MonoGame.UI;
 using System.Linq;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics;
 
 namespace DreamPotato.MonoGame;
 
@@ -32,6 +33,7 @@ public class Game1 : Game
     internal ColorPalette ColorPalette = null!;
     internal RecentFilesInfo RecentFilesInfo = null!;
     private SpriteBatch _spriteBatch = null!;
+    private MapleMessageBroker MapleMessageBroker = null!;
     private VmuPresenter _primaryVmuPresenter = null!;
     private VmuPresenter _secondaryVmuPresenter = null!;
 
@@ -57,7 +59,7 @@ public class Game1 : Game
         _initialFilePath = gameFilePath;
     }
 
-    [MemberNotNull(nameof(_spriteBatch), nameof(_primaryVmuPresenter), nameof(_secondaryVmuPresenter), nameof(_userInterface), nameof(Configuration), nameof(ColorPalette), nameof(RecentFilesInfo))]
+    [MemberNotNull(nameof(_spriteBatch), nameof(MapleMessageBroker), nameof(_primaryVmuPresenter), nameof(_secondaryVmuPresenter), nameof(_userInterface), nameof(Configuration), nameof(ColorPalette), nameof(RecentFilesInfo))]
     protected override void Initialize()
     {
         Configuration = Configuration.Load();
@@ -83,15 +85,15 @@ public class Game1 : Game
         _userInterface.Initialize(textures.IconConnectedTexture);
 
         var date = DateTime.Now;
-        var primaryVmu = new Vmu();
+        MapleMessageBroker = new MapleMessageBroker(LogLevel.Default);
+        MapleMessageBroker.RestartServer(Configuration.DreamcastPort);
+        var primaryVmu = new Vmu(MapleMessageBroker);
         initializeVmu(primaryVmu);
-        primaryVmu.Audio.Volume = Configuration.Volume;
         primaryVmu.DockOrEject(connect: Configuration.VmuConnectionState is VmuConnectionState.PrimaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
         primaryVmu.UnsavedChangesDetected += Vmu_UnsavedChangesDetected;
         RecentFilesInfo = RecentFilesInfo.Load();
 
-        // TODO: share/pass in a MapleMessageBroker for 2 VMUs
-        var secondaryVmu = new Vmu();
+        var secondaryVmu = new Vmu(MapleMessageBroker);
         initializeVmu(secondaryVmu);
         secondaryVmu.DockOrEject(connect: Configuration.VmuConnectionState is VmuConnectionState.SecondaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
 
@@ -99,6 +101,7 @@ public class Game1 : Game
         _secondaryVmuPresenter = new VmuPresenter(this, secondaryVmu, textures, _graphics, Configuration.SecondaryInput);
         UpdateScaleMatrix();
         UpdateAudioVolume();
+        UpdateVmuExpansionSlots();
 
         if (Configuration.WindowPosition is { } windowPosition)
         {
@@ -119,8 +122,6 @@ public class Game1 : Game
             vmu.InitializeFlash(date);
             if (Configuration.AutoInitializeDate)
                 vmu.InitializeDate(date);
-
-            vmu.RestartMapleServer(Configuration.DreamcastPort);
         }
     }
 
@@ -255,7 +256,7 @@ public class Game1 : Game
     internal void Configuration_DreamcastPortChanged(DreamcastPort dreamcastPort)
     {
         Configuration = Configuration with { DreamcastPort = dreamcastPort };
-        PrimaryVmu.RestartMapleServer(dreamcastPort);
+        MapleMessageBroker.RestartServer(dreamcastPort);
     }
 
     internal void Configuration_ExpansionSlotsChanged(ExpansionSlots expansionSlots)
@@ -282,9 +283,29 @@ public class Game1 : Game
             UpdateScaleMatrix();
         }
 
+        UpdateVmuExpansionSlots();
+
         // TODO: maple server needs to be able to operate independently of a single VMU
         // That implies contents of 2 VMUs need to be able to be stored/sync'd separately.
         // PrimaryVmu.RestartMapleServer(expansionSlots);
+    }
+
+    private void UpdateVmuExpansionSlots()
+    {
+        switch (Configuration.ExpansionSlots)
+        {
+            case ExpansionSlots.Slot1:
+                PrimaryVmu.DreamcastSlot = DreamcastSlot.Slot1;
+                break;
+            case ExpansionSlots.Slot2:
+                PrimaryVmu.DreamcastSlot = DreamcastSlot.Slot2;
+                break;
+            case ExpansionSlots.Slot1And2:
+                Debug.Assert(SecondaryVmu is not null);
+                PrimaryVmu.DreamcastSlot = DreamcastSlot.Slot1;
+                SecondaryVmu.DreamcastSlot = DreamcastSlot.Slot2;
+                break;
+        }
     }
 
     internal void Configuration_MuteSecondaryVmuAudioChanged(bool newValue)

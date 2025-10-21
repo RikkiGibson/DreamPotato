@@ -22,9 +22,9 @@ public class Vmu
         remove => _cpu.UnsavedChangesDetected -= value;
     }
 
-    public Vmu()
+    public Vmu(MapleMessageBroker? mapleMessageBroker = null)
     {
-        _cpu = new Cpu();
+        _cpu = new Cpu(mapleMessageBroker);
         _cpu.Reset();
         _fileSystem = new FileSystem(_cpu.Flash);
     }
@@ -173,14 +173,6 @@ public class Vmu
         _cpu.VmuFileWriteStream = fileStream;
     }
 
-    public void RestartMapleServer(DreamcastPort dreamcastPort)
-    {
-        if (_cpu.MapleMessageBroker.IsRunning)
-            _cpu.MapleMessageBroker.ShutdownServer();
-
-        _cpu.MapleMessageBroker.StartServer(dreamcastPort);
-    }
-
     public bool IsServerConnected
     {
         get
@@ -201,6 +193,9 @@ public class Vmu
         => _cpu.ConnectDreamcast(connect);
 
     public static string DataFolder => Path.Combine(AppContext.BaseDirectory, "Data");
+
+    public DreamcastSlot DreamcastSlot { get => _cpu.DreamcastSlot; set => _cpu.DreamcastSlot = value; }
+
     public const string RomFileName = "american_v1.05.bin";
     public const string SaveStateHeaderMessage = "DreamPotatoSaveState";
     public static readonly ReadOnlyMemory<byte> SaveStateHeaderBytes = Encoding.UTF8.GetBytes(SaveStateHeaderMessage);

@@ -65,6 +65,8 @@ public record Configuration(
         new KeyMapping { SourceKey = Keys.I, TargetButton = VmuButton.Mode },
         new KeyMapping { SourceKey = Keys.J, TargetButton = VmuButton.Sleep },
 
+        // TODO: emulator commands need to be extracted and only be present for "slot 1 configuration".
+        // Save/Load/Pause/Fast Forward are all universal commands across slots.
         new KeyMapping { SourceKey = Keys.Insert, TargetButton = VmuButton.InsertEject },
 
         new KeyMapping { SourceKey = Keys.F5, TargetButton = VmuButton.SaveState },
