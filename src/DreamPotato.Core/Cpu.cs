@@ -11,7 +11,6 @@ namespace DreamPotato.Core;
 public class Cpu
 {
     public Logger Logger { get; }
-    internal DreamcastSlot DreamcastSlot;
 
     // VMD-35: Accumulator and all registers are mapped to RAM.
     // VMD-38: Memory
@@ -135,6 +134,20 @@ public class Cpu
     internal int _interruptsCount;
 
     internal int _flashWriteUnlockSequence;
+
+    // TODO: update save state format
+    // Now, loading state can change the used expansion slots, in addition to changing whether we are docked.
+    internal DreamcastSlot DreamcastSlot
+    {
+        get;
+        set
+        {
+            if (SFRs.P7.DreamcastConnected)
+                throw new InvalidOperationException("VMU must be ejected when changing slots");
+
+            field = value;
+        }
+    }
 
     public Cpu(MapleMessageBroker? mapleMessageBroker = null)
     {

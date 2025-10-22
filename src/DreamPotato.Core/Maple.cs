@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Diagnostics;
+using System.Text.Json.Serialization;
 
 namespace DreamPotato.Core;
 
@@ -48,6 +49,7 @@ internal record struct MapleMessage()
     }
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter<DreamcastPort>))]
 public enum DreamcastPort
 {
     A = 0,

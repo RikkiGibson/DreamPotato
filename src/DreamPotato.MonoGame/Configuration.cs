@@ -27,7 +27,7 @@ public record Configuration(
     ViewportSize? ViewportSize = null,
     VmuConnectionState VmuConnectionState = VmuConnectionState.None,
     ExpansionSlots ExpansionSlots = ExpansionSlots.Slot1,
-    [property: JsonConverter(typeof(JsonStringEnumConverter<DreamcastPort>))] DreamcastPort DreamcastPort = DreamcastPort.A)
+    DreamcastPort DreamcastPort = DreamcastPort.A)
 {
     private const string FileName = "configuration.json";
     private static string FilePath => Path.Combine(Vmu.DataFolder, FileName);

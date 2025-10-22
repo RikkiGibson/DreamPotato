@@ -292,6 +292,14 @@ public class Game1 : Game
 
     private void UpdateVmuExpansionSlots()
     {
+        var wasDocked = PrimaryVmu.IsDocked;
+        if (wasDocked)
+            PrimaryVmu.DockOrEject();
+
+        var secondaryWasDocked = SecondaryVmu?.IsDocked == true;
+        if (secondaryWasDocked)
+            SecondaryVmu!.DockOrEject();
+
         switch (Configuration.ExpansionSlots)
         {
             case ExpansionSlots.Slot1:
@@ -306,6 +314,12 @@ public class Game1 : Game
                 SecondaryVmu.DreamcastSlot = DreamcastSlot.Slot2;
                 break;
         }
+
+        if (wasDocked)
+            PrimaryVmu.DockOrEject();
+
+        if (secondaryWasDocked)
+            SecondaryVmu!.DockOrEject();
     }
 
     internal void Configuration_MuteSecondaryVmuAudioChanged(bool newValue)
