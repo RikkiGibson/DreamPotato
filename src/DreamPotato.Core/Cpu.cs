@@ -142,6 +142,9 @@ public class Cpu
         get;
         set
         {
+            if (value is not (DreamcastSlot.Slot1 or DreamcastSlot.Slot2))
+                throw new InvalidOperationException("VMU must be associated with a single slot");
+
             if (SFRs.P7.DreamcastConnected)
                 throw new InvalidOperationException("VMU must be ejected when changing slots");
 

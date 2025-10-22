@@ -101,7 +101,7 @@ public class MapleMessageBroker
             {
                 // Send a message telling client to re-query devices
                 var message = new MapleMessage() { Type = (MapleMessageType)0xff, Sender = new MapleAddress(0xff), Recipient = new MapleAddress(0xff), Length = 0xff, AdditionalWords = [] };
-                var written = _outboundMessages.Writer.TryWrite(message);
+                var written = _outboundMessages.Writer.TryWrite(MapleMessage.ResetMessage);
                 Debug.Assert(written); // Channel is unbounded, this should always succeed
             }
         }
@@ -234,6 +234,8 @@ public class MapleMessageBroker
         var vmuInfo = GetVmuInfo(recipientSlot);
         switch (message.Type, message.Function)
         {
+            case (MapleMessageType.GetDeviceInfo, _):
+                return handleGetDeviceInfo(vmuInfo, message);
             case (MapleMessageType.SetCondition, MapleFunction.Clock):
                 // VMU beeps over maple are not supported.
                 // The biggest reason is that if the remote emulator pauses,
@@ -268,7 +270,7 @@ public class MapleMessageBroker
         {
             var slot1Docked = _slot1._vmuDocked;
             var slot2Docked = _slot2._vmuDocked;
-            var (message, senderSlot) = (slot1Docked, slot2Docked) switch
+            var (message, senderSlots) = (slot1Docked, slot2Docked) switch
             {
                 (true, true) => ("VMUs in slots 1 and 2", DreamcastSlot.Slot1 | DreamcastSlot.Slot2),
                 (true, false) => ("VMU in slot 1", DreamcastSlot.Slot1),
@@ -281,12 +283,48 @@ public class MapleMessageBroker
             {
                 Type = MapleMessageType.Ack,
                 Recipient = new MapleAddress { Port = _dreamcastPort, Slot = DreamcastSlot.Dreamcast },
-                Sender = new MapleAddress { Port = _dreamcastPort, Slot = senderSlot },
+                Sender = new MapleAddress { Port = _dreamcastPort, Slot = senderSlots },
                 Length = 0,
                 AdditionalWords = [],
             };
             return reply;
         }
+
+        MapleMessage handleGetDeviceInfo(VmuInfo vmuInfo, MapleMessage message)
+        {
+            if (!vmuInfo._vmuDocked)
+                return MapleMessage.ResetMessage;
+
+            const int responseLength = 28;
+            int[] additionalWords = new int[28];
+            additionalWords[0] = (int)(MapleFunction.Storage | MapleFunction.LCD | MapleFunction.Clock);
+            additionalWords[1] = 0x403f7e7e; // clock
+            additionalWords[2] = 0x00100500; // lcd
+            additionalWords[3] = 0x00410f00; // storage
+
+            byte[] rest = [
+                0xff, // area code
+                0x0, // direction
+                .. "Visual Memory                 "u8,
+                .. "Produced By or Under License From SEGA ENTERPRISES,LTD.     "u8,
+                0x7c, 0x0, // 12.4 mA
+                0x82, 0x0 // 13 mA
+                ];
+            Debug.Assert(4 + rest.Length / 4 == responseLength);
+            for (int i = 0, destIndex = 4; i < rest.Length; i += 4, destIndex++)
+                additionalWords[destIndex] = BinaryPrimitives.ReadInt32LittleEndian(rest[i..(i + 4)]);
+
+            var reply = new MapleMessage
+            {
+                Type = MapleMessageType.DeviceInfoTransfer,
+                Recipient = new MapleAddress { Port = _dreamcastPort, Slot = DreamcastSlot.Dreamcast },
+                Sender = new MapleAddress { Port = _dreamcastPort, Slot = message.Recipient.Slot },
+                Length = responseLength,
+                AdditionalWords = additionalWords,
+            };
+            return reply;
+        }
+
 
         MapleMessage handleReadBlockStorage(VmuInfo info, MapleMessage message)
         {

@@ -14,11 +14,13 @@ internal record struct MapleMessage()
         && Length == 0xff
         && AdditionalWords.Length == 0;
 
+    public static MapleMessage ResetMessage { get; } = new MapleMessage() { Type = (MapleMessageType)0xff, Sender = new MapleAddress(0xff), Recipient = new MapleAddress(0xff), Length = 0xff, AdditionalWords = [] };
+
     public MapleMessageType Type { get; init; }
     public MapleAddress Recipient { get; init; }
     public MapleAddress Sender { get; init; }
 
-    public MapleFunction Function => (MapleFunction)AdditionalWords[0];
+    public MapleFunction Function => (MapleFunction)AdditionalWords.FirstOrDefault();
 
     /// <summary>
     /// The number of additional 32-bit words being sent in the packet.
@@ -122,6 +124,7 @@ enum MapleMessageType : byte
 
 enum MapleFunction
 {
+    None = 0,
     Input = 0x0100_0000, // valid to combine with 'GetCondition'
     Storage = 0x0200_0000, // valid to combine with 'ReadBlock'/'WriteBlock'/'CompleteWrite'
     LCD = 0x0400_0000, // valid to combine with 'WriteBlock'
