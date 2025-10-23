@@ -100,7 +100,6 @@ public class MapleMessageBroker
             if ((dockedChanged || writeToMapleFlash) && _clientSocket is { })
             {
                 // Send a message telling client to re-query devices
-                var message = new MapleMessage() { Type = (MapleMessageType)0xff, Sender = new MapleAddress(0xff), Recipient = new MapleAddress(0xff), Length = 0xff, AdditionalWords = [] };
                 var written = _outboundMessages.Writer.TryWrite(MapleMessage.ResetMessage);
                 Debug.Assert(written); // Channel is unbounded, this should always succeed
             }
