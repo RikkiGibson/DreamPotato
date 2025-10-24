@@ -307,6 +307,9 @@ class UserInterface
         if (_toastDisplayFrames == 0)
             return;
 
+        if (_toastMessage is null)
+            throw new InvalidOperationException();
+
         _toastDisplayFrames--;
 
         var doFadeout = _toastDisplayFrames < ToastBeginFadeoutFrames;
@@ -314,13 +317,13 @@ class UserInterface
             ImGui.PushStyleVar(ImGuiStyleVar.Alpha, ((float)_toastDisplayFrames) / ToastBeginFadeoutFrames);
 
         var viewport = _game.GraphicsDevice.Viewport;
-        var textSize = ImGui.CalcTextSize(_toastMessage, wrapWidth: viewport.Width);
+        var textSize = ImGui.CalcTextSize(text: _toastMessage, wrapWidth: viewport.Width);
         // TODO probably userinterface should own the const MenuBarHeight
         ImGui.SetNextWindowPos(new Numerics.Vector2(x: 2, y: viewport.Height - textSize.Y - Game1.MenuBarHeight));
         ImGui.SetNextWindowSize(textSize + new Numerics.Vector2(10, 20));
         if (ImGui.Begin("Toast", ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoInputs | ImGuiWindowFlags.NoScrollbar))
         {
-            ImGui.TextWrapped(_toastMessage);
+            ImGui.TextWrapped(_toastMessage.Replace("%", "%%"));
         }
 
         ImGui.End();

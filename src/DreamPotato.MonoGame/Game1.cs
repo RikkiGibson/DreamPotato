@@ -200,7 +200,8 @@ public class Game1 : Game
         else if (extension.Equals(".vmu", StringComparison.OrdinalIgnoreCase)
             || extension.Equals(".bin", StringComparison.OrdinalIgnoreCase))
         {
-            vmu.LoadVmu(filePath, DateTime.Now);
+            if (!tryLoadVmuFile())
+                return;
         }
         else
         {
@@ -211,6 +212,22 @@ public class Game1 : Game
         UpdateWindowTitle();
         RecentFilesInfo = RecentFilesInfo.AddRecentFile(forPrimary: vmu == PrimaryVmu, filePath);
         RecentFilesInfo.Save();
+
+        bool tryLoadVmuFile()
+        {
+            // We need to enforce that the same VMU file is not opened by both VMUs.
+            // Otherwise they could stomp on each others' on-disk content.
+            // (Opening the same .vms file is fine.)
+            var otherVmu = vmu == PrimaryVmu ? SecondaryVmu : PrimaryVmu;
+            if (otherVmu?.LoadedFilePath == filePath)
+            {
+                _userInterface.ShowToast($"Cannot open {Path.GetFileName(filePath)} because it is already open on the other VMU.");
+                return false;
+            }
+
+            vmu.LoadVmu(filePath, DateTime.Now);
+            return true;
+        }
     }
 
     internal void SaveVmuFileAs(Vmu vmu, string vmuFilePath)
