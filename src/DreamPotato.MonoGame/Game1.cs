@@ -17,7 +17,7 @@ namespace DreamPotato.MonoGame;
 public class Game1 : Game
 {
     private readonly GraphicsDeviceManager _graphics;
-    private readonly string? _initialFilePath;
+    private readonly string? _commandLineFilePath;
 
     internal Vmu PrimaryVmu => _primaryVmuPresenter.Vmu;
 
@@ -56,7 +56,7 @@ public class Game1 : Game
         Window.ClientSizeChanged += Window_ClientSizeChanged;
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
-        _initialFilePath = gameFilePath;
+        _commandLineFilePath = gameFilePath;
     }
 
     [MemberNotNull(nameof(_spriteBatch), nameof(MapleMessageBroker), nameof(_primaryVmuPresenter), nameof(_secondaryVmuPresenter), nameof(_userInterface), nameof(Configuration), nameof(ColorPalette), nameof(RecentFilesInfo))]
@@ -87,12 +87,12 @@ public class Game1 : Game
         var date = DateTime.Now;
         MapleMessageBroker = new MapleMessageBroker(LogLevel.Default);
         MapleMessageBroker.RestartServer(Configuration.DreamcastPort);
-        var primaryVmu = new Vmu(MapleMessageBroker);
+        var primaryVmu = new Vmu(MapleMessageBroker) { DreamcastSlot = Configuration.ExpansionSlots is ExpansionSlots.Slot1 or ExpansionSlots.Slot1And2 ? DreamcastSlot.Slot1 : DreamcastSlot.Slot2 };
         initializeVmu(primaryVmu);
         primaryVmu.UnsavedChangesDetected += Vmu_UnsavedChangesDetected;
         RecentFilesInfo = RecentFilesInfo.Load();
 
-        var secondaryVmu = new Vmu(MapleMessageBroker);
+        var secondaryVmu = new Vmu(MapleMessageBroker) { DreamcastSlot = DreamcastSlot.Slot2 };
         initializeVmu(secondaryVmu);
 
         _primaryVmuPresenter = new VmuPresenter(this, primaryVmu, textures, _graphics, Configuration.PrimaryInput);
@@ -101,8 +101,6 @@ public class Game1 : Game
         UpdateAudioVolume();
 
         Debug.Assert(!primaryVmu.IsDocked && !secondaryVmu.IsDocked);
-        primaryVmu.DreamcastSlot = Configuration.ExpansionSlots is ExpansionSlots.Slot1 or ExpansionSlots.Slot1And2 ? DreamcastSlot.Slot1 : DreamcastSlot.Slot2;
-        secondaryVmu.DreamcastSlot = DreamcastSlot.Slot2;
         var connectionState = Configuration.VmuConnectionState;
         primaryVmu.DockOrEject(connect: connectionState is VmuConnectionState.PrimaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
         secondaryVmu.DockOrEject(connect: connectionState is VmuConnectionState.SecondaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
@@ -117,8 +115,8 @@ public class Game1 : Game
                 Window.Position = new Point(windowPosition.X, windowPosition.Y);
         }
 
-        LoadVmuFiles(primaryVmu, _initialFilePath ?? RecentFilesInfo.PrimaryVmuMostRecent);
-        LoadVmuFiles(secondaryVmu, _initialFilePath ?? RecentFilesInfo.SecondaryVmuMostRecent);
+        LoadVmuFiles(primaryVmu, _commandLineFilePath ?? RecentFilesInfo.PrimaryVmuMostRecent);
+        LoadVmuFiles(secondaryVmu, RecentFilesInfo.SecondaryVmuMostRecent);
         _spriteBatch = new SpriteBatch(GraphicsDevice);
 
         base.Initialize();
@@ -147,7 +145,13 @@ public class Game1 : Game
         {
             ViewportSize = new ViewportSize(viewport.Width, viewport.Height),
             WindowPosition = new WindowPosition(position.X, position.Y),
-            VmuConnectionState = PrimaryVmu.IsDocked ? VmuConnectionState.PrimaryDocked : VmuConnectionState.None,
+            VmuConnectionState = (PrimaryVmu.IsDocked, SecondaryVmu?.IsDocked) switch
+            {
+                (true, true) => VmuConnectionState.PrimaryAndSecondaryDocked,
+                (true, false or null) => VmuConnectionState.PrimaryDocked,
+                (false, true) => VmuConnectionState.SecondaryDocked,
+                (false, false or null) => VmuConnectionState.None,
+            }
         };
         Configuration.Save();
 
@@ -174,11 +178,8 @@ public class Game1 : Game
     private void LoadVmuFiles(Vmu vmu, string? vmsOrVmuFilePath)
     {
         vmu.LoadRom();
-        vmsOrVmuFilePath ??= RecentFilesInfo.RecentFiles.FirstOrDefault();
         if (vmsOrVmuFilePath != null)
-        {
             LoadAndStartVmsOrVmuFile(vmu, vmsOrVmuFilePath);
-        }
     }
 
     internal void LoadNewVmu(Vmu vmu)
