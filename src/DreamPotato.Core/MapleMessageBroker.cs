@@ -21,12 +21,15 @@ public class MapleMessageBroker
     private readonly Logger Logger;
 
     /// <summary>
-    /// Guards <see cref="_clientConnected"/>, <see cref="_vmuDocked"/>, <see cref="_vmuFlashData"/>, <see cref="_vmuFileHandle"/>, <see cref="_slot1"/>, <see cref="_slot2"/>.
+    /// Guards <see cref="_slot1"/>, <see cref="_slot2"/>, <see cref="_clientSocket"/>, <see cref="_clientNeedsRefresh"/>.
     /// </summary>
     private readonly Lock _lock = new Lock();
 
     /// <summary>Guarded by <see cref="_lock"/>.</summary>
     private Socket? _clientSocket;
+
+    /// <summary>Guarded by <see cref="_lock"/>.</summary>
+    private bool _clientNeedsRefresh;
 
     private readonly Channel<MapleMessage> _outboundMessages = Channel.CreateUnbounded<MapleMessage>();
 
@@ -37,6 +40,7 @@ public class MapleMessageBroker
 
     private Task? _serverTask;
     private CancellationTokenSource? _cancellationTokenSource;
+
     public MapleMessageBroker(LogLevel minimumLogLevel)
     {
         Logger = new Logger(minimumLogLevel, LogCategories.Maple, _cpu: null);
@@ -98,11 +102,19 @@ public class MapleMessageBroker
             // or, if caller is asking to write outbound to Maple,
             // in which case the local flash memory content has changed.
             if ((dockedChanged || writeToMapleFlash) && _clientSocket is { })
-            {
-                // Send a message telling client to re-query devices
-                var written = _outboundMessages.Writer.TryWrite(MapleMessage.ResetMessage);
-                Debug.Assert(written); // Channel is unbounded, this should always succeed
-            }
+                _clientNeedsRefresh = true;
+        }
+    }
+
+    /// <summary>Called once per frame in order to "batch" refresh messages to the client.</summary>
+    public void RefreshIfNeeded()
+    {
+        if (_clientNeedsRefresh)
+        {
+            // Send a message telling client to re-query devices
+            var written = _outboundMessages.Writer.TryWrite(MapleMessage.ResetMessage);
+            Debug.Assert(written); // Channel is unbounded, this should always succeed
+            _clientNeedsRefresh = false;
         }
     }
 
@@ -271,10 +283,10 @@ public class MapleMessageBroker
             var slot2Docked = _slot2._vmuDocked;
             var (message, senderSlots) = (slot1Docked, slot2Docked) switch
             {
-                (true, true) => ("VMUs in slots 1 and 2", DreamcastSlot.Slot1 | DreamcastSlot.Slot2),
-                (true, false) => ("VMU in slot 1", DreamcastSlot.Slot1),
-                (false, true) => ("VMU in slot 2", DreamcastSlot.Slot2),
-                (false, false) => ("No VMUs", DreamcastSlot.Dreamcast)
+                (true, true) => ("Devices in slots 1 and 2", DreamcastSlot.Slot1 | DreamcastSlot.Slot2),
+                (true, false) => ("Device in slot 1", DreamcastSlot.Slot1),
+                (false, true) => ("Device in slot 2", DreamcastSlot.Slot2),
+                (false, false) => ("No expansion devices", DreamcastSlot.Dreamcast)
             };
             Logger.LogDebug($"(GetCondition, Input): {message}", LogCategories.Maple);
 
@@ -312,6 +324,7 @@ public class MapleMessageBroker
             Debug.Assert(4 + rest.Length / 4 == responseLength);
             for (int i = 0, destIndex = 4; i < rest.Length; i += 4, destIndex++)
                 additionalWords[destIndex] = BinaryPrimitives.ReadInt32LittleEndian(rest[i..(i + 4)]);
+            Logger.LogDebug($"GetDeviceInfo: {message.Recipient.Slot} contains VMU", LogCategories.Maple);
 
             var reply = new MapleMessage
             {

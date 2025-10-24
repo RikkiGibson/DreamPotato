@@ -31,11 +31,13 @@ public record RecentFilesInfo
         return value ?? Default;
     }
 
-    public RecentFilesInfo AddPrimaryVmuRecentFile(string? newRecentFile)
-        => this with { PrimaryVmuMostRecent = newRecentFile, RecentFiles = PrependRecentFile(newRecentFile) };
-
-    public RecentFilesInfo AddSecondaryVmuRecentFile(string? newRecentFile)
-        => this with { SecondaryVmuMostRecent = newRecentFile, RecentFiles = PrependRecentFile(newRecentFile) };
+    public RecentFilesInfo AddRecentFile(bool forPrimary, string? newRecentFile)
+        => this with
+        {
+            PrimaryVmuMostRecent = forPrimary ? newRecentFile : PrimaryVmuMostRecent,
+            SecondaryVmuMostRecent = forPrimary ? SecondaryVmuMostRecent : newRecentFile,
+            RecentFiles = PrependRecentFile(newRecentFile)
+        };
 
     private ImmutableArray<string?> PrependRecentFile(string? newRecentFile)
         => [newRecentFile, .. RecentFiles.Where(file => file != null && file != newRecentFile).Take(5)];

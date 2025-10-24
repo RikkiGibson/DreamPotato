@@ -482,7 +482,7 @@ class UserInterface
         {
             if (vmu.LoadedFilePath is not null)
             {
-                ImGui.Text(Path.GetFileName(vmu.LoadedFilePath.AsSpan()));
+                ImGui.TextUnformatted(Path.GetFileName(vmu.LoadedFilePath.AsSpan()));
                 ImGui.Separator();
             }
 

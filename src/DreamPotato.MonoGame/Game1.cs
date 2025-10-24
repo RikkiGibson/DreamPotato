@@ -89,19 +89,25 @@ public class Game1 : Game
         MapleMessageBroker.RestartServer(Configuration.DreamcastPort);
         var primaryVmu = new Vmu(MapleMessageBroker);
         initializeVmu(primaryVmu);
-        primaryVmu.DockOrEject(connect: Configuration.VmuConnectionState is VmuConnectionState.PrimaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
         primaryVmu.UnsavedChangesDetected += Vmu_UnsavedChangesDetected;
         RecentFilesInfo = RecentFilesInfo.Load();
 
         var secondaryVmu = new Vmu(MapleMessageBroker);
         initializeVmu(secondaryVmu);
-        secondaryVmu.DockOrEject(connect: Configuration.VmuConnectionState is VmuConnectionState.SecondaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
 
         _primaryVmuPresenter = new VmuPresenter(this, primaryVmu, textures, _graphics, Configuration.PrimaryInput);
         _secondaryVmuPresenter = new VmuPresenter(this, secondaryVmu, textures, _graphics, Configuration.SecondaryInput);
         UpdateScaleMatrix();
         UpdateAudioVolume();
-        UpdateVmuExpansionSlots();
+
+        Debug.Assert(!primaryVmu.IsDocked && !secondaryVmu.IsDocked);
+        primaryVmu.DreamcastSlot = Configuration.ExpansionSlots is ExpansionSlots.Slot1 or ExpansionSlots.Slot1And2 ? DreamcastSlot.Slot1 : DreamcastSlot.Slot2;
+        secondaryVmu.DreamcastSlot = DreamcastSlot.Slot2;
+        var connectionState = Configuration.VmuConnectionState;
+        primaryVmu.DockOrEject(connect: connectionState is VmuConnectionState.PrimaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
+        secondaryVmu.DockOrEject(connect: connectionState is VmuConnectionState.SecondaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
+        // Secondary must not be docked if primary is associated with slot 2
+        Debug.Assert(!(primaryVmu.DreamcastSlot == DreamcastSlot.Slot2 && secondaryVmu.IsDocked));
 
         if (Configuration.WindowPosition is { } windowPosition)
         {
@@ -148,6 +154,10 @@ public class Game1 : Game
         base.OnExiting(sender, args);
     }
 
+    /// <summary>
+    /// This is always based on the primary vmu state.
+    /// Secondary indicates its status using Dear ImGui so there isn't a need to proactively go update its state.
+    /// </summary>
     internal void UpdateWindowTitle()
     {
         var star = PrimaryVmu.HasUnsavedChanges
@@ -176,7 +186,7 @@ public class Game1 : Game
         vmu.LoadNewVmu(date: DateTime.Now, autoInitializeRTCDate: Configuration.AutoInitializeDate);
         Paused = false;
         UpdateWindowTitle();
-        RecentFilesInfo = RecentFilesInfo.AddPrimaryVmuRecentFile(newRecentFile: null);
+        RecentFilesInfo = RecentFilesInfo.AddRecentFile(forPrimary: vmu == PrimaryVmu, newRecentFile: null);
         RecentFilesInfo.Save();
     }
 
@@ -198,9 +208,8 @@ public class Game1 : Game
         }
 
         Paused = false;
-        // TODO(spi): what to do with these for secondary VMU?
         UpdateWindowTitle();
-        RecentFilesInfo = RecentFilesInfo.AddPrimaryVmuRecentFile(filePath);
+        RecentFilesInfo = RecentFilesInfo.AddRecentFile(forPrimary: vmu == PrimaryVmu, filePath);
         RecentFilesInfo.Save();
     }
 
@@ -215,7 +224,7 @@ public class Game1 : Game
 
         vmu.SaveVmuAs(vmuFilePath);
         UpdateWindowTitle();
-        RecentFilesInfo = RecentFilesInfo.AddPrimaryVmuRecentFile(vmuFilePath);
+        RecentFilesInfo = RecentFilesInfo.AddRecentFile(forPrimary: vmu == PrimaryVmu, vmuFilePath);
         RecentFilesInfo.Save();
     }
 
@@ -259,14 +268,35 @@ public class Game1 : Game
         MapleMessageBroker.RestartServer(dreamcastPort);
     }
 
-    internal void Configuration_ExpansionSlotsChanged(ExpansionSlots expansionSlots)
+    internal void Configuration_ExpansionSlotsChanged(ExpansionSlots newExpansionSlots)
     {
         var oldExpansionSlots = Configuration.ExpansionSlots;
-        Configuration = Configuration with { ExpansionSlots = expansionSlots };
-        var usingBothSlots = expansionSlots == ExpansionSlots.Slot1And2;
+        // First eject any docked VMUs, then update settings, then re-insert the VMUs which are still being used.
+        // Note that changing 'Configuration.ExpansionSlots' affects the nullability of 'SecondaryVmu'.
+
+        // The secondary VMU must not be docked when the primary is associated with slot 2, otherwise they will stomp on each other's data
+        Debug.Assert(!(PrimaryVmu.DreamcastSlot == DreamcastSlot.Slot2 && SecondaryVmu?.IsDocked == true));
+        var wasDocked = PrimaryVmu.IsDocked;
+        if (wasDocked)
+            PrimaryVmu.DockOrEject();
+
+        var secondaryWasDocked = SecondaryVmu?.IsDocked == true;
+        if (secondaryWasDocked)
+            SecondaryVmu!.DockOrEject();
+
+        Configuration = Configuration with { ExpansionSlots = newExpansionSlots };
+        PrimaryVmu.DreamcastSlot = Configuration.ExpansionSlots is ExpansionSlots.Slot1 or ExpansionSlots.Slot1And2 ? DreamcastSlot.Slot1 : DreamcastSlot.Slot2;
+
+        if (wasDocked)
+            PrimaryVmu.DockOrEject();
+
+        if (secondaryWasDocked)
+            SecondaryVmu?.DockOrEject();
+
+        // Adjust the window size if changing from single slot to 2 slots.
+        var usingBothSlots = newExpansionSlots == ExpansionSlots.Slot1And2;
         if (usingBothSlots != (oldExpansionSlots == ExpansionSlots.Slot1And2))
         {
-            // When going from a single slot to 2 slots or vice-versa, automatically adjust the window size
             if (usingBothSlots)
             {
                 _graphics.PreferredBackBufferHeight *= 2;
@@ -282,44 +312,6 @@ public class Game1 : Game
             _graphics.ApplyChanges();
             UpdateScaleMatrix();
         }
-
-        UpdateVmuExpansionSlots();
-
-        // TODO: maple server needs to be able to operate independently of a single VMU
-        // That implies contents of 2 VMUs need to be able to be stored/sync'd separately.
-        // PrimaryVmu.RestartMapleServer(expansionSlots);
-    }
-
-    private void UpdateVmuExpansionSlots()
-    {
-        var wasDocked = PrimaryVmu.IsDocked;
-        if (wasDocked)
-            PrimaryVmu.DockOrEject();
-
-        var secondaryWasDocked = SecondaryVmu?.IsDocked == true;
-        if (secondaryWasDocked)
-            SecondaryVmu!.DockOrEject();
-
-        switch (Configuration.ExpansionSlots)
-        {
-            case ExpansionSlots.Slot1:
-                PrimaryVmu.DreamcastSlot = DreamcastSlot.Slot1;
-                break;
-            case ExpansionSlots.Slot2:
-                PrimaryVmu.DreamcastSlot = DreamcastSlot.Slot2;
-                break;
-            case ExpansionSlots.Slot1And2:
-                Debug.Assert(SecondaryVmu is not null);
-                PrimaryVmu.DreamcastSlot = DreamcastSlot.Slot1;
-                SecondaryVmu.DreamcastSlot = DreamcastSlot.Slot2;
-                break;
-        }
-
-        if (wasDocked)
-            PrimaryVmu.DockOrEject();
-
-        if (secondaryWasDocked)
-            SecondaryVmu!.DockOrEject();
     }
 
     internal void Configuration_MuteSecondaryVmuAudioChanged(bool newValue)
@@ -489,6 +481,8 @@ public class Game1 : Game
 
         if (UseSecondaryVmu)
             _secondaryVmuPresenter.Update(gameTime, _previousKeys, _previousGamepad, keyboard, gamepad);
+
+        MapleMessageBroker.RefreshIfNeeded();
 
         _previousKeys = keyboard;
         _previousGamepad = gamepad;
