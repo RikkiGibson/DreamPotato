@@ -270,23 +270,24 @@ class UserInterface
 
         LayoutPendingCommandDialog();
 
-        LayoutFastForwardIndicator();
-        LayoutPauseIndicators();
+        LayoutFastForwardOrPauseIndicators();
         LayoutToast();
 }
 
-    private void LayoutPauseIndicators()
+    private void LayoutFastForwardOrPauseIndicators()
     {
-        layoutOnePauseIndicator(_game.PrimaryVmuPresenter, "PrimaryPauseIndicator");
+        layoutOneIndicator(_game.PrimaryVmuPresenter, "PrimaryFastForwardOrPauseIndicator");
         if (_game.SecondaryVmuPresenter is { } secondaryPresenter)
-            layoutOnePauseIndicator(secondaryPresenter, "SecondaryPauseIndicator");
+            layoutOneIndicator(secondaryPresenter, "SecondaryFastForwardOrPauseIndicator");
 
-        static void layoutOnePauseIndicator(VmuPresenter presenter, string windowName)
+        static void layoutOneIndicator(VmuPresenter presenter, string windowName)
         {
-            if (!presenter.EffectivePaused)
+            var message = presenter.EffectivePaused ? "||"
+                : presenter.EffectiveFastForwarding ? ">>"
+                : null;
+            if (message is null)
                 return;
 
-            var message = "||";
             var rectangle = presenter.ContentRectangle;
             var textSize = ImGui.CalcTextSize(message, wrapWidth: rectangle.Width);
             ImGui.SetNextWindowPos(new Numerics.Vector2(x: rectangle.X + 2, y: rectangle.Y + rectangle.Height - textSize.Y - Game1.MenuBarHeight));
@@ -298,24 +299,6 @@ class UserInterface
 
             ImGui.End();
         }
-    }
-
-    private void LayoutFastForwardIndicator()
-    {
-        if (!_game.IsFastForwarding)
-            return;
-
-        var message = ">>";
-        var viewport = _game.GraphicsDevice.Viewport;
-        var textSize = ImGui.CalcTextSize(message, wrapWidth: viewport.Width);
-        ImGui.SetNextWindowPos(new Numerics.Vector2(x: 2, y: viewport.Height - textSize.Y - Game1.MenuBarHeight));
-        ImGui.SetNextWindowSize(textSize + new Numerics.Vector2(10, 20));
-        if (ImGui.Begin("FastForwardIndicator", ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoInputs | ImGuiWindowFlags.NoScrollbar))
-        {
-            ImGui.TextWrapped(message);
-        }
-
-        ImGui.End();
     }
 
     private void LayoutToast()

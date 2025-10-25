@@ -39,6 +39,10 @@ class VmuPresenter
         // A docked VMU should never be treated as paused because it is always responsive to the connected Dreamcast, in terms of LCD messages, saving/loading data, etc.
         => !Vmu.IsDocked && (LocalPaused || _game1.GlobalPaused);
 
+    internal bool EffectiveFastForwarding
+        // A docked VMU should never be treated as fast forwarding for the same reason it is not treated as paused.
+        => !Vmu.IsDocked && _game1.IsFastForwarding;
+
     private bool IsFastForwarding => _game1.IsFastForwarding;
 
     private readonly Color[] _vmuScreenData = new Color[Display.ScreenWidth * Display.ScreenHeight];
