@@ -20,7 +20,25 @@ class VmuPresenter
     private readonly Game1 _game1;
     private Configuration Configuration => _game1.Configuration;
     private ColorPalette ColorPalette => _game1.ColorPalette;
-    private bool Paused => _game1.Paused;
+
+    /// <summary>Current VMU pause flag.</summary>
+    internal bool LocalPaused
+    {
+        get;
+        set
+        {
+            if (Vmu.IsDocked && value)
+                throw new InvalidOperationException();
+
+            field = value;
+        }
+    }
+
+    /// <summary>Are we paused either locally or globally?</summary>
+    internal bool EffectivePaused
+        // A docked VMU should never be treated as paused because it is always responsive to the connected Dreamcast, in terms of LCD messages, saving/loading data, etc.
+        => !Vmu.IsDocked && (LocalPaused || _game1.GlobalPaused);
+
     private bool IsFastForwarding => _game1.IsFastForwarding;
 
     private readonly Color[] _vmuScreenData = new Color[Display.ScreenWidth * Display.ScreenHeight];
@@ -35,6 +53,8 @@ class VmuPresenter
     internal readonly Texture2D _vmuMarginTexture;
 
     private Matrix _spriteTransformMatrix;
+    internal Rectangle ContentRectangle { get; private set; }
+
     private int SleepHeldFrameCount;
 
     private const int MinVmuScale = 3;
@@ -76,6 +96,20 @@ class VmuPresenter
 
     internal void Update(GameTime gameTime, KeyboardState previousKeys, GamePadState previousGamepad, KeyboardState keyboard, GamePadState gamepad)
     {
+        if (!Vmu.IsDocked && ButtonChecker.IsNewlyPressed(VmuButton.Pause, previousKeys, keyboard, previousGamepad, gamepad))
+            LocalPaused = !LocalPaused;
+
+        if (ButtonChecker.IsNewlyPressed(VmuButton.SaveState, previousKeys, keyboard, previousGamepad, gamepad))
+            Vmu.SaveState(id: "0");
+
+        if (ButtonChecker.IsNewlyPressed(VmuButton.LoadState, previousKeys, keyboard, previousGamepad, gamepad))
+        {
+            if (Vmu.LoadStateById(id: "0", saveOopsFile: true) is (false, var error))
+            {
+                _game1.UserInterface.ShowToast(error ?? $"An unknown error occurred in {nameof(Vmu.LoadStateById)}.");
+            }
+        }
+
         var newP3 = new Core.SFRs.P3()
         {
             Up = !ButtonChecker.IsPressed(VmuButton.Up, keyboard, gamepad),
@@ -109,8 +143,7 @@ class VmuPresenter
         {
             // Do not toggle insert/eject via sleep until sleep button is released and re-pressed
             SleepHeldFrameCount = -1;
-
-            Vmu.DockOrEject();
+            DockOrEject();
         }
 
         // Let any button press wake the VMU from sleep
@@ -121,11 +154,17 @@ class VmuPresenter
 
         Vmu._cpu.SFRs.P3 = newP3;
 
-        var rate = Paused ? 0 :
+        var rate = EffectivePaused ? 0 :
             IsFastForwarding ? gameTime.ElapsedGameTime.Ticks * 2 :
             gameTime.ElapsedGameTime.Ticks;
 
         Vmu._cpu.Run(rate);
+    }
+
+    internal void Reset()
+    {
+        Vmu.Reset(Configuration.AutoInitializeDate ? DateTimeOffset.Now : null);
+        LocalPaused = false;
     }
 
     internal void Draw(SpriteBatch spriteBatch)
@@ -238,6 +277,7 @@ class VmuPresenter
             ? Matrix.CreateScale(minScale, minScale, 1)
             : Matrix.CreateScale(widthScale, heightScale, 1);
         _spriteTransformMatrix = scaleTransform * getTranslationTransform();
+        ContentRectangle = targetRectangle;
 
         Matrix getTranslationTransform()
         {
@@ -267,4 +307,12 @@ class VmuPresenter
 
     internal void UpdateVolume(int volume)
         => Vmu.Audio.Volume = volume;
+
+    internal void DockOrEject()
+    {
+        Vmu.DockOrEject();
+        // Unpause when docking, so that we will be unpaused already when ejecting.
+        if (Vmu.IsDocked)
+            LocalPaused = false;
+    }
 }

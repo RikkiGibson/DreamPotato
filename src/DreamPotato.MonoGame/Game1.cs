@@ -20,10 +20,13 @@ public class Game1 : Game
     private readonly string? _commandLineFilePath;
 
     internal Vmu PrimaryVmu => _primaryVmuPresenter.Vmu;
+    internal VmuPresenter PrimaryVmuPresenter => _primaryVmuPresenter;
 
-    [MemberNotNullWhen(true, nameof(SecondaryVmu))]
+    [MemberNotNullWhen(true, nameof(SecondaryVmu), nameof(SecondaryVmuPresenter))]
     internal bool UseSecondaryVmu => Configuration.ExpansionSlots == ExpansionSlots.Slot1And2;
-    internal Vmu? SecondaryVmu => UseSecondaryVmu ? _secondaryVmuPresenter.Vmu : null;
+    internal Vmu? SecondaryVmu => SecondaryVmuPresenter?.Vmu;
+    internal VmuPresenter? SecondaryVmuPresenter => UseSecondaryVmu ? _secondaryVmuPresenter : null;
+    internal UserInterface UserInterface => _userInterface;
 
     internal const int MenuBarHeight = 20;
 
@@ -42,7 +45,9 @@ public class Game1 : Game
     // Dynamic state
     private KeyboardState _previousKeys;
     private GamePadState _previousGamepad;
-    internal bool Paused;
+
+    /// <summary>Global pause flag.</summary>
+    internal bool GlobalPaused;
 
     /// <summary>Note: comprises the whole screen region which secondary VMU menus can expand into.</summary>
     internal Rectangle SecondaryMenuBarRectangle;
@@ -84,19 +89,21 @@ public class Game1 : Game
         _userInterface = new UserInterface(this);
         _userInterface.Initialize(textures.IconConnectedTexture);
 
-        var date = DateTime.Now;
         MapleMessageBroker = new MapleMessageBroker(LogLevel.Default);
         MapleMessageBroker.RestartServer(Configuration.DreamcastPort);
-        var primaryVmu = new Vmu(MapleMessageBroker) { DreamcastSlot = Configuration.ExpansionSlots is ExpansionSlots.Slot1 or ExpansionSlots.Slot1And2 ? DreamcastSlot.Slot1 : DreamcastSlot.Slot2 };
-        initializeVmu(primaryVmu);
-        primaryVmu.UnsavedChangesDetected += Vmu_UnsavedChangesDetected;
         RecentFilesInfo = RecentFilesInfo.Load();
 
-        var secondaryVmu = new Vmu(MapleMessageBroker) { DreamcastSlot = DreamcastSlot.Slot2 };
-        initializeVmu(secondaryVmu);
-
+        var primaryVmu = new Vmu(MapleMessageBroker) { DreamcastSlot = Configuration.ExpansionSlots is ExpansionSlots.Slot1 or ExpansionSlots.Slot1And2 ? DreamcastSlot.Slot1 : DreamcastSlot.Slot2 };
+        primaryVmu.UnsavedChangesDetected += Vmu_UnsavedChangesDetected;
         _primaryVmuPresenter = new VmuPresenter(this, primaryVmu, textures, _graphics, Configuration.PrimaryInput);
+
+        var secondaryVmu = new Vmu(MapleMessageBroker) { DreamcastSlot = DreamcastSlot.Slot2 };
         _secondaryVmuPresenter = new VmuPresenter(this, secondaryVmu, textures, _graphics, Configuration.SecondaryInput);
+
+        var date = DateTimeOffset.Now;
+        initializeVmu(_primaryVmuPresenter, date, _commandLineFilePath ?? RecentFilesInfo.PrimaryVmuMostRecent);
+        initializeVmu(_secondaryVmuPresenter, date, RecentFilesInfo.SecondaryVmuMostRecent);
+
         UpdateScaleMatrix();
         UpdateAudioVolume();
 
@@ -115,17 +122,20 @@ public class Game1 : Game
                 Window.Position = new Point(windowPosition.X, windowPosition.Y);
         }
 
-        LoadVmuFiles(primaryVmu, _commandLineFilePath ?? RecentFilesInfo.PrimaryVmuMostRecent);
-        LoadVmuFiles(secondaryVmu, RecentFilesInfo.SecondaryVmuMostRecent);
         _spriteBatch = new SpriteBatch(GraphicsDevice);
 
         base.Initialize();
 
-        void initializeVmu(Vmu vmu)
+        void initializeVmu(VmuPresenter presenter, DateTimeOffset date, string? vmsOrVmuFilePath)
         {
+            var vmu = presenter.Vmu;
             vmu.InitializeFlash(date);
             if (Configuration.AutoInitializeDate)
                 vmu.InitializeDate(date);
+
+            vmu.LoadRom();
+            if (vmsOrVmuFilePath != null)
+                LoadAndStartVmsOrVmuFile(presenter, vmsOrVmuFilePath);
         }
     }
 
@@ -135,7 +145,7 @@ public class Game1 : Game
             && _userInterface.PendingCommand is not { Kind: PendingCommandKind.Exit, State: ConfirmationState.Confirmed })
         {
             args.Cancel = true;
-            _userInterface.ShowConfirmCommandDialog(PendingCommandKind.Exit, vmu: null);
+            _userInterface.ShowConfirmCommandDialog(PendingCommandKind.Exit, vmuPresenter: null);
         }
 
         // Save window size and position on exit
@@ -175,24 +185,19 @@ public class Game1 : Game
         Window.Title = $"{star}{fileDesc}DreamPotato";
     }
 
-    private void LoadVmuFiles(Vmu vmu, string? vmsOrVmuFilePath)
+    internal void LoadNewVmu(VmuPresenter presenter)
     {
-        vmu.LoadRom();
-        if (vmsOrVmuFilePath != null)
-            LoadAndStartVmsOrVmuFile(vmu, vmsOrVmuFilePath);
-    }
-
-    internal void LoadNewVmu(Vmu vmu)
-    {
+        var vmu = presenter.Vmu;
         vmu.LoadNewVmu(date: DateTime.Now, autoInitializeRTCDate: Configuration.AutoInitializeDate);
-        Paused = false;
+        presenter.LocalPaused = false;
         UpdateWindowTitle();
-        RecentFilesInfo = RecentFilesInfo.AddRecentFile(forPrimary: vmu == PrimaryVmu, newRecentFile: null);
+        RecentFilesInfo = RecentFilesInfo.AddRecentFile(forPrimary: presenter == _primaryVmuPresenter, newRecentFile: null);
         RecentFilesInfo.Save();
     }
 
-    internal void LoadAndStartVmsOrVmuFile(Vmu vmu, string filePath)
+    internal void LoadAndStartVmsOrVmuFile(VmuPresenter presenter, string filePath)
     {
+        var vmu = presenter.Vmu;
         var extension = Path.GetExtension(filePath);
         if (extension.Equals(".vms", StringComparison.OrdinalIgnoreCase))
         {
@@ -209,7 +214,7 @@ public class Game1 : Game
             throw new ArgumentException($"Cannot load '{filePath}' because it is not a '.vms', '.vmu', or '.bin' file.");
         }
 
-        Paused = false;
+        presenter.LocalPaused = false;
         UpdateWindowTitle();
         RecentFilesInfo = RecentFilesInfo.AddRecentFile(forPrimary: vmu == PrimaryVmu, filePath);
         RecentFilesInfo.Save();
@@ -244,12 +249,6 @@ public class Game1 : Game
         UpdateWindowTitle();
         RecentFilesInfo = RecentFilesInfo.AddRecentFile(forPrimary: vmu == PrimaryVmu, vmuFilePath);
         RecentFilesInfo.Save();
-    }
-
-    internal void Reset(Vmu vmu)
-    {
-        vmu.Reset(Configuration.AutoInitializeDate ? DateTimeOffset.Now : null);
-        Paused = false;
     }
 
     internal void Configuration_AutoInitializeDateChanged(bool newValue)
@@ -474,29 +473,7 @@ public class Game1 : Game
         var keyboard = Keyboard.GetState();
         var gamepad = GamePad.GetState(PlayerIndex.One);
 
-        // TODO: most operations which are performed on a single VMU, should be extracted to VmuPresenter.
-
-        // Only respect a pause command if VMU is in the ejected state
-        var buttonChecker = _primaryVmuPresenter.ButtonChecker;
-        if (!PrimaryVmu.IsDocked && buttonChecker.IsNewlyPressed(VmuButton.Pause, _previousKeys, keyboard, _previousGamepad, gamepad))
-            Paused = !Paused;
-
-        // TODO: system for selecting save slots etc
-        if (buttonChecker.IsNewlyPressed(VmuButton.SaveState, _previousKeys, keyboard, _previousGamepad, gamepad))
-            PrimaryVmu.SaveState(id: "0");
-
-        if (buttonChecker.IsNewlyPressed(VmuButton.LoadState, _previousKeys, keyboard, _previousGamepad, gamepad))
-        {
-            if (PrimaryVmu.LoadStateById(id: "0", saveOopsFile: true) is (false, var error))
-            {
-                _userInterface.ShowToast(error ?? $"An unknown error occurred in {nameof(PrimaryVmu.LoadStateById)}.");
-            }
-        }
-
         _primaryVmuPresenter.Update(gameTime, _previousKeys, _previousGamepad, keyboard, gamepad);
-        if (PrimaryVmu.IsDocked)
-            Paused = false;
-
         if (UseSecondaryVmu)
             _secondaryVmuPresenter.Update(gameTime, _previousKeys, _previousGamepad, keyboard, gamepad);
 
@@ -507,8 +484,23 @@ public class Game1 : Game
         base.Update(gameTime);
     }
 
+    /// <summary>Note: fast forwarding is a global command because execution of primary+secondary VMUs are synchronized.</summary>
     internal bool IsFastForwarding
-        => _primaryVmuPresenter.ButtonChecker.IsPressed(VmuButton.FastForward, _previousKeys, _previousGamepad);
+    {
+        get
+        {
+            if (GlobalPaused)
+                return false;
+
+            if (_primaryVmuPresenter.ButtonChecker.IsPressed(VmuButton.FastForward, _previousKeys, _previousGamepad))
+                return true;
+
+            if (SecondaryVmuPresenter?.ButtonChecker.IsPressed(VmuButton.FastForward, _previousKeys, _previousGamepad) == true)
+                return true;
+
+            return false;
+        }
+    }
 
     protected override void Draw(GameTime gameTime)
     {
