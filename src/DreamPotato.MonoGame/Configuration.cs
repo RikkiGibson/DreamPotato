@@ -64,15 +64,22 @@ public record Configuration(
         new KeyMapping { SourceKey = Keys.L, TargetButton = VmuButton.B },
         new KeyMapping { SourceKey = Keys.I, TargetButton = VmuButton.Mode },
         new KeyMapping { SourceKey = Keys.J, TargetButton = VmuButton.Sleep },
+    ];
 
-        // TODO: emulator commands need to be extracted and only be present for "slot 1 configuration".
-        // Save/Load/Pause/Fast Forward are all universal commands across slots.
+    public static readonly ImmutableArray<KeyMapping> KeyPreset_MappedStateCommands = [
         new KeyMapping { SourceKey = Keys.Insert, TargetButton = VmuButton.InsertEject },
-
         new KeyMapping { SourceKey = Keys.F5, TargetButton = VmuButton.SaveState },
         new KeyMapping { SourceKey = Keys.F8, TargetButton = VmuButton.LoadState },
         new KeyMapping { SourceKey = Keys.F10, TargetButton = VmuButton.Pause },
         new KeyMapping { SourceKey = Keys.Tab, TargetButton = VmuButton.FastForward },
+    ];
+
+    public static readonly ImmutableArray<KeyMapping> KeyPreset_UnmappedStateCommands = [
+        new KeyMapping { SourceKey = Keys.None, TargetButton = VmuButton.InsertEject },
+        new KeyMapping { SourceKey = Keys.None, TargetButton = VmuButton.SaveState },
+        new KeyMapping { SourceKey = Keys.None, TargetButton = VmuButton.LoadState },
+        new KeyMapping { SourceKey = Keys.None, TargetButton = VmuButton.Pause },
+        new KeyMapping { SourceKey = Keys.None, TargetButton = VmuButton.FastForward },
     ];
 
     public static readonly ImmutableArray<KeyMapping> KeyPreset_Arrows = [
@@ -80,22 +87,23 @@ public record Configuration(
         new KeyMapping { SourceKey = Keys.Down, TargetButton = VmuButton.Down },
         new KeyMapping { SourceKey = Keys.Left, TargetButton = VmuButton.Left },
         new KeyMapping { SourceKey = Keys.Right, TargetButton = VmuButton.Right },
-        new KeyMapping { SourceKey = Keys.C, TargetButton = VmuButton.A },
+        new KeyMapping { SourceKey = Keys.Z, TargetButton = VmuButton.A },
         new KeyMapping { SourceKey = Keys.X, TargetButton = VmuButton.B },
-        new KeyMapping { SourceKey = Keys.D, TargetButton = VmuButton.Mode },
-        new KeyMapping { SourceKey = Keys.S, TargetButton = VmuButton.Sleep },
-
-        new KeyMapping { SourceKey = Keys.Insert, TargetButton = VmuButton.InsertEject },
-
-        new KeyMapping { SourceKey = Keys.F5, TargetButton = VmuButton.SaveState },
-        new KeyMapping { SourceKey = Keys.F8, TargetButton = VmuButton.LoadState },
-        new KeyMapping { SourceKey = Keys.F10, TargetButton = VmuButton.Pause },
-        new KeyMapping { SourceKey = Keys.Tab, TargetButton = VmuButton.FastForward },
+        new KeyMapping { SourceKey = Keys.C, TargetButton = VmuButton.Sleep },
+        new KeyMapping { SourceKey = Keys.V, TargetButton = VmuButton.Mode },
     ];
 
-    public static readonly ImmutableArray<(string name, string description, ImmutableArray<KeyMapping> mappings)> AllKeyPresets = [
-        ("WASD", "Uses WASD for D-pad and IJKL for buttons", KeyPreset_WASD),
-        ("Arrows", "Uses arrows for D-pad and XCSD for buttons", KeyPreset_Arrows)
+    public static readonly ImmutableArray<KeyMapping> DefaultPrimaryKeyPreset = [.. KeyPreset_WASD, .. KeyPreset_MappedStateCommands];
+    public static readonly ImmutableArray<KeyMapping> DefaultSecondaryKeyPreset = [.. KeyPreset_WASD, .. KeyPreset_UnmappedStateCommands];
+
+    public static readonly ImmutableArray<(string name, string description, ImmutableArray<KeyMapping> mappings)> AllPrimaryKeyPresets = [
+        ("WASD", "Uses WASD for D-pad and IJKL for buttons", DefaultPrimaryKeyPreset),
+        ("Arrows", "Uses arrows for D-pad and ZXCV for buttons", [.. KeyPreset_Arrows, .. KeyPreset_MappedStateCommands])
+    ];
+
+    public static readonly ImmutableArray<(string name, string description, ImmutableArray<KeyMapping> mappings)> AllSecondaryKeyPresets = [
+        ("WASD", "Uses WASD for D-pad and IJKL for buttons", DefaultSecondaryKeyPreset),
+        ("Arrows", "Uses arrows for D-pad and ZXCV for buttons", [.. KeyPreset_Arrows, .. KeyPreset_UnmappedStateCommands])
     ];
 
     public static readonly ImmutableArray<ButtonMapping> ButtonPreset_Default = [
@@ -143,13 +151,13 @@ public record Configuration(
 
     private static readonly InputMappings DefaultPrimaryInput = new InputMappings()
     {
-        KeyMappings = KeyPreset_WASD,
+        KeyMappings = DefaultPrimaryKeyPreset,
         ButtonMappings = ButtonPreset_Default,
     };
 
     private static readonly InputMappings DefaultSecondaryInput = new InputMappings()
     {
-        KeyMappings = KeyPreset_Arrows,
+        KeyMappings = DefaultSecondaryKeyPreset,
         ButtonMappings = ButtonPreset_Unmapped
     };
 

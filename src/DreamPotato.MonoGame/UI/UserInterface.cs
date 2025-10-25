@@ -664,11 +664,12 @@ class UserInterface
 
         bool doOpenEditKey = false;
 
-        var title = _game.UseSecondaryVmu switch
+        var editingPrimaryVmu = _mappingEditState.TargetVmu == _game.PrimaryVmu;
+        var title = (_game.UseSecondaryVmu, editingPrimaryVmu) switch
         {
-            false => "Keyboard Config",
-            true when _mappingEditState.TargetVmu == _game.PrimaryVmu => "Slot 1 Keyboard Config",
-            _ => "Slot 2 Keyboard Config"
+            (false, _) => "Keyboard Config",
+            (true, true) => "Slot 1 Keyboard Config",
+            (true, false) => "Slot 2 Keyboard Config"
         };
         ImGui.Begin(title, ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.Modal);
         {
@@ -693,16 +694,17 @@ class UserInterface
             ImGui.SeparatorText("Presets");
             ImGui.PushID("KeyPresetCombo");
             ImGui.SetNextItemWidth(80);
-            if (ImGui.BeginCombo(label: "", preview_value: Configuration.AllKeyPresets[_mappingEditState.PresetIndex].name))
+            var keyPresets = editingPrimaryVmu ? Configuration.AllPrimaryKeyPresets : Configuration.AllSecondaryKeyPresets;
+            if (ImGui.BeginCombo(label: "", preview_value: keyPresets[_mappingEditState.PresetIndex].name))
             {
-                for (int i = 0; i < Configuration.AllKeyPresets.Length; i++)
+                for (int i = 0; i < keyPresets.Length; i++)
                 {
-                    if (ImGui.Selectable(Configuration.AllKeyPresets[i].name))
+                    if (ImGui.Selectable(keyPresets[i].name))
                         _mappingEditState.PresetIndex = i;
 
                     if (ImGui.BeginItemTooltip())
                     {
-                        ImGui.Text(Configuration.AllKeyPresets[i].description);
+                        ImGui.Text(keyPresets[i].description);
                         ImGui.EndTooltip();
                     }
                 }
@@ -712,7 +714,7 @@ class UserInterface
 
             if (ImGui.BeginItemTooltip())
             {
-                ImGui.Text(Configuration.AllKeyPresets[_mappingEditState.PresetIndex].description);
+                ImGui.Text(keyPresets[_mappingEditState.PresetIndex].description);
                 ImGui.EndTooltip();
             }
 
@@ -721,7 +723,7 @@ class UserInterface
 
             if (ImGui.Button("Apply"))
             {
-                var preset = Configuration.AllKeyPresets[_mappingEditState.PresetIndex].mappings;
+                var preset = keyPresets[_mappingEditState.PresetIndex].mappings;
                 _mappingEditState.KeyMappings = [.. preset];
             }
 
@@ -870,23 +872,33 @@ class UserInterface
             if (_mappingEditState.KeyMappings is not { } keyMappings)
                 throw new InvalidOperationException();
 
+            ImGui.Text("Press a key.");
             ImGui.Text($"Target button: {keyMappings[_mappingEditState.EditedIndex].TargetButton}");
-            ImGui.Text("Press a key or press ESC to cancel.");
+
+            if (ImGui.Button("Cancel (ESC)"))
+                ImGui.CloseCurrentPopup();
+
+            ImGui.SameLine();
+            if (ImGui.Button("Unmap (DEL)"))
+                mapKey(Keys.None);
 
             var keyboard = Keyboard.GetState();
             if (keyboard.IsKeyDown(Keys.Escape))
-            {
                 ImGui.CloseCurrentPopup();
-            }
-            else if (keyboard.GetPressedKeyCount() != 0)
+            else if (keyboard.IsKeyDown(Keys.Delete))
+                mapKey(Keys.None);
+            else if (keyboard.GetPressedKeyCount() == 1)
+                mapKey(keyboard.GetPressedKeys()[0]);
+
+            ImGui.EndPopup();
+
+            void mapKey(Keys key)
             {
-                var key = keyboard.GetPressedKeys()[0];
                 keyMappings[_mappingEditState.EditedIndex] = keyMappings[_mappingEditState.EditedIndex] with { SourceKey = key };
                 ImGui.CloseCurrentPopup();
             }
-
-            ImGui.EndPopup();
         }
+
     }
 
     private void LayoutEditButton()
@@ -896,27 +908,35 @@ class UserInterface
             if (_mappingEditState.ButtonMappings is not { } buttonMappings)
                 throw new InvalidOperationException();
 
+            ImGui.Text("Press a button.");
             ImGui.Text($"Target button: {buttonMappings[_mappingEditState.EditedIndex].TargetButton}");
-            ImGui.Text("Press a button or press ESC to cancel.");
 
-            if (Keyboard.GetState().IsKeyDown(Keys.Escape))
-            {
+            if (ImGui.Button("Cancel (ESC)"))
                 ImGui.CloseCurrentPopup();
-                ImGui.EndPopup();
-                return;
-            }
+
+            ImGui.SameLine();
+            if (ImGui.Button("Unmap (DEL)"))
+                mapButton(Buttons.None);
+
+            var keyboard = Keyboard.GetState();
+            if (keyboard.IsKeyDown(Keys.Escape))
+                ImGui.CloseCurrentPopup();
+
+            if (keyboard.IsKeyDown(Keys.Delete))
+                mapButton(Buttons.None);
 
             var gamepad = GamePad.GetState(PlayerIndex.One);
             var sourceButton = Enum.GetValues<Buttons>().FirstOrDefault(b => gamepad.IsButtonDown(b));
-            if (sourceButton == default)
-            {
-                ImGui.EndPopup();
-                return;
-            }
+            if (sourceButton != default)
+                mapButton(sourceButton);
 
-            buttonMappings[_mappingEditState.EditedIndex] = buttonMappings[_mappingEditState.EditedIndex] with { SourceButton = sourceButton };
-            ImGui.CloseCurrentPopup();
             ImGui.EndPopup();
+
+            void mapButton(Buttons button)
+            {
+                buttonMappings[_mappingEditState.EditedIndex] = buttonMappings[_mappingEditState.EditedIndex] with { SourceButton = button };
+                ImGui.CloseCurrentPopup();
+            }
         }
     }
 
