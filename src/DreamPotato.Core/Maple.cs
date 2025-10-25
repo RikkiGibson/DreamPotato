@@ -125,6 +125,7 @@ enum MapleMessageType : byte
 enum MapleFunction
 {
     None = 0,
+    Vibration = 0x0001_0000,
     Input = 0x0100_0000, // valid to combine with 'GetCondition'
     Storage = 0x0200_0000, // valid to combine with 'ReadBlock'/'WriteBlock'/'CompleteWrite'
     LCD = 0x0400_0000, // valid to combine with 'WriteBlock'
