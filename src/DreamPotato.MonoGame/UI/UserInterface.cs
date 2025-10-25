@@ -36,12 +36,13 @@ enum PendingCommandKind
     NewVmu,
     OpenVms,
     OpenVmu,
+    Reset,
     Exit
 }
 
 readonly struct PendingCommand
 {
-    private PendingCommand(ConfirmationState confirmationState, PendingCommandKind kind)
+    private PendingCommand(ConfirmationState confirmationState, PendingCommandKind kind, VmuPresenter? vmuPresenter)
     {
         // If we are showing dialog or confirming something, there needs to be an actual command
         if (confirmationState is not ConfirmationState.None && kind is PendingCommandKind.None)
@@ -49,14 +50,49 @@ readonly struct PendingCommand
 
         State = confirmationState;
         Kind = kind;
+        VmuPresenter = vmuPresenter;
     }
 
     public ConfirmationState State { get; }
     public PendingCommandKind Kind { get; }
-    public string? FilePath { get; }
+    public VmuPresenter? VmuPresenter { get; }
 
-    public static PendingCommand ShowDialog(PendingCommandKind kind) => new(ConfirmationState.ShowDialog, kind);
-    public PendingCommand Confirmed() => new(ConfirmationState.Confirmed, Kind);
+    public static PendingCommand ShowDialog(PendingCommandKind kind, VmuPresenter? vmuPresenter) => new(ConfirmationState.ShowDialog, kind, vmuPresenter);
+    public PendingCommand Confirmed() => new(ConfirmationState.Confirmed, Kind, VmuPresenter);
+}
+
+struct MappingEditState
+{
+    private object? _editedMappings;
+
+    /// <summary>Which preset is currently selected in the combo box?</summary>
+    public int PresetIndex;
+
+    /// <summary>Which element of '_editedMappings' are we currently editing the key or button for?</summary>
+    public int EditedIndex;
+
+    /// <summary>Which VMU are we editing mappings for?</summary>
+    public Vmu? TargetVmu { get; }
+
+    private MappingEditState(object editedMappings, Vmu targetVmu)
+    {
+        if (editedMappings is not (List<KeyMapping> or List<ButtonMapping>))
+            throw new ArgumentException(null, nameof(editedMappings));
+
+        _editedMappings = editedMappings;
+        PresetIndex = 0;
+        EditedIndex = -1;
+        TargetVmu = targetVmu;
+    }
+
+    public static MappingEditState EditKeyMappings(ImmutableArray<KeyMapping> mappings, Vmu targetVmu)
+        => new(mappings.ToList(), targetVmu);
+
+    public static MappingEditState EditButtonMappings(ImmutableArray<ButtonMapping> mappings, Vmu targetVmu)
+        => new(mappings.ToList(), targetVmu);
+
+    public List<KeyMapping>? KeyMappings { get => _editedMappings as List<KeyMapping>; set => _editedMappings = value; }
+    public List<ButtonMapping>? ButtonMappings { get => _editedMappings as List<ButtonMapping>; set => _editedMappings = value; }
 }
 
 class UserInterface
@@ -67,14 +103,7 @@ class UserInterface
     private nint _rawIconConnectedTexture;
     private GCHandle _iniFilenameHandle;
 
-    private bool _pauseWhenClosed;
-
-    private int _editedMappingIndex = -1;
-    private List<KeyMapping>? _editingKeyMappings;
-    private List<ButtonMapping>? _editingButtonMappings;
-
-    private int _buttonPresetIndex = 0;
-    private int _keyPresetIndex = 0;
+    private MappingEditState _mappingEditState;
 
     private string? _toastMessage;
     private int _toastDisplayFrames;
@@ -141,61 +170,68 @@ class UserInterface
     }
 
     /// <summary>Show a modal asking user to confirm a "destructive" command</summary>
-    internal void ShowConfirmCommandDialog(PendingCommandKind commandKind)
+    internal void ShowConfirmCommandDialog(PendingCommandKind commandKind, VmuPresenter? vmuPresenter)
     {
         Pause();
-        PendingCommand = PendingCommand.ShowDialog(commandKind);
+        PendingCommand = PendingCommand.ShowDialog(commandKind, vmuPresenter);
     }
 
     private void Pause()
-    {
-        if (_game.Paused)
-            return;
+        => _game.GlobalPaused = true;
 
-        // TODO: if user presses insert/eject while in menus we can end up unpausing when we shouldn't.
-        _pauseWhenClosed = _game.Paused;
-        _game.Paused = true;
-    }
-
-    internal void NewVmu()
+    internal void NewVmu(VmuPresenter presenter)
     {
-        if (_game.Vmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.NewVmu, State: ConfirmationState.Confirmed })
+        var vmu = presenter.Vmu;
+        if (vmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.NewVmu, State: ConfirmationState.Confirmed })
         {
-            ShowConfirmCommandDialog(PendingCommandKind.NewVmu);
+            ShowConfirmCommandDialog(PendingCommandKind.NewVmu, presenter);
             return;
         }
 
-        _game.LoadNewVmu();
+        _game.LoadNewVmu(presenter);
     }
 
-    internal void OpenVmsDialog()
+    internal void OpenVmsDialog(VmuPresenter presenter)
     {
-        if (_game.Vmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.OpenVms, State: ConfirmationState.Confirmed })
+        var vmu = presenter.Vmu;
+        if (vmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.OpenVms, State: ConfirmationState.Confirmed })
         {
-            ShowConfirmCommandDialog(PendingCommandKind.OpenVms);
+            ShowConfirmCommandDialog(PendingCommandKind.OpenVms, presenter);
             return;
         }
 
         var result = Dialog.FileOpen("vms", defaultPath: null);
         if (result.IsOk)
         {
-            _game.LoadAndStartVmsOrVmuFile(result.Path);
+            _game.LoadAndStartVmsOrVmuFile(presenter, result.Path);
         }
     }
 
-    internal void OpenVmuDialog()
+    internal void OpenVmuDialog(VmuPresenter presenter)
     {
-        if (_game.Vmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.OpenVmu, State: ConfirmationState.Confirmed })
+        var vmu = presenter.Vmu;
+        if (vmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.OpenVmu, State: ConfirmationState.Confirmed })
         {
-            ShowConfirmCommandDialog(PendingCommandKind.OpenVmu);
+            ShowConfirmCommandDialog(PendingCommandKind.OpenVmu, presenter);
             return;
         }
 
         var result = Dialog.FileOpen("vmu,bin", defaultPath: null);
         if (result.IsOk)
         {
-            _game.LoadAndStartVmsOrVmuFile(result.Path);
+            _game.LoadAndStartVmsOrVmuFile(presenter, result.Path);
         }
+    }
+
+    internal void Reset(VmuPresenter presenter)
+    {
+        if (PendingCommand is not { Kind: PendingCommandKind.Reset, State: ConfirmationState.Confirmed })
+        {
+            ShowConfirmCommandDialog(PendingCommandKind.Reset, presenter);
+            return;
+        }
+
+        presenter.Reset();
     }
 
     private void OpenPopupAndPause(string name)
@@ -211,9 +247,7 @@ class UserInterface
     }
 
     private void Unpause()
-    {
-        _game.Paused = _pauseWhenClosed;
-    }
+        => _game.GlobalPaused = false;
 
     private void ClosePopupAndUnpause()
     {
@@ -223,7 +257,9 @@ class UserInterface
 
     private void LayoutImpl()
     {
-        LayoutMenuBar();
+        LayoutPrimaryMenuBar();
+        LayoutSecondaryMenuBar();
+
         LayoutSettings();
 
         LayoutKeyMapping();
@@ -232,31 +268,37 @@ class UserInterface
         LayoutButtonMapping();
         LayoutEditButton();
 
-        LayoutResetModal();
         LayoutPendingCommandDialog();
 
-        LayoutFastForwardOrPauseIndicator();
+        LayoutFastForwardOrPauseIndicators();
         LayoutToast();
-    }
+}
 
-    private void LayoutFastForwardOrPauseIndicator()
+    private void LayoutFastForwardOrPauseIndicators()
     {
-        var message = _game.Paused ? "||" :
-            _game.IsFastForwarding ? ">>" :
-            null;
-        if (message is null)
-            return;
+        layoutOneIndicator(_game.PrimaryVmuPresenter, "PrimaryFastForwardOrPauseIndicator");
+        if (_game.SecondaryVmuPresenter is { } secondaryPresenter)
+            layoutOneIndicator(secondaryPresenter, "SecondaryFastForwardOrPauseIndicator");
 
-        var textSize = ImGui.CalcTextSize(message, wrapWidth: Game1.TotalContentWidth);
-        var windowHeight = _game.GraphicsDevice.Viewport.Height;
-        ImGui.SetNextWindowPos(new Numerics.Vector2(x: 2, y: windowHeight - textSize.Y - 20));
-        ImGui.SetNextWindowSize(textSize + new Numerics.Vector2(10, 20));
-        if (ImGui.Begin("FastForwardOrPauseIndicator", ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoInputs | ImGuiWindowFlags.NoScrollbar))
+        static void layoutOneIndicator(VmuPresenter presenter, string windowName)
         {
-            ImGui.TextWrapped(message);
-        }
+            var message = presenter.EffectivePaused ? "||"
+                : presenter.EffectiveFastForwarding ? ">>"
+                : null;
+            if (message is null)
+                return;
 
-        ImGui.End();
+            var rectangle = presenter.ContentRectangle;
+            var textSize = ImGui.CalcTextSize(message, wrapWidth: rectangle.Width);
+            ImGui.SetNextWindowPos(new Numerics.Vector2(x: rectangle.X + 2, y: rectangle.Y + rectangle.Height - textSize.Y - Game1.MenuBarHeight));
+            ImGui.SetNextWindowSize(textSize + new Numerics.Vector2(10, 20));
+            if (ImGui.Begin(windowName, ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoInputs | ImGuiWindowFlags.NoScrollbar))
+            {
+                ImGui.TextWrapped(message);
+            }
+
+            ImGui.End();
+        }
     }
 
     private void LayoutToast()
@@ -264,19 +306,23 @@ class UserInterface
         if (_toastDisplayFrames == 0)
             return;
 
+        if (_toastMessage is null)
+            throw new InvalidOperationException();
+
         _toastDisplayFrames--;
 
         var doFadeout = _toastDisplayFrames < ToastBeginFadeoutFrames;
         if (doFadeout)
             ImGui.PushStyleVar(ImGuiStyleVar.Alpha, ((float)_toastDisplayFrames) / ToastBeginFadeoutFrames);
 
-        var textSize = ImGui.CalcTextSize(_toastMessage, wrapWidth: Game1.TotalContentWidth);
-        var windowHeight = _game.GraphicsDevice.Viewport.Height;
-        ImGui.SetNextWindowPos(new Numerics.Vector2(x: 2, y: windowHeight - textSize.Y - 20));
+        var viewport = _game.GraphicsDevice.Viewport;
+        var textSize = ImGui.CalcTextSize(text: _toastMessage, wrapWidth: viewport.Width);
+        // TODO probably userinterface should own the const MenuBarHeight
+        ImGui.SetNextWindowPos(new Numerics.Vector2(x: 2, y: viewport.Height - textSize.Y - Game1.MenuBarHeight));
         ImGui.SetNextWindowSize(textSize + new Numerics.Vector2(10, 20));
         if (ImGui.Begin("Toast", ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoInputs | ImGuiWindowFlags.NoScrollbar))
         {
-            ImGui.TextWrapped(_toastMessage);
+            ImGui.TextWrapped(_toastMessage.Replace("%", "%%"));
         }
 
         ImGui.End();
@@ -285,32 +331,14 @@ class UserInterface
             ImGui.PopStyleVar();
     }
 
-    private void LayoutMenuBar()
+    private void LayoutPrimaryMenuBar()
     {
+        var presenter = _game.PrimaryVmuPresenter;
         ImGui.BeginMainMenuBar();
         if (ImGui.BeginMenu("File"))
         {
-            if (ImGui.MenuItem("New VMU"))
-                NewVmu();
-
-            if (ImGui.MenuItem("Open VMS (Game)"))
-                OpenVmsDialog();
-
-            if (ImGui.MenuItem("Open VMU (Memory Card)"))
-                OpenVmuDialog();
-
-            if (ImGui.MenuItem("Save As"))
-            {
-                var result = Dialog.FileSave(filterList: "vmu,bin", defaultPath: null);
-                if (result.IsOk)
-                {
-                    _game.SaveVmuFileAs(result.Path);
-                }
-            }
-
+            LayoutNewOpenSaveMenuItems(presenter);
             ImGui.Separator();
-
-            // TODO: list recently opened VMU files?
 
             if (ImGui.MenuItem("Quit"))
                 _game.Exit();
@@ -318,56 +346,9 @@ class UserInterface
             ImGui.EndMenu();
         }
 
-        bool doOpenResetModal = false;
+        LayoutEmulationMenu(presenter);
+
         bool doOpenSettings = false;
-        if (ImGui.BeginMenu("Emulation"))
-        {
-            var isEjected = _game.Vmu.IsEjected;
-            using (new DisabledScope(disabled: !isEjected))
-            {
-                if (ImGui.MenuItem(_game.Paused ? "Resume" : "Pause"))
-                {
-                    _game.Paused = !_game.Paused;
-                }
-
-                if (ImGui.MenuItem("Reset"))
-                {
-                    // Workaround to delay calling OpenPopup: https://github.com/ocornut/imgui/issues/331#issuecomment-751372071
-                    doOpenResetModal = true;
-                }
-            }
-
-            if (ImGui.MenuItem(isEjected ? "Dock VMU" : "Eject VMU"))
-            {
-                _game.Vmu.InsertOrEject();
-            }
-
-            ImGui.Separator();
-
-            using (new DisabledScope(disabled: !isEjected || _game.Vmu.LoadedFilePath is null))
-            {
-                if (ImGui.MenuItem("Save State"))
-                {
-                    _game.Vmu.SaveState("0");
-                }
-
-                if (ImGui.MenuItem("Load State"))
-                {
-                    if (_game.Vmu.LoadStateById(id: "0", saveOopsFile: true) is (false, var error))
-                    {
-                        ShowToast(error ?? $"An unknown error occurred in '{nameof(Vmu.LoadStateById)}'.");
-                    }
-                }
-
-                if (ImGui.MenuItem("Undo Load State"))
-                {
-                    _game.Vmu.LoadOopsFile();
-                }
-            }
-
-            ImGui.EndMenu();
-        }
-
         if (ImGui.BeginMenu("Settings"))
         {
             if (ImGui.MenuItem("General"))
@@ -378,16 +359,14 @@ class UserInterface
 
             if (ImGui.MenuItem("Keyboard Config"))
             {
-                // Workaround to delay calling OpenPopup: https://github.com/ocornut/imgui/issues/331#issuecomment-751372071
                 Pause();
-                _editingKeyMappings = _game.Configuration.KeyMappings.ToList();
+                _mappingEditState = MappingEditState.EditKeyMappings(_game.Configuration.PrimaryInput.KeyMappings, _game.PrimaryVmu);
             }
 
             if (ImGui.MenuItem("Gamepad Config"))
             {
-                // Workaround to delay calling OpenPopup: https://github.com/ocornut/imgui/issues/331#issuecomment-751372071
                 Pause();
-                _editingButtonMappings = _game.Configuration.ButtonMappings.ToList();
+                _mappingEditState = MappingEditState.EditButtonMappings(_game.Configuration.PrimaryInput.ButtonMappings, _game.PrimaryVmu);
             }
 
             if (ImGui.MenuItem("Open Data Folder"))
@@ -435,7 +414,7 @@ class UserInterface
             ImGui.EndMenu();
         }
 
-        if (_game.Vmu.IsServerConnected)
+        if (_game.PrimaryVmu.IsServerConnected)
         {
             ImGui.Image(_rawIconConnectedTexture, new Numerics.Vector2(18));
             if (ImGui.IsItemHovered())
@@ -448,14 +427,140 @@ class UserInterface
 
         ImGui.EndMainMenuBar();
 
-        if (doOpenResetModal)
-            OpenPopupAndPause("Reset?");
-
         if (doOpenSettings)
             OpenPopupAndPause("Settings");
     }
 
-    private static readonly string[] AllDreamcastSlotNames = ["A1", "B1", "C1", "D1"];
+    private void LayoutEmulationMenu(VmuPresenter presenter)
+    {
+        var vmu = presenter.Vmu;
+        if (ImGui.BeginMenu("Emulation"))
+        {
+            var isDocked = vmu.IsDocked;
+            using (new DisabledScope(disabled: isDocked))
+            {
+                if (ImGui.MenuItem(presenter.LocalPaused ? "Resume" : "Pause"))
+                    presenter.LocalPaused = !presenter.LocalPaused;
+
+                if (ImGui.MenuItem("Reset"))
+                    Reset(presenter);
+            }
+
+            if (ImGui.MenuItem(isDocked ? "Eject VMU" : "Dock VMU"))
+                presenter.DockOrEject();
+
+            ImGui.Separator();
+
+            using (new DisabledScope(vmu.LoadedFilePath is null))
+            {
+                if (ImGui.MenuItem("Save State"))
+                {
+                    vmu.SaveState("0");
+                }
+
+                if (ImGui.MenuItem("Load State"))
+                {
+                    if (vmu.LoadStateById(id: "0", saveOopsFile: true) is (false, var error))
+                    {
+                        ShowToast(error ?? $"An unknown error occurred in '{nameof(Vmu.LoadStateById)}'.");
+                    }
+                }
+
+                if (ImGui.MenuItem("Undo Load State"))
+                {
+                    vmu.LoadOopsFile();
+                }
+            }
+
+            ImGui.EndMenu();
+        }
+    }
+
+    private void LayoutSecondaryMenuBar()
+    {
+        if (_game.SecondaryVmuPresenter is not { } presenter)
+            return;
+
+        var vmu = presenter.Vmu;
+        var rectangle = _game.SecondaryMenuBarRectangle;
+        ImGui.SetNextWindowPos(new Numerics.Vector2(rectangle.X, rectangle.Y));
+        ImGui.SetNextWindowSize(new Numerics.Vector2(rectangle.Width, rectangle.Height));
+        ImGui.Begin("SecondaryMenuWindow", ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.MenuBar | ImGuiWindowFlags.NoSavedSettings);
+        ImGui.BeginMenuBar();
+        if (ImGui.BeginMenu(vmu.HasUnsavedChanges ? "* File" : "File"))
+        {
+            if (vmu.LoadedFilePath is not null)
+            {
+                ImGui.TextUnformatted(Path.GetFileName(vmu.LoadedFilePath.AsSpan()));
+                ImGui.Separator();
+            }
+
+            LayoutNewOpenSaveMenuItems(presenter);
+            ImGui.EndMenu();
+        }
+
+        LayoutEmulationMenu(presenter);
+
+        if (ImGui.BeginMenu("Settings"))
+        {
+            var configuration = _game.Configuration;
+            var muteSecondaryVmuAudio = configuration.MuteSecondaryVmuAudio;
+            if (Checkbox("Mute Audio", ref muteSecondaryVmuAudio, paddingY: 0))
+                _game.Configuration_MuteSecondaryVmuAudioChanged(muteSecondaryVmuAudio);
+
+            ImGui.Separator();
+            if (ImGui.MenuItem("Keyboard Config"))
+            {
+                Pause();
+                _mappingEditState = MappingEditState.EditKeyMappings(_game.Configuration.SecondaryInput.KeyMappings, vmu);
+            }
+
+            if (ImGui.MenuItem("Gamepad Config"))
+            {
+                Pause();
+                _mappingEditState = MappingEditState.EditButtonMappings(_game.Configuration.SecondaryInput.ButtonMappings, vmu);
+            }
+
+            ImGui.EndMenu();
+        }
+
+        ImGui.EndMenuBar();
+        ImGui.End();
+    }
+
+    private bool Checkbox(string label, ref bool v, float paddingY)
+    {
+        ImGui.PushStyleVarY(ImGuiStyleVar.FramePadding, paddingY);
+        var changed = ImGui.Checkbox(label, ref v);
+        ImGui.PopStyleVar();
+        return changed;
+    }
+
+    private void LayoutNewOpenSaveMenuItems(VmuPresenter presenter)
+    {
+        if (ImGui.MenuItem("New VMU"))
+            NewVmu(presenter);
+
+        if (ImGui.MenuItem("Open VMS (Game)"))
+            OpenVmsDialog(presenter);
+
+        if (ImGui.MenuItem("Open VMU (Memory Card)"))
+            OpenVmuDialog(presenter);
+
+        if (ImGui.MenuItem("Save As"))
+        {
+            var result = Dialog.FileSave(filterList: "vmu,bin", defaultPath: null);
+            if (result.IsOk)
+            {
+                _game.SaveVmuFileAs(presenter.Vmu, result.Path);
+            }
+        }
+
+        // TODO: list recently opened VMU files?
+    }
+
+    private static readonly string[] AllDreamcastSlotNames = ["A", "B", "C", "D"];
+    private static readonly string[] AllExpansionSlotNames = ["Slot 1", "Slot 2", "Slot 1+2"];
 
     private void LayoutSettings()
     {
@@ -469,17 +574,17 @@ class UserInterface
 
             var configuration = _game.Configuration;
             var autoInitializeDate = configuration.AutoInitializeDate;
-            if (ImGui.Checkbox("Auto-initialize date on startup", ref autoInitializeDate))
+            if (Checkbox("Auto-initialize date on startup", ref autoInitializeDate, paddingY: 1))
                 _game.Configuration_AutoInitializeDateChanged(autoInitializeDate);
 
 
             var anyButtonWakesFromSleep = configuration.AnyButtonWakesFromSleep;
-            if (ImGui.Checkbox("Any button wakes from sleep", ref anyButtonWakesFromSleep))
+            if (Checkbox("Any button wakes from sleep", ref anyButtonWakesFromSleep, paddingY: 1))
                 _game.Configuration_AnyButtonWakesFromSleepChanged(anyButtonWakesFromSleep);
 
 
             var preserveAspectRatio = configuration.PreserveAspectRatio;
-            if (ImGui.Checkbox("Preserve aspect ratio", ref preserveAspectRatio))
+            if (Checkbox("Preserve aspect ratio", ref preserveAspectRatio, paddingY: 1))
                 _game.Configuration_PreserveAspectRatioChanged(preserveAspectRatio);
 
             // Volume
@@ -501,7 +606,7 @@ class UserInterface
                 var palette = configuration.ColorPaletteName;
                 var paletteIndex = Array.IndexOf(ColorPalette.AllPaletteNames, palette);
                 var selectedIndex = paletteIndex == -1 ? 0 : paletteIndex;
-                ImGui.SetNextItemWidth(120);
+                ImGui.SetNextItemWidth(CalcComboWidth(ColorPalette.AllPaletteNames[1]));
                 ImGui.PushID("ColorPaletteCombo");
                 ImGui.Combo(label: "", ref selectedIndex, items: ColorPalette.AllPaletteNames, items_count: ColorPalette.AllPaletteNames.Length);
                 ImGui.PopID();
@@ -511,36 +616,64 @@ class UserInterface
 
             // Dreamcast Port
             {
-                ImGui.Text("Dreamcast controller slot");
+                ImGui.Text("Dreamcast controller port");
                 ImGui.SameLine();
 
                 var port = configuration.DreamcastPort;
                 var selectedIndex = (int)port;
-                ImGui.SetNextItemWidth(40);
-                ImGui.PushID("DreamcastSlotCombo");
+                ImGui.SetNextItemWidth(CalcComboWidth(longestItem: AllDreamcastSlotNames[0]));
+                ImGui.PushID("DreamcastPortCombo");
                 ImGui.Combo(label: "", ref selectedIndex, items: AllDreamcastSlotNames, items_count: AllDreamcastSlotNames.Length);
                 ImGui.PopID();
                 if ((int)port != selectedIndex)
                     _game.Configuration_DreamcastPortChanged((DreamcastPort)selectedIndex);
             }
 
+            // Slot Configuration
+            {
+                ImGui.Text("Use Expansion Slots");
+                ImGui.SameLine();
+
+                var expansionSlots = configuration.ExpansionSlots;
+                var selectedIndex = (int)expansionSlots;
+                ImGui.SetNextItemWidth(CalcComboWidth(longestItem: AllExpansionSlotNames[2]));
+                ImGui.PushID("ExpansionSlotCombo");
+                ImGui.Combo(label: "", ref selectedIndex, items: AllExpansionSlotNames, items_count: AllExpansionSlotNames.Length);
+                ImGui.PopID();
+                if ((int)expansionSlots != selectedIndex)
+                    _game.Configuration_ExpansionSlotsChanged((ExpansionSlots)selectedIndex);
+            }
+
             ImGui.EndPopup();
+        }
+
+        static float CalcComboWidth(string longestItem)
+        {
+            // text size + padding + arrow button size
+            return ImGui.CalcTextSize(longestItem).X + ImGui.GetStyle().FramePadding.X * 2.0f + ImGui.GetFrameHeight();
         }
     }
 
     private void LayoutKeyMapping()
     {
-        if (_editingKeyMappings is null)
+        if (_mappingEditState.KeyMappings is null)
             return;
 
         bool doOpenEditKey = false;
 
-        ImGui.Begin("Keyboard Config", ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.Modal);
+        var editingPrimaryVmu = _mappingEditState.TargetVmu == _game.PrimaryVmu;
+        var title = (_game.UseSecondaryVmu, editingPrimaryVmu) switch
+        {
+            (false, _) => "Keyboard Config",
+            (true, true) => "Slot 1 Keyboard Config",
+            (true, false) => "Slot 2 Keyboard Config"
+        };
+        ImGui.Begin(title, ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.Modal);
         {
             if (ImGui.Button("Save"))
             {
-                _game.Configuration_DoneEditingKeyMappings(_editingKeyMappings.ToImmutableArray());
-                _editingKeyMappings = null;
+                _game.Configuration_DoneEditingKeyMappings(_mappingEditState.KeyMappings.ToImmutableArray(), forPrimary: _mappingEditState.TargetVmu == _game.PrimaryVmu);
+                _mappingEditState = default;
                 Unpause();
                 ImGui.End();
                 return;
@@ -549,7 +682,7 @@ class UserInterface
             ImGui.SameLine();
             if (ImGui.Button("Cancel"))
             {
-                _editingKeyMappings = null;
+                _mappingEditState = default;
                 Unpause();
                 ImGui.End();
                 return;
@@ -558,16 +691,17 @@ class UserInterface
             ImGui.SeparatorText("Presets");
             ImGui.PushID("KeyPresetCombo");
             ImGui.SetNextItemWidth(80);
-            if (ImGui.BeginCombo(label: "", preview_value: Configuration.AllKeyPresets[_keyPresetIndex].name))
+            var keyPresets = editingPrimaryVmu ? Configuration.AllPrimaryKeyPresets : Configuration.AllSecondaryKeyPresets;
+            if (ImGui.BeginCombo(label: "", preview_value: keyPresets[_mappingEditState.PresetIndex].name))
             {
-                for (int i = 0; i < Configuration.AllKeyPresets.Length; i++)
+                for (int i = 0; i < keyPresets.Length; i++)
                 {
-                    if (ImGui.Selectable(Configuration.AllKeyPresets[i].name))
-                        _keyPresetIndex = i;
+                    if (ImGui.Selectable(keyPresets[i].name))
+                        _mappingEditState.PresetIndex = i;
 
                     if (ImGui.BeginItemTooltip())
                     {
-                        ImGui.Text(Configuration.AllKeyPresets[i].description);
+                        ImGui.Text(keyPresets[i].description);
                         ImGui.EndTooltip();
                     }
                 }
@@ -577,7 +711,7 @@ class UserInterface
 
             if (ImGui.BeginItemTooltip())
             {
-                ImGui.Text(Configuration.AllKeyPresets[_keyPresetIndex].description);
+                ImGui.Text(keyPresets[_mappingEditState.PresetIndex].description);
                 ImGui.EndTooltip();
             }
 
@@ -586,8 +720,8 @@ class UserInterface
 
             if (ImGui.Button("Apply"))
             {
-                var preset = Configuration.AllKeyPresets[_keyPresetIndex].mappings;
-                _editingKeyMappings = [.. preset];
+                var preset = keyPresets[_mappingEditState.PresetIndex].mappings;
+                _mappingEditState.KeyMappings = [.. preset];
             }
 
             ImGui.SeparatorText("Mappings");
@@ -597,11 +731,11 @@ class UserInterface
                 ImGui.TableSetupColumn(label: "", flags: ImGuiTableColumnFlags.WidthFixed);
                 ImGui.TableSetupColumn(label: "", flags: ImGuiTableColumnFlags.WidthStretch);
 
-                for (int i = 0; i < _editingKeyMappings.Count; i++)
+                for (int i = 0; i < _mappingEditState.KeyMappings.Count; i++)
                 {
                     ImGui.PushID(i);
 
-                    var mapping = _editingKeyMappings[i];
+                    var mapping = _mappingEditState.KeyMappings[i];
                     ImGui.TableNextRow();
                     ImGui.TableSetColumnIndex(0);
                     ImGui.Text(mapping.TargetButton.ToString());
@@ -609,7 +743,7 @@ class UserInterface
                     ImGui.TableSetColumnIndex(1);
                     if (ImGui.Button(mapping.SourceKey.ToString()))
                     {
-                        _editedMappingIndex = i;
+                        _mappingEditState.EditedIndex = i;
                         doOpenEditKey = true;
                     }
 
@@ -627,17 +761,23 @@ class UserInterface
 
     private void LayoutButtonMapping()
     {
-        if (_editingButtonMappings is null)
+        if (_mappingEditState.ButtonMappings is null)
             return;
 
         bool doOpenEditKey = false;
 
-        ImGui.Begin("Gamepad Config", ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.Modal);
+        var title = _game.UseSecondaryVmu switch
+        {
+            false => "Gamepad Config",
+            true when _mappingEditState.TargetVmu == _game.PrimaryVmu => "Slot 1 Gamepad Config",
+            _ => "Slot 2 Gamepad Config"
+        };
+        ImGui.Begin(title, ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.Modal);
         {
             if (ImGui.Button("Save"))
             {
-                _game.Configuration_DoneEditingButtonMappings(_editingButtonMappings.ToImmutableArray());
-                _editingButtonMappings = null;
+                _game.Configuration_DoneEditingButtonMappings(_mappingEditState.ButtonMappings.ToImmutableArray(), forPrimary: _mappingEditState.TargetVmu == _game.PrimaryVmu);
+                _mappingEditState = default;
                 Unpause();
                 ImGui.End();
                 return;
@@ -646,7 +786,7 @@ class UserInterface
             ImGui.SameLine();
             if (ImGui.Button("Cancel"))
             {
-                _editingButtonMappings = null;
+                _mappingEditState = default;
                 Unpause();
                 ImGui.End();
                 return;
@@ -655,12 +795,12 @@ class UserInterface
             ImGui.SeparatorText("Presets");
             ImGui.PushID("ButtonPresetCombo");
             ImGui.SetNextItemWidth(80);
-            if (ImGui.BeginCombo(label: "", preview_value: Configuration.AllButtonPresets[_buttonPresetIndex].name))
+            if (ImGui.BeginCombo(label: "", preview_value: Configuration.AllButtonPresets[_mappingEditState.PresetIndex].name))
             {
                 for (int i = 0; i < Configuration.AllButtonPresets.Length; i++)
                 {
                     if (ImGui.Selectable(Configuration.AllButtonPresets[i].name))
-                        _buttonPresetIndex = i;
+                        _mappingEditState.PresetIndex = i;
 
                     if (ImGui.BeginItemTooltip())
                     {
@@ -674,7 +814,7 @@ class UserInterface
 
             if (ImGui.BeginItemTooltip())
             {
-                ImGui.Text(Configuration.AllButtonPresets[_buttonPresetIndex].description);
+                ImGui.Text(Configuration.AllButtonPresets[_mappingEditState.PresetIndex].description);
                 ImGui.EndTooltip();
             }
 
@@ -683,8 +823,8 @@ class UserInterface
 
             if (ImGui.Button("Apply"))
             {
-                var preset = Configuration.AllButtonPresets[_buttonPresetIndex].mappings;
-                _editingButtonMappings = [.. preset];
+                var preset = Configuration.AllButtonPresets[_mappingEditState.PresetIndex].mappings;
+                _mappingEditState.ButtonMappings = [.. preset];
             }
 
             ImGui.SeparatorText("Mappings");
@@ -694,11 +834,11 @@ class UserInterface
                 ImGui.TableSetupColumn(label: "", flags: ImGuiTableColumnFlags.WidthFixed);
                 ImGui.TableSetupColumn(label: "", flags: ImGuiTableColumnFlags.WidthStretch);
 
-                for (int i = 0; i < _editingButtonMappings.Count; i++)
+                for (int i = 0; i < _mappingEditState.ButtonMappings.Count; i++)
                 {
                     ImGui.PushID(i);
 
-                    var mapping = _editingButtonMappings[i];
+                    var mapping = _mappingEditState.ButtonMappings[i];
                     ImGui.TableNextRow();
                     ImGui.TableSetColumnIndex(0);
                     ImGui.Text(mapping.TargetButton.ToString());
@@ -706,7 +846,7 @@ class UserInterface
                     ImGui.TableSetColumnIndex(1);
                     if (ImGui.Button(mapping.SourceButton.ToString()))
                     {
-                        _editedMappingIndex = i;
+                        _mappingEditState.EditedIndex = i;
                         doOpenEditKey = true;
                     }
 
@@ -726,75 +866,74 @@ class UserInterface
     {
         if (ImGui.BeginPopup("Edit Key"))
         {
-            if (_editingKeyMappings is null)
+            if (_mappingEditState.KeyMappings is not { } keyMappings)
                 throw new InvalidOperationException();
 
-            ImGui.Text($"Target button: {_editingKeyMappings[_editedMappingIndex].TargetButton}");
-            ImGui.Text("Press a key or press ESC to cancel.");
+            ImGui.Text("Press a key.");
+            ImGui.Text($"Target button: {keyMappings[_mappingEditState.EditedIndex].TargetButton}");
+
+            if (ImGui.Button("Cancel (ESC)"))
+                ImGui.CloseCurrentPopup();
+
+            ImGui.SameLine();
+            if (ImGui.Button("Unmap (DEL)"))
+                mapKey(Keys.None);
 
             var keyboard = Keyboard.GetState();
             if (keyboard.IsKeyDown(Keys.Escape))
-            {
                 ImGui.CloseCurrentPopup();
-            }
-            else if (keyboard.GetPressedKeyCount() != 0)
-            {
-                var key = keyboard.GetPressedKeys()[0];
-                _editingKeyMappings[_editedMappingIndex] = _editingKeyMappings[_editedMappingIndex] with { SourceKey = key };
-                ImGui.CloseCurrentPopup();
-            }
+            else if (keyboard.IsKeyDown(Keys.Delete))
+                mapKey(Keys.None);
+            else if (keyboard.GetPressedKeyCount() == 1)
+                mapKey(keyboard.GetPressedKeys()[0]);
 
             ImGui.EndPopup();
+
+            void mapKey(Keys key)
+            {
+                keyMappings[_mappingEditState.EditedIndex] = keyMappings[_mappingEditState.EditedIndex] with { SourceKey = key };
+                ImGui.CloseCurrentPopup();
+            }
         }
+
     }
 
     private void LayoutEditButton()
     {
         if (ImGui.BeginPopup("Edit Button"))
         {
-            if (_editingButtonMappings is null)
+            if (_mappingEditState.ButtonMappings is not { } buttonMappings)
                 throw new InvalidOperationException();
 
-            ImGui.Text($"Target button: {_editingButtonMappings[_editedMappingIndex].TargetButton}");
-            ImGui.Text("Press a button or press ESC to cancel.");
+            ImGui.Text("Press a button.");
+            ImGui.Text($"Target button: {buttonMappings[_mappingEditState.EditedIndex].TargetButton}");
 
-            if (Keyboard.GetState().IsKeyDown(Keys.Escape))
-            {
+            if (ImGui.Button("Cancel (ESC)"))
                 ImGui.CloseCurrentPopup();
-                ImGui.EndPopup();
-                return;
-            }
+
+            ImGui.SameLine();
+            if (ImGui.Button("Unmap (DEL)"))
+                mapButton(Buttons.None);
+
+            var keyboard = Keyboard.GetState();
+            if (keyboard.IsKeyDown(Keys.Escape))
+                ImGui.CloseCurrentPopup();
+
+            if (keyboard.IsKeyDown(Keys.Delete))
+                mapButton(Buttons.None);
 
             var gamepad = GamePad.GetState(PlayerIndex.One);
             var sourceButton = Enum.GetValues<Buttons>().FirstOrDefault(b => gamepad.IsButtonDown(b));
-            if (sourceButton == default)
-            {
-                ImGui.EndPopup();
-                return;
-            }
-
-            _editingButtonMappings[_editedMappingIndex] = _editingButtonMappings[_editedMappingIndex] with { SourceButton = sourceButton };
-            ImGui.CloseCurrentPopup();
-            ImGui.EndPopup();
-        }
-    }
-
-    private void LayoutResetModal()
-    {
-        if (ImGui.BeginPopupModal("Reset?", ImGuiWindowFlags.NoResize))
-        {
-            ImGui.Text("Unsaved progress will be lost.");
-            if (ImGui.Button("Reset"))
-            {
-                _game.Reset();
-                ClosePopupAndUnpause();
-            }
-
-            ImGui.SameLine();
-            if (ImGui.Button("Cancel"))
-                ClosePopupAndUnpause();
+            if (sourceButton != default)
+                mapButton(sourceButton);
 
             ImGui.EndPopup();
+
+            void mapButton(Buttons button)
+            {
+                buttonMappings[_mappingEditState.EditedIndex] = buttonMappings[_mappingEditState.EditedIndex] with { SourceButton = button };
+                ImGui.CloseCurrentPopup();
+            }
         }
     }
 
@@ -808,6 +947,9 @@ class UserInterface
             PendingCommandKind.NewVmu => "Create new VMU without saving?",
             PendingCommandKind.OpenVms => "Open VMS without saving?",
             PendingCommandKind.OpenVmu => "Open VMU without saving?",
+            PendingCommandKind.Reset when !_game.UseSecondaryVmu => "Reset?",
+            PendingCommandKind.Reset when PendingCommand.VmuPresenter == _game.PrimaryVmuPresenter => "Reset slot 1?",
+            PendingCommandKind.Reset => "Reset slot 2?",
             PendingCommandKind.Exit => "Exit without saving?",
             _ => throw new InvalidOperationException(),
         };
@@ -821,6 +963,7 @@ class UserInterface
                 PendingCommandKind.NewVmu => "Create",
                 PendingCommandKind.OpenVms => "Open",
                 PendingCommandKind.OpenVmu => "Open",
+                PendingCommandKind.Reset => "Reset",
                 PendingCommandKind.Exit => "Exit",
                 _ => throw new InvalidOperationException(),
             };
@@ -852,16 +995,20 @@ class UserInterface
                     // But, OnExiting is not called until after this tick.
                     // So, we specifically need to keep PendingCommand around for this command.
                     break;
+                case PendingCommandKind.Reset:
+                    Reset(PendingCommand.VmuPresenter ?? throw new InvalidOperationException());
+                    PendingCommand = default;
+                    break;
                 case PendingCommandKind.NewVmu:
-                    NewVmu();
+                    NewVmu(PendingCommand.VmuPresenter ?? throw new InvalidOperationException());
                     PendingCommand = default;
                     break;
                 case PendingCommandKind.OpenVms:
-                    OpenVmsDialog();
+                    OpenVmsDialog(PendingCommand.VmuPresenter ?? throw new InvalidOperationException());
                     PendingCommand = default;
                     break;
                 case PendingCommandKind.OpenVmu:
-                    OpenVmuDialog();
+                    OpenVmuDialog(PendingCommand.VmuPresenter ?? throw new InvalidOperationException());
                     PendingCommand = default;
                     break;
                 default:

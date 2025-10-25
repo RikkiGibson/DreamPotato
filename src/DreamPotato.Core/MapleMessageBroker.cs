@@ -21,28 +21,26 @@ public class MapleMessageBroker
     private readonly Logger Logger;
 
     /// <summary>
-    /// Guards <see cref="_clientConnected"/>, <see cref="_vmuDocked"/>, <see cref="_vmuFlashData"/>, <see cref="_vmuFileHandle"/>.
+    /// Guards <see cref="_slot1"/>, <see cref="_slot2"/>, <see cref="_clientSocket"/>, <see cref="_clientNeedsRefresh"/>.
     /// </summary>
     private readonly Lock _lock = new Lock();
 
     /// <summary>Guarded by <see cref="_lock"/>.</summary>
     private Socket? _clientSocket;
 
-    private readonly Channel<MapleMessage> _inboundCpuMessages = Channel.CreateUnbounded<MapleMessage>();
+    /// <summary>Guarded by <see cref="_lock"/>.</summary>
+    private bool _clientNeedsRefresh;
+
     private readonly Channel<MapleMessage> _outboundMessages = Channel.CreateUnbounded<MapleMessage>();
 
-    /// <summary>Guarded by <see cref="_lock"/>.</summary>
-    private bool _vmuDocked;
+    private readonly VmuInfo _slot1 = new VmuInfo();
+    private readonly VmuInfo _slot2 = new VmuInfo();
 
-    /// <summary>Guarded by <see cref="_lock"/>.</summary>
-    private readonly byte[] _vmuFlashData = new byte[Cpu.FlashSize];
-
-    /// <summary>Guarded by <see cref="_lock"/>.</summary>
-    private SafeFileHandle? _vmuFileHandle;
     private DreamcastPort _dreamcastPort;
 
     private Task? _serverTask;
     private CancellationTokenSource? _cancellationTokenSource;
+
     public MapleMessageBroker(LogLevel minimumLogLevel)
     {
         Logger = new Logger(minimumLogLevel, LogCategories.Maple, _cpu: null);
@@ -57,8 +55,11 @@ public class MapleMessageBroker
         _serverTask = null;
     }
 
-    public void StartServer(DreamcastPort dreamcastPort)
+    public void RestartServer(DreamcastPort dreamcastPort)
     {
+        if (IsRunning)
+            ShutdownServer();
+
         if (_serverTask != null || _cancellationTokenSource?.IsCancellationRequested == true)
             throw new InvalidOperationException();
 
@@ -67,7 +68,15 @@ public class MapleMessageBroker
         _serverTask = Task.Run(() => SocketListenerEntryPoint(dreamcastPort, _cancellationTokenSource.Token));
     }
 
-    internal void Resync(bool vmuDocked, bool writeToMapleFlash, Span<byte> flash, SafeFileHandle? vmuFileHandle)
+    private VmuInfo GetVmuInfo(DreamcastSlot dreamcastSlot)
+    {
+        if (dreamcastSlot is DreamcastSlot.Dreamcast)
+            throw new InvalidOperationException();
+
+        return dreamcastSlot == DreamcastSlot.Slot1 ? _slot1 : _slot2;
+    }
+
+    internal void Resync(DreamcastSlot dreamcastSlot, bool vmuDocked, bool writeToMapleFlash, Span<byte> flash, SafeFileHandle? vmuFileHandle)
     {
         // Keeping an extra copy of the flash memory and maintaining both is a pain, but, it is thought to be preferable to synchronizing on a single copy.
         // This is because the CPU needs to read it every cycle to decode instructions (which can change while emulation is running due to STF--store flash).
@@ -76,32 +85,43 @@ public class MapleMessageBroker
         // The basic design here is that when the VMU is "docked" in the controller, the current flash state is copied over to the socket thread.
         // The socket thread immediately responds to flash I/O requests rather than waiting for main game thread to handle them.
         // Write LCD and buzzer requests are still routed to main game thread, but no response is expected for those.
+        var vmuInfo = GetVmuInfo(dreamcastSlot);
         lock (_lock)
         {
-            bool dockedChanged = _vmuDocked != vmuDocked;
-            _vmuDocked = vmuDocked;
+            bool dockedChanged = vmuInfo._vmuDocked != vmuDocked;
+            vmuInfo._vmuDocked = vmuDocked;
 
             if (writeToMapleFlash)
-                flash.CopyTo(_vmuFlashData);
+                flash.CopyTo(vmuInfo._vmuFlashData);
             else
-                _vmuFlashData.CopyTo(flash);
+                vmuInfo._vmuFlashData.CopyTo(flash);
 
-            _vmuFileHandle = vmuFileHandle;
+            vmuInfo._vmuFileHandle = vmuFileHandle;
 
-            if (dockedChanged && _clientSocket is { })
-            {
-                // Send a message telling client to re-query devices
-                var message = new MapleMessage() { Type = (MapleMessageType)0xff, Sender = new MapleAddress(0xff), Recipient = new MapleAddress(0xff), Length = 0xff, AdditionalWords = [] };
-                var written = _outboundMessages.Writer.TryWrite(message);
-                Debug.Assert(written); // Channel is unbounded, this should always succeed
-            }
+            // Dreamcast needs to be notified, if either the docked state changed,
+            // or, if caller is asking to write outbound to Maple,
+            // in which case the local flash memory content has changed.
+            if ((dockedChanged || writeToMapleFlash) && _clientSocket is { })
+                _clientNeedsRefresh = true;
+        }
+    }
+
+    /// <summary>Called once per frame in order to "batch" refresh messages to the client.</summary>
+    public void RefreshIfNeeded()
+    {
+        if (_clientNeedsRefresh)
+        {
+            // Send a message telling client to re-query devices
+            var written = _outboundMessages.Writer.TryWrite(MapleMessage.ResetMessage);
+            Debug.Assert(written); // Channel is unbounded, this should always succeed
+            _clientNeedsRefresh = false;
         }
     }
 
     /// <summary>Allows main game thread to receive messages affecting game-visible state (e.g. LCD, buzzer).</summary>
-    internal bool TryReceiveCpuMessage(out MapleMessage mapleMessage)
+    internal bool TryReceiveCpuMessage(DreamcastSlot slot, out MapleMessage mapleMessage)
     {
-        return _inboundCpuMessages.Reader.TryRead(out mapleMessage);
+        return GetVmuInfo(slot)._inboundCpuMessages.Reader.TryRead(out mapleMessage);
     }
 
     /// <summary>Can be called by threads besides the socket server thread.</summary>
@@ -207,33 +227,26 @@ public class MapleMessageBroker
         using var _ = _lock.EnterScope();
 
         Debug.Assert(message.HasValue);
-        if (!_vmuDocked)
+
+        var recipientSlot = message.Recipient.Slot;
+        if (recipientSlot == DreamcastSlot.Dreamcast)
         {
             if ((message.Type, message.Function) == (MapleMessageType.GetCondition, MapleFunction.Input))
             {
-                // Report no VMU in slot 1
-                Logger.LogDebug("(GetCondition, Input): No VMUs", LogCategories.Maple);
-                var reply = new MapleMessage()
-                {
-                    Type = MapleMessageType.Ack,
-                    Recipient = new MapleAddress { Port = _dreamcastPort, Slot = DreamcastSlot.Dreamcast },
-                    Sender = new MapleAddress { Port = _dreamcastPort, Slot = DreamcastSlot.Dreamcast },
-                    Length = 0,
-                    AdditionalWords = [],
-                };
-                return reply;
+                return handleGetConditionInput();
             }
             else
             {
-                Logger.LogDebug($"Received unexpected message while VMU disconnected: ({message.Type}, {message.Function})", LogCategories.Maple);
+                Logger.LogWarning($"Unexpected Maple message with Recipient.Slot: Dreamcast, Type: {message.Type}, Function: {message.Function})", LogCategories.Maple);
                 return default;
             }
-
-            throw new InvalidOperationException("Unreachable code");
         }
 
+        var vmuInfo = GetVmuInfo(recipientSlot);
         switch (message.Type, message.Function)
         {
+            case (MapleMessageType.GetDeviceInfo, _):
+                return handleGetDeviceInfo(vmuInfo, message);
             case (MapleMessageType.SetCondition, MapleFunction.Clock):
                 // VMU beeps over maple are not supported.
                 // The biggest reason is that if the remote emulator pauses,
@@ -249,17 +262,15 @@ public class MapleMessageBroker
                 return default; // No reply
             case (MapleMessageType.WriteBlock, MapleFunction.LCD):
                 // Cpu handles this message.
-                var written = _inboundCpuMessages.Writer.TryWrite(message);
+                var written = vmuInfo._inboundCpuMessages.Writer.TryWrite(message);
                 Debug.Assert(written);
                 return default; // No reply
-            case (MapleMessageType.GetCondition, MapleFunction.Input):
-                return handleGetConditionInput();
             case (MapleMessageType.ReadBlock, MapleFunction.Storage):
-                return handleReadBlockStorage(message);
+                return handleReadBlockStorage(vmuInfo, message);
             case (MapleMessageType.WriteBlock, MapleFunction.Storage):
-                return handleWriteBlockStorage(message);
+                return handleWriteBlockStorage(vmuInfo, message);
             case (MapleMessageType.CompleteWrite, MapleFunction.Storage):
-                return handleCompleteWriteStorage(message);
+                return handleCompleteWriteStorage(vmuInfo, message);
             default:
                 Debug.Fail($"Unhandled Maple message '({message.Type}, {message.Function})'");
                 Logger.LogError($"Unhandled Maple message '({message.Type}, {message.Function})'", category: LogCategories.Maple);
@@ -268,23 +279,70 @@ public class MapleMessageBroker
 
         MapleMessage handleGetConditionInput()
         {
-            Logger.LogDebug("(GetCondition, Input): VMU in slot 1", LogCategories.Maple);
+            var slot1Docked = _slot1._vmuDocked;
+            var slot2Docked = _slot2._vmuDocked;
+            var (message, senderSlots) = (slot1Docked, slot2Docked) switch
+            {
+                (true, true) => ("Devices in slots 1 and 2", DreamcastSlot.Slot1 | DreamcastSlot.Slot2),
+                (true, false) => ("Device in slot 1", DreamcastSlot.Slot1),
+                (false, true) => ("Device in slot 2", DreamcastSlot.Slot2),
+                (false, false) => ("No expansion devices", DreamcastSlot.Dreamcast)
+            };
+            Logger.LogDebug($"(GetCondition, Input): {message}", LogCategories.Maple);
+
             var reply = new MapleMessage()
             {
                 Type = MapleMessageType.Ack,
                 Recipient = new MapleAddress { Port = _dreamcastPort, Slot = DreamcastSlot.Dreamcast },
-                Sender = new MapleAddress { Port = _dreamcastPort, Slot = DreamcastSlot.Slot1 },
+                Sender = new MapleAddress { Port = _dreamcastPort, Slot = senderSlots },
                 Length = 0,
                 AdditionalWords = [],
             };
             return reply;
         }
 
-        MapleMessage handleReadBlockStorage(MapleMessage message)
+        MapleMessage handleGetDeviceInfo(VmuInfo vmuInfo, MapleMessage message)
+        {
+            if (!vmuInfo._vmuDocked)
+                return MapleMessage.ResetMessage;
+
+            const int responseLength = 28;
+            int[] additionalWords = new int[28];
+            additionalWords[0] = (int)(MapleFunction.Storage | MapleFunction.LCD | MapleFunction.Clock);
+            additionalWords[1] = 0x403f7e7e; // clock
+            additionalWords[2] = 0x00100500; // lcd
+            additionalWords[3] = 0x00410f00; // storage
+
+            byte[] rest = [
+                0xff, // area code
+                0x0, // direction
+                .. "Visual Memory                 "u8,
+                .. "Produced By or Under License From SEGA ENTERPRISES,LTD.     "u8,
+                0x7c, 0x0, // 12.4 mA
+                0x82, 0x0 // 13 mA
+                ];
+            Debug.Assert(4 + rest.Length / 4 == responseLength);
+            for (int i = 0, destIndex = 4; i < rest.Length; i += 4, destIndex++)
+                additionalWords[destIndex] = BinaryPrimitives.ReadInt32LittleEndian(rest[i..(i + 4)]);
+            Logger.LogDebug($"GetDeviceInfo: {message.Recipient.Slot} contains VMU", LogCategories.Maple);
+
+            var reply = new MapleMessage
+            {
+                Type = MapleMessageType.DeviceInfoTransfer,
+                Recipient = new MapleAddress { Port = _dreamcastPort, Slot = DreamcastSlot.Dreamcast },
+                Sender = new MapleAddress { Port = _dreamcastPort, Slot = message.Recipient.Slot },
+                Length = responseLength,
+                AdditionalWords = additionalWords,
+            };
+            return reply;
+        }
+
+
+        MapleMessage handleReadBlockStorage(VmuInfo info, MapleMessage message)
         {
             var blockNumber = message.AdditionalWords[1] >> 24 & 0xff;
             var startAddress = blockNumber * Memory.WorkRamSize;
-            var responseBytes = _vmuFlashData.AsSpan(startAddress, Memory.WorkRamSize);
+            var responseBytes = info._vmuFlashData.AsSpan(startAddress, Memory.WorkRamSize);
 
             // TODO: verify phase and pt are zero
 
@@ -309,7 +367,7 @@ public class MapleMessageBroker
             return reply;
         }
 
-        MapleMessage handleWriteBlockStorage(MapleMessage message)
+        MapleMessage handleWriteBlockStorage(VmuInfo info, MapleMessage message)
         {
             const int preambleWordCount = 2; // 0: function ID, 1: block/phase IDs
             const int writePayloadWordCount = Memory.WorkRamSize / 4 / 4; // 4 phases, 4 bytes per word
@@ -335,21 +393,21 @@ public class MapleMessageBroker
                 Logger.LogWarning($"Unexpected 'pt' value: {pt}", LogCategories.Maple);
 
             var startAddress = blockNumber * Memory.WorkRamSize + phaseNumber * Memory.WorkRamSize / 4;
-            var destSpan = _vmuFlashData.AsSpan(startAddress, Memory.WorkRamSize / 4);
+            var destSpan = info._vmuFlashData.AsSpan(startAddress, Memory.WorkRamSize / 4);
 
             for (int i = 0; i < writePayloadWordCount; i++)
             {
                 BinaryPrimitives.WriteInt32LittleEndian(destSpan[(i * 4)..((i + 1) * 4)], message.AdditionalWords[i + 2]);
             }
 
-            if (_vmuFileHandle is not null)
+            if (info._vmuFileHandle is not null)
             {
                 Logger.LogDebug($"Writing to VMU file at address 0x{startAddress:X}", LogCategories.Maple);
-                RandomAccess.Write(_vmuFileHandle, destSpan, fileOffset: startAddress);
+                RandomAccess.Write(info._vmuFileHandle, destSpan, fileOffset: startAddress);
             }
 
             // Also notify game thread so that we can flash the IO icon.
-            var written = _inboundCpuMessages.Writer.TryWrite(message);
+            var written = info._inboundCpuMessages.Writer.TryWrite(message);
             Debug.Assert(written);
 
             var reply = new MapleMessage()
@@ -363,7 +421,7 @@ public class MapleMessageBroker
             return reply;
         }
 
-        MapleMessage handleCompleteWriteStorage(MapleMessage message)
+        MapleMessage handleCompleteWriteStorage(VmuInfo info, MapleMessage message)
         {
             if (message.Length != 2)
             {
@@ -377,7 +435,7 @@ public class MapleMessageBroker
             }
 
             // Also notify game thread so that we can flash the IO icon.
-            var written = _inboundCpuMessages.Writer.TryWrite(message);
+            var written = info._inboundCpuMessages.Writer.TryWrite(message);
             Debug.Assert(written);
 
             var reply = new MapleMessage()
@@ -492,32 +550,40 @@ public class MapleMessageBroker
 
     private async Task SocketListenerEntryPoint(DreamcastPort dreamcastPort, CancellationToken cancellationToken)
     {
-        using var listener = new Socket(SocketType.Stream, ProtocolType.Tcp);
-        listener.Bind(new IPEndPoint(IPAddress.IPv6Loopback, BasePort + (int)dreamcastPort));
-        listener.Listen(backlog: 1);
-
-        while (true) // Accept a new client whenever one disconnects
+        try
         {
-            Logger.LogDebug("Waiting for client to connect", LogCategories.Maple);
-            var clientSocket = await listener.AcceptAsync(cancellationToken);
-            Logger.LogDebug("Client connected", LogCategories.Maple);
-            lock (_lock)
+            using var listener = new Socket(SocketType.Stream, ProtocolType.Tcp);
+            listener.Bind(new IPEndPoint(IPAddress.IPv6Loopback, BasePort + (int)dreamcastPort));
+            listener.Listen(backlog: 1);
+
+            while (true) // Accept a new client whenever one disconnects
             {
-                _clientSocket = clientSocket;
+                Logger.LogDebug("Waiting for client to connect", LogCategories.Maple);
+                var clientSocket = await listener.AcceptAsync(cancellationToken);
+                Logger.LogDebug("Client connected", LogCategories.Maple);
+                lock (_lock)
+                {
+                    _clientSocket = clientSocket;
+                }
+
+                var clientCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                await waitForClientDisconnectAsync(clientSocket, clientCancellationSource.Token);
+                // Ensure all socket tasks are completed or canceled
+                clientCancellationSource.Cancel();
+
+                lock (_lock)
+                {
+                    _clientSocket.Close();
+                    _clientSocket = null;
+                }
+
+                OnDisconnect();
             }
-
-            var clientCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            await waitForClientDisconnectAsync(clientSocket, clientCancellationSource.Token);
-            // Ensure all socket tasks are completed or canceled
-            clientCancellationSource.Cancel();
-
-            lock (_lock)
-            {
-                _clientSocket.Close();
-                _clientSocket = null;
-            }
-
-            OnDisconnect();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError($"Exception in SocketListenerEntryPoint: {ex.Message}", LogCategories.Maple);
+            throw;
         }
 
         async Task waitForClientDisconnectAsync(Socket clientSocket, CancellationToken cancellationToken)
@@ -544,17 +610,33 @@ public class MapleMessageBroker
     private void OnDisconnect()
     {
         // discard all messages from the last connection
-        while (_inboundCpuMessages.Reader.TryRead(out _)) { }
+        while (_slot1._inboundCpuMessages.Reader.TryRead(out _)) { }
+        while (_slot2._inboundCpuMessages.Reader.TryRead(out _)) { }
         while (_outboundMessages.Reader.TryRead(out _)) { }
 
-        // clear the screen
         var additionalWords = new int[50];
         additionalWords[0] = (int)MapleFunction.LCD;
-        bool written = _inboundCpuMessages.Writer.TryWrite(new MapleMessage
+        var clearScreenMessage = new MapleMessage
         {
             Type = MapleMessageType.WriteBlock,
             AdditionalWords = additionalWords,
-        });
+        };
+        bool written = _slot1._inboundCpuMessages.Writer.TryWrite(clearScreenMessage)
+            && _slot2._inboundCpuMessages.Writer.TryWrite(clearScreenMessage);
         Debug.Assert(written);
+    }
+
+    private class VmuInfo
+    {
+        internal readonly Channel<MapleMessage> _inboundCpuMessages = Channel.CreateUnbounded<MapleMessage>();
+
+        /// <summary>Guarded by <see cref="_lock"/>.</summary>
+        internal bool _vmuDocked;
+
+        /// <summary>Guarded by <see cref="_lock"/>.</summary>
+        internal readonly byte[] _vmuFlashData = new byte[Cpu.FlashSize];
+
+        /// <summary>Guarded by <see cref="_lock"/>.</summary>
+        internal SafeFileHandle? _vmuFileHandle;
     }
 }

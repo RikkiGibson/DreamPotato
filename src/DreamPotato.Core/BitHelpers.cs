@@ -10,7 +10,6 @@ public static class BitHelpers
         return (operand & (1 << bit)) != 0;
     }
 
-    // TODO: simple xor simpler?
     public static void WriteBit(ref byte dest, int bit, bool value)
     {
         Debug.Assert(bit is >= 0 and < 8);

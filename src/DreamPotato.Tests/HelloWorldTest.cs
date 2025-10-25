@@ -11,7 +11,7 @@ public class HelloWorldTest(ITestOutputHelper outputHelper)
     public void HelloWorld()
     {
         // Execute the assembled version of 'helloworld.s'
-        var cpu = new Cpu();
+        var cpu = new Cpu() { DreamcastSlot = DreamcastSlot.Slot1 };
         cpu.Reset();
 
         s_instructions.CopyTo(cpu.FlashBank0);

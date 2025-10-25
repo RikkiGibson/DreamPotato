@@ -13,6 +13,8 @@ public record RecentFilesInfo
 {
     /// <summary>Recent files with the most recently used first. null denotes a "new VMU" that is not saved to disk.</summary>
     public ImmutableArray<string?> RecentFiles { get; init; }
+    public string? PrimaryVmuMostRecent { get; init; }
+    public string? SecondaryVmuMostRecent { get; init; }
 
     const string FileName = "recent.json";
     private static string FilePath => Path.Combine(Vmu.DataFolder, FileName);
@@ -29,8 +31,16 @@ public record RecentFilesInfo
         return value ?? Default;
     }
 
-    public RecentFilesInfo PrependRecentFile(string? newRecentFile)
-        => this with { RecentFiles = [newRecentFile, .. RecentFiles.Where(file => file != null && file != newRecentFile).Take(5)] };
+    public RecentFilesInfo AddRecentFile(bool forPrimary, string? newRecentFile)
+        => this with
+        {
+            PrimaryVmuMostRecent = forPrimary ? newRecentFile : PrimaryVmuMostRecent,
+            SecondaryVmuMostRecent = forPrimary ? SecondaryVmuMostRecent : newRecentFile,
+            RecentFiles = PrependRecentFile(newRecentFile)
+        };
+
+    private ImmutableArray<string?> PrependRecentFile(string? newRecentFile)
+        => [newRecentFile, .. RecentFiles.Where(file => file != null && file != newRecentFile).Take(5)];
 
     public void Save()
     {

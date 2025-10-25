@@ -20,17 +20,23 @@ public record Configuration(
     bool AnyButtonWakesFromSleep = true,
     bool PreserveAspectRatio = true,
     int Volume = Audio.DefaultVolume,
+    bool MuteSecondaryVmuAudio = true,
+    string? ColorPaletteName = null,
+    InputMappings? PrimaryInput = null,
+    InputMappings? SecondaryInput = null,
     ViewportSize? ViewportSize = null,
-    [property: JsonConverter(typeof(JsonStringEnumConverter<DreamcastPort>))] DreamcastPort DreamcastPort = DreamcastPort.A)
+    VmuConnectionState VmuConnectionState = VmuConnectionState.None,
+    ExpansionSlots ExpansionSlots = ExpansionSlots.Slot1,
+    DreamcastPort DreamcastPort = DreamcastPort.A)
 {
     private const string FileName = "configuration.json";
     private static string FilePath => Path.Combine(Vmu.DataFolder, FileName);
 
-    public string? ColorPaletteName { get; init; }
-    public ImmutableArray<KeyMapping> KeyMappings { get; init; }
-    public ImmutableArray<ButtonMapping> ButtonMappings { get; init; }
+    public string ColorPaletteName { get; init; } = ColorPaletteName ?? ColorPalette.White.Name;
+    public InputMappings PrimaryInput { get; init; } = PrimaryInput ?? DefaultPrimaryInput;
+    public InputMappings SecondaryInput { get; init; } = SecondaryInput ?? DefaultSecondaryInput;
 
-    public ViewportSize ViewportSize { get; init; } = ViewportSize ?? new ViewportSize(Width: Game1.MinWidth * 2, Height: Game1.TotalContentHeight * 2 + Game1.MenuBarHeight);
+    public ViewportSize ViewportSize { get; init; } = ViewportSize ?? new ViewportSize(Width: VmuPresenter.TotalContentWidth * 2, Height: VmuPresenter.TotalContentHeight * 2 + Game1.MenuBarHeight);
     public WindowPosition? WindowPosition { get; init; }
 
     public void Save()
@@ -58,13 +64,22 @@ public record Configuration(
         new KeyMapping { SourceKey = Keys.L, TargetButton = VmuButton.B },
         new KeyMapping { SourceKey = Keys.I, TargetButton = VmuButton.Mode },
         new KeyMapping { SourceKey = Keys.J, TargetButton = VmuButton.Sleep },
+    ];
 
+    public static readonly ImmutableArray<KeyMapping> KeyPreset_MappedStateCommands = [
         new KeyMapping { SourceKey = Keys.Insert, TargetButton = VmuButton.InsertEject },
-
         new KeyMapping { SourceKey = Keys.F5, TargetButton = VmuButton.SaveState },
         new KeyMapping { SourceKey = Keys.F8, TargetButton = VmuButton.LoadState },
         new KeyMapping { SourceKey = Keys.F10, TargetButton = VmuButton.Pause },
         new KeyMapping { SourceKey = Keys.Tab, TargetButton = VmuButton.FastForward },
+    ];
+
+    public static readonly ImmutableArray<KeyMapping> KeyPreset_UnmappedStateCommands = [
+        new KeyMapping { SourceKey = Keys.None, TargetButton = VmuButton.InsertEject },
+        new KeyMapping { SourceKey = Keys.None, TargetButton = VmuButton.SaveState },
+        new KeyMapping { SourceKey = Keys.None, TargetButton = VmuButton.LoadState },
+        new KeyMapping { SourceKey = Keys.None, TargetButton = VmuButton.Pause },
+        new KeyMapping { SourceKey = Keys.None, TargetButton = VmuButton.FastForward },
     ];
 
     public static readonly ImmutableArray<KeyMapping> KeyPreset_Arrows = [
@@ -72,22 +87,23 @@ public record Configuration(
         new KeyMapping { SourceKey = Keys.Down, TargetButton = VmuButton.Down },
         new KeyMapping { SourceKey = Keys.Left, TargetButton = VmuButton.Left },
         new KeyMapping { SourceKey = Keys.Right, TargetButton = VmuButton.Right },
-        new KeyMapping { SourceKey = Keys.C, TargetButton = VmuButton.A },
+        new KeyMapping { SourceKey = Keys.Z, TargetButton = VmuButton.A },
         new KeyMapping { SourceKey = Keys.X, TargetButton = VmuButton.B },
-        new KeyMapping { SourceKey = Keys.D, TargetButton = VmuButton.Mode },
-        new KeyMapping { SourceKey = Keys.S, TargetButton = VmuButton.Sleep },
-
-        new KeyMapping { SourceKey = Keys.Insert, TargetButton = VmuButton.InsertEject },
-
-        new KeyMapping { SourceKey = Keys.F5, TargetButton = VmuButton.SaveState },
-        new KeyMapping { SourceKey = Keys.F8, TargetButton = VmuButton.LoadState },
-        new KeyMapping { SourceKey = Keys.F10, TargetButton = VmuButton.Pause },
-        new KeyMapping { SourceKey = Keys.Tab, TargetButton = VmuButton.FastForward },
+        new KeyMapping { SourceKey = Keys.C, TargetButton = VmuButton.Sleep },
+        new KeyMapping { SourceKey = Keys.V, TargetButton = VmuButton.Mode },
     ];
 
-    public static readonly ImmutableArray<(string name, string description, ImmutableArray<KeyMapping> mappings)> AllKeyPresets = [
-        ("WASD", "Uses WASD for D-pad and IJKL for buttons", KeyPreset_WASD),
-        ("Arrows", "Uses arrows for D-pad and XCSD for buttons", KeyPreset_Arrows)
+    public static readonly ImmutableArray<KeyMapping> DefaultPrimaryKeyPreset = [.. KeyPreset_WASD, .. KeyPreset_MappedStateCommands];
+    public static readonly ImmutableArray<KeyMapping> DefaultSecondaryKeyPreset = [.. KeyPreset_WASD, .. KeyPreset_UnmappedStateCommands];
+
+    public static readonly ImmutableArray<(string name, string description, ImmutableArray<KeyMapping> mappings)> AllPrimaryKeyPresets = [
+        ("WASD", "Uses WASD for D-pad and IJKL for buttons", DefaultPrimaryKeyPreset),
+        ("Arrows", "Uses arrows for D-pad and ZXCV for buttons", [.. KeyPreset_Arrows, .. KeyPreset_MappedStateCommands])
+    ];
+
+    public static readonly ImmutableArray<(string name, string description, ImmutableArray<KeyMapping> mappings)> AllSecondaryKeyPresets = [
+        ("WASD", "Uses WASD for D-pad and IJKL for buttons", DefaultSecondaryKeyPreset),
+        ("Arrows", "Uses arrows for D-pad and ZXCV for buttons", [.. KeyPreset_Arrows, .. KeyPreset_UnmappedStateCommands])
     ];
 
     public static readonly ImmutableArray<ButtonMapping> ButtonPreset_Default = [
@@ -113,27 +129,46 @@ public record Configuration(
         new ButtonMapping { SourceButton = Buttons.Back, TargetButton = VmuButton.Sleep },
     ];
 
+    public static readonly ImmutableArray<ButtonMapping> ButtonPreset_Unmapped = [
+        new ButtonMapping { SourceButton = Buttons.None, TargetButton = VmuButton.Up },
+        new ButtonMapping { SourceButton = Buttons.None, TargetButton = VmuButton.Down },
+        new ButtonMapping { SourceButton = Buttons.None, TargetButton = VmuButton.Left },
+        new ButtonMapping { SourceButton = Buttons.None, TargetButton = VmuButton.Right },
+        new ButtonMapping { SourceButton = Buttons.None, TargetButton = VmuButton.A },
+        new ButtonMapping { SourceButton = Buttons.None, TargetButton = VmuButton.B },
+        new ButtonMapping { SourceButton = Buttons.None, TargetButton = VmuButton.Mode },
+        new ButtonMapping { SourceButton = Buttons.None, TargetButton = VmuButton.Sleep },
+    ];
+
     public static readonly ImmutableArray<(string name, string description, ImmutableArray<ButtonMapping> mappings)> AllButtonPresets = [
         ("Default", "General purpose preset", ButtonPreset_Default),
         ("Sidecar", """
             Allows mapping both Dreamcast and
             VMU buttons to a single gamepad
             """, ButtonPreset_Sidecar),
+        ("Unmapped", "Do not use a gamepad", ButtonPreset_Unmapped),
     ];
 
-    public static readonly Configuration Default = new Configuration()
+    private static readonly InputMappings DefaultPrimaryInput = new InputMappings()
     {
-        ColorPaletteName = ColorPalette.White.Name,
-        KeyMappings = KeyPreset_WASD,
+        KeyMappings = DefaultPrimaryKeyPreset,
         ButtonMappings = ButtonPreset_Default,
     };
+
+    private static readonly InputMappings DefaultSecondaryInput = new InputMappings()
+    {
+        KeyMappings = DefaultSecondaryKeyPreset,
+        ButtonMappings = ButtonPreset_Unmapped
+    };
+
+    public static readonly Configuration Default = new Configuration();
 }
 
 internal class ButtonChecker
 {
     private readonly Dictionary<VmuButton, (List<Keys> Keys, List<Buttons> Buttons)> Mappings;
 
-    public ButtonChecker(Configuration configuration)
+    public ButtonChecker(InputMappings mappings)
     {
         Mappings = [];
         foreach (var value in Enum.GetValues<VmuButton>())
@@ -141,10 +176,10 @@ internal class ButtonChecker
             Mappings.Add(value, ([], []));
         }
 
-        foreach (var mapping in configuration.KeyMappings)
+        foreach (var mapping in mappings.KeyMappings)
             Mappings[mapping.TargetButton].Keys.Add(mapping.SourceKey);
 
-        foreach (var mapping in configuration.ButtonMappings)
+        foreach (var mapping in mappings.ButtonMappings)
             Mappings[mapping.TargetButton].Buttons.Add(mapping.SourceButton);
     }
 
@@ -211,6 +246,25 @@ public enum VmuButton
     SaveState,
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter<VmuConnectionState>))]
+public enum VmuConnectionState
+{
+    None,
+    PrimaryDocked,
+    SecondaryDocked,
+    PrimaryAndSecondaryDocked,
+    VmuToVmuConnection,
+}
+
+/// <summary>Which expansion slots are being used</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<ExpansionSlots>))]
+public enum ExpansionSlots
+{
+    Slot1 = 0,
+    Slot2 = 1,
+    Slot1And2 = 2,
+}
+
 public struct KeyMapping
 {
     [JsonConverter(typeof(JsonStringEnumConverter<Keys>))]
@@ -223,6 +277,12 @@ public struct ButtonMapping
     [JsonConverter(typeof(JsonStringEnumConverter<Buttons>))]
     public Buttons SourceButton { get; set; }
     public VmuButton TargetButton { get; set; }
+}
+
+public record InputMappings
+{
+    public required ImmutableArray<KeyMapping> KeyMappings { get; init; }
+    public required ImmutableArray<ButtonMapping> ButtonMappings { get; init; }
 }
 
 /// <summary>Size of the rendered content (i.e. not including the operating system menu bar.)</summary>

@@ -9,6 +9,12 @@ public enum LogLevel
     Debug,
     Warning,
     Error,
+
+#if DEBUG
+    Default = Trace,
+#else
+    Default = Warning,
+#endif
 }
 
 public enum LogCategories
