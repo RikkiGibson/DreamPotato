@@ -135,6 +135,9 @@ public class Cpu
 
     internal int _flashWriteUnlockSequence;
 
+    /// <summary>The CPU of another VMU, connected for serial I/O.</summary>
+    private Cpu? _otherCpu;
+
     // TODO: update save state format
     // Now, loading state can change the used expansion slots, in addition to changing whether we are docked.
     internal DreamcastSlot DreamcastSlot
@@ -486,6 +489,34 @@ public class Cpu
         }
 
         SFRs.I01Cr = i01cr;
+    }
+
+    internal void ConnectVmu(Cpu otherCpu)
+    {
+        if (otherCpu == this)
+            throw new InvalidOperationException();
+
+        var thisP7 = SFRs.P7;
+        var otherP7 = otherCpu.SFRs.P7;
+        if (thisP7.VmuConnected || otherP7.VmuConnected)
+            throw new InvalidOperationException("Already connected to a VMU");
+
+        if (thisP7.DreamcastConnected || otherP7.DreamcastConnected)
+            throw new InvalidOperationException("Already connected to a Dreamcast controller");
+
+        SFRs.P7 = thisP7 with { VmuConnected = true };
+        otherCpu.SFRs.P7 = otherP7 with { VmuConnected = true };
+        _otherCpu = otherCpu;
+    }
+
+    internal void DisconnectVmu()
+    {
+        if (_otherCpu is null)
+            throw new InvalidOperationException("Not connected to another VMU (note that the object reference is one-way)");
+
+        SFRs.P7 = SFRs.P7 with { VmuConnected = false };
+        _otherCpu.SFRs.P7 = _otherCpu.SFRs.P7 with { VmuConnected = false };
+        _otherCpu = null;
     }
 
     /// <summary>
