@@ -581,6 +581,15 @@ public struct P7
         get => BitHelpers.ReadBit(_value, bit: 0);
         set => BitHelpers.WriteBit(ref _value, bit: 0, value);
     }
+
+    /// <summary>Is another VMU connected for serial IO?</summary>
+    public bool VmuConnected
+    {
+        get => this is { DreamcastConnected: false, IP0: false, IP1: true };
+        set => this = value
+            ? this with { DreamcastConnected = false, IP0 = false, IP1 = true }
+            : this with { IP1 = false };
+    }
 }
 
 /// <summary>Port 3 interrupt function control register. VMD-62</summary>
