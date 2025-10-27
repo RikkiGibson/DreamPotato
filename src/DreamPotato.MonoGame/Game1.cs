@@ -138,18 +138,7 @@ public class Game1 : Game
 
     private void LoadVmuFiles(string? vmsOrVmuFilePath)
     {
-        const string romFileName = "american_v1.05.bin";
-        var romFilePath = Path.Combine(Vmu.DataFolder, romFileName);
-        try
-        {
-            var bios = File.ReadAllBytes(romFilePath);
-            bios.AsSpan().CopyTo(Vmu._cpu.ROM);
-        }
-        catch (FileNotFoundException ex)
-        {
-            throw new InvalidOperationException($"'{romFileName}' must be included in '{Vmu.DataFolder}'.", ex);
-        }
-
+        Vmu.LoadRom();
         vmsOrVmuFilePath ??= RecentFilesInfo.RecentFiles.FirstOrDefault();
         if (vmsOrVmuFilePath != null)
         {
