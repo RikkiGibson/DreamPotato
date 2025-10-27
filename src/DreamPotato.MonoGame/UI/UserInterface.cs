@@ -449,8 +449,17 @@ class UserInterface
             if (ImGui.MenuItem(isDocked ? "Eject VMU" : "Dock VMU"))
                 presenter.DockOrEject();
 
-            ImGui.Separator();
+            using (new DisabledScope(disabled: !_game.UseSecondaryVmu))
+            {
+                Debug.Assert(vmu.IsVmuConnected ? !vmu.IsDocked : true);
+                Debug.Assert((_game.SecondaryVmu is null && !_game.PrimaryVmu.IsVmuConnected)
+                    || _game.PrimaryVmu.IsVmuConnected == _game.SecondaryVmu?.IsVmuConnected);
 
+                if (ImGui.MenuItem(vmu.IsVmuConnected ? "Disconnect VMUs" : "Connect VMUs"))
+                    _game.PrimaryVmu.ConnectOrDisconnectVmu(_game.SecondaryVmu ?? throw new InvalidOperationException());
+            }
+
+            ImGui.Separator();
             using (new DisabledScope(vmu.LoadedFilePath is null))
             {
                 if (ImGui.MenuItem("Save State"))

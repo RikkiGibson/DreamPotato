@@ -36,8 +36,8 @@ public class SpecialFunctionRegisters
     /// </summary>
     public void Reset()
     {
-        // Do not change the Dreamcast connection state when resetting (loading a different VMU file, etc.)
-        var oldDreamcastConnected = P7.DreamcastConnected;
+        // Do not change the peripheral connection state when resetting (loading a different VMU file, etc.)
+        var oldP7 = P7;
 
         Array.Clear(_rawMemory);
         // NB: Memory owns clearing/updating _workRam
@@ -49,7 +49,7 @@ public class SpecialFunctionRegisters
         Write(Ids.P1Fcr, 0b1011_1111);
         Write(Ids.P3Int, 0b1111_1101);
         Write(Ids.P3, 0b1111_1111);
-        Write(Ids.P7, (byte)new P7() { LowVoltage = true, DreamcastConnected = oldDreamcastConnected });
+        Write(Ids.P7, (byte)new P7() { LowVoltage = true, DreamcastConnected = oldP7.DreamcastConnected, IP0 = oldP7.IP0, IP1 = oldP7.IP1 });
         Write(Ids.Isl, 0b1100_0000);
         Write(Ids.Vsel, 0b1111_1100);
         Write(Ids.Btcr, 0b0100_0001);
@@ -288,6 +288,11 @@ public class SpecialFunctionRegisters
                 _rawMemory[address] = value;
                 _cpu.Audio.IsActive = t1cnt is { ELDT1C: true, T1lRun: true };
                 return;
+
+            case Ids.Scon0:
+                { // breakpoint holder
+                }
+                goto default;
 
             default:
                 _rawMemory[address] = value;
@@ -586,7 +591,20 @@ public class SpecialFunctionRegisters
         set => Write(Ids.P1, (byte)value);
     }
 
-    /// <summary>Port 1 data direction register. VMD-58</summary>
+    /// <summary>
+    /// Port 1 data direction register. VMD-58
+    ///
+    /// Specifies whether bits 7 to 0 of <see cref="P1" /> are used for input or output.
+    /// When set to 1, P1n is in output mode.
+    /// When reset to 0, P1n is in input mode.
+    /// </summary>
+    /// <remarks>
+    // The data direction register for port 1 is a write-only register. When a bit operation instruction or an
+    // instruction such as INC, DEC, or DBNZ is used for a write- only register, bits other than the specified
+    // bit become "1". For the P1FCR, use the following instructions.
+    // MOV, MOV @, ST, ST @, POP
+    // NOTE: I think this implies a read should return all 1s.
+    /// </remarks>
     public byte P1Ddr
     {
         get => Read(Ids.P1Ddr);
@@ -594,10 +612,10 @@ public class SpecialFunctionRegisters
     }
 
     /// <summary>Port 1 function control register. VMD-59</summary>
-    public byte P1Fcr
+    public P1Fcr P1Fcr
     {
-        get => Read(Ids.P1Fcr);
-        set => Write(Ids.P1Fcr, value);
+        get => new(Read(Ids.P1Fcr));
+        set => Write(Ids.P1Fcr, (byte)value);
     }
 
     /// <summary>
