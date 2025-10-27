@@ -474,7 +474,9 @@ public class Game1 : Game
         var gamepad = GamePad.GetState(PlayerIndex.One);
 
         _primaryVmuPresenter.Update(gameTime, _previousKeys, _previousGamepad, keyboard, gamepad);
-        if (UseSecondaryVmu)
+        // TODO: secondary update does need to run, but needs to detect the case it is a client of a serial connection, and not actually run the CPU
+        // then, Update on the primary, will cause the two CPUs to run in sync.
+        if (UseSecondaryVmu && !PrimaryVmu.IsVmuConnected)
             _secondaryVmuPresenter.Update(gameTime, _previousKeys, _previousGamepad, keyboard, gamepad);
 
         MapleMessageBroker.RefreshIfNeeded();

@@ -23,6 +23,48 @@ public class SerialTests
 
         var quarterSecond = TimeSpan.TicksPerSecond / 4;
         var halfSecond = TimeSpan.TicksPerSecond / 2;
+
         cpuRx.Run(ticksToRun: quarterSecond);
+        Assert.Equal<object>("""
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+
+            """, cpuRx.Display.GetBlockString());
+
+        // TODO: following assertion should fail. We need io transfer to actually occur here.
+        cpuRx.Run(ticksToRun: halfSecond);
+        Assert.Equal<object>("""
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+                                                            
+
+            """, cpuRx.Display.GetBlockString());
     }
 }

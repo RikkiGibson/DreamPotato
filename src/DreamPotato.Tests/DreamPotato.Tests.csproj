@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="TestSource/RcOscillator.vms" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="TestSource/*.vms" CopyToOutputDirectory="PreserveNewest" />
 
     <Content Include="Data/*.bin">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

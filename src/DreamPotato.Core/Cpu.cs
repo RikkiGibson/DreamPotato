@@ -236,6 +236,9 @@ public class Cpu
         // TODO: do some kind of search of InstructionMap
         // to remove instructions which are no longer present in the binary?
 
+        // TODO: We can't restore the "VMUs connected" state in general.
+        // This is because a save state is local to one VMU, but the "connection" involves them both.
+
         readStream.ReadExactly(ROM);
         readStream.ReadExactly(Flash);
         if (VmuFileHandle is not null)
@@ -324,6 +327,14 @@ public class Cpu
 
     public long Run(long ticksToRun)
     {
+        if (SFRs.P7.VmuConnected && _otherCpu is null)
+        {
+            // If this errors when there isn't a real connection scenario taking place, then, there might be a need to distinguish
+            // the pin signal from latch, in case some software out there manually writes a high value into the latch.
+            Logger.LogError($"Cannot run this Cpu directly because it is the client in a VMU-to-VMU connection.");
+            return -1;
+        }
+
         HandleMapleMessages();
 
         if (SFRs.P7.DreamcastConnected)
@@ -332,6 +343,10 @@ public class Cpu
             // Instead HandleMapleMessages handles everything that should be happening while in this state.
             // TODO: we should at least keep ticking the base timer in this state.
             return ticksToRun;
+        }
+        else if (_otherCpu is not null)
+        {
+            return runBoth(this, _otherCpu, ticksToRun);
         }
 
         // Reduce the number of ticks we were asked to run, by the amount we overran last frame.
@@ -345,6 +360,27 @@ public class Cpu
         TicksOverrun = ticksSoFar - ticksToRun;
 
         return ticksSoFar;
+
+        static long runBoth(Cpu @this, Cpu other, long inputTicksToRun)
+        {
+            var thisTicksToRun = inputTicksToRun - @this.TicksOverrun;
+            var otherTicksToRun = inputTicksToRun - other.TicksOverrun;
+            while (thisTicksToRun > 0 || otherTicksToRun > 0)
+            {
+                // Execute one instruction for whichever VMU is further behind in time.
+                if (thisTicksToRun > otherTicksToRun)
+                    thisTicksToRun -= @this.StepTicks();
+                else
+                    otherTicksToRun -= other.StepTicks();
+            }
+
+            @this.TicksOverrun = -thisTicksToRun;
+            other.TicksOverrun = -otherTicksToRun;
+
+            // note: We don't rely on the return value of 'Run()' for precision.
+            // Possibly it should be changed to return void.
+            return inputTicksToRun - thisTicksToRun;
+        }
     }
 
     /// <summary>If VMU just became docked, update Maple flash from Cpu; otherwise, if VMU just became undocked, update Cpu flash from Maple.</summary>
@@ -683,6 +719,8 @@ public class Cpu
             _interruptServicingState = InterruptServicingState.Ready;
     }
 
+    /// <summary>Execute a single instruction and tick the base timer.</summary>
+    /// <returns>Number of ticks consumed by running the instruction.</returns>
     internal long StepTicks()
     {
         // Note that any instruction which modifies OCR, etc, is presumed to only affect the speed starting on the next instruction.
