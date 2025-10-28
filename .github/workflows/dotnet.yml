@@ -8,6 +8,7 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   Test:
@@ -39,6 +40,8 @@ jobs:
         list-tests: failed
 
   Publish:
+    # TODO: mac publishing job using macos-latest
+    # runs-on: ubuntu-latest
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -81,3 +84,19 @@ jobs:
       with:
         name: DreamPotato-Linux-x64-dev
         path: artifacts/publish/DreamPotato.MonoGame/release_linux-x64/
+
+  PublishMac:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+    - name: Download resources
+      run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.MonoGame/Data/american_v1.05.bin
+    - name: Run pack-arm64.sh
+      run: ./src/DreamPotato.MonoGame/Mac/pack-arm64.sh
+    - name: Upload Mac arm64
+      uses: actions/upload-artifact@v4
+      with:
+        name: DreamPotato-Mac-arm64-dev
+        path: artifacts/mac-arm64/DreamPotato.app
