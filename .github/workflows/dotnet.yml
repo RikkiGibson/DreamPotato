@@ -40,8 +40,6 @@ jobs:
         list-tests: failed
 
   Publish:
-    # TODO: mac publishing job using macos-latest
-    # runs-on: ubuntu-latest
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -60,22 +58,6 @@ jobs:
       with:
         name: DreamPotato-Windows-dev
         path: artifacts/publish/DreamPotato.MonoGame/release_win-x64/
-
-    # - name: dotnet publish osx-x64
-    #   run: dotnet publish src/DreamPotato.MonoGame -r osx-x64
-    # - name: Upload macOS x64
-    #   uses: actions/upload-artifact@v4
-    #   with:
-    #     name: DreamPotato-macOS-x64-dev
-    #     path: artifacts/publish/DreamPotato.MonoGame/release_osx-x64/
-
-    # - name: dotnet publish osx-arm64
-    #   run: dotnet publish src/DreamPotato.MonoGame -r osx-arm64
-    # - name: Upload macOS arm64
-    #   uses: actions/upload-artifact@v4
-    #   with:
-    #     name: DreamPotato-macOS-arm64-dev
-    #     path: artifacts/publish/DreamPotato.MonoGame/release_osx-arm64/
 
     - name: dotnet publish linux-x64
       run: dotnet publish src/DreamPotato.MonoGame -r linux-x64
@@ -99,4 +81,12 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: DreamPotato-Mac-arm64-dev
-        path: artifacts/mac-arm64/DreamPotato.app
+        path: artifacts/mac-arm64/
+
+    # - name: dotnet publish osx-x64
+    #   run: dotnet publish src/DreamPotato.MonoGame -r osx-x64
+    # - name: Upload macOS x64
+    #   uses: actions/upload-artifact@v4
+    #   with:
+    #     name: DreamPotato-macOS-x64-dev
+    #     path: artifacts/publish/DreamPotato.MonoGame/release_osx-x64/
