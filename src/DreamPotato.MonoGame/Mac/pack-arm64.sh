@@ -34,3 +34,4 @@ sips -z 512 512 $project/Icon.png --out $artifacts/obj/DreamPotato.MonoGame/rele
 sips -z 1024 1024 $project/Icon.png --out $artifacts/obj/DreamPotato.MonoGame/release_osx-arm64/DreamPotato.iconset/icon_512x512@2x.png 1>/dev/null
 iconutil -c icns $artifacts/obj/DreamPotato.MonoGame/release_osx-arm64/DreamPotato.iconset --output $artifacts/obj/DreamPotato.MonoGame/release_osx-arm64/DreamPotato.icns
 cp $artifacts/obj/DreamPotato.MonoGame/release_osx-arm64/DreamPotato.icns $artifacts/mac-arm64/DreamPotato.app/Contents/Resources/DreamPotato.icns
+ditto -c -k --sequesterRsrc --keepParent $artifacts/mac-arm64/DreamPotato.app $artifacts/mac-arm64/DreamPotato.app.zip
