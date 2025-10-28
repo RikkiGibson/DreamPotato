@@ -81,7 +81,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: DreamPotato-Mac-arm64-dev
-        path: artifacts/mac-arm64/DreamPotato.app.zip
+        path: artifacts/DreamPotato-mac-arm64.zip
 
     # - name: dotnet publish osx-x64
     #   run: dotnet publish src/DreamPotato.MonoGame -r osx-x64
