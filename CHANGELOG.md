@@ -1,5 +1,18 @@
 # Change Log
 
+## [0.1.0-beta-4] - TBD
+
+- Allow using VMUs in both slot 1 and slot 2
+    - When Slot 1+2 are both used, a "secondary VMU" will also be displayed. It has its own menu and can independently open/save files, pause/resume, save/load state, handle key bindings, etc.
+    - The default "Arrow keys" bindings were changed so that they do not overlap with the WASD bindings, to make the primary and secondary VMU easier to use together.
+    - Connecting the slot 2 VMU to Flycast works, but requires [dreamconn-slot-2-vmu](https://github.com/RikkiGibson/flycast/tree/dreamconn-slot-2-vmu) branch currently (planning to PR that soon).
+    - VMU-to-VMU communication (#6) is **not yet implemented**.
+- Preserve the docked/ejected state between runs (#8)
+- Allow saving/loading state while docked
+    - Saving state while docked can be useful before loading rewards from a minigame into a Dreamcast game, just in case something goes wrong.
+    - Note that the docked/ejected state is restored when loading state based on the save-state contents.
+    - Loading DreamPotato state while docked also causes Flycast to behave as if the memory card was removed and re-inserted.
+
 ## [0.1.0-beta-3] - 2025-10-05
 
 - Support resizing the window

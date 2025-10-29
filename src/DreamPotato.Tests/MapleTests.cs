@@ -6,10 +6,12 @@ namespace DreamPotato.Tests;
 
 public class MapleTests
 {
-    [Fact]
-    public void GetDeviceStatus()
+    [Theory]
+    [InlineData(DreamcastSlot.Slot1)]
+    [InlineData(DreamcastSlot.Slot2)]
+    public void GetCondition_Input_1(DreamcastSlot slot)
     {
-        var cpu = new Cpu();
+        var cpu = new Cpu() { DreamcastSlot = slot };
         var messageBroker = cpu.MapleMessageBroker;
         cpu.Reset();
         cpu.ConnectDreamcast();
@@ -23,15 +25,79 @@ public class MapleTests
         Assert.True(message.HasValue);
         Assert.Equal(MapleMessageType.Ack, message.Type);
         Assert.Equal((byte)new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast }, (byte)message.Recipient);
-        Assert.Equal((byte)new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Slot1 }, (byte)message.Sender);
+        Assert.Equal((byte)new MapleAddress { Port = DreamcastPort.A, Slot = slot }, (byte)message.Sender);
         Assert.Equal(0, message.Length);
         Assert.Empty(message.AdditionalWords);
     }
 
     [Fact]
+    public void GetCondition_Input_3()
+    {
+        // Indicate that slots 1 and 2 are both docked
+        var messageBroker = new MapleMessageBroker(LogLevel.Default);
+        messageBroker.Resync(DreamcastSlot.Slot1, vmuDocked: true, writeToMapleFlash: true, flash: default, vmuFileHandle: null);
+        messageBroker.Resync(DreamcastSlot.Slot2, vmuDocked: true, writeToMapleFlash: true, flash: default, vmuFileHandle: null);
+
+        // MDCF_GetCondition, destAP (requesting attached devices), originAP, length, MFID_0_Input
+        var deviceStatusMessage = "09 20 00 01 00 00 00 01\r\n"u8;
+        Queue<MapleMessage> inbound = [];
+        messageBroker.ScanAsciiHexFragment(asciiMessageBuilder: [], inbound, deviceStatusMessage);
+        var message = messageBroker.HandleMapleMessage(inbound.Dequeue());
+        Assert.True(message.HasValue);
+        Assert.Equal(MapleMessageType.Ack, message.Type);
+        Assert.Equal((byte)new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast }, (byte)message.Recipient);
+        Assert.Equal((byte)new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Slot1 | DreamcastSlot.Slot2 }, (byte)message.Sender);
+        Assert.Equal(0, message.Length);
+        Assert.Empty(message.AdditionalWords);
+    }
+
+    public static readonly TheoryData<DreamcastSlot, byte[]> DeviceRequest_Data = new()
+    {
+        {
+            DreamcastSlot.Slot1,
+            // MDCF_GetCondition, destAP (requesting slot 1 attached device), originAP, length
+            "01 01 00 00\r\n"u8.ToArray()
+        },
+        {
+            DreamcastSlot.Slot2,
+            "01 02 00 00\r\n"u8.ToArray()
+        },
+    };
+
+    [Theory, MemberData(nameof(DeviceRequest_Data))]
+    public void DeviceRequest_1(DreamcastSlot slot, byte[] deviceStatusMessage)
+    {
+        // Request info about the device in slot 1
+        var messageBroker = new MapleMessageBroker(LogLevel.Default);
+        messageBroker.Resync(slot, vmuDocked: true, writeToMapleFlash: true, flash: default, vmuFileHandle: null);
+
+        // MDCF_GetCondition, destAP (requesting slot 1 attached device), originAP, length
+        Queue<MapleMessage> inbound = [];
+        messageBroker.ScanAsciiHexFragment(asciiMessageBuilder: [], inbound, deviceStatusMessage);
+        var message = messageBroker.HandleMapleMessage(inbound.Dequeue());
+        Assert.True(message.HasValue);
+        Assert.Equal(MapleMessageType.DeviceInfoTransfer, message.Type);
+        Assert.Equal((byte)new MapleAddress { Port = DreamcastPort.A, Slot = DreamcastSlot.Dreamcast }, (byte)message.Recipient);
+        Assert.Equal((byte)new MapleAddress { Port = DreamcastPort.A, Slot = slot }, (byte)message.Sender);
+        Assert.Equal(28, message.Length);
+        Assert.Equal((int)(MapleFunction.Storage | MapleFunction.LCD | MapleFunction.Clock), message.AdditionalWords[0]);
+    }
+
+    [Theory, MemberData(nameof(DeviceRequest_Data))]
+    public void DeviceRequest_2(DreamcastSlot _, byte[] deviceStatusMessage)
+    {
+        // No device in slot
+        var messageBroker = new MapleMessageBroker(LogLevel.Default);
+        Queue<MapleMessage> inbound = [];
+        messageBroker.ScanAsciiHexFragment(asciiMessageBuilder: [], inbound, deviceStatusMessage);
+        var message = messageBroker.HandleMapleMessage(inbound.Dequeue());
+        Assert.True(message.IsResetMessage);
+    }
+
+    [Fact]
     public void SetConditionClock()
     {
-        var cpu = new Cpu();
+        var cpu = new Cpu() { DreamcastSlot = DreamcastSlot.Slot1 };
         var messageBroker = cpu.MapleMessageBroker;
         cpu.Reset();
         cpu.ConnectDreamcast();
@@ -50,7 +116,7 @@ public class MapleTests
     [Fact]
     public void SetConditionClock_02()
     {
-        var cpu = new Cpu();
+        var cpu = new Cpu() { DreamcastSlot = DreamcastSlot.Slot1 };
         var messageBroker = cpu.MapleMessageBroker;
         cpu.Reset();
         cpu.ConnectDreamcast();
@@ -73,7 +139,7 @@ public class MapleTests
     [Fact]
     public void Fragment_01()
     {
-        var cpu = new Cpu();
+        var cpu = new Cpu() { DreamcastSlot = DreamcastSlot.Slot1 };
         var messageBroker = cpu.MapleMessageBroker;
         cpu.Reset();
         cpu.ConnectDreamcast();
@@ -96,7 +162,7 @@ public class MapleTests
     [Fact]
     public void WriteLcd()
     {
-        var cpu = new Cpu();
+        var cpu = new Cpu() { DreamcastSlot = DreamcastSlot.Slot1 };
         var messageBroker = cpu.MapleMessageBroker;
         cpu.Reset();
         cpu.ConnectDreamcast();
@@ -138,7 +204,7 @@ public class MapleTests
     public void WriteLcd_2()
     {
         // test clear screen message
-        var cpu = new Cpu();
+        var cpu = new Cpu() { DreamcastSlot = DreamcastSlot.Slot1 };
         var messageBroker = cpu.MapleMessageBroker;
         cpu.Reset();
         cpu.ConnectDreamcast();
@@ -179,7 +245,7 @@ public class MapleTests
     [Fact]
     public void ReadBlock_01()
     {
-        var cpu = new Cpu();
+        var cpu = new Cpu() { DreamcastSlot = DreamcastSlot.Slot1 };
         var messageBroker = cpu.MapleMessageBroker;
 
         // fill the block we are going to read from
@@ -221,7 +287,7 @@ public class MapleTests
     [Fact]
     public void WriteBlock_01()
     {
-        var cpu = new Cpu();
+        var cpu = new Cpu() { DreamcastSlot = DreamcastSlot.Slot1 };
         var messageBroker = cpu.MapleMessageBroker;
 
         // fill the block we are going to read from
@@ -259,7 +325,7 @@ public class MapleTests
     [Fact]
     public void WriteComplete_01()
     {
-        var cpu = new Cpu();
+        var cpu = new Cpu() { DreamcastSlot = DreamcastSlot.Slot1 };
         var messageBroker = cpu.MapleMessageBroker;
 
         // fill the block we are going to read from
@@ -296,7 +362,7 @@ public class MapleTests
     [Fact]
     public void Reconnect()
     {
-        var cpu = new Cpu();
+        var cpu = new Cpu() { DreamcastSlot = DreamcastSlot.Slot1 };
 
         cpu.Reset();
 

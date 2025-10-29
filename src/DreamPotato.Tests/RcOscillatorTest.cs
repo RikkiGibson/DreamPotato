@@ -7,7 +7,7 @@ public class RcOscillatorTest
     [Fact]
     public void Main()
     {
-        var cpu = new Cpu();
+        var cpu = new Cpu() { DreamcastSlot = DreamcastSlot.Slot1 };
         cpu.Reset();
 
         var data = File.ReadAllBytes("TestSource/RcOscillator.vms");

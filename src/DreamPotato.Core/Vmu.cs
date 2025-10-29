@@ -13,6 +13,7 @@ public class Vmu
     public Audio Audio => _cpu.Audio;
     public Display Display => _cpu.Display;
     public string? LoadedFilePath { get; private set; }
+    public (byte a, byte r, byte g, byte b) Color => _fileSystem.VmuColor;
 
     public bool HasUnsavedChanges => _cpu.HasUnsavedChanges;
     public event Action UnsavedChangesDetected
@@ -21,9 +22,9 @@ public class Vmu
         remove => _cpu.UnsavedChangesDetected -= value;
     }
 
-    public Vmu()
+    public Vmu(MapleMessageBroker? mapleMessageBroker = null)
     {
-        _cpu = new Cpu();
+        _cpu = new Cpu(mapleMessageBroker);
         _cpu.Reset();
         _fileSystem = new FileSystem(_cpu.Flash);
     }
@@ -172,14 +173,6 @@ public class Vmu
         _cpu.VmuFileWriteStream = fileStream;
     }
 
-    public void RestartMapleServer(DreamcastPort dreamcastPort)
-    {
-        if (_cpu.MapleMessageBroker.IsRunning)
-            _cpu.MapleMessageBroker.ShutdownServer();
-
-        _cpu.MapleMessageBroker.StartServer(dreamcastPort);
-    }
-
     public bool IsServerConnected
     {
         get
@@ -188,15 +181,21 @@ public class Vmu
         }
     }
 
-    public bool IsEjected => !_cpu.SFRs.P7.DreamcastConnected;
+    /// <summary>Indicates whether the VMU is docked in the Dreamcast controller.</summary>
+    public bool IsDocked => _cpu.SFRs.P7.DreamcastConnected;
 
-    // Toggle the inserted/ejected state.
-    public void InsertOrEject()
-    {
-        _cpu.ConnectDreamcast(connect: IsEjected);
-    }
+    // Toggle the docked/ejected state.
+    public void DockOrEject()
+        => _cpu.ConnectDreamcast(connect: !IsDocked);
+
+    // Dock or eject depending on a bool argument.
+    public void DockOrEject(bool connect)
+        => _cpu.ConnectDreamcast(connect);
 
     public static string DataFolder => Path.Combine(AppContext.BaseDirectory, "Data");
+
+    public DreamcastSlot DreamcastSlot { get => _cpu.DreamcastSlot; set => _cpu.DreamcastSlot = value; }
+
     public const string RomFileName = "american_v1.05.bin";
     public const string SaveStateHeaderMessage = "DreamPotatoSaveState";
     public static readonly ReadOnlyMemory<byte> SaveStateHeaderBytes = Encoding.UTF8.GetBytes(SaveStateHeaderMessage);
@@ -210,7 +209,7 @@ public class Vmu
 
     public bool SaveState(string id)
     {
-        if (!IsEjected || LoadedFilePath is null ||  GetSaveStatePath(LoadedFilePath, id) is not string filePath)
+        if (LoadedFilePath is null ||  GetSaveStatePath(LoadedFilePath, id) is not string filePath)
             return false;
 
         // TODO: it feels like it would be reasonable to zip/unzip the state implicitly.
@@ -244,9 +243,6 @@ public class Vmu
 
     public (bool success, string? error) LoadStateFromPath(string filePath, bool saveOopsFile)
     {
-        if (!IsEjected)
-            return (false, error: "Cannot load state while docked.");
-
         if (saveOopsFile)
         {
             if (!SaveOopsFile())
