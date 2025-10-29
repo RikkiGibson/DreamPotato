@@ -8,6 +8,7 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   Test:
@@ -58,22 +59,6 @@ jobs:
         name: DreamPotato-Windows-dev
         path: artifacts/publish/DreamPotato.MonoGame/release_win-x64/
 
-    # - name: dotnet publish osx-x64
-    #   run: dotnet publish src/DreamPotato.MonoGame -r osx-x64
-    # - name: Upload macOS x64
-    #   uses: actions/upload-artifact@v4
-    #   with:
-    #     name: DreamPotato-macOS-x64-dev
-    #     path: artifacts/publish/DreamPotato.MonoGame/release_osx-x64/
-
-    # - name: dotnet publish osx-arm64
-    #   run: dotnet publish src/DreamPotato.MonoGame -r osx-arm64
-    # - name: Upload macOS arm64
-    #   uses: actions/upload-artifact@v4
-    #   with:
-    #     name: DreamPotato-macOS-arm64-dev
-    #     path: artifacts/publish/DreamPotato.MonoGame/release_osx-arm64/
-
     - name: dotnet publish linux-x64
       run: dotnet publish src/DreamPotato.MonoGame -r linux-x64
     - name: Upload Linux x64
@@ -81,3 +66,19 @@ jobs:
       with:
         name: DreamPotato-Linux-x64-dev
         path: artifacts/publish/DreamPotato.MonoGame/release_linux-x64/
+
+  PublishMac:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+    - name: Download resources
+      run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.MonoGame/Data/american_v1.05.bin
+    - name: Run pack-arm64.sh
+      run: ./src/DreamPotato.MonoGame/Mac/pack-arm64.sh
+    - name: Upload Mac arm64
+      uses: actions/upload-artifact@v4
+      with:
+        name: DreamPotato-Mac-arm64-dev
+        path: artifacts/DreamPotato-mac-arm64.zip
