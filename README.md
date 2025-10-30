@@ -24,17 +24,18 @@ See [compatibility.md](compatibility.md) for the current compatibility status of
 DreamPotato can connect to [Flycast](https://github.com/flyinghead/flycast) to support an experience similar to using a real Dreamcast and VMU together. This feature is now available in the **Flycast dev branch**. See [Flycast Builds](https://flyinghead.github.io/flycast-builds/) for the latest dev branch builds.
 
 Instructions:
-1) DreamPotato defaults to connecting to Port A. You can go into the settings and change this if you wish.
-    - The VMU also only connects to slot 1 of a given port currently. This limitation will hopefully be lifted in the future.
-2) Open the Flycast controller settings. Enable "**Use Physical VMU Memory**". Enable "**Use Network Expansion Devices**" for the controller port you want to use to connect.
-3) Once both Flycast and DreamPotato are running, start a game in Flycast. After a moment, the swirl icon should appear in the DreamPotato menu bar indicating things are connected.
-4) If you get disconnected, pause Flycast and hit the Connect button to reconnect.
+1) Open the Flycast controller settings. Enable "**Use Physical VMU Memory**". Enable "**Use Network Expansion Devices**" for the controller port you want to use to connect.
+2) Once both Flycast and DreamPotato are running, start a game in Flycast. After a moment, the swirl icon should appear in the DreamPotato menu bar indicating things are connected.
+3) If you get disconnected, pause Flycast and hit the Connect button to reconnect.
 
 Additional notes/caveats:
-1) DreamPotato will "take over" all the expansion devices for a given controller. So, if you want to do stuff like copy between Flycast-managed and DreamPotato-managed VMUs, you'll have to put them in separate controllers.
-2) DreamPotato does not play sound while docked to a controller. You should leave the Flycast VMU sound setting enabled if you want that. (DreamPotato *does* play sound in standalone mode.)
-3) If you want to use DreamPotato with multiple ports, you can launch multiple instance, and set a different Dreamcast Slot setting for each one.
-4) In Chao Adventure, you need to hit Mode to exit the game before inserting the VMU, or your progress may not be saved.
+1) DreamPotato defaults to connecting to slot A1. You can go into the settings and change this if you wish.
+2) If you disable **Use Physical VMU Memory**, then Flycast will use its own internal VMU files for saving/loading games. DreamPotato will still display VMU graphics in that case.
+    - When loading state in Flycast, Use Physical VMU Memory will be temporarily disabled. You'll need to pause the game and disconnect/reconnect DreamLink in order to resume using DreamPotato's VMU memory.
+2) DreamPotato will "take over" all the expansion devices for a given controller. So, if you want to do stuff like copy between Flycast-managed and DreamPotato-managed VMUs, you'll have to put them in separate controllers.
+3) DreamPotato does not play sound while docked to a controller. You should leave the Flycast VMU sound setting enabled if you want that. (DreamPotato *does* play sound in standalone mode.)
+4) If you want to use DreamPotato with multiple ports, you can launch multiple instance, and set a different Dreamcast Slot setting for each one.
+5) In Chao Adventure, you need to hit Mode to exit the game before inserting the VMU, or your progress may not be saved.
 
 ## Usage
 

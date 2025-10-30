@@ -1,16 +1,20 @@
 # Change Log
 
-## [0.1.0-beta-4] - TBD
-
+## [0.1.0-beta-4] - 2025-10-29
 - Allow using VMUs in both slot 1 and slot 2
+    - VMU-to-VMU communication (https://github.com/RikkiGibson/DreamPotato/issues/6) is **not yet implemented**, but this gets us much closer to being able to do it.
     - When Slot 1+2 are both used, a "secondary VMU" will also be displayed. It has its own menu and can independently open/save files, pause/resume, save/load state, handle key bindings, etc.
-    - The default "Arrow keys" bindings were changed so that they do not overlap with the WASD bindings, to make the primary and secondary VMU easier to use together.
-    - Connecting the slot 2 VMU to Flycast works, but requires [dreamconn-slot-2-vmu](https://github.com/RikkiGibson/flycast/tree/dreamconn-slot-2-vmu) branch currently (planning to PR that soon).
-    - VMU-to-VMU communication (#6) is **not yet implemented**.
-- Preserve the docked/ejected state between runs (#8)
+    - Connecting both the slot 1 and 2 VMUs to Flycast works in the latest [Flycast dev build](https://flyinghead.github.io/flycast-builds/#dev) (from 2025-10-28 or later).
+    - The default "Arrow keys" bindings were changed so that they do not overlap with the WASD bindings, to make the primary and secondary VMU easier to use at the same time.
+    - Multiple gamepads/selecting a gamepad per-VMU is not yet supported.
+- Add Linux build.
+- Mac build is also available directly from the main branch CI run, but, it has issues with macOS quarantining it. I don't have code signing/notarizing working.
+- Fix a bug where deleting the most recently opened VMU file would cause the emulator to crash on startup.
+- Fix a bug where the VMU contents would become corrupted after using "Save As" while docked.
+- Preserve the docked/ejected state between runs (https://github.com/RikkiGibson/DreamPotato/issues/8)
 - Allow saving/loading state while docked
     - Saving state while docked can be useful before loading rewards from a minigame into a Dreamcast game, just in case something goes wrong.
-    - Note that the docked/ejected state is restored when loading state based on the save-state contents.
+    - Note that the docked/ejected state is restored when loading state, based on the save-state contents.
     - Loading DreamPotato state while docked also causes Flycast to behave as if the memory card was removed and re-inserted.
 
 ## [0.1.0-beta-3] - 2025-10-05
