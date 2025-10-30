@@ -56,7 +56,7 @@ jobs:
     - name: Upload win-x64
       uses: actions/upload-artifact@v4
       with:
-        name: DreamPotato-Windows-dev
+        name: DreamPotato-Windows-x64-dev
         path: artifacts/publish/DreamPotato.MonoGame/release_win-x64/
 
     - name: dotnet publish linux-x64
