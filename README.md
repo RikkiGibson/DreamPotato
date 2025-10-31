@@ -1,6 +1,6 @@
 # DreamPotato
 
-DreamPotato is a Dreamcast VMU emulator in currently in beta. For the moment only Windows builds are available.
+DreamPotato is a Dreamcast VMU emulator in currently in beta.
 
 > [!WARNING]
 > When opening a `.vmu` or `.bin` file, the emulator will modify the file on disk while running in order to persist changes, such as save file changes on the memory card, saving your progress in minigames, or when using the Load State command.
