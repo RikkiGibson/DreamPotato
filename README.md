@@ -19,7 +19,7 @@ See [compatibility.md](compatibility.md) for the current compatibility status of
 
 ## Flycast Integration
 
-[Demo Video](https://www.youtube.com/watch?v=EN8Y3UX_TDM)
+[![DreamPotato Flycast Integration Demo](./docs/images/demo-video-thumbnail.png)](https://www.youtube.com/watch?v=EN8Y3UX_TDM)
 
 DreamPotato can connect to [Flycast](https://github.com/flyinghead/flycast) to support an experience similar to using a real Dreamcast and VMU together. This feature is now available in the **Flycast dev branch**. See [Flycast Builds](https://flyinghead.github.io/flycast-builds/) for the latest dev branch builds.
 
