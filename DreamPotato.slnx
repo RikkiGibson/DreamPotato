@@ -1,0 +1,13 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/DreamPotato.Core/DreamPotato.Core.csproj" />
+    <Project Path="src/DreamPotato.MonoGame/DreamPotato.MonoGame.csproj" />
+    <Project Path="src/DreamPotato.SaveStateDiff/DreamPotato.SaveStateDiff.csproj" />
+    <Project Path="src/DreamPotato.Tests/DreamPotato.Tests.csproj" />
+  </Folder>
+</Solution>
