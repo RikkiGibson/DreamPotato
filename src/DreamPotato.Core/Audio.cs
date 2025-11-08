@@ -169,33 +169,32 @@ public class Audio
         var signal = value ? _highSignal : _lowSignal;
         for (int i = 0; i < samplesPerCycle; i++)
         {
-            _pcmBuffer[_pcmBufferIndex++] = signal[0];
-            _pcmBuffer[_pcmBufferIndex++] = signal[1];
+            _cpuPulseBuffer[_pcmBufferIndex++] = signal[0];
+            _cpuPulseBuffer[_pcmBufferIndex++] = signal[1];
         }
 
-        if (_pcmBufferIndex >= PcmBufferFilledSize)
+        if (_pcmBufferIndex >= CpuPulseBufferFilledSize)
         {
-            _logger.LogDebug($"Submitting audio buffer of length {_pcmBufferIndex}", LogCategories.Audio);
-            AudioBufferReady?.Invoke(new(_pcmBuffer, Start: 0, Length: _pcmBufferIndex));
-            _pcmBufferIndex = 0;
-            _pcmRemainder = 0;
+            SubmitBuffer(endAudio: false);
         }
     }
 
-    private void EndAudio()
+    private void SubmitBuffer(bool endAudio)
     {
         if (_pcmBufferIndex == 0)
             return;
 
-        _logger.LogDebug($"EndAudio: Submitting audio buffer of length {_pcmBufferIndex}", LogCategories.Audio);
-        if (_cpu.SFRs.Ocr.CpuClockHz is not (OscillatorHz.Quartz / 6) or (OscillatorHz.Quartz / 12))
+        // TODO: do resampling
+        if (resampleStream.Length != 0)
         {
-            _logger.LogWarning(
-                $"Sample rate not compatible with clock {_cpu.SFRs.Ocr.SystemClockSelector}.",
-                LogCategories.Audio);
+            _logger.LogDebug($"Submitting audio buffer of length {resampleStream.Length}", LogCategories.Audio);
+            AudioBufferReady?.Invoke(new(resampleStream.GetBuffer(), 0, (int)resampleStream.Length));
         }
-
-        AudioBufferReady?.Invoke(new(_pcmBuffer, 0, _pcmBufferIndex));
+        else
+        {
+            _logger.LogWarning($"Resampling not performed!", LogCategories.Audio);
+        }
         _pcmBufferIndex = 0;
+        _pcmRemainder = 0;
     }
 }
