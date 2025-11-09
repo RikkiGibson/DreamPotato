@@ -8,9 +8,11 @@ using Microsoft.Win32.SafeHandles;
 
 namespace DreamPotato.Core;
 
+[DebuggerDisplay("{GetDebuggerDisplay(),nq}")]
 public class Cpu
 {
     public Logger Logger { get; }
+    public string? DisplayName { get; init; }
 
     // VMD-35: Accumulator and all registers are mapped to RAM.
     // VMD-38: Memory
@@ -118,6 +120,25 @@ public class Cpu
     /// </summary>
     internal byte T0Scale;
 
+    /// <summary>
+    /// How many bits of a 1-byte serial transfer have been sent so far.
+    /// </summary>
+    internal byte SioTxCount;
+
+    /// <summary>
+    /// How many bits of a 1-byte serial transfer have been received so far.
+    /// </summary>
+    internal byte SioRxCount;
+
+    /// <summary>
+    /// Tracks serial transfer progress when using internal clock.
+    /// Essentially, <see cref="SpecialFunctionRegisters.Sbr"/> is like a reload register for this thing.
+    /// When 9th bit of this timer overflows, we should shift another bit into the serial buffer register.
+    /// When certain higher bit than that overflows, we should mark the serial transfer as completed.
+    /// </summary>
+    /// <remarks>TODO! This may need to be tracked in save states.</remarks>
+    internal short SerialTransferTimer;
+
     internal Interrupts RequestedInterrupts;
     private InterruptServicingState _interruptServicingState;
 
@@ -164,6 +185,14 @@ public class Cpu
         Display = new Display(this);
         MapleMessageBroker = mapleMessageBroker ?? new MapleMessageBroker(LogLevel.Default);
         SetInstructionBank(InstructionBank.ROM);
+    }
+
+    string GetDebuggerDisplay()
+    {
+        var nameLabel = DisplayName is null ? "" : $"{DisplayName}: ";
+        var halt = SFRs.Pcon.HaltMode ? "HALT " : "";
+        var currentInstruction = InstructionDecoder.Decode(CurrentROMBank, Pc);
+        return $"{nameLabel}{InstructionBank}@[{Pc:X4}] {halt}{currentInstruction}";
     }
 
     public void Reset()
@@ -543,15 +572,20 @@ public class Cpu
         SFRs.P7 = thisP7 with { VmuConnected = true };
         otherCpu.SFRs.P7 = otherP7 with { VmuConnected = true };
         _otherCpu = otherCpu;
+        otherCpu._otherCpu = this;
     }
 
     internal void DisconnectVmu()
     {
         if (_otherCpu is null)
-            throw new InvalidOperationException("Not connected to another VMU (note that the object reference is one-way)");
+            throw new InvalidOperationException("Not connected to another VMU");
+
+        if (_otherCpu._otherCpu != this)
+            throw new InvalidOperationException("Other CPU is not connected to this CPU");
 
         SFRs.P7 = SFRs.P7 with { VmuConnected = false };
         _otherCpu.SFRs.P7 = _otherCpu.SFRs.P7 with { VmuConnected = false };
+        _otherCpu._otherCpu = null;
         _otherCpu = null;
     }
 
@@ -878,6 +912,7 @@ public class Cpu
         {
             tickTimer0();
             tickTimer1();
+            tickSerialTransferTimer();
 
             void tickTimer0()
             {
@@ -992,6 +1027,43 @@ public class Cpu
 
                 SFRs.T1Cnt = t1cnt;
             }
+
+            void tickSerialTransferTimer()
+            {
+                if (!SFRs.Scon0.TransferControl)
+                    return;
+
+                // Note that this is a normal condition which software can easily put us into.
+                // All it has to do is enable the transfer control without first checking the pin which indicates the other VMU is connected.
+                // It's not clear what real hardware would do here, a test program would be needed to check.
+                if (_otherCpu == null)
+                    return;
+
+                var reload = SFRs.Sbr;
+                for (var i = 0; i < cycles; i++)
+                {
+                    SerialTransferTimer++;
+                    if (SerialTransferTimer >= 0x200)
+                    {
+                        SerialTransferTimer = reload;
+                        sendOneBit();
+                    }
+                }
+            }
+
+            void sendOneBit()
+            {
+                var sbuf0 = SFRs.Sbuf0;
+                _otherCpu.ReceiveSerialTransferBit(sbuf0 & 1);
+                SFRs.Sbuf0 = (byte)(sbuf0 >> 1);
+
+                SioTxCount++;
+                if (SioTxCount == 8)
+                {
+                    SFRs.Scon0 = SFRs.Scon0 with { TransferControl = false, TransferEndFlag = true };
+                    SioTxCount = 0;
+                }
+            }
         }
 
         void requestLevelDrivenInterrupts()
@@ -1056,6 +1128,18 @@ public class Cpu
 
                 return false;
             }
+        }
+    }
+
+    private void ReceiveSerialTransferBit(int bit)
+    {
+        Debug.Assert(bit is 0 or 1);
+        SFRs.Sbuf1 = (byte)((SFRs.Sbuf1 << 1) | bit);
+        SioRxCount++;
+        if (SioRxCount == 8)
+        {
+            SFRs.Scon0 = SFRs.Scon0 with { TransferControl = false, TransferEndFlag = true };
+            SioRxCount = 0;
         }
     }
 

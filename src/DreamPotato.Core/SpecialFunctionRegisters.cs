@@ -96,6 +96,11 @@ public class SpecialFunctionRegisters
                 }
                 goto default;
 
+            case Ids.Scon1:
+                { // breakpoint holder
+                }
+                goto default;
+
             default:
                 return _rawMemory[address];
         }
@@ -290,8 +295,28 @@ public class SpecialFunctionRegisters
                 return;
 
             case Ids.Scon0:
-                { // breakpoint holder
-                }
+                var scon0 = new Scon0(value);
+                if (scon0.MSBFirstSequence)
+                    _logger.LogWarning($"MSB-first transfer was specified by user code. This will be ignored.", LogCategories.SerialTransfer);
+
+                if (scon0.ContinuousTransfer)
+                    _logger.LogWarning($"Continuous transfer was specified. This is not yet supported.", LogCategories.SerialTransfer);
+
+                goto default;
+
+            case Ids.Scon1:
+                var scon1 = new Scon1(value);
+                if (scon1.MSBFirstSequence)
+                    _logger.LogWarning($"MSB-first transfer was specified by user code. This will be ignored.", LogCategories.SerialTransfer);
+
+                if (scon1.ContinuousTransfer)
+                    _logger.LogWarning($"Continuous transfer was specified. This is not yet supported.", LogCategories.SerialTransfer);
+
+                goto default;
+
+            case Ids.Sbr:
+                // Reload the serial transfer timer
+                _cpu.SerialTransferTimer = value;
                 goto default;
 
             default:
