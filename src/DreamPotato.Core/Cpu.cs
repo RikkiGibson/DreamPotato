@@ -178,7 +178,7 @@ public class Cpu
 
     public Cpu(MapleMessageBroker? mapleMessageBroker = null)
     {
-        var categories = LogCategories.General;
+        var categories = LogCategories.General | LogCategories.SerialTransfer;
         Logger = new Logger(LogLevel.Default, categories, this);
         Memory = new Memory(this, Logger);
         Audio = new Audio(this, Logger);
@@ -189,7 +189,9 @@ public class Cpu
 
     string GetDebuggerDisplay()
     {
-        var nameLabel = DisplayName is null ? "" : $"{DisplayName}: ";
+        var nameLabel = DisplayName is { } ? $"{DisplayName}: "
+            : DreamcastSlot != DreamcastSlot.Dreamcast ? $"{DreamcastSlot}: "
+            : "";
         var halt = SFRs.Pcon.HaltMode ? "HALT " : "";
         var currentInstruction = InstructionDecoder.Decode(CurrentROMBank, Pc);
         return $"{nameLabel}{InstructionBank}@[{Pc:X4}] {halt}{currentInstruction}";
@@ -573,6 +575,14 @@ public class Cpu
         otherCpu.SFRs.P7 = otherP7 with { VmuConnected = true };
         _otherCpu = otherCpu;
         otherCpu._otherCpu = this;
+        raiseInt3IfNeeded(this);
+        raiseInt3IfNeeded(otherCpu);
+
+        static void raiseInt3IfNeeded(Cpu cpu)
+        {
+            if (cpu.SFRs.I23Cr is { Int3Enable: true, Int3RisingEdgeDetection: true })
+                cpu.RequestedInterrupts |= Interrupts.INT3_BT;
+        }
     }
 
     internal void DisconnectVmu()
@@ -585,8 +595,16 @@ public class Cpu
 
         SFRs.P7 = SFRs.P7 with { VmuConnected = false };
         _otherCpu.SFRs.P7 = _otherCpu.SFRs.P7 with { VmuConnected = false };
+        raiseInt3IfNeeded(this);
+        raiseInt3IfNeeded(_otherCpu);
         _otherCpu._otherCpu = null;
         _otherCpu = null;
+
+        static void raiseInt3IfNeeded(Cpu cpu)
+        {
+            if (cpu.SFRs.I23Cr is { Int3Enable: true, Int3FallingEdgeDetection: true })
+                cpu.RequestedInterrupts |= Interrupts.INT3_BT;
+        }
     }
 
     /// <summary>
@@ -1054,8 +1072,17 @@ public class Cpu
             void sendOneBit()
             {
                 var sbuf0 = SFRs.Sbuf0;
-                _otherCpu.ReceiveSerialTransferBit((sbuf0 & 1) != 0);
-                SFRs.Sbuf0 = (byte)(sbuf0 >> 1);
+
+                if (SFRs.Scon0.MSBFirstSequence)
+                {
+                    _otherCpu.ReceiveSerialTransferBit((sbuf0 & 0x80) != 0);
+                    SFRs.Sbuf0 = (byte)(sbuf0 << 1);
+                }
+                else
+                {
+                    _otherCpu.ReceiveSerialTransferBit((sbuf0 & 1) != 0);
+                    SFRs.Sbuf0 = (byte)(sbuf0 >> 1);
+                }
 
                 SioTxCount++;
                 if (SioTxCount == 8)
@@ -1101,6 +1128,12 @@ public class Cpu
             if (btcr.Int1Enable && btcr.Int1Source && !currentlyServicing(Interrupts.INT3_BT))
                 RequestedInterrupts |= Interrupts.INT3_BT;
 
+            if (SFRs.Scon0.TransferEndFlag && !currentlyServicing(Interrupts.SIO0))
+                RequestedInterrupts |= Interrupts.SIO0;
+
+            if (SFRs.Scon1.TransferEndFlag && !currentlyServicing(Interrupts.SIO1))
+                RequestedInterrupts |= Interrupts.SIO1;
+
             var p3int = SFRs.P3Int;
             // NB: non-continuous interrupts are generated in SFRs.P3.set (i.e. only when P3 changes)
             // TODO: empirical test if holding a button continuously just keeps setting the source flag.
@@ -1133,7 +1166,11 @@ public class Cpu
 
     private void ReceiveSerialTransferBit(bool bit)
     {
-        SFRs.Sbuf1 = (byte)((bit ? 0x80 : 0) | (SFRs.Sbuf1 >> 1));
+        if (SFRs.Scon1.MSBFirstSequence)
+            SFRs.Sbuf1 = (byte)((SFRs.Sbuf1 << 1) | (bit ? 1 : 0));
+        else
+            SFRs.Sbuf1 = (byte)((bit ? 0x80 : 0) | (SFRs.Sbuf1 >> 1));
+
         SioRxCount++;
         if (SioRxCount == 8)
         {

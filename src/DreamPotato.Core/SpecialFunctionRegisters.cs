@@ -297,20 +297,20 @@ public class SpecialFunctionRegisters
             case Ids.Scon0:
                 var scon0 = new Scon0(value);
                 if (scon0.MSBFirstSequence)
-                    _logger.LogWarning($"MSB-first transfer was specified by user code. This will be ignored.", LogCategories.SerialTransfer);
+                    _logger.LogWarning($"Scon0.MSBFirstSequence was specified by user code.", LogCategories.SerialTransfer);
 
                 if (scon0.ContinuousTransfer)
-                    _logger.LogWarning($"Continuous transfer was specified. This is not yet supported.", LogCategories.SerialTransfer);
+                    _logger.LogWarning($"Scon0.ContinuousTransfer was specified by user code.", LogCategories.SerialTransfer);
 
                 goto default;
 
             case Ids.Scon1:
                 var scon1 = new Scon1(value);
                 if (scon1.MSBFirstSequence)
-                    _logger.LogWarning($"MSB-first transfer was specified by user code. This will be ignored.", LogCategories.SerialTransfer);
+                    _logger.LogWarning($"Scon1.MSBFirstSequence was specified by user code.", LogCategories.SerialTransfer);
 
                 if (scon1.ContinuousTransfer)
-                    _logger.LogWarning($"Continuous transfer was specified. This is not yet supported.", LogCategories.SerialTransfer);
+                    _logger.LogWarning($"Scon1.ContinuousTransfer was specified by user code.", LogCategories.SerialTransfer);
 
                 goto default;
 
