@@ -134,7 +134,7 @@ public class Game1 : Game
                 vmu.InitializeDate(date);
 
             vmu.LoadRom();
-            if (vmsOrVmuFilePath != null)
+            if (vmsOrVmuFilePath != null && File.Exists(vmsOrVmuFilePath))
                 LoadAndStartVmsOrVmuFile(presenter, vmsOrVmuFilePath);
         }
     }

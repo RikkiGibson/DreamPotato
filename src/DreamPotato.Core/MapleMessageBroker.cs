@@ -78,6 +78,9 @@ public class MapleMessageBroker
 
     internal void Resync(DreamcastSlot dreamcastSlot, bool vmuDocked, bool writeToMapleFlash, Span<byte> flash, SafeFileHandle? vmuFileHandle)
     {
+        // TODO: it feels like it would be easier to catch bugs, if something like "move semantics" were used.
+        // Essentially allow *either* the cpu or maple thread to own the flash+file, but *not* both.
+
         // Keeping an extra copy of the flash memory and maintaining both is a pain, but, it is thought to be preferable to synchronizing on a single copy.
         // This is because the CPU needs to read it every cycle to decode instructions (which can change while emulation is running due to STF--store flash).
         // Acquiring a lock potentially ~100Ks of times per second is thought to be excessively expensive.

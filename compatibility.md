@@ -39,8 +39,13 @@ Statuses:
   </tr>
   <tr>
     <td>Power Stone Mini (Power Stone)</td>
+    <td>🟢</td>
+    <td>Plays well. Speed is reasonably close to real hardware, though some audio timings are off.</td>
+  </tr>
+  <tr>
+    <td>Soul Calibur 3-in-1 (Soul Calibur)</td>
     <td>🟡</td>
-    <td>Plays well, but have not verified differences with real hardware.</td>
+    <td>Playable, but, the NAMCO shout at the start doesn't work (RC oscillator sounds are broken). Runs faster than real hardware.</td>
   </tr>
 </tbody>
 </table>

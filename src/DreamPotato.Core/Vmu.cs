@@ -166,11 +166,16 @@ public class Vmu
 
     public void SaveVmuAs(string filePath)
     {
+        if (IsDocked)
+            _cpu.ResyncMapleInbound();
+
         var fileStream = File.Open(filePath, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite);
         fileStream.Write(_cpu.Flash);
         LoadedFilePath = filePath;
         _cpu.HasUnsavedChanges = false;
         _cpu.VmuFileWriteStream = fileStream;
+        if (IsDocked)
+            _cpu.ResyncMapleOutbound();
     }
 
     public bool IsServerConnected
