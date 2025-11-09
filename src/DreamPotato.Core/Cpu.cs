@@ -1054,7 +1054,7 @@ public class Cpu
             void sendOneBit()
             {
                 var sbuf0 = SFRs.Sbuf0;
-                _otherCpu.ReceiveSerialTransferBit(sbuf0 & 1);
+                _otherCpu.ReceiveSerialTransferBit((sbuf0 & 1) != 0);
                 SFRs.Sbuf0 = (byte)(sbuf0 >> 1);
 
                 SioTxCount++;
@@ -1131,14 +1131,13 @@ public class Cpu
         }
     }
 
-    private void ReceiveSerialTransferBit(int bit)
+    private void ReceiveSerialTransferBit(bool bit)
     {
-        Debug.Assert(bit is 0 or 1);
-        SFRs.Sbuf1 = (byte)((SFRs.Sbuf1 << 1) | bit);
+        SFRs.Sbuf1 = (byte)((bit ? 0x80 : 0) | (SFRs.Sbuf1 >> 1));
         SioRxCount++;
         if (SioRxCount == 8)
         {
-            SFRs.Scon0 = SFRs.Scon0 with { TransferControl = false, TransferEndFlag = true };
+            SFRs.Scon1 = SFRs.Scon1 with { TransferControl = false, TransferEndFlag = true };
             SioRxCount = 0;
         }
     }
