@@ -28,6 +28,7 @@ public enum LogCategories
     SystemClock = 1 << 5,
     Audio = 1 << 6,
     Maple = 1 << 7,
+    SerialTransfer = 1 << 8,
 }
 
 public class Logger(LogLevel _minimumLogLevel, LogCategories _categories, Cpu? _cpu = null)

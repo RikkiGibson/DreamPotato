@@ -367,7 +367,7 @@ public struct Scon0
     /// 0: LSB first
     /// 1: MSB first
     /// </summary>
-    public bool LSBFirstSequence
+    public bool MSBFirstSequence
     {
         get => BitHelpers.ReadBit(_value, bit: 2);
         set => BitHelpers.WriteBit(ref _value, bit: 2, value);
@@ -376,6 +376,8 @@ public struct Scon0
     /// <summary>
     /// 0: Transfer in progress
     /// 1: Transfer ended
+    /// The transfer end flag becomes "0" after 8 bits (1 byte) have been transferred,
+    /// regardless of the transfer bit length control setting.
     /// </summary>
     public bool TransferEndFlag
     {
@@ -432,7 +434,7 @@ public struct Scon1
     /// 0: LSB first
     /// 1: MSB first
     /// </summary>
-    public bool LSBFirstSequence
+    public bool MSBFirstSequence
     {
         get => BitHelpers.ReadBit(_value, bit: 2);
         set => BitHelpers.WriteBit(ref _value, bit: 2, value);
