@@ -98,7 +98,7 @@ class VmuPresenter
         ButtonChecker = new ButtonChecker(inputMappings);
     }
 
-    internal void Update(GameTime gameTime, KeyboardState previousKeys, GamePadState previousGamepad, KeyboardState keyboard, GamePadState gamepad)
+    internal void Update(KeyboardState previousKeys, GamePadState previousGamepad, KeyboardState keyboard, GamePadState gamepad)
     {
         if (!Vmu.IsDocked && ButtonChecker.IsNewlyPressed(VmuButton.Pause, previousKeys, keyboard, previousGamepad, gamepad))
             LocalPaused = !LocalPaused;
@@ -157,6 +157,11 @@ class VmuPresenter
         }
 
         Vmu._cpu.SFRs.P3 = newP3;
+    }
+
+    internal void UpdateAndRun(GameTime gameTime, KeyboardState previousKeys, GamePadState previousGamepad, KeyboardState keyboard, GamePadState gamepad)
+    {
+        Update(previousKeys, previousGamepad, keyboard, gamepad);
 
         var rate = EffectivePaused ? 0 :
             IsFastForwarding ? gameTime.ElapsedGameTime.Ticks * 2 :
