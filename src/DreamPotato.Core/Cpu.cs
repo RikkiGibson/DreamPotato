@@ -12,7 +12,16 @@ namespace DreamPotato.Core;
 public class Cpu
 {
     public Logger Logger { get; }
-    public string? DisplayName { get; init; }
+    public string DisplayName
+    {
+        get => (field, DreamcastSlot) switch
+        {
+            (string name, _) => name,
+            (_, not DreamcastSlot.Dreamcast and var slot) => slot.ToString(),
+            _ => "Cpu"
+        };
+        init;
+    }
 
     // VMD-35: Accumulator and all registers are mapped to RAM.
     // VMD-38: Memory
@@ -1071,18 +1080,13 @@ public class Cpu
 
             void sendOneBit()
             {
-                var sbuf0 = SFRs.Sbuf0;
-
-                if (SFRs.Scon0.MSBFirstSequence)
-                {
-                    _otherCpu.ReceiveSerialTransferBit((sbuf0 & 0x80) != 0);
-                    SFRs.Sbuf0 = (byte)(sbuf0 << 1);
-                }
-                else
-                {
-                    _otherCpu.ReceiveSerialTransferBit((sbuf0 & 1) != 0);
-                    SFRs.Sbuf0 = (byte)(sbuf0 >> 1);
-                }
+                // Note: the ROM appears to be assuming that Sbuf0 is left intact after the sending process.
+                // I don't think it's shifted out, it's likely rotated so that the bits are preserved.
+                // TODO: vmu-to-vmu file transfers are still failing. More investigation needed.
+                var bitAddress = SFRs.Scon0.MSBFirstSequence
+                    ? 7 - SioTxCount
+                    : SioTxCount;
+                _otherCpu.ReceiveSerialTransferBit(BitHelpers.ReadBit(SFRs.Sbuf0, bitAddress));
 
                 SioTxCount++;
                 if (SioTxCount == 8)
@@ -1128,10 +1132,10 @@ public class Cpu
             if (btcr.Int1Enable && btcr.Int1Source && !currentlyServicing(Interrupts.INT3_BT))
                 RequestedInterrupts |= Interrupts.INT3_BT;
 
-            if (SFRs.Scon0.TransferEndFlag && !currentlyServicing(Interrupts.SIO0))
+            if (SFRs.Scon0 is { InterruptEnable: true, TransferEndFlag: true } && !currentlyServicing(Interrupts.SIO0))
                 RequestedInterrupts |= Interrupts.SIO0;
 
-            if (SFRs.Scon1.TransferEndFlag && !currentlyServicing(Interrupts.SIO1))
+            if (SFRs.Scon1 is { InterruptEnable: true, TransferEndFlag: true } && !currentlyServicing(Interrupts.SIO1))
                 RequestedInterrupts |= Interrupts.SIO1;
 
             var p3int = SFRs.P3Int;
@@ -1174,6 +1178,7 @@ public class Cpu
         SioRxCount++;
         if (SioRxCount == 8)
         {
+            Logger.LogDebug($"Received serial byte: 0x{SFRs.Sbuf1:X}", LogCategories.SerialTransfer);
             SFRs.Scon1 = SFRs.Scon1 with { TransferControl = false, TransferEndFlag = true };
             SioRxCount = 0;
         }
