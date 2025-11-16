@@ -316,7 +316,15 @@ public class Game1 : Game
         {
             if (usingBothSlots)
             {
-                _graphics.PreferredBackBufferHeight *= 2;
+                var newHeight = _graphics.PreferredBackBufferHeight * 2;
+                var safeArea = _graphics.GraphicsDevice.DisplayMode.TitleSafeArea;
+                // TODO: simply doubling the height, as long as it is within screen bounds, isn't really what we want.
+                // What we want, is the smallest increase in either dimension, which meets these constraints:
+                // - The window remains within the bounds of the user's screen
+                // - It preserves the current single VMU size as closely as possible (possibly getting smaller)
+                // - It changes the window size as little as possible while still meeting the VMU size constraint.
+                if (newHeight < safeArea.Bottom)
+                    _graphics.PreferredBackBufferHeight = newHeight;
             }
             else
             {
