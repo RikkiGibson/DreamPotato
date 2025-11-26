@@ -24,25 +24,11 @@ public class HelloWorldTest(ITestOutputHelper outputHelper)
             var display = new Display(cpu);
 
             Assert.Equal<object>("""
-                █ █      █   █          █ █          █    █  █  
-                █▀█ ▄██  █   █  ▄▀▄     ███ ▄▀▄ ▄▀   █  ▄▀█  █  
-                █ █ ▀▄▄  ▀▄  ▀▄ ▀▄▀  █  █▀█ ▀▄▀ █    ▀▄ ▀▄█  ▄  
-                                                                
-                                                                
-                                                                
-                                                                
-                                                                
-                                                                
-                                                                
-                                                                
-                                                                
-                                                                
-                                                                
-                                                                
-                                                                
-
+                |█ █      █   █          █ █          █    █  █
+                |█▀█ ▄██  █   █  ▄▀▄     ███ ▄▀▄ ▄▀   █  ▄▀█  █
+                |█ █ ▀▄▄  ▀▄  ▀▄ ▀▄▀  █  █▀█ ▀▄▀ █    ▀▄ ▀▄█  ▄
                 """,
-                display.GetBlockString());
+                display.ToTestDisplayString());
         }
         catch
         {

@@ -34,67 +34,32 @@ public class SerialTests
 
         var halfSecond = TimeSpan.TicksPerSecond / 2;
         cpuRx.Run(ticksToRun: halfSecond);
-        Assert.Equal<object>("""
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-
-            """, cpuRx.Display.GetBlockString());
+        Assert.Equal<object>("", cpuRx.Display.ToTestDisplayString());
 
         cpuRx.Run(ticksToRun: halfSecond);
-        Assert.Equal<object>("""
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-
-            """, cpuRx.Display.GetBlockString());
+        Assert.Equal<object>("", cpuRx.Display.ToTestDisplayString());
 
         cpuRx.Run(ticksToRun: halfSecond);
+        // Receive '1'
         Assert.Equal<object>("""
-              ▄██                                           
-               ██                                           
-               ██                                           
-              ▀▀▀▀                                          
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
-                                                            
+        |  ▄██
+        |   ██
+        |   ██
+        |  ▀▀▀▀
+        """, cpuRx.Display.ToTestDisplayString());
 
-            """, cpuRx.Display.GetBlockString());
+        cpuRx.Run(ticksToRun: halfSecond);
+        // Receive '2'
+        Assert.Equal<object>("", cpuRx.Display.ToTestDisplayString());
+
+        // cpuRx.Run(ticksToRun: halfSecond);
+        // // Receive '3'?
+        Assert.Equal<object>("", cpuRx.Display.ToTestDisplayString());
+
+        // for (int i = 0; i < 100; i++)
+        // {
+        //     cpuRx.Run(ticksToRun: halfSecond);
+        // }
 
         // TODO: consecutive digits work on the real hardware setup but not here.
         // More work needed to figure out what is missing there.
