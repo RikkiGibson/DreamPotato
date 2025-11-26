@@ -34,15 +34,15 @@ enum PendingCommandKind
 {
     None,
     NewVmu,
-    OpenVms,
     OpenVmu,
+    OpenRecent,
     Reset,
     Exit
 }
 
 readonly struct PendingCommand
 {
-    private PendingCommand(ConfirmationState confirmationState, PendingCommandKind kind, VmuPresenter? vmuPresenter)
+    private PendingCommand(ConfirmationState confirmationState, PendingCommandKind kind, VmuPresenter? vmuPresenter, string? filePath)
     {
         // If we are showing dialog or confirming something, there needs to be an actual command
         if (confirmationState is not ConfirmationState.None && kind is PendingCommandKind.None)
@@ -51,14 +51,16 @@ readonly struct PendingCommand
         State = confirmationState;
         Kind = kind;
         VmuPresenter = vmuPresenter;
+        FilePath = filePath;
     }
 
     public ConfirmationState State { get; }
     public PendingCommandKind Kind { get; }
     public VmuPresenter? VmuPresenter { get; }
+    public string? FilePath { get; }
 
-    public static PendingCommand ShowDialog(PendingCommandKind kind, VmuPresenter? vmuPresenter) => new(ConfirmationState.ShowDialog, kind, vmuPresenter);
-    public PendingCommand Confirmed() => new(ConfirmationState.Confirmed, Kind, VmuPresenter);
+    public static PendingCommand ShowDialog(PendingCommandKind kind, VmuPresenter? vmuPresenter, string? filePath) => new(ConfirmationState.ShowDialog, kind, vmuPresenter, filePath);
+    public PendingCommand Confirmed() => new(ConfirmationState.Confirmed, Kind, VmuPresenter, FilePath);
 }
 
 struct MappingEditState
@@ -170,10 +172,10 @@ class UserInterface
     }
 
     /// <summary>Show a modal asking user to confirm a "destructive" command</summary>
-    internal void ShowConfirmCommandDialog(PendingCommandKind commandKind, VmuPresenter? vmuPresenter)
+    internal void ShowConfirmCommandDialog(PendingCommandKind commandKind, VmuPresenter? vmuPresenter, string? filePath = null)
     {
         Pause();
-        PendingCommand = PendingCommand.ShowDialog(commandKind, vmuPresenter);
+        PendingCommand = PendingCommand.ShowDialog(commandKind, vmuPresenter, filePath);
     }
 
     private void Pause()
@@ -191,20 +193,16 @@ class UserInterface
         _game.LoadNewVmu(presenter);
     }
 
-    internal void OpenVmsDialog(VmuPresenter presenter)
+    internal void OpenRecentFile(VmuPresenter presenter, string filePath)
     {
         var vmu = presenter.Vmu;
-        if (vmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.OpenVms, State: ConfirmationState.Confirmed })
+        if (vmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.OpenRecent, State: ConfirmationState.Confirmed })
         {
-            ShowConfirmCommandDialog(PendingCommandKind.OpenVms, presenter);
+            ShowConfirmCommandDialog(PendingCommandKind.OpenRecent, presenter);
             return;
         }
 
-        var result = Dialog.FileOpen("vms", defaultPath: null);
-        if (result.IsOk)
-        {
-            _game.LoadAndStartVmsOrVmuFile(presenter, result.Path);
-        }
+        _game.LoadAndStartVmsOrVmuFile(presenter, filePath);
     }
 
     internal void OpenVmuDialog(VmuPresenter presenter)
@@ -216,7 +214,7 @@ class UserInterface
             return;
         }
 
-        var result = Dialog.FileOpen("vmu,bin", defaultPath: null);
+        var result = Dialog.FileOpen("vmu,bin,vms", defaultPath: null);
         if (result.IsOk)
         {
             _game.LoadAndStartVmsOrVmuFile(presenter, result.Path);
@@ -550,11 +548,23 @@ class UserInterface
         if (ImGui.MenuItem("New VMU"))
             NewVmu(presenter);
 
-        if (ImGui.MenuItem("Open VMS (Game)"))
-            OpenVmsDialog(presenter);
-
-        if (ImGui.MenuItem("Open VMU (Memory Card)"))
+        if (ImGui.MenuItem("Open"))
             OpenVmuDialog(presenter);
+
+        var (displayFileNames, recentFiles) = calcRecentFilesInfo();
+        if (ImGui.BeginMenu("Open Recent", enabled: recentFiles.Any()))
+        {
+            for (int i = 0; i < recentFiles.Length; i++)
+            {
+                var recentFile = recentFiles[i];
+                var fileName = displayFileNames[i];
+
+                if (recentFile != null && ImGui.MenuItem(fileName))
+                    OpenRecentFile(presenter, recentFile);
+            }
+
+            ImGui.EndMenu();
+        }
 
         if (ImGui.MenuItem("Save As"))
         {
@@ -563,6 +573,30 @@ class UserInterface
             {
                 _game.SaveVmuFileAs(presenter.Vmu, result.Path);
             }
+        }
+
+        (string[] displayFileNames, ImmutableArray<string> recentFiles) calcRecentFilesInfo()
+        {
+            var recentFiles = _game.RecentFilesInfo.RecentFiles;
+            const int maxFileNameLength = 20;
+            string[] displayFileNames = new string[recentFiles.Length];
+            for (var i = 0; i < recentFiles.Length; i++)
+            {
+                var fileNameSpan = Path.GetFileName(recentFiles[i].AsSpan());
+                var oversize = fileNameSpan.Length - maxFileNameLength;
+                if (oversize > 0)
+                {
+                    var prefix = fileNameSpan[0..(maxFileNameLength / 2)];
+                    var suffix = fileNameSpan[^(maxFileNameLength / 2)..];
+                    displayFileNames[i] = $"{prefix}...{suffix}";
+                }
+                else
+                {
+                    displayFileNames[i] = fileNameSpan.ToString();
+                }
+            }
+
+            return (displayFileNames, recentFiles);
         }
 
         // TODO: list recently opened VMU files?
@@ -954,8 +988,7 @@ class UserInterface
         var title = PendingCommand.Kind switch
         {
             PendingCommandKind.NewVmu => "Create new VMU without saving?",
-            PendingCommandKind.OpenVms => "Open VMS without saving?",
-            PendingCommandKind.OpenVmu => "Open VMU without saving?",
+            PendingCommandKind.OpenVmu => "Open without saving?",
             PendingCommandKind.Reset when !_game.UseSecondaryVmu => "Reset?",
             PendingCommandKind.Reset when PendingCommand.VmuPresenter == _game.PrimaryVmuPresenter => "Reset slot 1?",
             PendingCommandKind.Reset => "Reset slot 2?",
@@ -970,7 +1003,6 @@ class UserInterface
             var confirmLabel = PendingCommand.Kind switch
             {
                 PendingCommandKind.NewVmu => "Create",
-                PendingCommandKind.OpenVms => "Open",
                 PendingCommandKind.OpenVmu => "Open",
                 PendingCommandKind.Reset => "Reset",
                 PendingCommandKind.Exit => "Exit",
@@ -1012,12 +1044,14 @@ class UserInterface
                     NewVmu(PendingCommand.VmuPresenter ?? throw new InvalidOperationException());
                     PendingCommand = default;
                     break;
-                case PendingCommandKind.OpenVms:
-                    OpenVmsDialog(PendingCommand.VmuPresenter ?? throw new InvalidOperationException());
-                    PendingCommand = default;
-                    break;
                 case PendingCommandKind.OpenVmu:
                     OpenVmuDialog(PendingCommand.VmuPresenter ?? throw new InvalidOperationException());
+                    PendingCommand = default;
+                    break;
+                case PendingCommandKind.OpenRecent:
+                    OpenRecentFile(
+                        PendingCommand.VmuPresenter ?? throw new InvalidOperationException(nameof(PendingCommand.VmuPresenter)),
+                        PendingCommand.FilePath ?? throw new InvalidOperationException(nameof(PendingCommand.FilePath)));
                     PendingCommand = default;
                     break;
                 default:
