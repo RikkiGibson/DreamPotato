@@ -122,7 +122,10 @@ public class Display(Cpu cpu)
                 }
             }
 
-            for (int i = builder.Length - 1; i >= builder.Length - ScreenWidth; i--)
+            var endIndex = builder.Length - 1;
+            var lineStartIndex = endIndex - ScreenWidth;
+            Debug.Assert(builder[lineStartIndex] == '|');
+            for (int i = endIndex; i >= lineStartIndex; i--)
             {
                 if (builder[i] != ' ')
                 {
