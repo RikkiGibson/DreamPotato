@@ -996,6 +996,7 @@ class UserInterface
         void performCommand()
         {
             Debug.Assert(PendingCommand.State == ConfirmationState.Confirmed);
+            Unpause();
             switch (PendingCommand.Kind)
             {
                 case PendingCommandKind.Exit:
