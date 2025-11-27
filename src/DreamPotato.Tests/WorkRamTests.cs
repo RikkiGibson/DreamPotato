@@ -1,7 +1,5 @@
 using DreamPotato.Core;
 
-using Xunit.Abstractions;
-
 namespace DreamPotato.Tests;
 
 public class WorkRamTests

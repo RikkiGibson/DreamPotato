@@ -5,8 +5,9 @@ namespace DreamPotato.Tests;
 
 public class SerialTests
 {
+    /// <summary>Run the Serial Communications Sample from VMT-72.</summary>
     [Fact]
-    public void Main()
+    public void SerialCommunicationsSample()
     {
         // not1  ext, $00
         // jmpf  $0139
@@ -89,5 +90,121 @@ public class SerialTests
             |                 ▀▀▀▀▀   ▀▀▀▀▀
             """, cpuRx.Display.ToTestDisplayString());
         Assert.Equal(3, cpuRx.SFRs.Sbuf1);
+    }
+
+    [Fact]
+    public void FileTransfer()
+    {
+        if (!File.Exists("Data/american_v1.05.bin"))
+            Assert.Skip("Test requires a BIOS");
+
+        var vmuTx = new Vmu();
+        var cpuTx = vmuTx._cpu;
+        cpuTx.DreamcastSlot = DreamcastSlot.Slot1;
+        vmuTx.LoadRom();
+        vmuTx.LoadGameVms("TestSource/helloworld.vms", date: DateTimeOffset.Parse("09/09/1999"));
+
+        const long halfSecond = TimeSpan.TicksPerSecond / 2;
+        cpuTx.Run(halfSecond);
+        Assert.Equal<object>("""
+            |            ▄████ ▄████ ▄████  ▄█▄
+            |            ▀█▄▄  ██▄▄  ██▄▄▄ ██▀██
+            |            ▄▄▄██ ██▄▄▄ ██▄██ ██▄██
+            |            ▀▀▀▀   ▀▀▀▀  ▀▀▀▀ ▀▀ ▀▀
+            |      █   █   ▀                      ▀█
+            |      █   █  ▀█   ▄▀▀▀  █   █  ▀▀▀▄   █
+            |      ▀▄ ▄▀   █    ▀▀▀▄ █  ▄█ ▄▀▀▀█   █
+            |        ▀    ▀▀▀  ▀▀▀▀   ▀▀ ▀  ▀▀▀▀  ▀▀▀
+            |      █▄ ▄█
+            |      █ █ █ ▄▀▀▀▄ █▀▄▀▄ ▄▀▀▀▄ █▄▀▀▄ █   █
+            |      █   █ █▀▀▀▀ █ ▀ █ █   █ █      ▀▀▀█
+            |      ▀   ▀  ▀▀▀  ▀   ▀  ▀▀▀  ▀      ▀▀▀
+            |            █   █         ▀    █
+            |            █   █ █▄▀▀▄  ▀█   ▀█▀
+            |            █   █ █   █   █    █  ▄
+            |             ▀▀▀  ▀   ▀  ▀▀▀    ▀▀
+            """, vmuTx.Display.ToTestDisplayString());
+
+        pressButtonAndWait(cpuTx, new P3(0xff) { ButtonA = false });
+        Assert.Equal<object>("""
+            |█▀▀▀▀                          ▄█   ▄▀▀▀▄  ▄▀▀
+            |█▄▄▄  █▄▀▀▄ ▄▀▀▀▄ ▄▀▀▀▄         █   ▀▄▄▄█ █▄▄▄
+            |█     █     █▀▀▀▀ █▀▀▀▀         █      ▄▀ █   █
+            |▀     ▀      ▀▀▀   ▀▀▀         ▀▀▀   ▀▀    ▀▀▀
+            |▄▀▀▀▄                         ▄▀▀▀▄ ▄▀▀▀▄ ▄▀▀▀▄
+            |█ ▄▄▄  ▀▀▀▄ █▀▄▀▄ ▄▀▀▀▄       █ ▄▀█ █ ▄▀█ █ ▄▀█
+            |█   █ ▄▀▀▀█ █ ▀ █ █▀▀▀▀       █▀  █ █▀  █ █▀  █
+            | ▀▀▀▀  ▀▀▀▀ ▀   ▀  ▀▀▀         ▀▀▀   ▀▀▀   ▀▀▀
+            """, vmuTx.Display.ToTestDisplayString());
+
+        // Press Right 3 times
+        for (int i = 0; i < 3; i++)
+            pressButtonAndWait(cpuTx, new P3(0xff) { Right = false });
+
+        Assert.Equal<object>("""
+            |█▀▀▀██▀▄▄▄▀█████████████████████████████████████
+            |   ▄ █ █████▀▄▄▄▀█ ▄▄▄▀█ ███ ███████████████████
+            |▄ ▀ ▄█ ███▀█ ███ █ ▄▄▄███▄▄▄ ███████████████████
+            |███████▄▄▄███▄▄▄██▄██████▄▄▄████████████████████
+            | ▄▄▄  █▀▀▄         ▀█          █
+            |███▀█ █   █ ▄▀▀▀▄   █   ▄▀▀▀▄ ▀█▀   ▄▀▀▀▄
+            |▀█▄█▀ █  ▄▀ █▀▀▀▀   █   █▀▀▀▀  █  ▄ █▀▀▀▀
+            |      ▀▀▀    ▀▀▀   ▀▀▀   ▀▀▀    ▀▀   ▀▀▀
+            | ▄█▄   ▄▄   █   █
+            |██▀██  ▀▀   ▀▄ ▄▀ ▄▀▀▀▄ ▄▀▀▀
+            |██▄██  ██     █   █▀▀▀▀  ▀▀▀▄
+            |▀▀ ▀▀         ▀    ▀▀▀  ▀▀▀▀
+            |██▀█▄  ▄▄   █   █
+            |██▄█▀  ▀▀   █▀▄ █ ▄▀▀▀▄
+            |██ ██  ██   █  ▀█ █   █
+            |▀▀▀▀▀       ▀   ▀  ▀▀▀
+            """, vmuTx.Display.ToTestDisplayString());
+
+        pressButtonAndWait(cpuTx, new P3(0xff) { ButtonA = false });
+        pressButtonAndWait(cpuTx, new P3(0xff) { Left = false });
+        pressButtonAndWait(cpuTx, new P3(0xff) { ButtonA = false });
+
+        Assert.Equal<object>("""
+            |█            ▀█    ▀█
+            |█▄▀▀▄ ▄▀▀▀▄   █     █   ▄▀▀▀▄ █   █ ▄▀▀▀▄ █▄▀▀▄
+            |█   █ █▀▀▀▀   █     █   █   █ █ █ █ █   █ █
+            |▀   ▀  ▀▀▀   ▀▀▀   ▀▀▀   ▀▀▀   ▀ ▀   ▀▀▀  ▀
+            | ▀█       █
+            |  █   ▄▀▀▄█
+            |  █   █   █
+            | ▀▀▀   ▀▀▀▀   ▀     ▀
+            |▄▀▀▀▄                                █
+            |█     ▄▀▀▀▄ █▄▀▀▄ █▄▀▀▄ ▄▀▀▀▄ ▄▀▀▀  ▀█▀
+            |█   ▄ █   █ █   █ █   █ █▀▀▀▀ █   ▄  █  ▄
+            | ▀▀▀   ▀▀▀  ▀   ▀ ▀   ▀  ▀▀▀   ▀▀▀    ▀▀
+            |█   █ █▄ ▄█                               █████
+            |█   █ █ █ █                               █   █
+            |▀▄ ▄▀ █   █                               ▀███▀
+            |  ▀   ▀   ▀                               ▀▀▀▀▀
+            """, vmuTx.Display.ToTestDisplayString());
+
+        // TODO: setup the Rx VM, connect the VMs, observe the Rx VM receiving the file
+        // File.ReadAllBytes("TestSource/SioTx.vms").CopyTo(cpuTx.FlashBank0);
+        // cpuTx.SetInstructionBank(InstructionBank.FlashBank0);
+
+        // var cpuRx = new Cpu() { DisplayName = "SioRx", DreamcastSlot = DreamcastSlot.Slot2 };
+        // cpuRx.Reset();
+        // cpuRx.SFRs.Btcr = new Btcr { CountEnable = true, Int0Enable = true };
+        // cpuRx.SFRs.Psw = new Psw { Rambk0 = true };
+
+        // File.ReadAllBytes("TestSource/SioRx.vms").CopyTo(cpuRx.FlashBank0);
+        // cpuRx.SetInstructionBank(InstructionBank.FlashBank0);
+        // cpuRx.ConnectVmu(cpuTx);
+
+        // cpuRx.Run(ticksToRun: halfSecond);
+
+        static void pressButtonAndWait(Cpu cpuTx, P3 pressedState)
+        {
+            cpuTx.SFRs.P3 = pressedState;
+            cpuTx.Run(halfSecond);
+
+            cpuTx.SFRs.P3 = new P3(0xff);
+            cpuTx.Run(TimeSpan.TicksPerSecond * 2);
+        }
     }
 }
