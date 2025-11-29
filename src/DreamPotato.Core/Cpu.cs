@@ -20,7 +20,7 @@ public class Cpu
             (_, not DreamcastSlot.Dreamcast and var slot) => slot.ToString(),
             _ => "Cpu"
         };
-        init;
+        set;
     }
 
     // VMD-35: Accumulator and all registers are mapped to RAM.
@@ -1091,6 +1091,7 @@ public class Cpu
                 SioTxCount++;
                 if (SioTxCount == 8)
                 {
+                    Logger.LogDebug($"Sent serial byte: 0x{SFRs.Sbuf0:X}", LogCategories.SerialTransfer);
                     SFRs.Scon0 = SFRs.Scon0 with { TransferControl = false, TransferEndFlag = true };
                     SioTxCount = 0;
                 }

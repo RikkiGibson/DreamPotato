@@ -100,6 +100,7 @@ public class SerialTests
 
         var vmuTx = new Vmu();
         var cpuTx = vmuTx._cpu;
+        cpuTx.DisplayName = "Sender";
         cpuTx.DreamcastSlot = DreamcastSlot.Slot1;
         vmuTx.LoadRom();
         vmuTx.LoadGameVms("TestSource/helloworld.vms", date: DateTimeOffset.Parse("09/09/1999"));
@@ -186,6 +187,7 @@ public class SerialTests
 
         var vmuRx = new Vmu();
         var cpuRx = vmuRx._cpu;
+        cpuRx.DisplayName = "Receiver";
         cpuRx.DreamcastSlot = DreamcastSlot.Slot2;
         vmuRx.LoadRom();
         vmuRx.LoadNewVmu(DateTimeOffset.Parse("09/09/1999"), autoInitializeRTCDate: true);

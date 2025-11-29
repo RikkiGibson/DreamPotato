@@ -514,7 +514,7 @@ public struct P1
 /// <summary>Port 1 function control register. VMD-59</summary>
 /// <remarks>
 /// To use the function assigned to port 1, the corresponding port latch must be reset to "0".
-// For example, to use PWM, set P17FCR to "0" and reset P17 to "0".
+// For example, to use PWM, set P17FCR to "1" and reset P17 to "0".
 // The instructions BPC, DBNZ, INC, DEC, SET1, CLR1, NOT1 read port latch data. Other instructions
 // read data assigned to the port.
 /// </remarks>
