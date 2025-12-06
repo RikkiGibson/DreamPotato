@@ -218,7 +218,7 @@ public class Vmu
     public static readonly ReadOnlyMemory<byte> SaveStateHeaderBytes = Encoding.UTF8.GetBytes(SaveStateHeaderMessage);
     public const int SaveStateVersion = 3;
 
-    private static string GetSaveStatePath(string loadedFilePath, string id)
+    public static string GetSaveStatePath(string loadedFilePath, string id)
     {
         var filePath = $"{Path.GetFileNameWithoutExtension(loadedFilePath)}_{id}.dpstate";
         return Path.Combine(DataFolder, filePath);

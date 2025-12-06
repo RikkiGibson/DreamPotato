@@ -25,6 +25,7 @@ public record Configuration(
     InputMappings? PrimaryInput = null,
     InputMappings? SecondaryInput = null,
     ViewportSize? ViewportSize = null,
+    int CurrentSaveStateSlot = 0,
     VmuConnectionState VmuConnectionState = VmuConnectionState.None,
     ExpansionSlots ExpansionSlots = ExpansionSlots.Slot1,
     DreamcastPort DreamcastPort = DreamcastPort.A)

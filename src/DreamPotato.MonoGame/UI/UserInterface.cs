@@ -462,7 +462,7 @@ class UserInterface
             {
                 if (ImGui.MenuItem("Save State"))
                 {
-                    vmu.SaveState("0");
+                    vmu.SaveState($"{_game.Configuration.CurrentSaveStateSlot}");
                 }
 
                 if (ImGui.MenuItem("Load State"))
@@ -476,6 +476,40 @@ class UserInterface
                 if (ImGui.MenuItem("Undo Load State"))
                 {
                     vmu.LoadOopsFile();
+                }
+
+                if (ImGui.BeginMenu("Save State Slot"))
+                {
+                    var vmuScreenTexture = new Texture2D(_game.GraphicsDevice, Display.ScreenWidth, Display.ScreenHeight);
+                    var rawTexture = _imGuiRenderer.BindTexture(vmuScreenTexture);
+
+                    var vmuForDrawing = new Vmu() { DreamcastSlot = DreamcastSlot.Slot1 };
+                    if (vmu.LoadedFilePath is null)
+                        throw new InvalidOperationException();
+                        
+                    // TODO: drawing code etc to draw the vmu screen as a texture here.
+                    // We def need to cache this, and cache needs to be invalidated at appropriate time...
+                    // File watcher seems excessive but maybe good here.
+
+                    var currentSaveStateSlot = _game.Configuration.CurrentSaveStateSlot;
+                    for (int i = 0; i < 10; i++)
+                    {
+                        var statePath = Vmu.GetSaveStatePath(vmu.LoadedFilePath, $"{i}");
+                        var displayString = "";
+                        if (File.Exists(statePath))
+                        {
+                            vmuForDrawing.LoadStateFromPath(statePath, saveOopsFile: false);
+                            displayString = vmuForDrawing.Display.GetBlockString();
+                        }
+
+                        if (ImGui.MenuItem($"{i}{displayString}", enabled: currentSaveStateSlot != i))
+                        {
+                            _game.Configuration = _game.Configuration with { CurrentSaveStateSlot = i };
+                            _game.Configuration.Save();
+                        }
+                    }
+
+                    ImGui.EndMenu();
                 }
             }
 
