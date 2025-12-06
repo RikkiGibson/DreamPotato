@@ -240,10 +240,10 @@ class UserInterface
         ImGui.OpenPopup(name);
     }
 
-    internal void ShowToast(string message)
+    internal void ShowToast(string message, int durationFrames = ToastMaxDisplayFrames)
     {
         _toastMessage = message;
-        _toastDisplayFrames = ToastMaxDisplayFrames;
+        _toastDisplayFrames = durationFrames;
     }
 
     private void Unpause()
@@ -450,7 +450,6 @@ class UserInterface
                 presenter.DockOrEject();
 
             ImGui.Separator();
-
             using (new DisabledScope(vmu.LoadedFilePath is null))
             {
                 if (ImGui.MenuItem("Save State"))
@@ -471,6 +470,10 @@ class UserInterface
                     vmu.LoadOopsFile();
                 }
             }
+
+            ImGui.Separator();
+            if (ImGui.MenuItem("Take Screenshot"))
+                presenter.TakeScreenshot();
 
             ImGui.EndMenu();
         }
