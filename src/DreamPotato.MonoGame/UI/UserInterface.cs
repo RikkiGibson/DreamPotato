@@ -240,10 +240,10 @@ class UserInterface
         ImGui.OpenPopup(name);
     }
 
-    internal void ShowToast(string message)
+    internal void ShowToast(string message, int durationFrames = ToastMaxDisplayFrames)
     {
         _toastMessage = message;
-        _toastDisplayFrames = ToastMaxDisplayFrames;
+        _toastDisplayFrames = durationFrames;
     }
 
     private void Unpause()
@@ -480,6 +480,10 @@ class UserInterface
                     vmu.LoadOopsFile();
                 }
             }
+
+            ImGui.Separator();
+            if (ImGui.MenuItem("Take Screenshot"))
+                presenter.TakeScreenshot();
 
             ImGui.EndMenu();
         }

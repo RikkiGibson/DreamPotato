@@ -71,6 +71,7 @@ public record Configuration(
         new KeyMapping { SourceKey = Keys.F5, TargetButton = VmuButton.SaveState },
         new KeyMapping { SourceKey = Keys.F8, TargetButton = VmuButton.LoadState },
         new KeyMapping { SourceKey = Keys.F10, TargetButton = VmuButton.Pause },
+        new KeyMapping { SourceKey = Keys.F12, TargetButton = VmuButton.TakeScreenshot },
         new KeyMapping { SourceKey = Keys.Tab, TargetButton = VmuButton.FastForward },
     ];
 
@@ -79,6 +80,7 @@ public record Configuration(
         new KeyMapping { SourceKey = Keys.None, TargetButton = VmuButton.SaveState },
         new KeyMapping { SourceKey = Keys.None, TargetButton = VmuButton.LoadState },
         new KeyMapping { SourceKey = Keys.None, TargetButton = VmuButton.Pause },
+        new KeyMapping { SourceKey = Keys.None, TargetButton = VmuButton.TakeScreenshot },
         new KeyMapping { SourceKey = Keys.None, TargetButton = VmuButton.FastForward },
     ];
 
@@ -244,6 +246,7 @@ public enum VmuButton
     FastForward,
     LoadState,
     SaveState,
+    TakeScreenshot,
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter<VmuConnectionState>))]

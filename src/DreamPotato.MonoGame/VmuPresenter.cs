@@ -4,6 +4,7 @@ namespace DreamPotato.MonoGame;
 using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 
 using DreamPotato.Core;
 
@@ -113,6 +114,9 @@ class VmuPresenter
                 _game1.UserInterface.ShowToast(error ?? $"An unknown error occurred in {nameof(Vmu.LoadStateById)}.");
             }
         }
+
+        if (ButtonChecker.IsNewlyPressed(VmuButton.TakeScreenshot, previousKeys, keyboard, previousGamepad, gamepad))
+            TakeScreenshot();
 
         var newP3 = new Core.SFRs.P3()
         {
@@ -323,5 +327,21 @@ class VmuPresenter
         // Unpause when docking, so that we will be unpaused already when ejecting.
         if (Vmu.IsDocked)
             LocalPaused = false;
+    }
+
+    internal void TakeScreenshot()
+    {
+        var now = DateTimeOffset.Now;
+        var timeDescription = now.ToString($"yyyy-MM-dd_HH-mm-ss");
+        var baseName = Path.GetFileNameWithoutExtension(Vmu.LoadedFilePath) ?? "DreamPotato";
+
+        var screenshotsFolder = Path.Combine(Vmu.DataFolder, "Screenshots");
+        Directory.CreateDirectory(screenshotsFolder);
+
+        var filePath = Path.Combine(screenshotsFolder, $"{baseName}_{timeDescription}.png");
+        using var outFile = File.Create(Path.Combine(Vmu.DataFolder, filePath));
+        _vmuScreenTexture.SaveAsPng(outFile, _vmuScreenTexture.Width, _vmuScreenTexture.Height);
+
+        _game1.UserInterface.ShowToast($"Screenshot saved to {filePath}", durationFrames: 5 * 60);
     }
 }
