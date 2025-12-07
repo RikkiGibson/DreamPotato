@@ -335,7 +335,21 @@ class VmuPresenter
 
         var filePath = Path.Combine(screenshotsFolder, $"{baseName}_{timeDescription}.png");
         using var outFile = File.Create(Path.Combine(Vmu.DataFolder, filePath));
-        _vmuScreenTexture.SaveAsPng(outFile, _vmuScreenTexture.Width, _vmuScreenTexture.Height);
+
+        if (!Vmu.IsDocked)
+        {
+            // Easy case, VMU texture is already properly oriented.
+            _vmuScreenTexture.SaveAsPng(outFile, _vmuScreenTexture.Width, _vmuScreenTexture.Height);
+        }
+        else
+        {
+            // Need to flip the image horizontally and vertically before saving
+            using var texture = new Texture2D(Graphics.GraphicsDevice, _vmuScreenTexture.Width, _vmuScreenTexture.Height);
+            _vmuScreenData.Reverse();
+            texture.SetData(_vmuScreenData);
+            _vmuScreenData.Reverse();
+            texture.SaveAsPng(outFile, texture.Width, texture.Height);
+        }
 
         _game1.UserInterface.ShowToast($"Screenshot saved to {filePath}", durationFrames: 5 * 60);
     }
