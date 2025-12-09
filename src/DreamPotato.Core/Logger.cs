@@ -28,6 +28,7 @@ public enum LogCategories
     SystemClock = 1 << 5,
     Audio = 1 << 6,
     Maple = 1 << 7,
+    SerialTransfer = 1 << 8,
 }
 
 public class Logger(LogLevel _minimumLogLevel, LogCategories _categories, Cpu? _cpu = null)
@@ -78,7 +79,7 @@ public class Logger(LogLevel _minimumLogLevel, LogCategories _categories, Cpu? _
             return;
 
         var timestamp = DateTimeOffset.Now;
-        var cpuDescription = _cpu is null ? $"" : (DefaultInterpolatedStringHandler)$" {_cpu.InstructionBank}@[{_cpu.Pc:X4}]";
+        var cpuDescription = _cpu is null ? $"" : (DefaultInterpolatedStringHandler)$" {_cpu.DisplayName}.{_cpu.InstructionBank}@[{_cpu.Pc:X4}]";
         string message = $"{timestamp.TimeOfDay}{cpuDescription.ToStringAndClear()}: [{level}] {handler.ToStringAndClear()}";
         if (level is LogLevel.Debug or LogLevel.Warning)
             Console.WriteLine(message);

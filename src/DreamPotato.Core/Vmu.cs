@@ -189,6 +189,9 @@ public class Vmu
     /// <summary>Indicates whether the VMU is docked in the Dreamcast controller.</summary>
     public bool IsDocked => _cpu.SFRs.P7.DreamcastConnected;
 
+    /// <summary>Indicates whether the VMU is connected to another VMU for serial I/O.</summary>
+    public bool IsVmuConnected => _cpu.SFRs.P7.VmuConnected;
+
     // Toggle the docked/ejected state.
     public void DockOrEject()
         => _cpu.ConnectDreamcast(connect: !IsDocked);
@@ -196,6 +199,15 @@ public class Vmu
     // Dock or eject depending on a bool argument.
     public void DockOrEject(bool connect)
         => _cpu.ConnectDreamcast(connect);
+
+
+    public void ConnectOrDisconnectVmu(Vmu other)
+    {
+        if (IsVmuConnected)
+            _cpu.DisconnectVmu();
+        else
+            _cpu.ConnectVmu(other._cpu);
+    }
 
     public static string DataFolder => Path.Combine(AppContext.BaseDirectory, "Data");
 

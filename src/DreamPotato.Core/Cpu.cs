@@ -8,9 +8,20 @@ using Microsoft.Win32.SafeHandles;
 
 namespace DreamPotato.Core;
 
+[DebuggerDisplay("{GetDebuggerDisplay(),nq}")]
 public class Cpu
 {
     public Logger Logger { get; }
+    public string DisplayName
+    {
+        get => (field, DreamcastSlot) switch
+        {
+            (string name, _) => name,
+            (_, not DreamcastSlot.Dreamcast and var slot) => slot.ToString(),
+            _ => "Cpu"
+        };
+        set;
+    }
 
     // VMD-35: Accumulator and all registers are mapped to RAM.
     // VMD-38: Memory
@@ -118,6 +129,25 @@ public class Cpu
     /// </summary>
     internal byte T0Scale;
 
+    /// <summary>
+    /// How many bits of a 1-byte serial transfer have been sent so far.
+    /// </summary>
+    internal byte SioTxCount;
+
+    /// <summary>
+    /// How many bits of a 1-byte serial transfer have been received so far.
+    /// </summary>
+    internal byte SioRxCount;
+
+    /// <summary>
+    /// Tracks serial transfer progress when using internal clock.
+    /// Essentially, <see cref="SpecialFunctionRegisters.Sbr"/> is like a reload register for this thing.
+    /// When 9th bit of this timer overflows, we should shift another bit into the serial buffer register.
+    /// When certain higher bit than that overflows, we should mark the serial transfer as completed.
+    /// </summary>
+    /// <remarks>TODO! This may need to be tracked in save states.</remarks>
+    internal short SerialTransferTimer;
+
     internal Interrupts RequestedInterrupts;
     private InterruptServicingState _interruptServicingState;
 
@@ -134,6 +164,9 @@ public class Cpu
     internal int _interruptsCount;
 
     internal int _flashWriteUnlockSequence;
+
+    /// <summary>The CPU of another VMU, connected for serial I/O.</summary>
+    private Cpu? _otherCpu;
 
     // TODO: update save state format
     // Now, loading state can change the used expansion slots, in addition to changing whether we are docked.
@@ -154,13 +187,23 @@ public class Cpu
 
     public Cpu(MapleMessageBroker? mapleMessageBroker = null)
     {
-        var categories = LogCategories.General;
+        var categories = LogCategories.General | LogCategories.SerialTransfer;
         Logger = new Logger(LogLevel.Default, categories, this);
         Memory = new Memory(this, Logger);
         Audio = new Audio(this, Logger);
         Display = new Display(this);
         MapleMessageBroker = mapleMessageBroker ?? new MapleMessageBroker(LogLevel.Default);
         SetInstructionBank(InstructionBank.ROM);
+    }
+
+    string GetDebuggerDisplay()
+    {
+        var nameLabel = DisplayName is { } ? $"{DisplayName}: "
+            : DreamcastSlot != DreamcastSlot.Dreamcast ? $"{DreamcastSlot}: "
+            : "";
+        var halt = SFRs.Pcon.HaltMode ? "HALT " : "";
+        var currentInstruction = InstructionDecoder.Decode(CurrentROMBank, Pc);
+        return $"{nameLabel}{InstructionBank}@[{Pc:X4}] {halt}{currentInstruction}";
     }
 
     public void Reset()
@@ -232,6 +275,9 @@ public class Cpu
     {
         // TODO: do some kind of search of InstructionMap
         // to remove instructions which are no longer present in the binary?
+
+        // TODO: We can't restore the "VMUs connected" state in general.
+        // This is because a save state is local to one VMU, but the "connection" involves them both.
 
         readStream.ReadExactly(ROM);
         readStream.ReadExactly(Flash);
@@ -321,6 +367,14 @@ public class Cpu
 
     public long Run(long ticksToRun)
     {
+        if (SFRs.P7.VmuConnected && _otherCpu is null)
+        {
+            // If this errors when there isn't a real connection scenario taking place, then, there might be a need to distinguish
+            // the pin signal from latch, in case some software out there manually writes a high value into the latch.
+            Logger.LogError($"Cannot run this Cpu directly because it is the client in a VMU-to-VMU connection.");
+            return -1;
+        }
+
         HandleMapleMessages();
 
         if (SFRs.P7.DreamcastConnected)
@@ -329,6 +383,10 @@ public class Cpu
             // Instead HandleMapleMessages handles everything that should be happening while in this state.
             // TODO: we should at least keep ticking the base timer in this state.
             return ticksToRun;
+        }
+        else if (_otherCpu is not null)
+        {
+            return runBoth(this, _otherCpu, ticksToRun);
         }
 
         // Reduce the number of ticks we were asked to run, by the amount we overran last frame.
@@ -342,6 +400,27 @@ public class Cpu
         TicksOverrun = ticksSoFar - ticksToRun;
 
         return ticksSoFar;
+
+        static long runBoth(Cpu @this, Cpu other, long inputTicksToRun)
+        {
+            var thisTicksToRun = inputTicksToRun - @this.TicksOverrun;
+            var otherTicksToRun = inputTicksToRun - other.TicksOverrun;
+            while (thisTicksToRun > 0 || otherTicksToRun > 0)
+            {
+                // Execute one instruction for whichever VMU is further behind in time.
+                if (thisTicksToRun > otherTicksToRun)
+                    thisTicksToRun -= @this.StepTicks();
+                else
+                    otherTicksToRun -= other.StepTicks();
+            }
+
+            @this.TicksOverrun = -thisTicksToRun;
+            other.TicksOverrun = -otherTicksToRun;
+
+            // note: We don't rely on the return value of 'Run()' for precision.
+            // Possibly it should be changed to return void.
+            return inputTicksToRun - thisTicksToRun;
+        }
     }
 
     /// <summary>If VMU just became docked, update Maple flash from Cpu; otherwise, if VMU just became undocked, update Cpu flash from Maple.</summary>
@@ -486,6 +565,55 @@ public class Cpu
         }
 
         SFRs.I01Cr = i01cr;
+    }
+
+    internal void ConnectVmu(Cpu otherCpu)
+    {
+        if (otherCpu == this)
+            throw new InvalidOperationException();
+
+        var thisP7 = SFRs.P7;
+        var otherP7 = otherCpu.SFRs.P7;
+        if (thisP7.VmuConnected || otherP7.VmuConnected)
+            throw new InvalidOperationException("Already connected to a VMU");
+
+        if (thisP7.DreamcastConnected || otherP7.DreamcastConnected)
+            throw new InvalidOperationException("Already connected to a Dreamcast controller");
+
+        SFRs.P7 = thisP7 with { VmuConnected = true };
+        otherCpu.SFRs.P7 = otherP7 with { VmuConnected = true };
+        _otherCpu = otherCpu;
+        otherCpu._otherCpu = this;
+        raiseInt3IfNeeded(this);
+        raiseInt3IfNeeded(otherCpu);
+
+        static void raiseInt3IfNeeded(Cpu cpu)
+        {
+            if (cpu.SFRs.I23Cr is { Int3Enable: true, Int3RisingEdgeDetection: true })
+                cpu.RequestedInterrupts |= Interrupts.INT3_BT;
+        }
+    }
+
+    internal void DisconnectVmu()
+    {
+        if (_otherCpu is null)
+            throw new InvalidOperationException("Not connected to another VMU");
+
+        if (_otherCpu._otherCpu != this)
+            throw new InvalidOperationException("Other CPU is not connected to this CPU");
+
+        SFRs.P7 = SFRs.P7 with { VmuConnected = false };
+        _otherCpu.SFRs.P7 = _otherCpu.SFRs.P7 with { VmuConnected = false };
+        raiseInt3IfNeeded(this);
+        raiseInt3IfNeeded(_otherCpu);
+        _otherCpu._otherCpu = null;
+        _otherCpu = null;
+
+        static void raiseInt3IfNeeded(Cpu cpu)
+        {
+            if (cpu.SFRs.I23Cr is { Int3Enable: true, Int3FallingEdgeDetection: true })
+                cpu.RequestedInterrupts |= Interrupts.INT3_BT;
+        }
     }
 
     /// <summary>
@@ -652,6 +780,8 @@ public class Cpu
             _interruptServicingState = InterruptServicingState.Ready;
     }
 
+    /// <summary>Execute a single instruction and tick the base timer.</summary>
+    /// <returns>Number of ticks consumed by running the instruction.</returns>
     internal long StepTicks()
     {
         // Note that any instruction which modifies OCR, etc, is presumed to only affect the speed starting on the next instruction.
@@ -809,6 +939,7 @@ public class Cpu
         {
             tickTimer0();
             tickTimer1();
+            tickSerialTransferTimer();
 
             void tickTimer0()
             {
@@ -923,6 +1054,48 @@ public class Cpu
 
                 SFRs.T1Cnt = t1cnt;
             }
+
+            void tickSerialTransferTimer()
+            {
+                if (!SFRs.Scon0.TransferControl)
+                    return;
+
+                // Note that this is a normal condition which software can easily put us into.
+                // All it has to do is enable the transfer control without first checking the pin which indicates the other VMU is connected.
+                // It's not clear what real hardware would do here, a test program would be needed to check.
+                if (_otherCpu == null)
+                    return;
+
+                var reload = SFRs.Sbr;
+                for (var i = 0; i < cycles; i++)
+                {
+                    SerialTransferTimer++;
+                    if (SerialTransferTimer >= 0x200)
+                    {
+                        SerialTransferTimer = reload;
+                        sendOneBit();
+                    }
+                }
+            }
+
+            void sendOneBit()
+            {
+                // Note: the ROM appears to be assuming that Sbuf0 is left intact after the sending process.
+                // I don't think it's shifted out, it's likely rotated so that the bits are preserved.
+                // TODO: vmu-to-vmu file transfers are still failing. More investigation needed.
+                var bitAddress = SFRs.Scon0.MSBFirstSequence
+                    ? 7 - SioTxCount
+                    : SioTxCount;
+                _otherCpu.ReceiveSerialTransferBit(BitHelpers.ReadBit(SFRs.Sbuf0, bitAddress));
+
+                SioTxCount++;
+                if (SioTxCount == 8)
+                {
+                    Logger.LogDebug($"Sent serial byte: 0x{SFRs.Sbuf0:X}", LogCategories.SerialTransfer);
+                    SFRs.Scon0 = SFRs.Scon0 with { TransferControl = false, TransferEndFlag = true };
+                    SioTxCount = 0;
+                }
+            }
         }
 
         void requestLevelDrivenInterrupts()
@@ -960,6 +1133,12 @@ public class Cpu
             if (btcr.Int1Enable && btcr.Int1Source && !currentlyServicing(Interrupts.INT3_BT))
                 RequestedInterrupts |= Interrupts.INT3_BT;
 
+            if (SFRs.Scon0 is { InterruptEnable: true, TransferEndFlag: true } && !currentlyServicing(Interrupts.SIO0))
+                RequestedInterrupts |= Interrupts.SIO0;
+
+            if (SFRs.Scon1 is { InterruptEnable: true, TransferEndFlag: true } && !currentlyServicing(Interrupts.SIO1))
+                RequestedInterrupts |= Interrupts.SIO1;
+
             var p3int = SFRs.P3Int;
             // NB: non-continuous interrupts are generated in SFRs.P3.set (i.e. only when P3 changes)
             // TODO: empirical test if holding a button continuously just keeps setting the source flag.
@@ -987,6 +1166,22 @@ public class Cpu
 
                 return false;
             }
+        }
+    }
+
+    private void ReceiveSerialTransferBit(bool bit)
+    {
+        if (SFRs.Scon1.MSBFirstSequence)
+            SFRs.Sbuf1 = (byte)((SFRs.Sbuf1 << 1) | (bit ? 1 : 0));
+        else
+            SFRs.Sbuf1 = (byte)((bit ? 0x80 : 0) | (SFRs.Sbuf1 >> 1));
+
+        SioRxCount++;
+        if (SioRxCount == 8)
+        {
+            Logger.LogDebug($"Received serial byte: 0x{SFRs.Sbuf1:X}", LogCategories.SerialTransfer);
+            SFRs.Scon1 = SFRs.Scon1 with { TransferControl = false, TransferEndFlag = true };
+            SioRxCount = 0;
         }
     }
 

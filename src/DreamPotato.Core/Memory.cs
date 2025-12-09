@@ -216,10 +216,9 @@ public class Memory
         _workRam[address] = value;
     }
 
-    internal Span<byte> Direct_AccessWorkRam()
-    {
-        return _workRam;
-    }
+    internal Span<byte> Direct_AccessMainRam0() => _mainRam0;
+    internal Span<byte> Direct_AccessMainRam1() => _mainRam1;
+    internal Span<byte> Direct_AccessWorkRam() => _workRam;
 
     /// <summary>
     /// Do not use when executing user code; use for implementing front-end or direct Maple handling only.
