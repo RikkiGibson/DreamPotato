@@ -294,6 +294,11 @@ public class SpecialFunctionRegisters
                 _cpu.Audio.IsActive = t1cnt is { ELDT1C: true, T1lRun: true };
                 return;
 
+            case Ids.Sbuf0:
+                { // breakpoint holder
+                }
+                goto default;
+
             case Ids.Scon0:
                 var scon0 = new Scon0(value);
                 if (scon0.ContinuousTransfer)

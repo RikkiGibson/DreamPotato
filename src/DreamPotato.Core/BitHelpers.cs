@@ -30,4 +30,6 @@ public static class BitHelpers
     {
         return (value & (value - 1)) == 0;
     }
+
+    public static int AsBinary(this bool value) => value ? 1 : 0;
 }

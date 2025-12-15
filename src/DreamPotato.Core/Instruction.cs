@@ -9,7 +9,7 @@ namespace DreamPotato.Core;
 /// <summary>
 /// The information we know about an instruction originating solely from the code, and not any cpu state.
 /// </summary>
-record struct Instruction(ushort Offset, Operation Operation, ushort Arg0 = default, ushort Arg1 = default, ushort Arg2 = default)
+readonly record struct Instruction(ushort Offset, Operation Operation, ushort Arg0 = default, ushort Arg1 = default, ushort Arg2 = default)
 {
     public bool HasValue => Operation is not null;
 
