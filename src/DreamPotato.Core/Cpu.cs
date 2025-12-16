@@ -187,7 +187,7 @@ public class Cpu
 
     public Cpu(MapleMessageBroker? mapleMessageBroker = null)
     {
-        var categories = LogCategories.General | LogCategories.SerialTransfer;
+        var categories = LogCategories.General | LogCategories.SerialTransfer | LogCategories.Instructions;
         Logger = new Logger(LogLevel.Default, categories, this);
         Memory = new Memory(this, Logger);
         Audio = new Audio(this, Logger);
@@ -1214,15 +1214,6 @@ public class Cpu
         byte Throw() => throw new InvalidOperationException($"Cannot fetch address for parameter '{param}'");
     }
 
-    internal string? DisplayOperandAddress(Parameter param, ushort arg)
-    {
-        if (param.Kind is not ParameterKind.Ri)
-            return null;
-        
-        var address = Memory.ReadIndirectAddressRegister(arg);
-        return $"({address:X4})=";
-    }
-
     private void Op_ADD(Instruction inst)
     {
         // ACC <- ACC + operand
@@ -1246,7 +1237,7 @@ public class Cpu
         };
 
         SFRs.Psw = psw;
-        Logger.LogTrace(DisplayArithmetic(inst, result, psw));
+        Logger.LogTrace(DisplayArithmetic(inst, result, psw), LogCategories.Instructions);
 
         Pc += inst.Size;
     }
@@ -1280,7 +1271,7 @@ public class Cpu
         };
 
         SFRs.Psw = psw;
-        Logger.LogTrace(DisplayArithmetic(inst, result, psw));
+        Logger.LogTrace(DisplayArithmetic(inst, result, psw), LogCategories.Instructions);
 
         Pc += inst.Size;
     }
@@ -1308,7 +1299,7 @@ public class Cpu
         };
 
         SFRs.Psw = psw;
-        Logger.LogTrace(DisplayArithmetic(inst, result, psw));
+        Logger.LogTrace(DisplayArithmetic(inst, result, psw), LogCategories.Instructions);
 
         Pc += inst.Size;
     }
@@ -1339,7 +1330,7 @@ public class Cpu
         };
 
         SFRs.Psw = psw;
-        Logger.LogTrace(DisplayArithmetic(inst, result, psw));
+        Logger.LogTrace(DisplayArithmetic(inst, result, psw), LogCategories.Instructions);
 
         Pc += inst.Size;
     }
@@ -1352,7 +1343,7 @@ public class Cpu
         var operand = ReadRam(address);
         operand++;
         WriteRam(address, operand);
-        Logger.LogTrace($"{inst} value={operand:X}, Rambk0={SFRs.Psw.Rambk0.AsBinary()}");
+        Logger.LogTrace($"{inst} value={operand:X}, Rambk0={SFRs.Psw.Rambk0.AsBinary()}", LogCategories.Instructions);
         Pc += inst.Size;
     }
 
@@ -1364,7 +1355,7 @@ public class Cpu
         var operand = ReadRam(address);
         operand--;
         WriteRam(address, operand);
-        Logger.LogTrace($"{inst} value={operand:X}, Rambk0={SFRs.Psw.Rambk0.AsBinary()}");
+        Logger.LogTrace($"{inst} value={operand:X}, Rambk0={SFRs.Psw.Rambk0.AsBinary()}", LogCategories.Instructions);
         Pc += inst.Size;
     }
 
@@ -1378,7 +1369,7 @@ public class Cpu
 
         // Overflow cleared indicates the result can fit into 16 bits, i.e. B is 0.
         SFRs.Psw = SFRs.Psw with { Ov = SFRs.B != 0, Cy = false };
-        Logger.LogTrace($"{inst} B={SFRs.B:X} Acc={SFRs.Acc:X} C={SFRs.C} Ov={SFRs.Psw.Ov.AsBinary()} Cy={SFRs.Psw.Cy.AsBinary()}");
+        Logger.LogTrace($"{inst} B={SFRs.B:X} Acc={SFRs.Acc:X} C={SFRs.C} Ov={SFRs.Psw.Ov.AsBinary()} Cy={SFRs.Psw.Cy.AsBinary()}", LogCategories.Instructions);
         Pc += inst.Size;
     }
 
@@ -1404,7 +1395,7 @@ public class Cpu
         }
         psw.Cy = false;
         SFRs.Psw = psw;
-        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X} C={SFRs.C} mod(B)={SFRs.B:X} Ov={SFRs.Psw.Ov.AsBinary()} Cy={SFRs.Psw.Cy.AsBinary()}");
+        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X} C={SFRs.C} mod(B)={SFRs.B:X} Ov={SFRs.Psw.Ov.AsBinary()} Cy={SFRs.Psw.Cy.AsBinary()}", LogCategories.Instructions);
         Pc += inst.Size;
     }
 
@@ -1413,7 +1404,7 @@ public class Cpu
         // ACC <- ACC & operand
         var rhs = FetchOperand(inst.Parameters[0], inst.Arg0);
         SFRs.Acc &= rhs;
-        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X}");
+        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X}", LogCategories.Instructions);
         Pc += inst.Size;
     }
 
@@ -1423,7 +1414,7 @@ public class Cpu
         // ACC <- ACC | operand
         var rhs = FetchOperand(inst.Parameters[0], inst.Arg0);
         SFRs.Acc |= rhs;
-        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X}");
+        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X}", LogCategories.Instructions);
         Pc += inst.Size;
     }
     private void Op_XOR(Instruction inst)
@@ -1431,7 +1422,7 @@ public class Cpu
         // ACC <- ACC ^ operand
         var rhs = FetchOperand(inst.Parameters[0], inst.Arg0);
         SFRs.Acc ^= rhs;
-        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X}");
+        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X}", LogCategories.Instructions);
         Pc += inst.Size;
     }
 
@@ -1441,7 +1432,7 @@ public class Cpu
         int shifted = SFRs.Acc << 1;
         bool bit0 = (shifted & 0x100) != 0;
         SFRs.Acc = (byte)(shifted | (bit0 ? 1 : 0));
-        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X}");
+        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X}", LogCategories.Instructions);
         Pc += inst.Size;
     }
 
@@ -1453,7 +1444,7 @@ public class Cpu
         psw.Cy = (shifted & 0x100) != 0;
         SFRs.Acc = (byte)shifted;
         SFRs.Psw = psw;
-        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X} Cy={psw.Cy.AsBinary()}");
+        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X} Cy={psw.Cy.AsBinary()}", LogCategories.Instructions);
         Pc += inst.Size;
     }
 
@@ -1462,7 +1453,7 @@ public class Cpu
         // (A0) ->A7->A6->A5->A4->A3->A2->A1->A0
         bool bit7 = (SFRs.Acc & 1) != 0;
         SFRs.Acc = (byte)((SFRs.Acc >> 1) | (bit7 ? 0x80 : 0));
-        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X}");
+        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X}", LogCategories.Instructions);
         Pc += inst.Size;
     }
 
@@ -1475,26 +1466,34 @@ public class Cpu
         SFRs.Acc = (byte)((psw.Cy ? 0x80 : 0) | SFRs.Acc >> 1);
         psw.Cy = newCarry;
         SFRs.Psw = psw;
-        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X} Cy={psw.Cy.AsBinary()}");
+        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X} Cy={psw.Cy.AsBinary()}", LogCategories.Instructions);
         Pc += inst.Size;
     }
 
     private void Op_LD(Instruction inst)
     {
         // (ACC) <- (d9)
-        // TODO: Ri display
         SFRs.Acc = FetchOperand(inst.Parameters[0], inst.Arg0);
-        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X}");
+#if DEBUG
+        if (inst.Parameters[0].Kind == ParameterKind.Ri)
+            Logger.LogTrace($"{inst} ({Memory.ReadIndirectAddressRegister(inst.Arg0):X}) Acc={SFRs.Acc:X} Rambk0={SFRs.Psw.Rambk0.AsBinary()}", LogCategories.Instructions);
+        else
+            Logger.LogTrace($"{inst} Acc={SFRs.Acc:X} Rambk0={SFRs.Psw.Rambk0.AsBinary()}", LogCategories.Instructions);
+#endif
         Pc += inst.Size;
     }
 
     private void Op_ST(Instruction inst)
     {
         // (d9) <- (ACC)
-        // TODO: Ri display
         var address = GetOperandAddress(inst.Parameters[0], inst.Arg0);
         WriteRam(address, SFRs.Acc);
-        Logger.LogTrace($"{inst} ({address:X})={SFRs.Acc:X} Rambk0={SFRs.Psw.Rambk0}");
+#if DEBUG
+        if (inst.Parameters[0].Kind == ParameterKind.Ri)
+            Logger.LogTrace($"{inst} ({address:X}) Acc={SFRs.Acc:X} Rambk0={SFRs.Psw.Rambk0.AsBinary()}", LogCategories.Instructions);
+        else
+            Logger.LogTrace($"{inst} Acc={SFRs.Acc:X} Rambk0={SFRs.Psw.Rambk0.AsBinary()}", LogCategories.Instructions);
+#endif
         Pc += inst.Size;
     }
 
@@ -1506,8 +1505,12 @@ public class Cpu
         var i8 = (byte)inst.Arg0;
         var address = GetOperandAddress(inst.Parameters[1], inst.Arg1);
         WriteRam(address, i8);
-        // TODO: Ri display with trailing = is wonky here
-        Logger.LogTrace($"{inst} {DisplayOperandAddress(inst.Parameters[1], inst.Arg1)} Rambk0={SFRs.Psw.Rambk0}");
+#if DEBUG
+        if (inst.Parameters[1].Kind == ParameterKind.Ri)
+            Logger.LogTrace($"{inst} ({address:X}) Acc={SFRs.Acc:X} Rambk0={SFRs.Psw.Rambk0.AsBinary()}", LogCategories.Instructions);
+        else
+            Logger.LogTrace($"{inst} Acc={SFRs.Acc:X} Rambk0={SFRs.Psw.Rambk0.AsBinary()}", LogCategories.Instructions);
+#endif
         Pc += inst.Size;
     }
 
@@ -1519,7 +1522,7 @@ public class Cpu
         // TODO: Cannot access bank 1 of flash memory. System BIOS function must be used instead.
         var address = ((SFRs.Trh << 8) | SFRs.Trl) + SFRs.Acc;
         SFRs.Acc = CurrentROMBank[address];
-        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X} address={address:X}");
+        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X} address={address:X}", LogCategories.Instructions);
         Pc += inst.Size;
     }
 
@@ -1528,7 +1531,7 @@ public class Cpu
         // (SP) <- (SP) + 1, ((SP)) <- (d9)
         var operand = FetchOperand(inst.Parameters[0], inst.Arg0);
         Memory.PushStack(operand);
-        Logger.LogTrace($"{inst} Sp({SFRs.Sp})={operand:X}");
+        Logger.LogTrace($"{inst} Sp({SFRs.Sp})={operand:X}", LogCategories.Instructions);
         Pc += inst.Size;
     }
 
@@ -1538,7 +1541,7 @@ public class Cpu
         var dAddress = GetOperandAddress(inst.Parameters[0], inst.Arg0);
         var value = Memory.PopStack();
         WriteRam(dAddress, value);
-        Logger.LogTrace($"{inst} value={value:X}");
+        Logger.LogTrace($"{inst} value={value:X}", LogCategories.Instructions);
 
         Pc += inst.Size;
     }
@@ -1552,8 +1555,7 @@ public class Cpu
         var newAcc = ReadRam(address);
         WriteRam(address, SFRs.Acc);
         SFRs.Acc = newAcc;
-        Logger.LogTrace($"{inst} Acc={newAcc:X} {DisplayOperandAddress(inst.Parameters[1], inst.Arg1)}={oldAcc:X} Rambk0={SFRs.Psw.Rambk0}");
-
+        Logger.LogTrace($"{inst} Acc={newAcc:X} ({address:X})={oldAcc:X} Rambk0={SFRs.Psw.Rambk0.AsBinary()}", LogCategories.Instructions);
         Pc += inst.Size;
     }
 
@@ -1688,7 +1690,12 @@ public class Cpu
         --value;
         WriteRam(address, value);
 
-        Logger.LogTrace($"{inst} {DisplayOperandAddress(inst.Parameters[0], inst.Arg0)}{value:X}", LogCategories.Instructions);
+#if DEBUG
+        if (inst.Parameters[0].Kind == ParameterKind.Ri)
+            Logger.LogTrace($"{inst} ({address:X})={value:X} Rambk0={SFRs.Psw.Rambk0.AsBinary()}", LogCategories.Instructions);
+        else
+            Logger.LogTrace($"{inst} value={value:X} Rambk0={SFRs.Psw.Rambk0.AsBinary()}", LogCategories.Instructions);
+#endif
         Pc += inst.Size;
         if (value != 0)
             Pc = (ushort)(Pc + r8);
@@ -1713,7 +1720,13 @@ public class Cpu
             : (lhs: SFRs.Acc, rhs: FetchOperand(param0, inst.Arg0), r8: (sbyte)inst.Arg1);
 
         SFRs.Psw = SFRs.Psw with { Cy = lhs < rhs };
-        Logger.LogTrace($"{inst} {DisplayOperandAddress(inst.Parameters[0], inst.Arg0)}{lhs:X} == {rhs:X} Cy={SFRs.Psw.Cy.AsBinary()}", LogCategories.Instructions);
+#if DEBUG
+        if (inst.Parameters[0].Kind == ParameterKind.Ri)
+            Logger.LogTrace($"{inst} ({Memory.ReadIndirectAddressRegister(inst.Arg0):X}) {lhs:X} == {rhs:X} Cy={SFRs.Psw.Cy.AsBinary()}", LogCategories.Instructions);
+        else
+            Logger.LogTrace($"{inst} {lhs:X} == {rhs:X} Cy={SFRs.Psw.Cy.AsBinary()}", LogCategories.Instructions);
+#endif
+
         Pc += inst.Operation.Size;
         if (lhs == rhs)
             Pc = (ushort)(Pc + r8);
@@ -1735,7 +1748,13 @@ public class Cpu
             : (lhs: SFRs.Acc, rhs: FetchOperand(param0, inst.Arg0), r8: (sbyte)inst.Arg1);
 
         SFRs.Psw = SFRs.Psw with { Cy = lhs < rhs };
-        Logger.LogTrace($"{inst} {DisplayOperandAddress(inst.Parameters[0], inst.Arg0)}{lhs:X} != {rhs:X} Cy={SFRs.Psw.Cy.AsBinary()}", LogCategories.Instructions);
+#if DEBUG
+        if (inst.Parameters[0].Kind == ParameterKind.Ri)
+            Logger.LogTrace($"{inst} ({Memory.ReadIndirectAddressRegister(inst.Arg0):X}) {lhs:X} != {rhs:X} Cy={SFRs.Psw.Cy.AsBinary()}", LogCategories.Instructions);
+        else
+            Logger.LogTrace($"{inst} {lhs:X} != {rhs:X} Cy={SFRs.Psw.Cy.AsBinary()}", LogCategories.Instructions);
+#endif
+
         Pc += inst.Operation.Size;
         if (lhs != rhs)
             Pc = (ushort)(Pc + r8);
