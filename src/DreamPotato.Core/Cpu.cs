@@ -882,6 +882,18 @@ public class Cpu
         { // breakpoint holder
         }
 
+        if (InstructionBank == InstructionBank.ROM
+            && Pc == 0x2515
+            && inst.ToString() == "DEC 1")
+        {
+            // MEGA hack. See if this bizarre random DEC 1 is the only thing destroying the world
+            Op_NOP(new Instruction(Pc, Operations.NOP));
+            Op_NOP(new Instruction(Pc, Operations.NOP));
+            tickCpuClockedTimers(inst.Cycles);
+            requestLevelDrivenInterrupts();
+            return inst;
+        }
+
         switch (inst.Kind)
         {
             case OperationKind.ADD: Op_ADD(inst); break;
@@ -1064,8 +1076,13 @@ public class Cpu
                 if (!SFRs.Scon0.TransferControl)
                     return;
 
-                if (_otherCpu == null || !_otherCpu.SFRs.Scon1.TransferControl)
+                if (_otherCpu == null)
                     return;
+
+                // TODO: figure out how this influences transfer on real hardware.
+                // Are bits just dropped if this is disabled etc
+                // if (!_otherCpu.SFRs.Scon1.TransferControl)
+                //     return;
 
                 var reload = SFRs.Sbr;
                 for (var i = 0; i < cycles; i++)

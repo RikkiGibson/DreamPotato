@@ -265,7 +265,6 @@ public class SerialTests
         while (vmuTx.Display.ToTestDisplayString() == copyingText)
             cpuRx.Run(halfSecond);
 
-        // TODO: copy is failing. Debug why.
         Assert.Equal<object>("""
             |█            ▀█    ▀█
             |█▄▀▀▄ ▄▀▀▀▄   █     █   ▄▀▀▀▄ █   █ ▄▀▀▀▄ █▄▀▀▄
@@ -275,15 +274,23 @@ public class SerialTests
             |  █   ▄▀▀▄█
             |  █   █   █
             | ▀▀▀   ▀▀▀▀   ▀     ▀
-            |▄▀▀▀▄
-            |█     ▄▀▀▀▄ █▀▀▀▄ █   █
-            |█   ▄ █   █ █▀▀▀   ▀▀▀█
-            | ▀▀▀   ▀▀▀  ▀      ▀▀▀
-            |             ▄▀▀▄         ▀    ▀█             █
-            |            ▄█▄    ▀▀▀▄  ▀█     █   ▄▀▀▀▄ ▄▀▀▄█
-            |             █    ▄▀▀▀█   █     █   █▀▀▀▀ █   █
-            |             ▀     ▀▀▀▀  ▀▀▀   ▀▀▀   ▀▀▀   ▀▀▀▀
+            |▄▀▀▀▄               ▀             █
+            |█     ▄▀▀▀▄ █▀▀▀▄  ▀█   ▄▀▀▀▄ ▄▀▀▄█
+            |█   ▄ █   █ █▀▀▀    █   █▀▀▀▀ █   █
+            | ▀▀▀   ▀▀▀  ▀      ▀▀▀   ▀▀▀   ▀▀▀▀
             """, vmuTx.Display.ToTestDisplayString());
+
+        cpuRx.Run(TimeSpan.TicksPerSecond);
+        pressButtonAndWait(cpuRx, new P3(0xff) { ButtonMode = false });
+        pressButtonAndWait(cpuRx, new P3(0xff) { ButtonA = false });
+
+        // Run the copied game
+        Assert.Equal<object>("""
+            |█ █      █   █          █ █          █    █  █
+            |█▀█ ▄██  █   █  ▄▀▄     ███ ▄▀▄ ▄▀   █  ▄▀█  █
+            |█ █ ▀▄▄  ▀▄  ▀▄ ▀▄▀  █  █▀█ ▀▄▀ █    ▀▄ ▀▄█  ▄
+            """, vmuRx.Display.ToTestDisplayString());
+        Assert.Equal(Icons.Game, vmuRx.Display.GetIcons());
 
         static void pressButtonAndWait(Cpu cpu, P3 pressedState)
         {
