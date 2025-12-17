@@ -305,12 +305,18 @@ public class SpecialFunctionRegisters
                     _logger.LogWarning($"Scon0.ContinuousTransfer was specified by user code, but is not supported.", LogCategories.SerialTransfer);
 
                 // TODO: this doesn't seem to fix and I don't know whether it's correct to real hardware
-                // var oldScon0 = new Scon0(_rawMemory[address]);
-                // if (!oldScon0.TransferControl && scon0.TransferControl)
-                // {
-                //     _logger.LogDebug($"Scon0.TransferControl set to true. Reloading timer with Sbr 0x{Sbr:X}.", LogCategories.SerialTransfer);
-                //     _cpu.SerialTransferTimer = Sbr;
-                // }
+                var oldScon0 = new Scon0(_rawMemory[address]);
+                if (oldScon0.TransferControl != scon0.TransferControl)
+                {
+                    _logger.LogTrace($"Scon0.TransferControl changed to {scon0.TransferControl}", LogCategories.SerialTransfer);
+                    // _cpu.SerialTransferTimer = Sbr;
+                }
+
+                if (oldScon0.TransferEndFlag != scon0.TransferEndFlag)
+                {
+                    _logger.LogTrace($"Scon0.TransferEndFlag changed to {scon0.TransferEndFlag}", LogCategories.SerialTransfer);
+                    // _cpu.SerialTransferTimer = Sbr;
+                }
 
                 goto default;
 
@@ -318,6 +324,13 @@ public class SpecialFunctionRegisters
                 var scon1 = new Scon1(value);
                 if (scon1.ContinuousTransfer)
                     _logger.LogWarning($"Scon1.ContinuousTransfer was specified by user code, but is not supported.", LogCategories.SerialTransfer);
+
+                var oldScon1 = new Scon1(_rawMemory[address]);
+                if (oldScon1.TransferControl != scon1.TransferControl)
+                    _logger.LogTrace($"Scon1.TransferControl changed to {scon1.TransferControl}", LogCategories.SerialTransfer);
+
+                if (oldScon1.TransferEndFlag != scon1.TransferEndFlag)
+                    _logger.LogTrace($"Scon1.TransferEndFlag changed to {scon1.TransferEndFlag}", LogCategories.SerialTransfer);
 
                 goto default;
 

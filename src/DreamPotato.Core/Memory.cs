@@ -287,6 +287,12 @@ public class Memory
     private void WriteMainMemory(ushort address, byte value)
     {
         Debug.Assert(address < 0x100);
+        if (address == 0x1)
+        { // breakpoint holder
+        }
+        if (address == 0x28)
+        { // breakpoint holder
+        }
         var bank = SFRs.Psw.Rambk0 ? _mainRam1 : _mainRam0;
         bank[address] = value;
     }

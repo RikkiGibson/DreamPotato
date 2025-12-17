@@ -1140,6 +1140,12 @@ public class Cpu
             if (SFRs.Scon1 is { InterruptEnable: true, TransferEndFlag: true } && !currentlyServicing(Interrupts.SIO1))
                 RequestedInterrupts |= Interrupts.SIO1;
 
+            if (SFRs.Scon1.TransferEndFlag && DisplayName == "Sender")
+            { //breakpoint holder
+            }
+            if (SFRs.Scon0.InterruptEnable && SFRs.Scon1.TransferEndFlag && !currentlyServicing(Interrupts.SIO1))
+                RequestedInterrupts |= Interrupts.SIO1;
+
             var p3int = SFRs.P3Int;
             // NB: non-continuous interrupts are generated in SFRs.P3.set (i.e. only when P3 changes)
             // TODO: empirical test if holding a button continuously just keeps setting the source flag.
