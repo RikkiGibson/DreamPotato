@@ -304,6 +304,14 @@ public class SpecialFunctionRegisters
                 if (scon0.ContinuousTransfer)
                     _logger.LogWarning($"Scon0.ContinuousTransfer was specified by user code, but is not supported.", LogCategories.SerialTransfer);
 
+                // TODO: this doesn't seem to fix and I don't know whether it's correct to real hardware
+                // var oldScon0 = new Scon0(_rawMemory[address]);
+                // if (!oldScon0.TransferControl && scon0.TransferControl)
+                // {
+                //     _logger.LogDebug($"Scon0.TransferControl set to true. Reloading timer with Sbr 0x{Sbr:X}.", LogCategories.SerialTransfer);
+                //     _cpu.SerialTransferTimer = Sbr;
+                // }
+
                 goto default;
 
             case Ids.Scon1:

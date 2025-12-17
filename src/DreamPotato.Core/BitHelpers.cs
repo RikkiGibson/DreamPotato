@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 
 namespace DreamPotato.Core;
 
@@ -32,4 +33,42 @@ public static class BitHelpers
     }
 
     public static int AsBinary(this bool value) => value ? 1 : 0;
+
+    public static List<string> AsHexRows(this ReadOnlySpan<byte> bytes)
+    {
+        Debug.Assert((bytes.Length % 0x10) == 0);
+
+        List<string> ret = [];
+        var rows = bytes.Length / 0x10;
+
+        // aligner
+        {
+            var builder = new StringBuilder();
+            builder.Append("   | ");
+            for (int addr = 0; addr < 0x10; addr++)
+            {
+                builder.Append($"{addr:X2} ");
+            }
+            ret.Add(builder.ToString());
+        }
+
+        for (int i = 0; i < rows; i++)
+        {
+            // start of row
+            var builder = new StringBuilder();
+            builder.Append($"{i:X2} | ");
+
+            for (int addr = i * 0x10; addr < (i + 1) * 0x10; addr++)
+            {
+                builder.Append($"{bytes[addr]:X2} ");
+            }
+            ret.Add(builder.ToString());
+        }
+        return ret;
+    }
+
+    public static string AsHexBlock(this ReadOnlySpan<byte> bytes)
+    {
+        return string.Join('\n', AsHexRows(bytes));
+    }
 }

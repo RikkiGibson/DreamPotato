@@ -1064,10 +1064,7 @@ public class Cpu
                 if (!SFRs.Scon0.TransferControl)
                     return;
 
-                // Note that this is a normal condition which software can easily put us into.
-                // All it has to do is enable the transfer control without first checking the pin which indicates the other VMU is connected.
-                // It's not clear what real hardware would do here, a test program would be needed to check.
-                if (_otherCpu == null)
+                if (_otherCpu == null || !_otherCpu.SFRs.Scon1.TransferControl)
                     return;
 
                 var reload = SFRs.Sbr;
@@ -1242,9 +1239,12 @@ public class Cpu
         Pc += inst.Size;
     }
 
-    private static string DisplayArithmetic(Instruction inst, byte result, Psw psw)
+    private string DisplayArithmetic(Instruction inst, byte result, Psw psw)
     {
-        return $"{inst} Acc={result:X} Cy={psw.Cy.AsBinary()} Ac={psw.Ac.AsBinary()} Ov={psw.Ov.AsBinary()}";
+        if (inst.Parameters[0].Kind == ParameterKind.Ri)
+            return $"{inst} ({Memory.ReadIndirectAddressRegister(inst.Arg0):X}) Acc={result:X} Cy={psw.Cy.AsBinary()} Ac={psw.Ac.AsBinary()} Ov={psw.Ov.AsBinary()}";
+        else
+            return $"{inst} Acc={result:X} Cy={psw.Cy.AsBinary()} Ac={psw.Ac.AsBinary()} Ov={psw.Ov.AsBinary()}";
     }
 
     private void Op_ADDC(Instruction inst)
@@ -1343,7 +1343,12 @@ public class Cpu
         var operand = ReadRam(address);
         operand++;
         WriteRam(address, operand);
-        Logger.LogTrace($"{inst} value={operand:X}, Rambk0={SFRs.Psw.Rambk0.AsBinary()}", LogCategories.Instructions);
+#if DEBUG
+        if (inst.Parameters[0].Kind == ParameterKind.Ri)
+            Logger.LogTrace($"{inst} ({address:X}) value={operand:X}, Rambk0={SFRs.Psw.Rambk0.AsBinary()}", LogCategories.Instructions);
+        else
+            Logger.LogTrace($"{inst} value={operand:X}, Rambk0={SFRs.Psw.Rambk0.AsBinary()}", LogCategories.Instructions);
+#endif
         Pc += inst.Size;
     }
 
@@ -1355,7 +1360,12 @@ public class Cpu
         var operand = ReadRam(address);
         operand--;
         WriteRam(address, operand);
-        Logger.LogTrace($"{inst} value={operand:X}, Rambk0={SFRs.Psw.Rambk0.AsBinary()}", LogCategories.Instructions);
+#if DEBUG
+        if (inst.Parameters[0].Kind == ParameterKind.Ri)
+            Logger.LogTrace($"{inst} ({address:X}) value={operand:X}, Rambk0={SFRs.Psw.Rambk0.AsBinary()}", LogCategories.Instructions);
+        else
+            Logger.LogTrace($"{inst} value={operand:X}, Rambk0={SFRs.Psw.Rambk0.AsBinary()}", LogCategories.Instructions);
+#endif
         Pc += inst.Size;
     }
 
@@ -1369,7 +1379,7 @@ public class Cpu
 
         // Overflow cleared indicates the result can fit into 16 bits, i.e. B is 0.
         SFRs.Psw = SFRs.Psw with { Ov = SFRs.B != 0, Cy = false };
-        Logger.LogTrace($"{inst} B={SFRs.B:X} Acc={SFRs.Acc:X} C={SFRs.C} Ov={SFRs.Psw.Ov.AsBinary()} Cy={SFRs.Psw.Cy.AsBinary()}", LogCategories.Instructions);
+        Logger.LogTrace($"{inst} B={SFRs.B:X} Acc={SFRs.Acc:X} C={SFRs.C:X} Ov={SFRs.Psw.Ov.AsBinary()} Cy={SFRs.Psw.Cy.AsBinary()}", LogCategories.Instructions);
         Pc += inst.Size;
     }
 
@@ -1395,7 +1405,7 @@ public class Cpu
         }
         psw.Cy = false;
         SFRs.Psw = psw;
-        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X} C={SFRs.C} mod(B)={SFRs.B:X} Ov={SFRs.Psw.Ov.AsBinary()} Cy={SFRs.Psw.Cy.AsBinary()}", LogCategories.Instructions);
+        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X} C={SFRs.C:X} mod(B)={SFRs.B:X} Ov={SFRs.Psw.Ov.AsBinary()} Cy={SFRs.Psw.Cy.AsBinary()}", LogCategories.Instructions);
         Pc += inst.Size;
     }
 
@@ -1404,7 +1414,13 @@ public class Cpu
         // ACC <- ACC & operand
         var rhs = FetchOperand(inst.Parameters[0], inst.Arg0);
         SFRs.Acc &= rhs;
-        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X}", LogCategories.Instructions);
+
+#if DEBUG
+        if (inst.Parameters[0].Kind == ParameterKind.Ri)
+            Logger.LogTrace($"{inst} ({Memory.ReadIndirectAddressRegister(inst.Arg0):X}) Acc={SFRs.Acc:X}", LogCategories.Instructions);
+        else
+            Logger.LogTrace($"{inst} Acc={SFRs.Acc:X}", LogCategories.Instructions);
+#endif
         Pc += inst.Size;
     }
 
@@ -1414,7 +1430,13 @@ public class Cpu
         // ACC <- ACC | operand
         var rhs = FetchOperand(inst.Parameters[0], inst.Arg0);
         SFRs.Acc |= rhs;
-        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X}", LogCategories.Instructions);
+
+#if DEBUG
+        if (inst.Parameters[0].Kind == ParameterKind.Ri)
+            Logger.LogTrace($"{inst} ({Memory.ReadIndirectAddressRegister(inst.Arg0):X}) Acc={SFRs.Acc:X}", LogCategories.Instructions);
+        else
+            Logger.LogTrace($"{inst} Acc={SFRs.Acc:X}", LogCategories.Instructions);
+#endif
         Pc += inst.Size;
     }
     private void Op_XOR(Instruction inst)
@@ -1422,7 +1444,13 @@ public class Cpu
         // ACC <- ACC ^ operand
         var rhs = FetchOperand(inst.Parameters[0], inst.Arg0);
         SFRs.Acc ^= rhs;
-        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X}", LogCategories.Instructions);
+
+#if DEBUG
+        if (inst.Parameters[0].Kind == ParameterKind.Ri)
+            Logger.LogTrace($"{inst} ({Memory.ReadIndirectAddressRegister(inst.Arg0):X}) Acc={SFRs.Acc:X}", LogCategories.Instructions);
+        else
+            Logger.LogTrace($"{inst} Acc={SFRs.Acc:X}", LogCategories.Instructions);
+#endif
         Pc += inst.Size;
     }
 
@@ -1507,9 +1535,9 @@ public class Cpu
         WriteRam(address, i8);
 #if DEBUG
         if (inst.Parameters[1].Kind == ParameterKind.Ri)
-            Logger.LogTrace($"{inst} ({address:X}) Acc={SFRs.Acc:X} Rambk0={SFRs.Psw.Rambk0.AsBinary()}", LogCategories.Instructions);
+            Logger.LogTrace($"{inst} ({address:X}) Rambk0={SFRs.Psw.Rambk0.AsBinary()}", LogCategories.Instructions);
         else
-            Logger.LogTrace($"{inst} Acc={SFRs.Acc:X} Rambk0={SFRs.Psw.Rambk0.AsBinary()}", LogCategories.Instructions);
+            Logger.LogTrace($"{inst} Rambk0={SFRs.Psw.Rambk0.AsBinary()}", LogCategories.Instructions);
 #endif
         Pc += inst.Size;
     }
@@ -1531,7 +1559,7 @@ public class Cpu
         // (SP) <- (SP) + 1, ((SP)) <- (d9)
         var operand = FetchOperand(inst.Parameters[0], inst.Arg0);
         Memory.PushStack(operand);
-        Logger.LogTrace($"{inst} Sp({SFRs.Sp})={operand:X}", LogCategories.Instructions);
+        Logger.LogTrace($"{inst} Sp({SFRs.Sp:X})={operand:X}", LogCategories.Instructions);
         Pc += inst.Size;
     }
 
@@ -1769,11 +1797,11 @@ public class Cpu
 
         ushort a12 = inst.Arg0;
 
+        Logger.LogTrace($"{inst}", LogCategories.Instructions);
         Pc += inst.Size;
         Memory.PushStack((byte)Pc);
         Memory.PushStack((byte)(Pc >> 8));
 
-        Logger.LogTrace($"{inst}", LogCategories.Instructions);
         Pc &= 0b1111_0000__0000_0000;
         Pc |= a12;
     }
@@ -1877,7 +1905,7 @@ public class Cpu
         Debug.Assert(BitHelpers.IsPowerOfTwo(InstructionBankSize));
         var a17 = SFRs.Trl | (SFRs.Trh << 8) | (SFRs.FPR.FlashAddressBank ? InstructionBankSize : 0);
         SFRs.Acc = Flash[a17];
-        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X}", LogCategories.Instructions);
+        Logger.LogTrace($"{inst} Acc={SFRs.Acc:X} a17={a17:X}", LogCategories.Instructions);
         Pc += inst.Size;
     }
 
@@ -1918,8 +1946,8 @@ public class Cpu
             return;
         }
 
-        if (_flashWriteUnlockSequence == flashFirstUnlockSeq && (a16 & 0x127) != 0)
-            Logger.LogWarning($"Starting unaligned flash write: {a16}", LogCategories.Instructions);
+        if (_flashWriteUnlockSequence == flashFirstUnlockSeq && (a16 & (0x80 - 1)) != 0)
+            Logger.LogWarning($"Starting unaligned flash write: {a16:X}", LogCategories.Instructions);
 
         if (_flashWriteUnlockSequence >= flashFirstUnlockSeq)
         {

@@ -247,21 +247,25 @@ public class SerialTests
         pressButtonAndWait(cpuTx, new P3(0xff) { Left = false });
         pressButtonAndWait(cpuTx, new P3(0xff) { ButtonA = false });
 
+        var copyingText = """
+            |█            ▀█    ▀█
+            |█▄▀▀▄ ▄▀▀▀▄   █     █   ▄▀▀▀▄ █   █ ▄▀▀▀▄ █▄▀▀▄
+            |█   █ █▀▀▀▀   █     █   █   █ █ █ █ █   █ █
+            |▀   ▀  ▀▀▀   ▀▀▀   ▀▀▀   ▀▀▀   ▀ ▀   ▀▀▀  ▀
+            | ▀█       █
+            |  █   ▄▀▀▄█
+            |  █   █   █
+            | ▀▀▀   ▀▀▀▀   ▀     ▀
+            |▄▀▀▀▄                     ▀          ▄▄▄▄   █
+            |█     ▄▀▀▀▄ █▀▀▀▄ █   █  ▀█   █▄▀▀▄ █   █   █
+            |█   ▄ █   █ █▀▀▀   ▀▀▀█   █   █   █  ▀▀▀█
+            | ▀▀▀   ▀▀▀  ▀      ▀▀▀   ▀▀▀  ▀   ▀  ▀▀▀    ▀
+            """;
+
+        while (vmuTx.Display.ToTestDisplayString() == copyingText)
+            cpuRx.Run(halfSecond);
+
         // TODO: copy is failing. Debug why.
-        // Assert.Equal<object>("""
-        //     |█            ▀█    ▀█
-        //     |█▄▀▀▄ ▄▀▀▀▄   █     █   ▄▀▀▀▄ █   █ ▄▀▀▀▄ █▄▀▀▄
-        //     |█   █ █▀▀▀▀   █     █   █   █ █ █ █ █   █ █
-        //     |▀   ▀  ▀▀▀   ▀▀▀   ▀▀▀   ▀▀▀   ▀ ▀   ▀▀▀  ▀
-        //     | ▀█       █
-        //     |  █   ▄▀▀▄█
-        //     |  █   █   █
-        //     | ▀▀▀   ▀▀▀▀   ▀     ▀
-        //     |▄▀▀▀▄                     ▀          ▄▄▄▄   █
-        //     |█     ▄▀▀▀▄ █▀▀▀▄ █   █  ▀█   █▄▀▀▄ █   █   █
-        //     |█   ▄ █   █ █▀▀▀   ▀▀▀█   █   █   █  ▀▀▀█
-        //     | ▀▀▀   ▀▀▀  ▀      ▀▀▀   ▀▀▀  ▀   ▀  ▀▀▀    ▀
-        //     """, vmuTx.Display.ToTestDisplayString());
         Assert.Equal<object>("""
             |█            ▀█    ▀█
             |█▄▀▀▄ ▄▀▀▀▄   █     █   ▄▀▀▀▄ █   █ ▄▀▀▀▄ █▄▀▀▄
@@ -280,7 +284,6 @@ public class SerialTests
             |             █    ▄▀▀▀█   █     █   █▀▀▀▀ █   █
             |             ▀     ▀▀▀▀  ▀▀▀   ▀▀▀   ▀▀▀   ▀▀▀▀
             """, vmuTx.Display.ToTestDisplayString());
-        cpuTx.Run(TimeSpan.TicksPerSecond);
 
         static void pressButtonAndWait(Cpu cpu, P3 pressedState)
         {
