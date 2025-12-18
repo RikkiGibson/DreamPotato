@@ -451,6 +451,8 @@ class UserInterface
 
             using (new DisabledScope(disabled: !_game.UseSecondaryVmu))
             {
+                // TODO: this code will run after the side-effect of DockOrEject, so the assertion can fail.
+                // DockOrEject probably needs to ensure that VMUs are both disconnected prior to docking.
                 Debug.Assert(vmu.IsVmuConnected ? !vmu.IsDocked : true);
                 Debug.Assert((_game.SecondaryVmu is null && !_game.PrimaryVmu.IsVmuConnected)
                     || _game.PrimaryVmu.IsVmuConnected == _game.SecondaryVmu?.IsVmuConnected);

@@ -40,7 +40,7 @@ public class Cpu
     internal Span<byte> FlashBank1 => Flash.AsSpan(FlashBankSize, FlashBankSize);
 
 #if DEBUG
-    internal readonly InstructionMap InstructionMap = new();
+    internal readonly InstructionMap InstructionMap;
 #endif
 
     internal event Action? UnsavedChangesDetected;
@@ -192,6 +192,9 @@ public class Cpu
         Memory = new Memory(this, Logger);
         Audio = new Audio(this, Logger);
         Display = new Display(this);
+#if DEBUG
+        InstructionMap = new InstructionMap(Logger);
+#endif
         MapleMessageBroker = mapleMessageBroker ?? new MapleMessageBroker(LogLevel.Default);
         SetInstructionBank(InstructionBank.ROM);
     }
@@ -1081,8 +1084,6 @@ public class Cpu
 
                 // TODO: figure out how this influences transfer on real hardware.
                 // Are bits just dropped if this is disabled etc
-                // if (!_otherCpu.SFRs.Scon1.TransferControl)
-                //     return;
 
                 var reload = SFRs.Sbr;
                 for (var i = 0; i < cycles; i++)
@@ -1110,7 +1111,8 @@ public class Cpu
                 if (SioTxCount == 8)
                 {
                     Logger.LogDebug($"Sent serial byte: 0x{SFRs.Sbuf0:X}", LogCategories.SerialTransfer);
-                    SFRs.Scon0 = SFRs.Scon0 with { TransferControl = false, TransferEndFlag = true };
+                    var oldScon0 = SFRs.Scon0;
+                    SFRs.Scon0 = oldScon0 with { TransferControl = oldScon0.ContinuousTransfer, TransferEndFlag = true };
                     SioTxCount = 0;
                 }
             }
@@ -1195,6 +1197,9 @@ public class Cpu
 
     private void ReceiveSerialTransferBit(bool bit)
     {
+        if (!SFRs.Scon1.TransferControl)
+            return;
+
         if (SFRs.Scon1.MSBFirstSequence)
             SFRs.Sbuf1 = (byte)((SFRs.Sbuf1 << 1) | (bit ? 1 : 0));
         else
@@ -1204,7 +1209,8 @@ public class Cpu
         if (SioRxCount == 8)
         {
             Logger.LogDebug($"Received serial byte: 0x{SFRs.Sbuf1:X}", LogCategories.SerialTransfer);
-            SFRs.Scon1 = SFRs.Scon1 with { TransferControl = false, TransferEndFlag = true };
+            var oldScon1 = SFRs.Scon1;
+            SFRs.Scon1 = oldScon1 with { TransferControl = oldScon1.ContinuousTransfer, TransferEndFlag = true };
             SioRxCount = 0;
         }
     }
