@@ -341,7 +341,7 @@ class VmuPresenter
         var filePath = Path.Combine(screenshotsFolder, $"{baseName}_{timeDescription}.png");
         using var outFile = File.Create(Path.Combine(Vmu.DataFolder, filePath));
 
-        if (!Vmu.IsDocked)
+        if (!Vmu.IsDockedToDreamcast)
         {
             // Easy case, VMU texture is already properly oriented.
             _vmuScreenTexture.SaveAsPng(outFile, _vmuScreenTexture.Width, _vmuScreenTexture.Height);
