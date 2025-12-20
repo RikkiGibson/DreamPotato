@@ -28,7 +28,7 @@ class VmuPresenter
         get;
         set
         {
-            if (Vmu.IsDocked && value)
+            if (Vmu.IsDockedToDreamcast && value)
                 throw new InvalidOperationException();
 
             field = value;
@@ -38,11 +38,11 @@ class VmuPresenter
     /// <summary>Are we paused either locally or globally?</summary>
     internal bool EffectivePaused
         // A docked VMU should never be treated as paused because it is always responsive to the connected Dreamcast, in terms of LCD messages, saving/loading data, etc.
-        => !Vmu.IsDocked && (LocalPaused || _game1.GlobalPaused);
+        => !Vmu.IsDockedToDreamcast && (LocalPaused || _game1.GlobalPaused);
 
     internal bool EffectiveFastForwarding
         // A docked VMU should never be treated as fast forwarding for the same reason it is not treated as paused.
-        => !Vmu.IsDocked && _game1.IsFastForwarding;
+        => !Vmu.IsDockedToDreamcast && _game1.IsFastForwarding;
 
     private bool IsFastForwarding => _game1.IsFastForwarding;
 
@@ -101,7 +101,7 @@ class VmuPresenter
 
     internal void Update(KeyboardState previousKeys, GamePadState previousGamepad, KeyboardState keyboard, GamePadState gamepad)
     {
-        if (!Vmu.IsDocked && ButtonChecker.IsNewlyPressed(VmuButton.Pause, previousKeys, keyboard, previousGamepad, gamepad))
+        if (!Vmu.IsDockedToDreamcast && ButtonChecker.IsNewlyPressed(VmuButton.Pause, previousKeys, keyboard, previousGamepad, gamepad))
             LocalPaused = !LocalPaused;
 
         if (ButtonChecker.IsNewlyPressed(VmuButton.SaveState, previousKeys, keyboard, previousGamepad, gamepad))
@@ -200,7 +200,7 @@ class VmuPresenter
         // Use nearest neighbor scaling for the screen content
         spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: _spriteTransformMatrix);
 
-        var vmuIsEjected = !Vmu.IsDocked;
+        var vmuIsEjected = !Vmu.IsDockedToDreamcast;
         var screenSize = new Point(x: ScaledWidth, y: ScaledHeight);
         var screenRectangle = vmuIsEjected
             ? new Rectangle(new Point(x: SideMargin, y: TopMargin), screenSize)
@@ -323,9 +323,9 @@ class VmuPresenter
 
     internal void DockOrEject()
     {
-        Vmu.DockOrEject();
+        Vmu.DockOrEjectToDreamcast();
         // Unpause when docking, so that we will be unpaused already when ejecting.
-        if (Vmu.IsDocked)
+        if (Vmu.IsDockedToDreamcast)
             LocalPaused = false;
     }
 

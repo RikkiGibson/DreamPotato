@@ -34,6 +34,7 @@ public static class BitHelpers
 
     public static int AsBinary(this bool value) => value ? 1 : 0;
 
+    /// <summary>Display bytes as hex rows of length 0x10 for debugging</summary>
     public static List<string> AsHexRows(this ReadOnlySpan<byte> bytes)
     {
         Debug.Assert((bytes.Length % 0x10) == 0);

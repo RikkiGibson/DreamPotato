@@ -83,11 +83,12 @@ public class Game1 : Game
             IconClockTexture = Content.Load<Texture2D>("VMUIconClock"),
             IconIOTexture = Content.Load<Texture2D>("VMUIconIO"),
             IconSleepTexture = Content.Load<Texture2D>("VMUIconSleep"),
-            IconConnectedTexture = Content.Load<Texture2D>("DreamcastConnectedIcon"),
+            IconDreamcastConnectedTexture = Content.Load<Texture2D>("DreamcastConnectedIcon"),
+            IconVmusConnectedTexture = Content.Load<Texture2D>("VmusConnectedIcon"),
         };
 
         _userInterface = new UserInterface(this);
-        _userInterface.Initialize(textures.IconConnectedTexture);
+        _userInterface.Initialize(textures.IconDreamcastConnectedTexture, textures.IconVmusConnectedTexture);
 
         MapleMessageBroker = new MapleMessageBroker(LogLevel.Default);
         MapleMessageBroker.RestartServer(Configuration.DreamcastPort);
@@ -107,12 +108,12 @@ public class Game1 : Game
         UpdateScaleMatrix();
         UpdateAudioVolume();
 
-        Debug.Assert(!primaryVmu.IsDocked && !secondaryVmu.IsDocked);
+        Debug.Assert(!primaryVmu.IsDockedToDreamcast && !secondaryVmu.IsDockedToDreamcast);
         var connectionState = Configuration.VmuConnectionState;
-        primaryVmu.DockOrEject(connect: connectionState is VmuConnectionState.PrimaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
-        secondaryVmu.DockOrEject(connect: connectionState is VmuConnectionState.SecondaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
+        primaryVmu.DockOrEjectToDreamcast(connect: connectionState is VmuConnectionState.PrimaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
+        secondaryVmu.DockOrEjectToDreamcast(connect: connectionState is VmuConnectionState.SecondaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
         // Secondary must not be docked if primary is associated with slot 2
-        Debug.Assert(!(primaryVmu.DreamcastSlot == DreamcastSlot.Slot2 && secondaryVmu.IsDocked));
+        Debug.Assert(!(primaryVmu.DreamcastSlot == DreamcastSlot.Slot2 && secondaryVmu.IsDockedToDreamcast));
 
         if (Configuration.WindowPosition is { } windowPosition)
         {
@@ -155,7 +156,7 @@ public class Game1 : Game
         {
             ViewportSize = new ViewportSize(viewport.Width, viewport.Height),
             WindowPosition = new WindowPosition(position.X, position.Y),
-            VmuConnectionState = (PrimaryVmu.IsDocked, SecondaryVmu?.IsDocked) switch
+            VmuConnectionState = (PrimaryVmu.IsDockedToDreamcast, SecondaryVmu?.IsDockedToDreamcast) switch
             {
                 (true, true) => VmuConnectionState.PrimaryAndSecondaryDocked,
                 (true, false or null) => VmuConnectionState.PrimaryDocked,
@@ -292,23 +293,21 @@ public class Game1 : Game
         // Note that changing 'Configuration.ExpansionSlots' affects the nullability of 'SecondaryVmu'.
 
         // The secondary VMU must not be docked when the primary is associated with slot 2, otherwise they will stomp on each other's data
-        Debug.Assert(!(PrimaryVmu.DreamcastSlot == DreamcastSlot.Slot2 && SecondaryVmu?.IsDocked == true));
-        var wasDocked = PrimaryVmu.IsDocked;
-        if (wasDocked)
-            PrimaryVmu.DockOrEject();
+        Debug.Assert(!(PrimaryVmu.DreamcastSlot == DreamcastSlot.Slot2 && SecondaryVmu?.IsDockedToDreamcast == true));
+        var wasDocked = PrimaryVmu.IsDockedToDreamcast;
+        PrimaryVmu.DockOrEjectToDreamcast(connect: false);
 
-        var secondaryWasDocked = SecondaryVmu?.IsDocked == true;
-        if (secondaryWasDocked)
-            SecondaryVmu!.DockOrEject();
+        var secondaryWasDocked = SecondaryVmu?.IsDockedToDreamcast == true;
+        SecondaryVmu?.DockOrEjectToDreamcast(connect: false);
 
         Configuration = Configuration with { ExpansionSlots = newExpansionSlots };
         PrimaryVmu.DreamcastSlot = Configuration.ExpansionSlots is ExpansionSlots.Slot1 or ExpansionSlots.Slot1And2 ? DreamcastSlot.Slot1 : DreamcastSlot.Slot2;
 
         if (wasDocked)
-            PrimaryVmu.DockOrEject();
+            PrimaryVmu.DockOrEjectToDreamcast();
 
         if (secondaryWasDocked)
-            SecondaryVmu?.DockOrEject();
+            SecondaryVmu?.DockOrEjectToDreamcast();
 
         // Adjust the window size if changing from single slot to 2 slots.
         var usingBothSlots = newExpansionSlots == ExpansionSlots.Slot1And2;
@@ -485,7 +484,7 @@ public class Game1 : Game
         {
             // For a VMU-to-VMU connection, the secondary should 'Update' only.
             // In that case, the primary will run both CPUs in sync in its 'UpdateAndRun' call.
-            if (PrimaryVmu.IsVmuConnected)
+            if (PrimaryVmu.IsOtherVmuConnected)
                 _secondaryVmuPresenter.Update(_previousKeys, _previousGamepad, keyboard, gamepad);
             else
                 _secondaryVmuPresenter.UpdateAndRun(gameTime, _previousKeys, _previousGamepad, keyboard, gamepad);

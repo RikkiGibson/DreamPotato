@@ -100,7 +100,8 @@ class UserInterface
     private readonly Game1 _game;
 
     private ImGuiRenderer _imGuiRenderer = null!;
-    private nint _rawIconConnectedTexture;
+    private nint _rawDreamcastConnectedIconTexture;
+    private nint _rawVmusConnectedIconTexture;
     private GCHandle _iniFilenameHandle;
 
     private MappingEditState _mappingEditState;
@@ -137,7 +138,7 @@ class UserInterface
         }
     }
 
-    internal void Initialize(Texture2D iconConnectedTexture)
+    internal void Initialize(Texture2D dreamcastConnectedIconTexture, Texture2D vmusConnectedIconTexture)
     {
         _imGuiRenderer = new ImGuiRenderer(_game);
         _imGuiRenderer.RebuildFontAtlas();
@@ -154,7 +155,8 @@ class UserInterface
             }
         }
 
-        _rawIconConnectedTexture = _imGuiRenderer.BindTexture(iconConnectedTexture);
+        _rawDreamcastConnectedIconTexture = _imGuiRenderer.BindTexture(dreamcastConnectedIconTexture);
+        _rawVmusConnectedIconTexture = _imGuiRenderer.BindTexture(vmusConnectedIconTexture);
     }
 
     internal void Layout(GameTime gameTime)
@@ -339,7 +341,13 @@ class UserInterface
         {
             LayoutNewOpenSaveMenuItems(presenter);
             ImGui.Separator();
+            if (ImGui.MenuItem(_game.UseSecondaryVmu ? "Close Slot 2 VMU" : "Open Slot 2 VMU"))
+            {
+                _game.Configuration_ExpansionSlotsChanged(
+                    _game.UseSecondaryVmu ? ExpansionSlots.Slot1 : ExpansionSlots.Slot1And2);
+            }
 
+            ImGui.Separator();
             if (ImGui.MenuItem("Quit"))
                 _game.Exit();
 
@@ -416,7 +424,7 @@ class UserInterface
 
         if (_game.PrimaryVmu.IsServerConnected)
         {
-            ImGui.Image(_rawIconConnectedTexture, new Numerics.Vector2(18));
+            ImGui.Image(_rawDreamcastConnectedIconTexture, new Numerics.Vector2(18));
             if (ImGui.IsItemHovered())
             {
                 ImGui.BeginTooltip();
@@ -425,6 +433,7 @@ class UserInterface
             }
         }
 
+        LayoutVmusConnectedIcon();
         ImGui.EndMainMenuBar();
 
         if (doOpenSettings)
@@ -436,7 +445,7 @@ class UserInterface
         var vmu = presenter.Vmu;
         if (ImGui.BeginMenu("Emulation"))
         {
-            var isDocked = vmu.IsDocked;
+            var isDocked = vmu.IsDockedToDreamcast;
             using (new DisabledScope(disabled: isDocked))
             {
                 if (ImGui.MenuItem(presenter.LocalPaused ? "Resume" : "Pause"))
@@ -446,18 +455,16 @@ class UserInterface
                     Reset(presenter);
             }
 
-            if (ImGui.MenuItem(isDocked ? "Eject VMU" : "Dock VMU"))
+            if (ImGui.MenuItem(isDocked ? "Eject from Dreamcast" : "Dock to Dreamcast"))
                 presenter.DockOrEject();
 
             using (new DisabledScope(disabled: !_game.UseSecondaryVmu))
             {
-                // TODO: this code will run after the side-effect of DockOrEject, so the assertion can fail.
-                // DockOrEject probably needs to ensure that VMUs are both disconnected prior to docking.
-                Debug.Assert(vmu.IsVmuConnected ? !vmu.IsDocked : true);
-                Debug.Assert((_game.SecondaryVmu is null && !_game.PrimaryVmu.IsVmuConnected)
-                    || _game.PrimaryVmu.IsVmuConnected == _game.SecondaryVmu?.IsVmuConnected);
+                Debug.Assert(!vmu.IsOtherVmuConnected || !vmu.IsDockedToDreamcast);
+                Debug.Assert((_game.SecondaryVmu is null && !_game.PrimaryVmu.IsOtherVmuConnected)
+                    || _game.PrimaryVmu.IsOtherVmuConnected == _game.SecondaryVmu?.IsOtherVmuConnected);
 
-                if (ImGui.MenuItem(vmu.IsVmuConnected ? "Disconnect VMUs" : "Connect VMUs"))
+                if (ImGui.MenuItem(vmu.IsOtherVmuConnected ? "Disconnect VMU-to-VMU" : "Connect VMU-to-VMU"))
                     _game.PrimaryVmu.ConnectOrDisconnectVmu(_game.SecondaryVmu ?? throw new InvalidOperationException());
             }
 
@@ -511,6 +518,10 @@ class UserInterface
             }
 
             LayoutNewOpenSaveMenuItems(presenter);
+            ImGui.Separator();
+            if (ImGui.MenuItem("Close Slot 2 VMU"))
+                _game.Configuration_ExpansionSlotsChanged(ExpansionSlots.Slot1);
+
             ImGui.EndMenu();
         }
 
@@ -541,6 +552,21 @@ class UserInterface
 
         ImGui.EndMenuBar();
         ImGui.End();
+    }
+
+    private void LayoutVmusConnectedIcon()
+    {
+        if (_game.PrimaryVmu.IsOtherVmuConnected)
+        {
+            Debug.Assert(_game.SecondaryVmu!.IsOtherVmuConnected);
+            ImGui.Image(_rawVmusConnectedIconTexture, new Numerics.Vector2(x: 36, y: 18));
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.BeginTooltip();
+                ImGui.Text("VMU-to-VMU connection active");
+                ImGui.EndTooltip();
+            }
+        }
     }
 
     private bool Checkbox(string label, ref bool v, float paddingY)
@@ -575,7 +601,6 @@ class UserInterface
     }
 
     private static readonly string[] AllDreamcastSlotNames = ["A", "B", "C", "D"];
-    private static readonly string[] AllExpansionSlotNames = ["Slot 1", "Slot 2", "Slot 1+2"];
 
     private void LayoutSettings()
     {
@@ -642,21 +667,6 @@ class UserInterface
                 ImGui.PopID();
                 if ((int)port != selectedIndex)
                     _game.Configuration_DreamcastPortChanged((DreamcastPort)selectedIndex);
-            }
-
-            // Slot Configuration
-            {
-                ImGui.Text("Use Expansion Slots");
-                ImGui.SameLine();
-
-                var expansionSlots = configuration.ExpansionSlots;
-                var selectedIndex = (int)expansionSlots;
-                ImGui.SetNextItemWidth(CalcComboWidth(longestItem: AllExpansionSlotNames[2]));
-                ImGui.PushID("ExpansionSlotCombo");
-                ImGui.Combo(label: "", ref selectedIndex, items: AllExpansionSlotNames, items_count: AllExpansionSlotNames.Length);
-                ImGui.PopID();
-                if ((int)expansionSlots != selectedIndex)
-                    _game.Configuration_ExpansionSlotsChanged((ExpansionSlots)selectedIndex);
             }
 
             ImGui.EndPopup();
