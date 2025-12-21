@@ -265,6 +265,7 @@ public class SerialTests
         while (vmuTx.Display.ToTestDisplayString() == copyingText)
             cpuRx.Run(halfSecond);
 
+        cpuRx.Run(halfSecond);
         Assert.Equal<object>("""
             |█            ▀█    ▀█
             |█▄▀▀▄ ▄▀▀▀▄   █     █   ▄▀▀▀▄ █   █ ▄▀▀▀▄ █▄▀▀▄

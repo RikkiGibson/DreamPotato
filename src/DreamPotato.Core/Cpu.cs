@@ -142,11 +142,10 @@ public class Cpu
     /// <summary>
     /// Tracks serial transfer progress when using internal clock.
     /// Essentially, <see cref="SpecialFunctionRegisters.Sbr"/> is like a reload register for this thing.
-    /// When 9th bit of this timer overflows, we should shift another bit into the serial buffer register.
-    /// When certain higher bit than that overflows, we should mark the serial transfer as completed.
+    /// When this timer overflows, we should shift another bit into the serial buffer register.
     /// </summary>
     /// <remarks>TODO! This may need to be tracked in save states.</remarks>
-    internal short SerialTransferTimer;
+    internal byte SerialTransferTimer;
 
     internal Interrupts RequestedInterrupts;
     private InterruptServicingState _interruptServicingState;
@@ -1082,14 +1081,22 @@ public class Cpu
                 if (_otherCpu == null)
                     return;
 
+                if (!_otherCpu.SFRs.Scon1.TransferControl)
+                    return;
+
                 var reload = SFRs.Sbr;
                 for (var i = 0; i < cycles; i++)
                 {
                     SerialTransferTimer++;
-                    if (SerialTransferTimer >= 0x200)
+                    if (SerialTransferTimer == 0)
                     {
                         SerialTransferTimer = reload;
-                        sendOneBit();
+                        var p1 = SFRs.P1;
+                        p1.SCK0 = !p1.SCK0;
+                        if (!p1.SCK0)
+                            sendOneBit();
+
+                        SFRs.P1 = p1;
                     }
                 }
             }
