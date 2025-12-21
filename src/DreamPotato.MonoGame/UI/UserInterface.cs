@@ -463,6 +463,7 @@ class UserInterface
                     Reset(presenter);
             }
 
+            ImGui.Separator();
             if (ImGui.MenuItem(isDocked ? "Eject from Dreamcast" : "Dock to Dreamcast"))
                 presenter.DockOrEject();
 
