@@ -44,7 +44,6 @@ public class Game1 : Game
 
     // Dynamic state
     private KeyboardState _previousKeys;
-    private GamePadState _previousGamepad;
 
     /// <summary>Global pause flag.</summary>
     internal bool GlobalPaused;
@@ -365,16 +364,16 @@ public class Game1 : Game
         Configuration.Save();
     }
 
-    internal void Configuration_DoneEditingButtonMappings(ImmutableArray<ButtonMapping> buttonMappings, bool forPrimary)
+    internal void Configuration_DoneEditingButtonMappings(ImmutableArray<ButtonMapping> buttonMappings, int gamePadIndex, bool forPrimary)
     {
         if (forPrimary)
         {
-            Configuration = Configuration with { PrimaryInput = Configuration.PrimaryInput with { ButtonMappings = buttonMappings } };
+            Configuration = Configuration with { PrimaryInput = Configuration.PrimaryInput with { ButtonMappings = buttonMappings, GamePadIndex = gamePadIndex } };
             _primaryVmuPresenter.UpdateButtonChecker(Configuration.PrimaryInput);
         }
         else
         {
-            Configuration = Configuration with { SecondaryInput = Configuration.SecondaryInput with { ButtonMappings = buttonMappings } };
+            Configuration = Configuration with { SecondaryInput = Configuration.SecondaryInput with { ButtonMappings = buttonMappings, GamePadIndex = gamePadIndex } };
             _secondaryVmuPresenter.UpdateButtonChecker(Configuration.SecondaryInput);
         }
 
@@ -478,24 +477,22 @@ public class Game1 : Game
     protected override void Update(GameTime gameTime)
     {
         var keyboard = Keyboard.GetState();
-        var gamepad = GamePad.GetState(PlayerIndex.One);
 
         if (UseSecondaryVmu)
         {
             // For a VMU-to-VMU connection, the secondary should 'Update' only.
             // In that case, the primary will run both CPUs in sync in its 'UpdateAndRun' call.
             if (PrimaryVmu.IsOtherVmuConnected)
-                _secondaryVmuPresenter.Update(_previousKeys, _previousGamepad, keyboard, gamepad);
+                _secondaryVmuPresenter.Update(_previousKeys, keyboard);
             else
-                _secondaryVmuPresenter.UpdateAndRun(gameTime, _previousKeys, _previousGamepad, keyboard, gamepad);
+                _secondaryVmuPresenter.UpdateAndRun(gameTime, _previousKeys, keyboard);
         }
 
-        _primaryVmuPresenter.UpdateAndRun(gameTime, _previousKeys, _previousGamepad, keyboard, gamepad);
+        _primaryVmuPresenter.UpdateAndRun(gameTime, _previousKeys, keyboard);
 
         MapleMessageBroker.RefreshIfNeeded();
 
         _previousKeys = keyboard;
-        _previousGamepad = gamepad;
         base.Update(gameTime);
     }
 
@@ -507,10 +504,10 @@ public class Game1 : Game
             if (GlobalPaused)
                 return false;
 
-            if (_primaryVmuPresenter.ButtonChecker.IsPressed(VmuButton.FastForward, _previousKeys, _previousGamepad))
+            if (_primaryVmuPresenter.ButtonChecker.IsPressed(VmuButton.FastForward, _previousKeys, _primaryVmuPresenter.PreviousGamepad))
                 return true;
 
-            if (SecondaryVmuPresenter?.ButtonChecker.IsPressed(VmuButton.FastForward, _previousKeys, _previousGamepad) == true)
+            if (SecondaryVmuPresenter?.ButtonChecker.IsPressed(VmuButton.FastForward, _previousKeys, SecondaryVmuPresenter.PreviousGamepad) == true)
                 return true;
 
             return false;

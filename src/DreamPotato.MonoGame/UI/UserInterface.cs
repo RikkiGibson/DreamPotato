@@ -65,6 +65,9 @@ struct MappingEditState
 {
     private object? _editedMappings;
 
+    /// <summary>What gamepad is currently selected in the combo box? (<see cref="InputMappings.GamePadIndex_None"/> when editing keyboard mappings)</summary>
+    public int GamePadIndex;
+
     /// <summary>Which preset is currently selected in the combo box?</summary>
     public int PresetIndex;
 
@@ -74,22 +77,26 @@ struct MappingEditState
     /// <summary>Which VMU are we editing mappings for?</summary>
     public Vmu? TargetVmu { get; }
 
-    private MappingEditState(object editedMappings, Vmu targetVmu)
+    private MappingEditState(object editedMappings, int gamePadIndex, Vmu targetVmu)
     {
         if (editedMappings is not (List<KeyMapping> or List<ButtonMapping>))
             throw new ArgumentException(null, nameof(editedMappings));
 
+        if (editedMappings is List<KeyMapping> && gamePadIndex > 0)
+            throw new ArgumentOutOfRangeException(nameof(gamePadIndex));
+
         _editedMappings = editedMappings;
+        GamePadIndex = gamePadIndex;
         PresetIndex = 0;
         EditedIndex = -1;
         TargetVmu = targetVmu;
     }
 
     public static MappingEditState EditKeyMappings(ImmutableArray<KeyMapping> mappings, Vmu targetVmu)
-        => new(mappings.ToList(), targetVmu);
+        => new(mappings.ToList(), gamePadIndex: InputMappings.GamePadIndex_None, targetVmu);
 
-    public static MappingEditState EditButtonMappings(ImmutableArray<ButtonMapping> mappings, Vmu targetVmu)
-        => new(mappings.ToList(), targetVmu);
+    public static MappingEditState EditButtonMappings(ImmutableArray<ButtonMapping> mappings, int gamePadIndex, Vmu targetVmu)
+        => new(mappings.ToList(), gamePadIndex, targetVmu);
 
     public List<KeyMapping>? KeyMappings { get => _editedMappings as List<KeyMapping>; set => _editedMappings = value; }
     public List<ButtonMapping>? ButtonMappings { get => _editedMappings as List<ButtonMapping>; set => _editedMappings = value; }
@@ -374,7 +381,8 @@ class UserInterface
             if (ImGui.MenuItem("Gamepad Config"))
             {
                 Pause();
-                _mappingEditState = MappingEditState.EditButtonMappings(_game.Configuration.PrimaryInput.ButtonMappings, _game.PrimaryVmu);
+                var input = _game.Configuration.PrimaryInput;
+                _mappingEditState = MappingEditState.EditButtonMappings(input.ButtonMappings, input.GamePadIndex, _game.PrimaryVmu);
             }
 
             if (ImGui.MenuItem("Open Data Folder"))
@@ -544,7 +552,8 @@ class UserInterface
             if (ImGui.MenuItem("Gamepad Config"))
             {
                 Pause();
-                _mappingEditState = MappingEditState.EditButtonMappings(_game.Configuration.SecondaryInput.ButtonMappings, vmu);
+                var input = _game.Configuration.SecondaryInput;
+                _mappingEditState = MappingEditState.EditButtonMappings(input.ButtonMappings, input.GamePadIndex, vmu);
             }
 
             ImGui.EndMenu();
@@ -801,7 +810,10 @@ class UserInterface
         {
             if (ImGui.Button("Save"))
             {
-                _game.Configuration_DoneEditingButtonMappings(_mappingEditState.ButtonMappings.ToImmutableArray(), forPrimary: _mappingEditState.TargetVmu == _game.PrimaryVmu);
+                _game.Configuration_DoneEditingButtonMappings(
+                    _mappingEditState.ButtonMappings.ToImmutableArray(),
+                    gamePadIndex: _mappingEditState.GamePadIndex,
+                    forPrimary: _mappingEditState.TargetVmu == _game.PrimaryVmu);
                 _mappingEditState = default;
                 Unpause();
                 ImGui.End();
@@ -816,6 +828,34 @@ class UserInterface
                 ImGui.End();
                 return;
             }
+
+            ImGui.SeparatorText("Gamepads");
+            ImGui.PushID("GamepadsCombo");
+            var previewValue = _mappingEditState.GamePadIndex switch
+            {
+                InputMappings.GamePadIndex_None => "None",
+                var index => $"{_mappingEditState.GamePadIndex+1}: {GamePad.GetCapabilities(index).DisplayName ?? "<not found>"}"
+            };
+            if (ImGui.BeginCombo(label: "", previewValue))
+            {
+                if (ImGui.Selectable("None"))
+                {
+                    _mappingEditState.GamePadIndex = InputMappings.GamePadIndex_None;
+                }
+
+                for (int i = 0; i < GamePad.MaximumGamePadCount; i++)
+                {
+                    var capabilities = GamePad.GetCapabilities(i);
+                    if (!capabilities.IsConnected)
+                        continue;
+
+                    if (ImGui.Selectable($"{i+1}: {capabilities.DisplayName}"))
+                        _mappingEditState.GamePadIndex = i;
+                }
+
+                ImGui.EndCombo();
+            }
+            ImGui.PopID();
 
             ImGui.SeparatorText("Presets");
             ImGui.PushID("ButtonPresetCombo");
@@ -947,7 +987,7 @@ class UserInterface
             if (keyboard.IsKeyDown(Keys.Delete))
                 mapButton(Buttons.None);
 
-            var gamepad = GamePad.GetState(PlayerIndex.One);
+            var gamepad = GamePad.GetState(_mappingEditState.GamePadIndex);
             var sourceButton = Enum.GetValues<Buttons>().FirstOrDefault(b => gamepad.IsButtonDown(b));
             if (sourceButton != default)
                 mapButton(sourceButton);

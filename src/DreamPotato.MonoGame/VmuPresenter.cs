@@ -49,6 +49,7 @@ class VmuPresenter
     private readonly Color[] _vmuScreenData = new Color[Display.ScreenWidth * Display.ScreenHeight];
     private readonly DynamicSoundEffectInstance _dynamicSound;
     internal ButtonChecker ButtonChecker { get; private set; }
+    internal int GamePadIndex { get; private set; }
 
     internal readonly Vmu Vmu;
     internal readonly IconTextures IconTextures;
@@ -61,7 +62,7 @@ class VmuPresenter
     internal Rectangle ContentRectangle { get; private set; }
 
     private int SleepHeldFrameCount;
-
+    internal GamePadState PreviousGamepad { get; private set; }
     private const int MinVmuScale = 3;
     private const int ScaledWidth = Display.ScreenWidth * MinVmuScale;
     private const int ScaledHeight = Display.ScreenHeight * MinVmuScale;
@@ -97,17 +98,19 @@ class VmuPresenter
     internal void UpdateButtonChecker(InputMappings inputMappings)
     {
         ButtonChecker = new ButtonChecker(inputMappings);
+        GamePadIndex = inputMappings.GamePadIndex;
     }
 
-    internal void Update(KeyboardState previousKeys, GamePadState previousGamepad, KeyboardState keyboard, GamePadState gamepad)
+    internal void Update(KeyboardState previousKeys, KeyboardState keyboard)
     {
-        if (!Vmu.IsDockedToDreamcast && ButtonChecker.IsNewlyPressed(VmuButton.Pause, previousKeys, keyboard, previousGamepad, gamepad))
+        var gamepad = GamePad.GetState(index: GamePadIndex);
+        if (!Vmu.IsDockedToDreamcast && ButtonChecker.IsNewlyPressed(VmuButton.Pause, previousKeys, keyboard, PreviousGamepad, gamepad))
             LocalPaused = !LocalPaused;
 
-        if (ButtonChecker.IsNewlyPressed(VmuButton.SaveState, previousKeys, keyboard, previousGamepad, gamepad))
+        if (ButtonChecker.IsNewlyPressed(VmuButton.SaveState, previousKeys, keyboard, PreviousGamepad, gamepad))
             Vmu.SaveState(id: "0");
 
-        if (ButtonChecker.IsNewlyPressed(VmuButton.LoadState, previousKeys, keyboard, previousGamepad, gamepad))
+        if (ButtonChecker.IsNewlyPressed(VmuButton.LoadState, previousKeys, keyboard, PreviousGamepad, gamepad))
         {
             if (Vmu.LoadStateById(id: "0", saveOopsFile: true) is (false, var error))
             {
@@ -115,7 +118,7 @@ class VmuPresenter
             }
         }
 
-        if (ButtonChecker.IsNewlyPressed(VmuButton.TakeScreenshot, previousKeys, keyboard, previousGamepad, gamepad))
+        if (ButtonChecker.IsNewlyPressed(VmuButton.TakeScreenshot, previousKeys, keyboard, PreviousGamepad, gamepad))
             TakeScreenshot();
 
         var newP3 = new Core.SFRs.P3()
@@ -147,7 +150,7 @@ class VmuPresenter
         }
 
         if (SleepHeldFrameCount >= SleepToggleInsertEjectFrameCount
-            || ButtonChecker.IsNewlyPressed(VmuButton.InsertEject, previousKeys, keyboard, previousGamepad, gamepad))
+            || ButtonChecker.IsNewlyPressed(VmuButton.InsertEject, previousKeys, keyboard, PreviousGamepad, gamepad))
         {
             // Do not toggle insert/eject via sleep until sleep button is released and re-pressed
             SleepHeldFrameCount = -1;
@@ -161,11 +164,12 @@ class VmuPresenter
         }
 
         Vmu._cpu.SFRs.P3 = newP3;
+        PreviousGamepad = gamepad;
     }
 
-    internal void UpdateAndRun(GameTime gameTime, KeyboardState previousKeys, GamePadState previousGamepad, KeyboardState keyboard, GamePadState gamepad)
+    internal void UpdateAndRun(GameTime gameTime, KeyboardState previousKeys, KeyboardState keyboard)
     {
-        Update(previousKeys, previousGamepad, keyboard, gamepad);
+        Update(previousKeys, keyboard);
 
         var rate = EffectivePaused ? 0 :
             IsFastForwarding ? gameTime.ElapsedGameTime.Ticks * 2 :
