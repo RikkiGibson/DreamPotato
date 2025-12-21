@@ -376,7 +376,7 @@ public struct Scon0
     /// <summary>
     /// 0: Transfer in progress
     /// 1: Transfer ended
-    /// The transfer end flag becomes "0" after 8 bits (1 byte) have been transferred,
+    /// The transfer end flag becomes "1" after 8 bits (1 byte) have been transferred,
     /// regardless of the transfer bit length control setting.
     /// </summary>
     public bool TransferEndFlag

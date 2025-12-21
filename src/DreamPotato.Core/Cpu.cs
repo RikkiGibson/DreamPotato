@@ -881,17 +881,17 @@ public class Cpu
         InstructionMap[InstructionBank, Pc] = inst;
 #endif
 
-        if (SFRs.Trl == 0x31 && SFRs.Trh == 0x27)
-        { // breakpoint holder
-        }
-
         if (InstructionBank == InstructionBank.ROM
             && Pc == 0x2515
             && inst.ToString() == "DEC 1")
         {
-            // MEGA hack. See if this bizarre random DEC 1 is the only thing destroying the world
-            Op_NOP(new Instruction(Pc, Operations.NOP));
-            Op_NOP(new Instruction(Pc, Operations.NOP));
+            // HACK: The BIOS file transfer routine is doing a DEC 1 which
+            // causes the sender to fail to verify the data it transmitted.
+            // This is likely a symptom that we are handling something
+            // about the serial transfer process inaccurately.
+            // https://github.com/gyrovorbis/vmu-bios-disassembly/blob/923d28f99d43a03fad81342bf5650cf94e287d03/american_v1.05.s#L4219
+            // https://github.com/RikkiGibson/DreamPotato/pull/14#discussion_r2628643313
+            Pc += inst.Size;
             tickCpuClockedTimers(inst.Cycles);
             requestLevelDrivenInterrupts();
             return inst;
@@ -1082,9 +1082,6 @@ public class Cpu
                 if (_otherCpu == null)
                     return;
 
-                // TODO: figure out how this influences transfer on real hardware.
-                // Are bits just dropped if this is disabled etc
-
                 var reload = SFRs.Sbr;
                 for (var i = 0; i < cycles; i++)
                 {
@@ -1101,7 +1098,6 @@ public class Cpu
             {
                 // Note: the ROM appears to be assuming that Sbuf0 is left intact after the sending process.
                 // I don't think it's shifted out, it's likely rotated so that the bits are preserved.
-                // TODO: vmu-to-vmu file transfers are still failing. More investigation needed.
                 var bitAddress = SFRs.Scon0.MSBFirstSequence
                     ? 7 - SioTxCount
                     : SioTxCount;
@@ -1157,12 +1153,6 @@ public class Cpu
                 RequestedInterrupts |= Interrupts.SIO0;
 
             if (SFRs.Scon1 is { InterruptEnable: true, TransferEndFlag: true } && !currentlyServicing(Interrupts.SIO1))
-                RequestedInterrupts |= Interrupts.SIO1;
-
-            if (SFRs.Scon1.TransferEndFlag && DisplayName == "Sender")
-            { //breakpoint holder
-            }
-            if (SFRs.Scon0.InterruptEnable && SFRs.Scon1.TransferEndFlag && !currentlyServicing(Interrupts.SIO1))
                 RequestedInterrupts |= Interrupts.SIO1;
 
             var p3int = SFRs.P3Int;
@@ -1764,9 +1754,6 @@ public class Cpu
     /// </summary>
     private void Op_BE(Instruction inst)
     {
-        if (inst.ToString() == "BE 3DH, 286BH")
-        { // breakpoint holder
-        }
         // (PC) <- (PC) + 3, if (ACC) == #i8 then (PC) <- (PC) + r8
         // (PC) <- (PC) + 3, if (ACC) == d9 then (PC) <- (PC) + r8
         // (PC) <- (PC) + 3, if ((Ri)) == #i8 then (PC) <- (PC) + r8

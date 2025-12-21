@@ -82,7 +82,7 @@ struct MappingEditState
         if (editedMappings is not (List<KeyMapping> or List<ButtonMapping>))
             throw new ArgumentException(null, nameof(editedMappings));
 
-        if (editedMappings is List<KeyMapping> && gamePadIndex > 0)
+        if (editedMappings is List<KeyMapping> && gamePadIndex != InputMappings.GamePadIndex_None)
             throw new ArgumentOutOfRangeException(nameof(gamePadIndex));
 
         _editedMappings = editedMappings;
