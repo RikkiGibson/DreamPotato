@@ -280,6 +280,7 @@ public class Cpu
 
         // TODO: We can't restore the "VMUs connected" state in general.
         // This is because a save state is local to one VMU, but the "connection" involves them both.
+        var wasOtherVmuConnected = SFRs.P7.VmuConnected;
 
         readStream.ReadExactly(ROM);
         readStream.ReadExactly(Flash);

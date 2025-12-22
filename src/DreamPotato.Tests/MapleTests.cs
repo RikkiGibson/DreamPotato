@@ -81,6 +81,10 @@ public class MapleTests
         Assert.Equal((byte)new MapleAddress { Port = DreamcastPort.A, Slot = slot }, (byte)message.Sender);
         Assert.Equal(28, message.Length);
         Assert.Equal((int)(MapleFunction.Storage | MapleFunction.LCD | MapleFunction.Clock), message.AdditionalWords[0]);
+
+        var outBytes = new byte[1024];
+        var bytesWritten = messageBroker.EncodeAsciiHexData(message, outBytes);
+        var value = Encoding.UTF8.GetString(outBytes.AsSpan(start: 0, length: bytesWritten));
     }
 
     [Theory, MemberData(nameof(DeviceRequest_Data))]

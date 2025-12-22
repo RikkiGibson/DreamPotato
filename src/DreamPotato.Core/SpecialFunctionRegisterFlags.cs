@@ -474,6 +474,7 @@ public struct P1
         set => BitHelpers.WriteBit(ref _value, bit: 7, value);
     }
 
+    /// <summary>SIO1 clock pin</summary>
     public bool SCK1
     {
         get => BitHelpers.ReadBit(_value, bit: 5);
@@ -486,12 +487,14 @@ public struct P1
         set => BitHelpers.WriteBit(ref _value, bit: 4, value);
     }
 
+    /// <summary>SIO1 output pin</summary>
     public bool SO1
     {
         get => BitHelpers.ReadBit(_value, bit: 3);
         set => BitHelpers.WriteBit(ref _value, bit: 3, value);
     }
 
+    /// <summary>SIO0 clock pin</summary>
     public bool SCK0
     {
         get => BitHelpers.ReadBit(_value, bit: 2);
@@ -504,6 +507,7 @@ public struct P1
         set => BitHelpers.WriteBit(ref _value, bit: 1, value);
     }
 
+    /// <summary>SIO0 output pin</summary>
     public bool SO0
     {
         get => BitHelpers.ReadBit(_value, bit: 0);
