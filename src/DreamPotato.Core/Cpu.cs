@@ -278,10 +278,6 @@ public class Cpu
         // TODO: do some kind of search of InstructionMap
         // to remove instructions which are no longer present in the binary?
 
-        // TODO: We can't restore the "VMUs connected" state in general.
-        // This is because a save state is local to one VMU, but the "connection" involves them both.
-        var wasOtherVmuConnected = SFRs.P7.VmuConnected;
-
         readStream.ReadExactly(ROM);
         readStream.ReadExactly(Flash);
         if (VmuFileHandle is not null)

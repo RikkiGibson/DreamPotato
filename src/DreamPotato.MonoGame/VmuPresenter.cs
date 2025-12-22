@@ -35,10 +35,16 @@ class VmuPresenter
         }
     }
 
-    /// <summary>Are we paused either locally or globally?</summary>
+    /// <summary>Are we paused either locally or globally (UI)?</summary>
     internal bool EffectivePaused
         // A docked VMU should never be treated as paused because it is always responsive to the connected Dreamcast, in terms of LCD messages, saving/loading data, etc.
-        => !Vmu.IsDockedToDreamcast && (LocalPaused || _game1.GlobalPaused);
+        => !Vmu.IsDockedToDreamcast && (LocalPaused || _game1.UIPaused);
+
+    internal void ToggleLocalPause()
+    {
+        Debug.Assert(!Vmu.IsDockedToDreamcast);
+        LocalPaused = !LocalPaused;
+    }
 
     internal bool EffectiveFastForwarding
         // A docked VMU should never be treated as fast forwarding for the same reason it is not treated as paused.

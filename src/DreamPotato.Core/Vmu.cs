@@ -245,8 +245,11 @@ public class Vmu
 
     public bool SaveState(string id)
     {
-        if (LoadedFilePath is null ||  GetSaveStatePath(LoadedFilePath, id) is not string filePath)
+        if (LoadedFilePath is null || GetSaveStatePath(LoadedFilePath, id) is not string filePath)
             return false;
+
+        if (IsOtherVmuConnected)
+           return false;
 
         // TODO: it feels like it would be reasonable to zip/unzip the state implicitly.
         // But, 194k is also not that hefty.
@@ -279,6 +282,9 @@ public class Vmu
 
     public (bool success, string? error) LoadStateFromPath(string filePath, bool saveOopsFile)
     {
+        if (IsOtherVmuConnected)
+            return (false, "Cannot load state while connected to other VMU.");
+
         if (saveOopsFile)
         {
             if (!SaveOopsFile())

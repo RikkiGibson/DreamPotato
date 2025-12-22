@@ -45,8 +45,10 @@ public class Game1 : Game
     // Dynamic state
     private KeyboardState _previousKeys;
 
-    /// <summary>Global pause flag.</summary>
-    internal bool GlobalPaused;
+    /// <summary>
+    /// Pause flag for UI. Pauses all VMUs when true, while preserving pause state for after UI is closed.
+    /// </summary>
+    internal bool UIPaused;
 
     /// <summary>Note: comprises the whole screen region which secondary VMU menus can expand into.</summary>
     internal Rectangle SecondaryMenuBarRectangle;
@@ -501,7 +503,7 @@ public class Game1 : Game
     {
         get
         {
-            if (GlobalPaused)
+            if (UIPaused)
                 return false;
 
             if (_primaryVmuPresenter.ButtonChecker.IsPressed(VmuButton.FastForward, _previousKeys, _primaryVmuPresenter.PreviousGamepad))

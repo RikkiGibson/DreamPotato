@@ -186,7 +186,7 @@ class UserInterface
     }
 
     private void Pause()
-        => _game.GlobalPaused = true;
+        => _game.UIPaused = true;
 
     internal void NewVmu(VmuPresenter presenter)
     {
@@ -256,7 +256,7 @@ class UserInterface
     }
 
     private void Unpause()
-        => _game.GlobalPaused = false;
+        => _game.UIPaused = false;
 
     private void ClosePopupAndUnpause()
     {
@@ -453,18 +453,34 @@ class UserInterface
         var vmu = presenter.Vmu;
         if (ImGui.BeginMenu("Emulation"))
         {
-            var isDocked = vmu.IsDockedToDreamcast;
-            using (new DisabledScope(disabled: isDocked))
+            var isDockedToDreamcast = vmu.IsDockedToDreamcast;
+            var isOtherVmuConnected = vmu.IsOtherVmuConnected;
+            using (new DisabledScope(disabled: isDockedToDreamcast))
             {
-                if (ImGui.MenuItem(presenter.LocalPaused ? "Resume" : "Pause"))
-                    presenter.LocalPaused = !presenter.LocalPaused;
+                if (ImGui.MenuItem(presenter.EffectivePaused ? "Resume" : "Pause"))
+                {
+                    if (isOtherVmuConnected)
+                    {
+                        Debug.Assert(_game.SecondaryVmuPresenter is not null);
+                        Debug.Assert(_game.PrimaryVmuPresenter.LocalPaused == _game.SecondaryVmuPresenter.LocalPaused);
+                        _game.PrimaryVmuPresenter.ToggleLocalPause();
+                        _game.SecondaryVmuPresenter.ToggleLocalPause();
+                    }
+                    else
+                    {
+                        presenter.ToggleLocalPause();
+                    }
+                }
+            }
 
+            using (new DisabledScope(disabled: isDockedToDreamcast || isOtherVmuConnected))
+            {
                 if (ImGui.MenuItem("Reset"))
                     Reset(presenter);
             }
 
             ImGui.Separator();
-            if (ImGui.MenuItem(isDocked ? "Eject from Dreamcast" : "Dock to Dreamcast"))
+            if (ImGui.MenuItem(isDockedToDreamcast ? "Eject from Dreamcast" : "Dock to Dreamcast"))
                 presenter.DockOrEject();
 
             using (new DisabledScope(disabled: !_game.UseSecondaryVmu))
@@ -474,11 +490,16 @@ class UserInterface
                     || _game.PrimaryVmu.IsOtherVmuConnected == _game.SecondaryVmu?.IsOtherVmuConnected);
 
                 if (ImGui.MenuItem(vmu.IsOtherVmuConnected ? "Disconnect VMU-to-VMU" : "Connect VMU-to-VMU"))
-                    _game.PrimaryVmu.ConnectOrDisconnectVmu(_game.SecondaryVmu ?? throw new InvalidOperationException());
+                {
+                    Debug.Assert(_game.UseSecondaryVmu);
+                    _game.PrimaryVmu.ConnectOrDisconnectVmu(_game.SecondaryVmu);
+                    _game.PrimaryVmuPresenter.LocalPaused = false;
+                    _game.SecondaryVmuPresenter.LocalPaused = false;
+                }
             }
 
             ImGui.Separator();
-            using (new DisabledScope(vmu.LoadedFilePath is null))
+            using (new DisabledScope(vmu.LoadedFilePath is null || vmu.IsOtherVmuConnected))
             {
                 if (ImGui.MenuItem("Save State"))
                 {
