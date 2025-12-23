@@ -131,20 +131,15 @@ public class Cpu
 
     /// <summary>
     /// How many bits of a 1-byte serial transfer have been sent so far.
+    /// Corresponds to the "octal counter" in VMD-102.
     /// </summary>
-    internal byte SioTxCount;
+    internal byte SerialBitCount;
 
     /// <summary>
-    /// How many bits of a 1-byte serial transfer have been received so far.
+    /// Counts the serial transfer clock. When this overflows, we send 1 bit to the
+    /// other VMU and reload with <see cref="SpecialFunctionRegisters.Sbr"/>.
+    /// Corresponds to the "8-bit reload counter" in VMD-102.
     /// </summary>
-    internal byte SioRxCount;
-
-    /// <summary>
-    /// Tracks serial transfer progress when using internal clock.
-    /// Essentially, <see cref="SpecialFunctionRegisters.Sbr"/> is like a reload register for this thing.
-    /// When this timer overflows, we should shift another bit into the serial buffer register.
-    /// </summary>
-    /// <remarks>TODO! This may need to be tracked in save states.</remarks>
     internal byte SerialTransferTimer;
 
     internal Interrupts RequestedInterrupts;
@@ -245,6 +240,8 @@ public class Cpu
         writeUInt16(buffer, BaseTimer);
         writeInt64(buffer, BaseTimerTicksRemaining);
         writeStream.WriteByte(T0Scale);
+        writeStream.WriteByte(SerialBitCount);
+        writeStream.WriteByte(SerialTransferTimer);
         writeUInt16(buffer, (ushort)RequestedInterrupts);
         writeStream.WriteByte((byte)_interruptServicingState);
         for (int i = 0; i < _servicingInterrupts.Length; i++)
@@ -293,6 +290,8 @@ public class Cpu
         BaseTimer = readUInt16(buffer);
         BaseTimerTicksRemaining = readInt64(buffer);
         T0Scale = (byte)readStream.ReadByte();
+        SerialBitCount = (byte)readStream.ReadByte();
+        SerialTransferTimer = (byte)readStream.ReadByte();
         RequestedInterrupts = (Interrupts)readUInt16(buffer);
         _interruptServicingState = (InterruptServicingState)readStream.ReadByte();
         for (int i = 0; i < _servicingInterrupts.Length; i++)
@@ -1103,17 +1102,19 @@ public class Cpu
                 // Note: the ROM appears to be assuming that Sbuf0 is left intact after the sending process.
                 // I don't think it's shifted out, it's likely rotated so that the bits are preserved.
                 var bitAddress = SFRs.Scon0.MSBFirstSequence
-                    ? 7 - SioTxCount
-                    : SioTxCount;
-                _otherCpu.ReceiveSerialTransferBit(BitHelpers.ReadBit(SFRs.Sbuf0, bitAddress));
+                    ? 7 - SerialBitCount
+                    : SerialBitCount;
+                var bit = BitHelpers.ReadBit(SFRs.Sbuf0, bitAddress);
+                SerialBitCount++;
 
-                SioTxCount++;
-                if (SioTxCount == 8)
+                var isEnd = SerialBitCount == 8;
+                _otherCpu.ReceiveSerialTransferBit(bit, isEnd);
+                if (isEnd)
                 {
                     Logger.LogDebug($"Sent serial byte: 0x{SFRs.Sbuf0:X}", LogCategories.SerialTransfer);
                     var oldScon0 = SFRs.Scon0;
                     SFRs.Scon0 = oldScon0 with { TransferControl = oldScon0.ContinuousTransfer, TransferEndFlag = true };
-                    SioTxCount = 0;
+                    SerialBitCount = 0;
                 }
             }
         }
@@ -1189,23 +1190,20 @@ public class Cpu
         }
     }
 
-    private void ReceiveSerialTransferBit(bool bit)
+    private void ReceiveSerialTransferBit(bool bit, bool isEnd)
     {
-        if (!SFRs.Scon1.TransferControl)
-            return;
+        Debug.Assert(SFRs.Scon1.TransferControl);
 
         if (SFRs.Scon1.MSBFirstSequence)
             SFRs.Sbuf1 = (byte)((SFRs.Sbuf1 << 1) | (bit ? 1 : 0));
         else
             SFRs.Sbuf1 = (byte)((bit ? 0x80 : 0) | (SFRs.Sbuf1 >> 1));
 
-        SioRxCount++;
-        if (SioRxCount == 8)
+        if (isEnd)
         {
             Logger.LogDebug($"Received serial byte: 0x{SFRs.Sbuf1:X}", LogCategories.SerialTransfer);
             var oldScon1 = SFRs.Scon1;
             SFRs.Scon1 = oldScon1 with { TransferControl = oldScon1.ContinuousTransfer, TransferEndFlag = true };
-            SioRxCount = 0;
         }
     }
 
