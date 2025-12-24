@@ -67,6 +67,9 @@ struct MappingEditState
 {
     private object? _editedMappings;
 
+    /// <summary>What gamepad is currently selected in the combo box? (<see cref="InputMappings.GamePadIndex_None"/> when editing keyboard mappings)</summary>
+    public int GamePadIndex;
+
     /// <summary>Which preset is currently selected in the combo box?</summary>
     public int PresetIndex;
 
@@ -76,22 +79,26 @@ struct MappingEditState
     /// <summary>Which VMU are we editing mappings for?</summary>
     public Vmu? TargetVmu { get; }
 
-    private MappingEditState(object editedMappings, Vmu targetVmu)
+    private MappingEditState(object editedMappings, int gamePadIndex, Vmu targetVmu)
     {
         if (editedMappings is not (List<KeyMapping> or List<ButtonMapping>))
             throw new ArgumentException(null, nameof(editedMappings));
 
+        if (editedMappings is List<KeyMapping> && gamePadIndex != InputMappings.GamePadIndex_None)
+            throw new ArgumentOutOfRangeException(nameof(gamePadIndex));
+
         _editedMappings = editedMappings;
+        GamePadIndex = gamePadIndex;
         PresetIndex = 0;
         EditedIndex = -1;
         TargetVmu = targetVmu;
     }
 
     public static MappingEditState EditKeyMappings(ImmutableArray<KeyMapping> mappings, Vmu targetVmu)
-        => new(mappings.ToList(), targetVmu);
+        => new(mappings.ToList(), gamePadIndex: InputMappings.GamePadIndex_None, targetVmu);
 
-    public static MappingEditState EditButtonMappings(ImmutableArray<ButtonMapping> mappings, Vmu targetVmu)
-        => new(mappings.ToList(), targetVmu);
+    public static MappingEditState EditButtonMappings(ImmutableArray<ButtonMapping> mappings, int gamePadIndex, Vmu targetVmu)
+        => new(mappings.ToList(), gamePadIndex, targetVmu);
 
     public List<KeyMapping>? KeyMappings { get => _editedMappings as List<KeyMapping>; set => _editedMappings = value; }
     public List<ButtonMapping>? ButtonMappings { get => _editedMappings as List<ButtonMapping>; set => _editedMappings = value; }
@@ -102,7 +109,8 @@ class UserInterface
     private readonly Game1 _game;
 
     private ImGuiRenderer _imGuiRenderer = null!;
-    private nint _rawIconConnectedTexture;
+    private nint _rawDreamcastConnectedIconTexture;
+    private nint _rawVmusConnectedIconTexture;
     private GCHandle _iniFilenameHandle;
 
     private MappingEditState _mappingEditState;
@@ -139,7 +147,7 @@ class UserInterface
         }
     }
 
-    internal void Initialize(Texture2D iconConnectedTexture)
+    internal void Initialize(Texture2D dreamcastConnectedIconTexture, Texture2D vmusConnectedIconTexture)
     {
         _imGuiRenderer = new ImGuiRenderer(_game);
         _imGuiRenderer.RebuildFontAtlas();
@@ -156,7 +164,8 @@ class UserInterface
             }
         }
 
-        _rawIconConnectedTexture = _imGuiRenderer.BindTexture(iconConnectedTexture);
+        _rawDreamcastConnectedIconTexture = _imGuiRenderer.BindTexture(dreamcastConnectedIconTexture);
+        _rawVmusConnectedIconTexture = _imGuiRenderer.BindTexture(vmusConnectedIconTexture);
     }
 
     internal void Layout(GameTime gameTime)
@@ -179,7 +188,7 @@ class UserInterface
     }
 
     private void Pause()
-        => _game.GlobalPaused = true;
+        => _game.UIPaused = true;
 
     internal void NewVmu(VmuPresenter presenter)
     {
@@ -238,14 +247,14 @@ class UserInterface
         ImGui.OpenPopup(name);
     }
 
-    internal void ShowToast(string message)
+    internal void ShowToast(string message, int durationFrames = ToastMaxDisplayFrames)
     {
         _toastMessage = message;
-        _toastDisplayFrames = ToastMaxDisplayFrames;
+        _toastDisplayFrames = durationFrames;
     }
 
     private void Unpause()
-        => _game.GlobalPaused = false;
+        => _game.UIPaused = false;
 
     private void ClosePopupAndUnpause()
     {
@@ -337,7 +346,13 @@ class UserInterface
         {
             LayoutNewOpenSaveMenuItems(presenter);
             ImGui.Separator();
+            if (ImGui.MenuItem(_game.UseSecondaryVmu ? "Close Slot 2 VMU" : "Open Slot 2 VMU"))
+            {
+                _game.Configuration_ExpansionSlotsChanged(
+                    _game.UseSecondaryVmu ? ExpansionSlots.Slot1 : ExpansionSlots.Slot1And2);
+            }
 
+            ImGui.Separator();
             if (ImGui.MenuItem("Quit"))
                 _game.Exit();
 
@@ -364,7 +379,8 @@ class UserInterface
             if (ImGui.MenuItem("Gamepad Config"))
             {
                 Pause();
-                _mappingEditState = MappingEditState.EditButtonMappings(_game.Configuration.PrimaryInput.ButtonMappings, _game.PrimaryVmu);
+                var input = _game.Configuration.PrimaryInput;
+                _mappingEditState = MappingEditState.EditButtonMappings(input.ButtonMappings, input.GamePadIndex, _game.PrimaryVmu);
             }
 
             if (ImGui.MenuItem("Open Data Folder"))
@@ -414,7 +430,7 @@ class UserInterface
 
         if (_game.PrimaryVmu.IsServerConnected)
         {
-            ImGui.Image(_rawIconConnectedTexture, new Numerics.Vector2(18));
+            ImGui.Image(_rawDreamcastConnectedIconTexture, new Numerics.Vector2(18));
             if (ImGui.IsItemHovered())
             {
                 ImGui.BeginTooltip();
@@ -423,6 +439,7 @@ class UserInterface
             }
         }
 
+        LayoutVmusConnectedIcon();
         ImGui.EndMainMenuBar();
 
         if (doOpenSettings)
@@ -434,31 +451,53 @@ class UserInterface
         var vmu = presenter.Vmu;
         if (ImGui.BeginMenu("Emulation"))
         {
-            var isDocked = vmu.IsDocked;
-            using (new DisabledScope(disabled: isDocked))
+            var isDockedToDreamcast = vmu.IsDockedToDreamcast;
+            var isOtherVmuConnected = vmu.IsOtherVmuConnected;
+            using (new DisabledScope(disabled: isDockedToDreamcast))
             {
-                if (ImGui.MenuItem(presenter.LocalPaused ? "Resume" : "Pause"))
-                    presenter.LocalPaused = !presenter.LocalPaused;
+                if (ImGui.MenuItem(presenter.EffectivePaused ? "Resume" : "Pause"))
+                {
+                    if (isOtherVmuConnected)
+                    {
+                        Debug.Assert(_game.SecondaryVmuPresenter is not null);
+                        Debug.Assert(_game.PrimaryVmuPresenter.LocalPaused == _game.SecondaryVmuPresenter.LocalPaused);
+                        _game.PrimaryVmuPresenter.ToggleLocalPause();
+                        _game.SecondaryVmuPresenter.ToggleLocalPause();
+                    }
+                    else
+                    {
+                        presenter.ToggleLocalPause();
+                    }
+                }
+            }
 
+            using (new DisabledScope(disabled: isDockedToDreamcast || isOtherVmuConnected))
+            {
                 if (ImGui.MenuItem("Reset"))
                     Reset(presenter);
             }
 
-            if (ImGui.MenuItem(isDocked ? "Eject VMU" : "Dock VMU"))
+            ImGui.Separator();
+            if (ImGui.MenuItem(isDockedToDreamcast ? "Eject from Dreamcast" : "Dock to Dreamcast"))
                 presenter.DockOrEject();
 
             using (new DisabledScope(disabled: !_game.UseSecondaryVmu))
             {
-                Debug.Assert(vmu.IsVmuConnected ? !vmu.IsDocked : true);
-                Debug.Assert((_game.SecondaryVmu is null && !_game.PrimaryVmu.IsVmuConnected)
-                    || _game.PrimaryVmu.IsVmuConnected == _game.SecondaryVmu?.IsVmuConnected);
+                Debug.Assert(!vmu.IsOtherVmuConnected || !vmu.IsDockedToDreamcast);
+                Debug.Assert((_game.SecondaryVmu is null && !_game.PrimaryVmu.IsOtherVmuConnected)
+                    || _game.PrimaryVmu.IsOtherVmuConnected == _game.SecondaryVmu?.IsOtherVmuConnected);
 
-                if (ImGui.MenuItem(vmu.IsVmuConnected ? "Disconnect VMUs" : "Connect VMUs"))
-                    _game.PrimaryVmu.ConnectOrDisconnectVmu(_game.SecondaryVmu ?? throw new InvalidOperationException());
+                if (ImGui.MenuItem(vmu.IsOtherVmuConnected ? "Disconnect VMU-to-VMU" : "Connect VMU-to-VMU"))
+                {
+                    Debug.Assert(_game.UseSecondaryVmu);
+                    _game.PrimaryVmu.ConnectOrDisconnectVmu(_game.SecondaryVmu);
+                    _game.PrimaryVmuPresenter.LocalPaused = false;
+                    _game.SecondaryVmuPresenter.LocalPaused = false;
+                }
             }
 
             ImGui.Separator();
-            using (new DisabledScope(vmu.LoadedFilePath is null))
+            using (new DisabledScope(vmu.LoadedFilePath is null || vmu.IsOtherVmuConnected))
             {
                 if (ImGui.MenuItem("Save State"))
                 {
@@ -513,6 +552,10 @@ class UserInterface
                 }
             }
 
+            ImGui.Separator();
+            if (ImGui.MenuItem("Take Screenshot"))
+                presenter.TakeScreenshot();
+
             ImGui.EndMenu();
         }
     }
@@ -537,6 +580,10 @@ class UserInterface
             }
 
             LayoutNewOpenSaveMenuItems(presenter);
+            ImGui.Separator();
+            if (ImGui.MenuItem("Close Slot 2 VMU"))
+                _game.Configuration_ExpansionSlotsChanged(ExpansionSlots.Slot1);
+
             ImGui.EndMenu();
         }
 
@@ -559,7 +606,8 @@ class UserInterface
             if (ImGui.MenuItem("Gamepad Config"))
             {
                 Pause();
-                _mappingEditState = MappingEditState.EditButtonMappings(_game.Configuration.SecondaryInput.ButtonMappings, vmu);
+                var input = _game.Configuration.SecondaryInput;
+                _mappingEditState = MappingEditState.EditButtonMappings(input.ButtonMappings, input.GamePadIndex, vmu);
             }
 
             ImGui.EndMenu();
@@ -567,6 +615,21 @@ class UserInterface
 
         ImGui.EndMenuBar();
         ImGui.End();
+    }
+
+    private void LayoutVmusConnectedIcon()
+    {
+        if (_game.PrimaryVmu.IsOtherVmuConnected)
+        {
+            Debug.Assert(_game.SecondaryVmu!.IsOtherVmuConnected);
+            ImGui.Image(_rawVmusConnectedIconTexture, new Numerics.Vector2(x: 36, y: 18));
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.BeginTooltip();
+                ImGui.Text("VMU-to-VMU connection active");
+                ImGui.EndTooltip();
+            }
+        }
     }
 
     private bool Checkbox(string label, ref bool v, float paddingY)
@@ -637,7 +700,6 @@ class UserInterface
     }
 
     private static readonly string[] AllDreamcastSlotNames = ["A", "B", "C", "D"];
-    private static readonly string[] AllExpansionSlotNames = ["Slot 1", "Slot 2", "Slot 1+2"];
 
     private void LayoutSettings()
     {
@@ -704,21 +766,6 @@ class UserInterface
                 ImGui.PopID();
                 if ((int)port != selectedIndex)
                     _game.Configuration_DreamcastPortChanged((DreamcastPort)selectedIndex);
-            }
-
-            // Slot Configuration
-            {
-                ImGui.Text("Use Expansion Slots");
-                ImGui.SameLine();
-
-                var expansionSlots = configuration.ExpansionSlots;
-                var selectedIndex = (int)expansionSlots;
-                ImGui.SetNextItemWidth(CalcComboWidth(longestItem: AllExpansionSlotNames[2]));
-                ImGui.PushID("ExpansionSlotCombo");
-                ImGui.Combo(label: "", ref selectedIndex, items: AllExpansionSlotNames, items_count: AllExpansionSlotNames.Length);
-                ImGui.PopID();
-                if ((int)expansionSlots != selectedIndex)
-                    _game.Configuration_ExpansionSlotsChanged((ExpansionSlots)selectedIndex);
             }
 
             ImGui.EndPopup();
@@ -853,7 +900,10 @@ class UserInterface
         {
             if (ImGui.Button("Save"))
             {
-                _game.Configuration_DoneEditingButtonMappings(_mappingEditState.ButtonMappings.ToImmutableArray(), forPrimary: _mappingEditState.TargetVmu == _game.PrimaryVmu);
+                _game.Configuration_DoneEditingButtonMappings(
+                    _mappingEditState.ButtonMappings.ToImmutableArray(),
+                    gamePadIndex: _mappingEditState.GamePadIndex,
+                    forPrimary: _mappingEditState.TargetVmu == _game.PrimaryVmu);
                 _mappingEditState = default;
                 Unpause();
                 ImGui.End();
@@ -868,6 +918,34 @@ class UserInterface
                 ImGui.End();
                 return;
             }
+
+            ImGui.SeparatorText("Gamepads");
+            ImGui.PushID("GamepadsCombo");
+            var previewValue = _mappingEditState.GamePadIndex switch
+            {
+                InputMappings.GamePadIndex_None => "None",
+                var index => $"{_mappingEditState.GamePadIndex+1}: {GamePad.GetCapabilities(index).DisplayName ?? "<not found>"}"
+            };
+            if (ImGui.BeginCombo(label: "", previewValue))
+            {
+                if (ImGui.Selectable("None"))
+                {
+                    _mappingEditState.GamePadIndex = InputMappings.GamePadIndex_None;
+                }
+
+                for (int i = 0; i < GamePad.MaximumGamePadCount; i++)
+                {
+                    var capabilities = GamePad.GetCapabilities(i);
+                    if (!capabilities.IsConnected)
+                        continue;
+
+                    if (ImGui.Selectable($"{i+1}: {capabilities.DisplayName}"))
+                        _mappingEditState.GamePadIndex = i;
+                }
+
+                ImGui.EndCombo();
+            }
+            ImGui.PopID();
 
             ImGui.SeparatorText("Presets");
             ImGui.PushID("ButtonPresetCombo");
@@ -999,7 +1077,7 @@ class UserInterface
             if (keyboard.IsKeyDown(Keys.Delete))
                 mapButton(Buttons.None);
 
-            var gamepad = GamePad.GetState(PlayerIndex.One);
+            var gamepad = GamePad.GetState(_mappingEditState.GamePadIndex);
             var sourceButton = Enum.GetValues<Buttons>().FirstOrDefault(b => gamepad.IsButtonDown(b));
             if (sourceButton != default)
                 mapButton(sourceButton);
@@ -1062,6 +1140,7 @@ class UserInterface
         void performCommand()
         {
             Debug.Assert(PendingCommand.State == ConfirmationState.Confirmed);
+            Unpause();
             switch (PendingCommand.Kind)
             {
                 case PendingCommandKind.Exit:

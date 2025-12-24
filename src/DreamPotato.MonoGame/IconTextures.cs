@@ -10,5 +10,6 @@ class IconTextures
     public required Texture2D IconClockTexture { get; init; }
     public required Texture2D IconIOTexture { get; init; }
     public required Texture2D IconSleepTexture { get; init; }
-    public required Texture2D IconConnectedTexture { get; init; }
+    public required Texture2D IconDreamcastConnectedTexture { get; init; }
+    public required Texture2D IconVmusConnectedTexture { get; init; }
 }

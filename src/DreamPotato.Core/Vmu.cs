@@ -166,7 +166,7 @@ public class Vmu
 
     public void SaveVmuAs(string filePath)
     {
-        if (IsDocked)
+        if (IsDockedToDreamcast)
             _cpu.ResyncMapleInbound();
 
         var fileStream = File.Open(filePath, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite);
@@ -174,7 +174,7 @@ public class Vmu
         LoadedFilePath = filePath;
         _cpu.HasUnsavedChanges = false;
         _cpu.VmuFileWriteStream = fileStream;
-        if (IsDocked)
+        if (IsDockedToDreamcast)
             _cpu.ResyncMapleOutbound();
     }
 
@@ -187,23 +187,42 @@ public class Vmu
     }
 
     /// <summary>Indicates whether the VMU is docked in the Dreamcast controller.</summary>
-    public bool IsDocked => _cpu.SFRs.P7.DreamcastConnected;
+    public bool IsDockedToDreamcast => _cpu.SFRs.P7.DreamcastConnected;
 
     /// <summary>Indicates whether the VMU is connected to another VMU for serial I/O.</summary>
-    public bool IsVmuConnected => _cpu.SFRs.P7.VmuConnected;
+    public bool IsOtherVmuConnected => _cpu.SFRs.P7.VmuConnected;
 
     // Toggle the docked/ejected state.
-    public void DockOrEject()
-        => _cpu.ConnectDreamcast(connect: !IsDocked);
+    public void DockOrEjectToDreamcast()
+        => DockOrEjectToDreamcast(connect: !IsDockedToDreamcast);
 
     // Dock or eject depending on a bool argument.
-    public void DockOrEject(bool connect)
-        => _cpu.ConnectDreamcast(connect);
+    public void DockOrEjectToDreamcast(bool connect)
+    {
+        if (IsOtherVmuConnected)
+        {
+            Debug.Assert(!IsDockedToDreamcast);
+            _cpu.DisconnectVmu();
+        }
 
+        _cpu.ConnectDreamcast(connect);
+    }
 
     public void ConnectOrDisconnectVmu(Vmu other)
     {
-        if (IsVmuConnected)
+        if (IsDockedToDreamcast)
+        {
+            Debug.Assert(!IsOtherVmuConnected);
+            _cpu.ConnectDreamcast(connect: false);
+        }
+
+        if (other.IsDockedToDreamcast)
+        {
+            Debug.Assert(!other.IsOtherVmuConnected);
+            other._cpu.ConnectDreamcast(connect: false);
+        }
+
+        if (IsOtherVmuConnected)
             _cpu.DisconnectVmu();
         else
             _cpu.ConnectVmu(other._cpu);
@@ -216,7 +235,7 @@ public class Vmu
     public const string RomFileName = "american_v1.05.bin";
     public const string SaveStateHeaderMessage = "DreamPotatoSaveState";
     public static readonly ReadOnlyMemory<byte> SaveStateHeaderBytes = Encoding.UTF8.GetBytes(SaveStateHeaderMessage);
-    public const int SaveStateVersion = 3;
+    public const int SaveStateVersion = 4;
 
     public static string GetSaveStatePath(string loadedFilePath, string id)
     {
@@ -226,8 +245,11 @@ public class Vmu
 
     public bool SaveState(string id)
     {
-        if (LoadedFilePath is null ||  GetSaveStatePath(LoadedFilePath, id) is not string filePath)
+        if (LoadedFilePath is null || GetSaveStatePath(LoadedFilePath, id) is not string filePath)
             return false;
+
+        if (IsOtherVmuConnected)
+           return false;
 
         // TODO: it feels like it would be reasonable to zip/unzip the state implicitly.
         // But, 194k is also not that hefty.
@@ -260,6 +282,9 @@ public class Vmu
 
     public (bool success, string? error) LoadStateFromPath(string filePath, bool saveOopsFile)
     {
+        if (IsOtherVmuConnected)
+            return (false, "Cannot load state while connected to other VMU.");
+
         if (saveOopsFile)
         {
             if (!SaveOopsFile())

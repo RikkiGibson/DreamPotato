@@ -38,7 +38,12 @@ public class Logger(LogLevel _minimumLogLevel, LogCategories _categories, Cpu? _
     private readonly Cpu? _cpu = _cpu;
 
     // Rolling buffer of log messages.
-    private readonly string?[] _messages = new string[1000];
+    private readonly string?[] _messages
+#if DEBUG
+    = new string[50000];
+#else
+    = new string[1000];
+#endif
     private int _nextMessageIndex = 0;
 
     // TODO: CallerFilePath, CallerLineNumber

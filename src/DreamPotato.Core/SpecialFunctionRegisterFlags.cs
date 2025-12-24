@@ -376,7 +376,7 @@ public struct Scon0
     /// <summary>
     /// 0: Transfer in progress
     /// 1: Transfer ended
-    /// The transfer end flag becomes "0" after 8 bits (1 byte) have been transferred,
+    /// The transfer end flag becomes "1" after 8 bits (1 byte) have been transferred,
     /// regardless of the transfer bit length control setting.
     /// </summary>
     public bool TransferEndFlag
@@ -474,6 +474,7 @@ public struct P1
         set => BitHelpers.WriteBit(ref _value, bit: 7, value);
     }
 
+    /// <summary>SIO1 clock pin</summary>
     public bool SCK1
     {
         get => BitHelpers.ReadBit(_value, bit: 5);
@@ -486,12 +487,14 @@ public struct P1
         set => BitHelpers.WriteBit(ref _value, bit: 4, value);
     }
 
+    /// <summary>SIO1 output pin</summary>
     public bool SO1
     {
         get => BitHelpers.ReadBit(_value, bit: 3);
         set => BitHelpers.WriteBit(ref _value, bit: 3, value);
     }
 
+    /// <summary>SIO0 clock pin</summary>
     public bool SCK0
     {
         get => BitHelpers.ReadBit(_value, bit: 2);
@@ -504,6 +507,7 @@ public struct P1
         set => BitHelpers.WriteBit(ref _value, bit: 1, value);
     }
 
+    /// <summary>SIO0 output pin</summary>
     public bool SO0
     {
         get => BitHelpers.ReadBit(_value, bit: 0);
@@ -514,7 +518,7 @@ public struct P1
 /// <summary>Port 1 function control register. VMD-59</summary>
 /// <remarks>
 /// To use the function assigned to port 1, the corresponding port latch must be reset to "0".
-// For example, to use PWM, set P17FCR to "0" and reset P17 to "0".
+// For example, to use PWM, set P17FCR to "1" and reset P17 to "0".
 // The instructions BPC, DBNZ, INC, DEC, SET1, CLR1, NOT1 read port latch data. Other instructions
 // read data assigned to the port.
 /// </remarks>
