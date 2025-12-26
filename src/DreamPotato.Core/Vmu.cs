@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Diagnostics;
+using System.IO.Compression;
 using System.Text;
 
 using DreamPotato.Core.SFRs;
@@ -233,9 +234,8 @@ public class Vmu
     public DreamcastSlot DreamcastSlot { get => _cpu.DreamcastSlot; set => _cpu.DreamcastSlot = value; }
 
     public const string RomFileName = "american_v1.05.bin";
-    public const string SaveStateHeaderMessage = "DreamPotatoSaveState";
-    public static readonly ReadOnlyMemory<byte> SaveStateHeaderBytes = Encoding.UTF8.GetBytes(SaveStateHeaderMessage);
-    public const int SaveStateVersion = 4;
+    public const string SaveStateHeaderMessage = $"DreamPotatoSaveStateV{SaveStateVersion}";
+    public const string SaveStateVersion = "4";
 
     public static string GetSaveStatePath(string loadedFilePath, string id)
     {
@@ -255,13 +255,22 @@ public class Vmu
         // But, 194k is also not that hefty.
         Debug.Assert(filePath.StartsWith(DataFolder, StringComparison.Ordinal));
         Directory.CreateDirectory(DataFolder);
-        using var writeStream = File.Create(filePath);
-        writeStream.Write(SaveStateHeaderBytes.Span);
+        using var fileStream = File.Create(filePath);
+        using var zipArchive = new ZipArchive(fileStream, ZipArchiveMode.Create);
+        zipArchive.Comment = SaveStateHeaderMessage;
 
-        Span<byte> bytes = [0, 0, 0, 0];
-        BinaryPrimitives.WriteInt32LittleEndian(bytes, SaveStateVersion);
-        writeStream.Write(bytes);
-        _cpu.SaveState(writeStream);
+        // Save thumbnail
+        var thumbnailBytes = Display.GetBytes();
+        using (var thumbnailStream = zipArchive.CreateEntry(SaveState_ThumbnailFile).Open())
+        {
+            thumbnailStream.Write(thumbnailBytes);
+        }
+
+        using (var cpuStateStream = zipArchive.CreateEntry(SaveState_CpuStateFile).Open())
+        {
+            _cpu.SaveState(cpuStateStream);
+        }
+
         return true;
     }
 
@@ -280,6 +289,9 @@ public class Vmu
         return LoadStateFromPath(filePath, saveOopsFile);
     }
 
+    public const string SaveState_ThumbnailFile = "Thumbnail.bin";
+    public const string SaveState_CpuStateFile = "CpuState.bin";
+
     public (bool success, string? error) LoadStateFromPath(string filePath, bool saveOopsFile)
     {
         if (IsOtherVmuConnected)
@@ -294,24 +306,24 @@ public class Vmu
         try
         {
             using var readStream = File.OpenRead(filePath);
+            using var zipArchive = new ZipArchive(readStream);
+            if (zipArchive.Comment != SaveStateHeaderMessage)
+                return (success: false, $"Outdated '{zipArchive.Comment}' is not supported. '{SaveStateHeaderMessage}'.");
 
-            byte[] buffer = new byte[SaveStateHeaderBytes.Length];
-            readStream.ReadExactly(buffer);
-            if (!buffer.SequenceEqual(SaveStateHeaderBytes.Span))
-                return (success: false, $"Unsupported save state. Bad header data: '{Encoding.UTF8.GetString(buffer)}'");
+            if (zipArchive.GetEntry(SaveState_CpuStateFile) is not { } cpuStateEntry)
+                return (success: false, $"'{SaveState_CpuStateFile}' not found.");
 
-            byte[] versionBytes = new byte[4];
-            readStream.ReadExactly(versionBytes);
-            int version = BinaryPrimitives.ReadInt32LittleEndian(versionBytes);
-            if (version != SaveStateVersion)
-                return (success: false, $"Unsupported save state version '{version}'. Version '{SaveStateVersion}' needed.");
-
-            _cpu.LoadState(readStream);
+            using var cpuStateStream = cpuStateEntry.Open();
+            _cpu.LoadState(cpuStateStream);
             return (true, null);
         }
         catch (FileNotFoundException)
         {
             return (false, $"Could not load state because '{filePath}' was not found.");
+        }
+        catch (InvalidDataException)
+        {
+            return (false, $"Invalid or outdated save state: '{filePath}'");
         }
     }
 }

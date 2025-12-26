@@ -525,7 +525,7 @@ class UserInterface
                     var vmuForDrawing = new Vmu() { DreamcastSlot = DreamcastSlot.Slot1 };
                     if (vmu.LoadedFilePath is null)
                         throw new InvalidOperationException();
-                        
+
                     // TODO: drawing code etc to draw the vmu screen as a texture here.
                     // We def need to cache this, and cache needs to be invalidated at appropriate time...
                     // File watcher seems excessive but maybe good here.
@@ -538,7 +538,7 @@ class UserInterface
                         if (File.Exists(statePath))
                         {
                             vmuForDrawing.LoadStateFromPath(statePath, saveOopsFile: false);
-                            displayString = vmuForDrawing.Display.GetBlockString();
+                            displayString = vmuForDrawing.Display.ToTestDisplayString();
                         }
 
                         if (ImGui.MenuItem($"{i}{displayString}", enabled: currentSaveStateSlot != i))
