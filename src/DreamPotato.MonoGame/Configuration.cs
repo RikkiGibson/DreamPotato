@@ -33,8 +33,32 @@ public record Configuration(
     private static string FilePath => Path.Combine(Vmu.DataFolder, FileName);
 
     public string ColorPaletteName { get; init; } = ColorPaletteName ?? ColorPalette.White.Name;
-    public InputMappings PrimaryInput { get; init; } = PrimaryInput ?? DefaultPrimaryInput;
-    public InputMappings SecondaryInput { get; init; } = SecondaryInput ?? DefaultSecondaryInput;
+    public InputMappings PrimaryInput { get; init; } = SetupPrimaryInput(PrimaryInput);
+    public InputMappings SecondaryInput { get; init; } = SetupSecondaryInput(SecondaryInput);
+
+    private static InputMappings SetupPrimaryInput(InputMappings? primaryInput)
+    {
+        if (primaryInput is null)
+            return DefaultPrimaryInput;
+
+        // config from old emu version
+        if (primaryInput.GamePadIndex == InputMappings.GamePadIndex_NotSet)
+            primaryInput = primaryInput with { GamePadIndex = 0 };
+
+        return primaryInput;
+    }
+
+    private static InputMappings SetupSecondaryInput(InputMappings? secondaryInput)
+    {
+        if (secondaryInput is null)
+            return DefaultSecondaryInput;
+
+        // config from old emu version
+        if (secondaryInput.GamePadIndex == InputMappings.GamePadIndex_NotSet)
+            secondaryInput = secondaryInput with { GamePadIndex = 1 };
+
+        return secondaryInput;
+    }
 
     public ViewportSize ViewportSize { get; init; } = ViewportSize ?? new ViewportSize(Width: VmuPresenter.TotalContentWidth * 2, Height: VmuPresenter.TotalContentHeight * 2 + Game1.MenuBarHeight);
     public WindowPosition? WindowPosition { get; init; }
@@ -131,36 +155,26 @@ public record Configuration(
         new ButtonMapping { SourceButton = Buttons.Back, TargetButton = VmuButton.Sleep },
     ];
 
-    public static readonly ImmutableArray<ButtonMapping> ButtonPreset_Unmapped = [
-        new ButtonMapping { SourceButton = Buttons.None, TargetButton = VmuButton.Up },
-        new ButtonMapping { SourceButton = Buttons.None, TargetButton = VmuButton.Down },
-        new ButtonMapping { SourceButton = Buttons.None, TargetButton = VmuButton.Left },
-        new ButtonMapping { SourceButton = Buttons.None, TargetButton = VmuButton.Right },
-        new ButtonMapping { SourceButton = Buttons.None, TargetButton = VmuButton.A },
-        new ButtonMapping { SourceButton = Buttons.None, TargetButton = VmuButton.B },
-        new ButtonMapping { SourceButton = Buttons.None, TargetButton = VmuButton.Mode },
-        new ButtonMapping { SourceButton = Buttons.None, TargetButton = VmuButton.Sleep },
-    ];
-
     public static readonly ImmutableArray<(string name, string description, ImmutableArray<ButtonMapping> mappings)> AllButtonPresets = [
         ("Default", "General purpose preset", ButtonPreset_Default),
         ("Sidecar", """
             Allows mapping both Dreamcast and
             VMU buttons to a single gamepad
             """, ButtonPreset_Sidecar),
-        ("Unmapped", "Do not use a gamepad", ButtonPreset_Unmapped),
     ];
 
     private static readonly InputMappings DefaultPrimaryInput = new InputMappings()
     {
         KeyMappings = DefaultPrimaryKeyPreset,
         ButtonMappings = ButtonPreset_Default,
+        GamePadIndex = 0
     };
 
     private static readonly InputMappings DefaultSecondaryInput = new InputMappings()
     {
         KeyMappings = DefaultSecondaryKeyPreset,
-        ButtonMappings = ButtonPreset_Unmapped
+        ButtonMappings = ButtonPreset_Default,
+        GamePadIndex = 1
     };
 
     public static readonly Configuration Default = new Configuration();
@@ -286,6 +300,10 @@ public record InputMappings
 {
     public required ImmutableArray<KeyMapping> KeyMappings { get; init; }
     public required ImmutableArray<ButtonMapping> ButtonMappings { get; init; }
+    public int GamePadIndex { get; init; } = GamePadIndex_NotSet;
+
+    public const int GamePadIndex_NotSet = -2;
+    public const int GamePadIndex_None = -1;
 }
 
 /// <summary>Size of the rendered content (i.e. not including the operating system menu bar.)</summary>

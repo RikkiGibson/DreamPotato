@@ -28,27 +28,34 @@ class VmuPresenter
         get;
         set
         {
-            if (Vmu.IsDocked && value)
+            if (Vmu.IsDockedToDreamcast && value)
                 throw new InvalidOperationException();
 
             field = value;
         }
     }
 
-    /// <summary>Are we paused either locally or globally?</summary>
+    /// <summary>Are we paused either locally or globally (UI)?</summary>
     internal bool EffectivePaused
         // A docked VMU should never be treated as paused because it is always responsive to the connected Dreamcast, in terms of LCD messages, saving/loading data, etc.
-        => !Vmu.IsDocked && (LocalPaused || _game1.GlobalPaused);
+        => !Vmu.IsDockedToDreamcast && (LocalPaused || _game1.UIPaused);
+
+    internal void ToggleLocalPause()
+    {
+        Debug.Assert(!Vmu.IsDockedToDreamcast);
+        LocalPaused = !LocalPaused;
+    }
 
     internal bool EffectiveFastForwarding
         // A docked VMU should never be treated as fast forwarding for the same reason it is not treated as paused.
-        => !Vmu.IsDocked && _game1.IsFastForwarding;
+        => !Vmu.IsDockedToDreamcast && _game1.IsFastForwarding;
 
     private bool IsFastForwarding => _game1.IsFastForwarding;
 
     private readonly Color[] _vmuScreenData = new Color[Display.ScreenWidth * Display.ScreenHeight];
     private readonly DynamicSoundEffectInstance _dynamicSound;
     internal ButtonChecker ButtonChecker { get; private set; }
+    internal int GamePadIndex { get; private set; }
 
     internal readonly Vmu Vmu;
     internal readonly IconTextures IconTextures;
@@ -61,7 +68,7 @@ class VmuPresenter
     internal Rectangle ContentRectangle { get; private set; }
 
     private int SleepHeldFrameCount;
-
+    internal GamePadState PreviousGamepad { get; private set; }
     private const int MinVmuScale = 3;
     private const int ScaledWidth = Display.ScreenWidth * MinVmuScale;
     private const int ScaledHeight = Display.ScreenHeight * MinVmuScale;
@@ -97,17 +104,19 @@ class VmuPresenter
     internal void UpdateButtonChecker(InputMappings inputMappings)
     {
         ButtonChecker = new ButtonChecker(inputMappings);
+        GamePadIndex = inputMappings.GamePadIndex;
     }
 
-    internal void Update(GameTime gameTime, KeyboardState previousKeys, GamePadState previousGamepad, KeyboardState keyboard, GamePadState gamepad)
+    internal void Update(KeyboardState previousKeys, KeyboardState keyboard)
     {
-        if (!Vmu.IsDocked && ButtonChecker.IsNewlyPressed(VmuButton.Pause, previousKeys, keyboard, previousGamepad, gamepad))
+        var gamepad = GamePad.GetState(index: GamePadIndex);
+        if (!Vmu.IsDockedToDreamcast && ButtonChecker.IsNewlyPressed(VmuButton.Pause, previousKeys, keyboard, PreviousGamepad, gamepad))
             LocalPaused = !LocalPaused;
 
-        if (ButtonChecker.IsNewlyPressed(VmuButton.SaveState, previousKeys, keyboard, previousGamepad, gamepad))
+        if (ButtonChecker.IsNewlyPressed(VmuButton.SaveState, previousKeys, keyboard, PreviousGamepad, gamepad))
             Vmu.SaveState(id: "0");
 
-        if (ButtonChecker.IsNewlyPressed(VmuButton.LoadState, previousKeys, keyboard, previousGamepad, gamepad))
+        if (ButtonChecker.IsNewlyPressed(VmuButton.LoadState, previousKeys, keyboard, PreviousGamepad, gamepad))
         {
             if (Vmu.LoadStateById(id: "0", saveOopsFile: true) is (false, var error))
             {
@@ -115,7 +124,7 @@ class VmuPresenter
             }
         }
 
-        if (ButtonChecker.IsNewlyPressed(VmuButton.TakeScreenshot, previousKeys, keyboard, previousGamepad, gamepad))
+        if (ButtonChecker.IsNewlyPressed(VmuButton.TakeScreenshot, previousKeys, keyboard, PreviousGamepad, gamepad))
             TakeScreenshot();
 
         var newP3 = new Core.SFRs.P3()
@@ -147,7 +156,7 @@ class VmuPresenter
         }
 
         if (SleepHeldFrameCount >= SleepToggleInsertEjectFrameCount
-            || ButtonChecker.IsNewlyPressed(VmuButton.InsertEject, previousKeys, keyboard, previousGamepad, gamepad))
+            || ButtonChecker.IsNewlyPressed(VmuButton.InsertEject, previousKeys, keyboard, PreviousGamepad, gamepad))
         {
             // Do not toggle insert/eject via sleep until sleep button is released and re-pressed
             SleepHeldFrameCount = -1;
@@ -161,6 +170,12 @@ class VmuPresenter
         }
 
         Vmu._cpu.SFRs.P3 = newP3;
+        PreviousGamepad = gamepad;
+    }
+
+    internal void UpdateAndRun(GameTime gameTime, KeyboardState previousKeys, KeyboardState keyboard)
+    {
+        Update(previousKeys, keyboard);
 
         var rate = EffectivePaused ? 0 :
             IsFastForwarding ? gameTime.ElapsedGameTime.Ticks * 2 :
@@ -195,7 +210,7 @@ class VmuPresenter
         // Use nearest neighbor scaling for the screen content
         spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: _spriteTransformMatrix);
 
-        var vmuIsEjected = !Vmu.IsDocked;
+        var vmuIsEjected = !Vmu.IsDockedToDreamcast;
         var screenSize = new Point(x: ScaledWidth, y: ScaledHeight);
         var screenRectangle = vmuIsEjected
             ? new Rectangle(new Point(x: SideMargin, y: TopMargin), screenSize)
@@ -318,9 +333,9 @@ class VmuPresenter
 
     internal void DockOrEject()
     {
-        Vmu.DockOrEject();
+        Vmu.DockOrEjectToDreamcast();
         // Unpause when docking, so that we will be unpaused already when ejecting.
-        if (Vmu.IsDocked)
+        if (Vmu.IsDockedToDreamcast)
             LocalPaused = false;
     }
 
@@ -336,7 +351,7 @@ class VmuPresenter
         var filePath = Path.Combine(screenshotsFolder, $"{baseName}_{timeDescription}.png");
         using var outFile = File.Create(Path.Combine(Vmu.DataFolder, filePath));
 
-        if (!Vmu.IsDocked)
+        if (!Vmu.IsDockedToDreamcast)
         {
             // Easy case, VMU texture is already properly oriented.
             _vmuScreenTexture.SaveAsPng(outFile, _vmuScreenTexture.Width, _vmuScreenTexture.Height);
