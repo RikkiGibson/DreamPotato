@@ -233,6 +233,14 @@ public class Game1 : Game
                 return false;
             }
 
+            if (!File.Exists(filePath))
+            {
+                _userInterface.ShowToast($"File not found: {Path.GetFileName(filePath)}");
+                RecentFilesInfo = RecentFilesInfo with { RecentFiles = [..RecentFilesInfo.RecentFiles.Where(path => path != filePath)] };
+                RecentFilesInfo.Save();
+                return false;
+            }
+
             vmu.LoadVmu(filePath, DateTime.Now);
             return true;
         }

@@ -10,6 +10,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 
 using DreamPotato.Core;
 
@@ -76,10 +77,12 @@ class SaveStateInfo
         StateTimeDescription = "";
     }
 
-    public string? StateFilePath { get; set; }
-    public string StateTimeDescription { get; set; }
     public Texture2D ThumbnailTexture { get; }
     public nint RawThumbnailTexture { get; }
+
+    public string? StateFilePath { get; set; }
+    public string StateTimeDescription { get; set; }
+    public bool Exists { get; set; }
 }
 
 struct MappingEditState
@@ -123,7 +126,7 @@ struct MappingEditState
     public List<ButtonMapping>? ButtonMappings { get => _editedMappings as List<ButtonMapping>; set => _editedMappings = value; }
 }
 
-class UserInterface
+partial class UserInterface
 {
     private readonly Game1 _game;
 
@@ -531,7 +534,8 @@ class UserInterface
                 if (ImGui.MenuItem("Save State"))
                     SaveStateWithThumbnail(vmu);
 
-                if (ImGui.MenuItem("Load State"))
+                var stateInfo = vmu == _game.PrimaryVmu ? _primarySaveStateInfo : _secondarySaveStateInfo;
+                if (ImGui.MenuItem("Load State", enabled: stateInfo.Exists))
                 {
                     if (vmu.LoadStateById(id: _game.Configuration.CurrentSaveStateSlot.ToString(), saveOopsFile: true) is (false, var error))
                     {
@@ -547,29 +551,29 @@ class UserInterface
                 {
                     // Select Save Slot
                     ImGui.BeginGroup();
-                    if (ImGui.ArrowButton(str_id: "PrevSaveState", dir: ImGuiDir.Up))
+                    UpdateThumbnail(vmu, stateInfo);
+                    ImGui.Image(stateInfo.RawThumbnailTexture, image_size: new Numerics.Vector2(Display.ScreenWidth, Display.ScreenHeight));
+
+                    ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 1); // make the prev/next buttons align nicely with the thumbnail.
+                    if (ImGui.ArrowButton(str_id: "PrevSaveState", dir: ImGuiDir.Left))
                     {
                         var newSlot = BitHelpers.ModPositive(_game.Configuration.CurrentSaveStateSlot - 1, 10);
                         _game.Configuration_CurrentSaveStateSlotChanged(newSlot);
                     }
 
-                    ImGui.SetNextItemWidth(16);
-                    if (ImGui.ArrowButton(str_id: "NextSaveState", dir: ImGuiDir.Down))
+                    ImGui.SameLine();
+                    if (ImGui.ArrowButton(str_id: "NextSaveState", dir: ImGuiDir.Right))
                     {
                         var newSlot = BitHelpers.ModPositive(_game.Configuration.CurrentSaveStateSlot + 1, 10);
                         _game.Configuration_CurrentSaveStateSlotChanged(newSlot);
                     }
                     ImGui.EndGroup();
 
-                    var stateInfo = vmu == _game.PrimaryVmu ? _primarySaveStateInfo : _secondarySaveStateInfo;
-                    ImGui.SameLine();
-                    UpdateThumbnail(vmu, stateInfo);
-                    ImGui.Image(stateInfo.RawThumbnailTexture, image_size: new Numerics.Vector2(Display.ScreenWidth, Display.ScreenHeight));
-
                     ImGui.SameLine();
                     ImGui.BeginGroup();
                     ImGui.Text($"Slot {_game.Configuration.CurrentSaveStateSlot + 1}");
-                    ImGui.Text(stateInfo.StateTimeDescription);
+                    // Note: this 13 is kind of a magic number. It would need to be adjusted if the names of other menu items changed.
+                    ImGui.Text(BreakLines(stateInfo.StateTimeDescription, maxLineLength: 13));
                     ImGui.EndGroup();
                 }
             }
@@ -600,11 +604,12 @@ class UserInterface
         var thumbnailData = getScreenData();
         stateInfo.ThumbnailTexture.SetData(thumbnailData);
         stateInfo.StateFilePath = filePath;
-        stateInfo.StateTimeDescription = File.Exists(filePath) ? File.GetLastWriteTime(filePath).Humanize() : "";
+        (stateInfo.Exists, stateInfo.StateTimeDescription) = File.Exists(filePath) ? (true, File.GetLastWriteTime(filePath).Humanize()) : (false, "");
 
         Color[] getScreenData()
         {
             var vmuScreenData = new Color[Display.ScreenWidth * Display.ScreenHeight];
+            Array.Fill(vmuScreenData, _game.ColorPalette.Screen0);
             if (filePath is null)
                 return vmuScreenData;
 
@@ -721,16 +726,18 @@ class UserInterface
         if (ImGui.MenuItem("Open"))
             OpenVmuDialog(presenter);
 
-        var (displayFileNames, recentFiles) = calcRecentFilesInfo();
-        if (ImGui.BeginMenu("Open Recent", enabled: recentFiles.Any()))
+        var (displayFileNames, recentFilePaths) = calcRecentFilesInfo();
+        if (ImGui.BeginMenu("Open Recent", enabled: recentFilePaths.Any()))
         {
-            for (int i = 0; i < recentFiles.Length; i++)
+            for (int i = 0; i < recentFilePaths.Length; i++)
             {
-                var recentFile = recentFiles[i];
-                var fileName = displayFileNames[i];
+                var recentFilePath = recentFilePaths[i];
+                if (recentFilePath is null)
+                    continue;
 
-                if (recentFile != null && ImGui.MenuItem(fileName))
-                    OpenRecentFile(presenter, recentFile);
+                var fileName = displayFileNames[i];
+                if (ImGui.MenuItem(fileName))
+                    OpenRecentFile(presenter, recentFilePath);
             }
 
             ImGui.EndMenu();
@@ -752,24 +759,42 @@ class UserInterface
             string[] displayFileNames = new string[recentFiles.Length];
             for (var i = 0; i < recentFiles.Length; i++)
             {
-                var fileNameSpan = Path.GetFileName(recentFiles[i].AsSpan());
-                var oversize = fileNameSpan.Length - maxFileNameLength;
-                if (oversize > 0)
-                {
-                    var prefix = fileNameSpan[0..(maxFileNameLength / 2 - 1)];
-                    var suffix = fileNameSpan[^(maxFileNameLength / 2 - 1)..];
-                    displayFileNames[i] = $"{prefix}..{suffix}";
-                }
-                else
-                {
-                    displayFileNames[i] = fileNameSpan.ToString();
-                }
+                var fileName = Path.GetFileName(recentFiles[i]);
+                var oversize = fileName.Length > maxFileNameLength;
+                displayFileNames[i] = oversize ? BreakLines(fileName, maxFileNameLength) : fileName;
             }
 
             return (displayFileNames, recentFiles);
         }
+    }
 
-        // TODO: list recently opened VMU files?
+    private static string BreakLines(ReadOnlySpan<char> span, int maxLineLength)
+    {
+        var builder = new StringBuilder();
+        var i = 0;
+        var previousMatchIndex = 0;
+        var pattern = BreakLinesPattern();
+        foreach (ValueMatch match in pattern.EnumerateMatches(span))
+        {
+            if (match.Index > i + maxLineLength)
+            {
+                // chunk must be non-empty
+                var endIndex = i == previousMatchIndex ? match.Index : previousMatchIndex;
+                builder.Append(span[i..endIndex]);
+                if (i != endIndex)
+                    i = endIndex;
+
+                if (i != span.Length)
+                    builder.AppendLine();
+            }
+
+            previousMatchIndex = match.Index;
+        }
+
+        if (i != span.Length)
+            builder.Append(span[i..]);
+
+        return builder.ToString();
     }
 
     private static readonly string[] AllDreamcastSlotNames = ["A", "B", "C", "D"];
@@ -1173,7 +1198,7 @@ class UserInterface
         var title = PendingCommand.Kind switch
         {
             PendingCommandKind.NewVmu => "Create new VMU without saving?",
-            PendingCommandKind.OpenVmu => "Open without saving?",
+            PendingCommandKind.OpenVmu or PendingCommandKind.OpenRecent => "Open without saving?",
             PendingCommandKind.Reset when !_game.UseSecondaryVmu => "Reset?",
             PendingCommandKind.Reset when PendingCommand.VmuPresenter == _game.PrimaryVmuPresenter => "Reset slot 1?",
             PendingCommandKind.Reset => "Reset slot 2?",
@@ -1245,6 +1270,9 @@ class UserInterface
             }
         }
     }
+
+    [GeneratedRegex(@"\b|_")]
+    private static partial Regex BreakLinesPattern();
 }
 
 /// <summary>
