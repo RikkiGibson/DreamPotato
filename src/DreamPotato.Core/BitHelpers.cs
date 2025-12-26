@@ -72,4 +72,10 @@ public static class BitHelpers
     {
         return string.Join('\n', AsHexRows(bytes));
     }
+
+    public static int ModPositive(int x, int m)
+    {
+        Debug.Assert(m > 0);
+        return (x % m + m) % m;
+    }
 }

@@ -114,11 +114,11 @@ class VmuPresenter
             LocalPaused = !LocalPaused;
 
         if (ButtonChecker.IsNewlyPressed(VmuButton.SaveState, previousKeys, keyboard, PreviousGamepad, gamepad))
-            Vmu.SaveState(id: "0");
+            _game1.UserInterface.SaveStateWithThumbnail(Vmu);
 
         if (ButtonChecker.IsNewlyPressed(VmuButton.LoadState, previousKeys, keyboard, PreviousGamepad, gamepad))
         {
-            if (Vmu.LoadStateById(id: "0", saveOopsFile: true) is (false, var error))
+            if (Vmu.LoadStateById(id: _game1.Configuration.CurrentSaveStateSlot.ToString(), saveOopsFile: true) is (false, var error))
             {
                 _game1.UserInterface.ShowToast(error ?? $"An unknown error occurred in {nameof(Vmu.LoadStateById)}.");
             }
@@ -192,19 +192,7 @@ class VmuPresenter
 
     internal void Draw(SpriteBatch spriteBatch)
     {
-        var screenData = Vmu.Display.GetBytes();
-        int i = 0;
-        foreach (byte b in screenData)
-        {
-            _vmuScreenData[i++] = ReadColor(b, 7);
-            _vmuScreenData[i++] = ReadColor(b, 6);
-            _vmuScreenData[i++] = ReadColor(b, 5);
-            _vmuScreenData[i++] = ReadColor(b, 4);
-            _vmuScreenData[i++] = ReadColor(b, 3);
-            _vmuScreenData[i++] = ReadColor(b, 2);
-            _vmuScreenData[i++] = ReadColor(b, 1);
-            _vmuScreenData[i++] = ReadColor(b, 0);
-        }
+        UpdateScreenData(_vmuScreenData, Vmu.Display.GetBytes(), ColorPalette);
         _vmuScreenTexture.SetData(_vmuScreenData);
 
         // Use nearest neighbor scaling for the screen content
@@ -273,10 +261,26 @@ class VmuPresenter
         }
 
         spriteBatch.End();
+    }
+
+    internal static void UpdateScreenData(Color[] dest, ReadOnlySpan<byte> src, ColorPalette colorPalette)
+    {
+        int i = 0;
+        foreach (byte b in src)
+        {
+            dest[i++] = ReadColor(b, 7);
+            dest[i++] = ReadColor(b, 6);
+            dest[i++] = ReadColor(b, 5);
+            dest[i++] = ReadColor(b, 4);
+            dest[i++] = ReadColor(b, 3);
+            dest[i++] = ReadColor(b, 2);
+            dest[i++] = ReadColor(b, 1);
+            dest[i++] = ReadColor(b, 0);
+        }
 
         Color ReadColor(byte b, byte bitAddress)
         {
-            return BitHelpers.ReadBit(b, bitAddress) ? ColorPalette.Screen1 : ColorPalette.Screen0;
+            return BitHelpers.ReadBit(b, bitAddress) ? colorPalette.Screen1 : colorPalette.Screen0;
         }
     }
 

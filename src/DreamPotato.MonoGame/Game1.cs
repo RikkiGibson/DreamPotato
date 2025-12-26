@@ -263,6 +263,12 @@ public class Game1 : Game
         Configuration = Configuration with { AnyButtonWakesFromSleep = newValue };
     }
 
+    internal void Configuration_CurrentSaveStateSlotChanged(int newValue)
+    {
+        Configuration = Configuration with { CurrentSaveStateSlot = newValue };
+        Configuration.Save();
+    }
+
     internal void Configuration_PreserveAspectRatioChanged(bool newValue)
     {
         Configuration = Configuration with { PreserveAspectRatio = newValue };

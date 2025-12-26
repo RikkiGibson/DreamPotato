@@ -3,13 +3,17 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 
 using DreamPotato.Core;
+
+using Humanizer;
 
 using ImGuiNET;
 
@@ -63,6 +67,21 @@ readonly struct PendingCommand
     public PendingCommand Confirmed() => new(ConfirmationState.Confirmed, Kind, VmuPresenter, FilePath);
 }
 
+class SaveStateInfo
+{
+    public SaveStateInfo(GraphicsDevice graphics, ImGuiRenderer imGuiRenderer)
+    {
+        ThumbnailTexture = new Texture2D(graphics, Display.ScreenWidth, Display.ScreenHeight);
+        RawThumbnailTexture = imGuiRenderer.BindTexture(ThumbnailTexture);
+        StateTimeDescription = "";
+    }
+
+    public string? StateFilePath { get; set; }
+    public string StateTimeDescription { get; set; }
+    public Texture2D ThumbnailTexture { get; }
+    public nint RawThumbnailTexture { get; }
+}
+
 struct MappingEditState
 {
     private object? _editedMappings;
@@ -108,10 +127,16 @@ class UserInterface
 {
     private readonly Game1 _game;
 
+    // Set in Initialize()
+    //
     private ImGuiRenderer _imGuiRenderer = null!;
+    private SaveStateInfo _primarySaveStateInfo = null!;
+    private SaveStateInfo _secondarySaveStateInfo = null!;
+
     private nint _rawDreamcastConnectedIconTexture;
     private nint _rawVmusConnectedIconTexture;
     private GCHandle _iniFilenameHandle;
+    // ---
 
     private MappingEditState _mappingEditState;
 
@@ -147,6 +172,7 @@ class UserInterface
         }
     }
 
+    [MemberNotNull(nameof(_imGuiRenderer), nameof(_primarySaveStateInfo), nameof(_secondarySaveStateInfo))]
     internal void Initialize(Texture2D dreamcastConnectedIconTexture, Texture2D vmusConnectedIconTexture)
     {
         _imGuiRenderer = new ImGuiRenderer(_game);
@@ -166,6 +192,9 @@ class UserInterface
 
         _rawDreamcastConnectedIconTexture = _imGuiRenderer.BindTexture(dreamcastConnectedIconTexture);
         _rawVmusConnectedIconTexture = _imGuiRenderer.BindTexture(vmusConnectedIconTexture);
+
+        _primarySaveStateInfo = new SaveStateInfo(_game.GraphicsDevice, _imGuiRenderer);
+        _secondarySaveStateInfo = new SaveStateInfo(_game.GraphicsDevice, _imGuiRenderer);
     }
 
     internal void Layout(GameTime gameTime)
@@ -500,13 +529,11 @@ class UserInterface
             using (new DisabledScope(vmu.LoadedFilePath is null || vmu.IsOtherVmuConnected))
             {
                 if (ImGui.MenuItem("Save State"))
-                {
-                    vmu.SaveState($"{_game.Configuration.CurrentSaveStateSlot}");
-                }
+                    SaveStateWithThumbnail(vmu);
 
                 if (ImGui.MenuItem("Load State"))
                 {
-                    if (vmu.LoadStateById(id: "0", saveOopsFile: true) is (false, var error))
+                    if (vmu.LoadStateById(id: _game.Configuration.CurrentSaveStateSlot.ToString(), saveOopsFile: true) is (false, var error))
                     {
                         ShowToast(error ?? $"An unknown error occurred in '{nameof(Vmu.LoadStateById)}'.");
                     }
@@ -517,38 +544,33 @@ class UserInterface
                     vmu.LoadOopsFile();
                 }
 
-                if (ImGui.BeginMenu("Save State Slot"))
                 {
-                    var vmuScreenTexture = new Texture2D(_game.GraphicsDevice, Display.ScreenWidth, Display.ScreenHeight);
-                    var rawTexture = _imGuiRenderer.BindTexture(vmuScreenTexture);
-
-                    var vmuForDrawing = new Vmu() { DreamcastSlot = DreamcastSlot.Slot1 };
-                    if (vmu.LoadedFilePath is null)
-                        throw new InvalidOperationException();
-
-                    // TODO: drawing code etc to draw the vmu screen as a texture here.
-                    // We def need to cache this, and cache needs to be invalidated at appropriate time...
-                    // File watcher seems excessive but maybe good here.
-
-                    var currentSaveStateSlot = _game.Configuration.CurrentSaveStateSlot;
-                    for (int i = 0; i < 10; i++)
+                    // Select Save Slot
+                    ImGui.BeginGroup();
+                    if (ImGui.ArrowButton(str_id: "PrevSaveState", dir: ImGuiDir.Up))
                     {
-                        var statePath = Vmu.GetSaveStatePath(vmu.LoadedFilePath, $"{i}");
-                        var displayString = "";
-                        if (File.Exists(statePath))
-                        {
-                            vmuForDrawing.LoadStateFromPath(statePath, saveOopsFile: false);
-                            displayString = vmuForDrawing.Display.ToTestDisplayString();
-                        }
-
-                        if (ImGui.MenuItem($"{i}{displayString}", enabled: currentSaveStateSlot != i))
-                        {
-                            _game.Configuration = _game.Configuration with { CurrentSaveStateSlot = i };
-                            _game.Configuration.Save();
-                        }
+                        var newSlot = BitHelpers.ModPositive(_game.Configuration.CurrentSaveStateSlot - 1, 10);
+                        _game.Configuration_CurrentSaveStateSlotChanged(newSlot);
                     }
 
-                    ImGui.EndMenu();
+                    ImGui.SetNextItemWidth(16);
+                    if (ImGui.ArrowButton(str_id: "NextSaveState", dir: ImGuiDir.Down))
+                    {
+                        var newSlot = BitHelpers.ModPositive(_game.Configuration.CurrentSaveStateSlot + 1, 10);
+                        _game.Configuration_CurrentSaveStateSlotChanged(newSlot);
+                    }
+                    ImGui.EndGroup();
+
+                    var stateInfo = vmu == _game.PrimaryVmu ? _primarySaveStateInfo : _secondarySaveStateInfo;
+                    ImGui.SameLine();
+                    UpdateThumbnail(vmu, stateInfo);
+                    ImGui.Image(stateInfo.RawThumbnailTexture, image_size: new Numerics.Vector2(Display.ScreenWidth, Display.ScreenHeight));
+
+                    ImGui.SameLine();
+                    ImGui.BeginGroup();
+                    ImGui.Text($"Slot {_game.Configuration.CurrentSaveStateSlot + 1}");
+                    ImGui.Text(stateInfo.StateTimeDescription);
+                    ImGui.EndGroup();
                 }
             }
 
@@ -557,6 +579,57 @@ class UserInterface
                 presenter.TakeScreenshot();
 
             ImGui.EndMenu();
+        }
+    }
+
+    internal void SaveStateWithThumbnail(Vmu vmu)
+    {
+        vmu.SaveState(_game.Configuration.CurrentSaveStateSlot.ToString());
+        var stateInfo = vmu == _game.PrimaryVmu ? _primarySaveStateInfo : _secondarySaveStateInfo;
+        stateInfo.StateFilePath = null; // invalidate thumbnail
+    }
+
+    private void UpdateThumbnail(Vmu vmu, SaveStateInfo stateInfo)
+    {
+        var filePath = vmu.LoadedFilePath is null ? null : Vmu.GetSaveStatePath(vmu.LoadedFilePath, id: _game.Configuration.CurrentSaveStateSlot.ToString());
+
+        // thumbnail up to date
+        if (stateInfo.StateFilePath == filePath)
+            return;
+
+        var thumbnailData = getScreenData();
+        stateInfo.ThumbnailTexture.SetData(thumbnailData);
+        stateInfo.StateFilePath = filePath;
+        stateInfo.StateTimeDescription = File.Exists(filePath) ? File.GetLastWriteTime(filePath).Humanize() : "";
+
+        Color[] getScreenData()
+        {
+            var vmuScreenData = new Color[Display.ScreenWidth * Display.ScreenHeight];
+            if (filePath is null)
+                return vmuScreenData;
+
+            try
+            {
+                using var stateFile = File.OpenRead(filePath);
+                using var zip = new ZipArchive(stateFile);
+
+                if (zip.GetEntry(Vmu.SaveState_ThumbnailFile) is not { } thumbnailEntry)
+                    return vmuScreenData;
+
+                var vmuBytes = new byte[Display.ScreenWidth * Display.ScreenHeight / 8];
+                using var thumbnailStream = thumbnailEntry.Open();
+                thumbnailStream.ReadExactly(vmuBytes);
+                VmuPresenter.UpdateScreenData(vmuScreenData, vmuBytes, _game.ColorPalette);
+                return vmuScreenData;
+            }
+            catch (FileNotFoundException)
+            {
+                return vmuScreenData;
+            }
+            catch (InvalidDataException)
+            {
+                return vmuScreenData;
+            }
         }
     }
 
@@ -675,7 +748,7 @@ class UserInterface
         (string[] displayFileNames, ImmutableArray<string> recentFiles) calcRecentFilesInfo()
         {
             var recentFiles = _game.RecentFilesInfo.RecentFiles;
-            const int maxFileNameLength = 20;
+            const int maxFileNameLength = 18;
             string[] displayFileNames = new string[recentFiles.Length];
             for (var i = 0; i < recentFiles.Length; i++)
             {
@@ -683,9 +756,9 @@ class UserInterface
                 var oversize = fileNameSpan.Length - maxFileNameLength;
                 if (oversize > 0)
                 {
-                    var prefix = fileNameSpan[0..(maxFileNameLength / 2)];
-                    var suffix = fileNameSpan[^(maxFileNameLength / 2)..];
-                    displayFileNames[i] = $"{prefix}...{suffix}";
+                    var prefix = fileNameSpan[0..(maxFileNameLength / 2 - 1)];
+                    var suffix = fileNameSpan[^(maxFileNameLength / 2 - 1)..];
+                    displayFileNames[i] = $"{prefix}..{suffix}";
                 }
                 else
                 {
