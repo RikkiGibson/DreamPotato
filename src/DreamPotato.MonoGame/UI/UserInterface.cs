@@ -80,7 +80,8 @@ class SaveStateInfo
     public Texture2D ThumbnailTexture { get; }
     public nint RawThumbnailTexture { get; }
 
-    public string? StateFilePath { get; set; }
+    public void InvalidateThumbnail() => StateFilePath = "<<unset>>";
+    public string? StateFilePath { get; set; } = "<<unset>>";
     public string StateTimeDescription { get; set; }
     public bool Exists { get; set; }
 }
@@ -535,6 +536,7 @@ partial class UserInterface
                     SaveStateWithThumbnail(vmu);
 
                 var stateInfo = vmu == _game.PrimaryVmu ? _primarySaveStateInfo : _secondarySaveStateInfo;
+                UpdateThumbnail(vmu, stateInfo);
                 if (ImGui.MenuItem("Load State", enabled: stateInfo.Exists))
                 {
                     if (vmu.LoadStateById(id: _game.Configuration.CurrentSaveStateSlot.ToString(), saveOopsFile: true) is (false, var error))
@@ -551,7 +553,6 @@ partial class UserInterface
                 {
                     // Select Save Slot
                     ImGui.BeginGroup();
-                    UpdateThumbnail(vmu, stateInfo);
                     ImGui.Image(stateInfo.RawThumbnailTexture, image_size: new Numerics.Vector2(Display.ScreenWidth, Display.ScreenHeight));
 
                     ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 1); // make the prev/next buttons align nicely with the thumbnail.
@@ -590,7 +591,7 @@ partial class UserInterface
     {
         vmu.SaveState(_game.Configuration.CurrentSaveStateSlot.ToString());
         var stateInfo = vmu == _game.PrimaryVmu ? _primarySaveStateInfo : _secondarySaveStateInfo;
-        stateInfo.StateFilePath = null; // invalidate thumbnail
+        stateInfo.InvalidateThumbnail();
     }
 
     private void UpdateThumbnail(Vmu vmu, SaveStateInfo stateInfo)
@@ -848,7 +849,11 @@ partial class UserInterface
                 ImGui.Combo(label: "", ref selectedIndex, items: ColorPalette.AllPaletteNames, items_count: ColorPalette.AllPaletteNames.Length);
                 ImGui.PopID();
                 if (paletteIndex != selectedIndex)
+                {
                     _game.Configuration_PaletteChanged(ColorPalette.AllPalettes[selectedIndex]);
+                    _primarySaveStateInfo.InvalidateThumbnail();
+                    _secondarySaveStateInfo.InvalidateThumbnail();
+                }
             }
 
             // Dreamcast Port
