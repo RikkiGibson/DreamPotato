@@ -374,7 +374,11 @@ partial class UserInterface
     private void LayoutPrimaryMenuBar()
     {
         var presenter = _game.PrimaryVmuPresenter;
-        ImGui.BeginMainMenuBar();
+        var rectangle = _game.PrimaryMenuBarRectangle;
+        ImGui.SetNextWindowPos(new Numerics.Vector2(0, 0));
+        ImGui.SetNextWindowSize(new Numerics.Vector2(rectangle.Width, rectangle.Height));
+        ImGui.Begin("PrimaryMenuWindow", ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.MenuBar | ImGuiWindowFlags.NoSavedSettings);
+        ImGui.BeginMenuBar();
         if (ImGui.BeginMenu("File"))
         {
             LayoutNewOpenSaveMenuItems(presenter);
@@ -473,7 +477,8 @@ partial class UserInterface
         }
 
         LayoutVmusConnectedIcon();
-        ImGui.EndMainMenuBar();
+        ImGui.EndMenuBar();
+        ImGui.End();
 
         if (doOpenSettings)
             OpenPopupAndPause("Settings");

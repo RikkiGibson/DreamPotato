@@ -50,6 +50,7 @@ public class Game1 : Game
     /// </summary>
     internal bool UIPaused;
 
+    internal Rectangle PrimaryMenuBarRectangle;
     /// <summary>Note: comprises the whole screen region which secondary VMU menus can expand into.</summary>
     internal Rectangle SecondaryMenuBarRectangle;
     /// <summary>Only meaningful when <see cref="UseSecondaryVmu"/> is true.</summary>
@@ -416,6 +417,7 @@ public class Game1 : Game
 
         if (!UseSecondaryVmu)
         {
+            PrimaryMenuBarRectangle = viewport.Bounds;
             _primaryVmuPresenter.UpdateScaleMatrix(contentRectangle, Configuration.PreserveAspectRatio);
             return;
         }
@@ -425,26 +427,28 @@ public class Game1 : Game
         IsHorizontalLayout = Configuration.PreserveAspectRatio &&
             (float)contentRectangle.Height / VmuPresenter.TotalContentHeight < (float)contentRectangle.Width / VmuPresenter.TotalContentWidth;
 
-        (var slot1Rectangle, SecondaryMenuBarRectangle, var slot2Rectangle) = IsHorizontalLayout ? layoutHorizontal(contentRectangle) : layoutVertical(contentRectangle);
+        (PrimaryMenuBarRectangle, var slot1Rectangle, SecondaryMenuBarRectangle, var slot2Rectangle) = IsHorizontalLayout ? layoutHorizontal(contentRectangle) : layoutVertical(contentRectangle);
 
         _primaryVmuPresenter.UpdateScaleMatrix(slot1Rectangle, Configuration.PreserveAspectRatio);
         _secondaryVmuPresenter.UpdateScaleMatrix(slot2Rectangle, Configuration.PreserveAspectRatio);
 
-        static (Rectangle slot1Rectangle, Rectangle secondaryMenuBarRectangle, Rectangle slot2Rectangle) layoutHorizontal(Rectangle contentRectangle)
+        static (Rectangle primaryMenuBarRectangle, Rectangle slot1Rectangle, Rectangle secondaryMenuBarRectangle, Rectangle slot2Rectangle) layoutHorizontal(Rectangle contentRectangle)
         {
             var slot1Rectangle = contentRectangle with { Width = contentRectangle.Width / 2 };
-            var secondaryMenuBarRectangle = new Rectangle(x: slot1Rectangle.X + slot1Rectangle.Width, y: 0, width: slot1Rectangle.Width, height: MenuBarHeight + slot1Rectangle.Height);
+            var primaryMenuBarRectangle = new Rectangle(x: 0, y: 0, width: slot1Rectangle.Width, height: MenuBarHeight + slot1Rectangle.Height);
+            var secondaryMenuBarRectangle = primaryMenuBarRectangle with { X = primaryMenuBarRectangle.Width };
             var slot2Rectangle = contentRectangle with { Width = contentRectangle.Width / 2, X = slot1Rectangle.X + slot1Rectangle.Width };
-            return (slot1Rectangle, secondaryMenuBarRectangle, slot2Rectangle);
+            return (primaryMenuBarRectangle, slot1Rectangle, secondaryMenuBarRectangle, slot2Rectangle);
         }
 
-        static (Rectangle slot1Rectangle, Rectangle secondaryMenuBarRectangle, Rectangle slot2Rectangle) layoutVertical(Rectangle contentRectangle)
+        static (Rectangle primaryMenuBarRectangle, Rectangle slot1Rectangle, Rectangle secondaryMenuBarRectangle, Rectangle slot2Rectangle) layoutVertical(Rectangle contentRectangle)
         {
             // When a vertical layout is used, extra space needs to be reserved for a 2nd menu bar
             var slot1Rectangle = contentRectangle with { Height = (contentRectangle.Height - MenuBarHeight) / 2 };
-            var secondaryMenuBarRectangle = new Rectangle(x: 0, y: slot1Rectangle.Y + slot1Rectangle.Height, width: slot1Rectangle.Width, height: MenuBarHeight + slot1Rectangle.Height);
+            var primaryMenuBarRectangle = new Rectangle(x: 0, y: 0, width: slot1Rectangle.Width, height: MenuBarHeight + slot1Rectangle.Height);
+            var secondaryMenuBarRectangle = primaryMenuBarRectangle with { Y = primaryMenuBarRectangle.Height };
             var slot2Rectangle = contentRectangle with { Height = slot1Rectangle.Height, Y = secondaryMenuBarRectangle.Y + MenuBarHeight };
-            return (slot1Rectangle, secondaryMenuBarRectangle, slot2Rectangle);
+            return (primaryMenuBarRectangle, slot1Rectangle, secondaryMenuBarRectangle, slot2Rectangle);
         }
     }
 
