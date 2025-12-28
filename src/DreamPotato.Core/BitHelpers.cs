@@ -26,6 +26,15 @@ public static class BitHelpers
         return operand;
     }
 
+    public static byte ReverseBits(byte value)
+    {
+        byte result = 0;
+        for (int i = 0; i < 8; i++)
+            WriteBit(ref result, bit: 7 - i, ReadBit(value, i));
+
+        return result;
+    }
+
     // TODO: BitOperations.IsPow2?
     public static bool IsPowerOfTwo(int value)
     {

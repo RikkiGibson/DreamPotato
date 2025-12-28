@@ -86,6 +86,24 @@ class SaveStateInfo
     public bool Exists { get; set; }
 }
 
+class ToastInfo
+{
+    public ToastInfo(GraphicsDevice graphics, ImGuiRenderer imGuiRenderer)
+    {
+        ImageTexture = new Texture2D(graphics, Display.ScreenWidth, Display.ScreenHeight);
+        RawImageTexture = imGuiRenderer.BindTexture(ImageTexture);
+    }
+
+    public string? Message { get; set; }
+    public Texture2D ImageTexture { get; }
+    public bool ShowImage { get; set; }
+    public nint RawImageTexture { get; }
+    public int DisplayFrames { get; set; }
+
+    public const int DefaultDurationFrames = 3 * 60;
+    public const int BeginFadeoutFrames = 30;
+}
+
 struct MappingEditState
 {
     private object? _editedMappings;
@@ -136,6 +154,8 @@ partial class UserInterface
     private ImGuiRenderer _imGuiRenderer = null!;
     private SaveStateInfo _primarySaveStateInfo = null!;
     private SaveStateInfo _secondarySaveStateInfo = null!;
+    private ToastInfo _primaryToastInfo = null!;
+    private ToastInfo _secondaryToastInfo = null!;
 
     private nint _rawDreamcastConnectedIconTexture;
     private nint _rawVmusConnectedIconTexture;
@@ -143,11 +163,6 @@ partial class UserInterface
     // ---
 
     private MappingEditState _mappingEditState;
-
-    private string? _toastMessage;
-    private int _toastDisplayFrames;
-    private const int ToastMaxDisplayFrames = 2 * 60;
-    private const int ToastBeginFadeoutFrames = 30;
 
     private readonly string _displayVersion;
     private readonly string _commitId;
@@ -176,7 +191,7 @@ partial class UserInterface
         }
     }
 
-    [MemberNotNull(nameof(_imGuiRenderer), nameof(_primarySaveStateInfo), nameof(_secondarySaveStateInfo))]
+    [MemberNotNull(nameof(_imGuiRenderer), nameof(_primarySaveStateInfo), nameof(_secondarySaveStateInfo), nameof(_primaryToastInfo), nameof(_secondaryToastInfo))]
     internal void Initialize(Texture2D dreamcastConnectedIconTexture, Texture2D vmusConnectedIconTexture)
     {
         _imGuiRenderer = new ImGuiRenderer(_game);
@@ -197,8 +212,11 @@ partial class UserInterface
         _rawDreamcastConnectedIconTexture = _imGuiRenderer.BindTexture(dreamcastConnectedIconTexture);
         _rawVmusConnectedIconTexture = _imGuiRenderer.BindTexture(vmusConnectedIconTexture);
 
-        _primarySaveStateInfo = new SaveStateInfo(_game.GraphicsDevice, _imGuiRenderer);
-        _secondarySaveStateInfo = new SaveStateInfo(_game.GraphicsDevice, _imGuiRenderer);
+        var graphicsDevice = _game.GraphicsDevice;
+        _primarySaveStateInfo = new SaveStateInfo(graphicsDevice, _imGuiRenderer);
+        _secondarySaveStateInfo = new SaveStateInfo(graphicsDevice, _imGuiRenderer);
+        _primaryToastInfo = new ToastInfo(graphicsDevice, _imGuiRenderer);
+        _secondaryToastInfo = new ToastInfo(graphicsDevice, _imGuiRenderer);
     }
 
     internal void Layout(GameTime gameTime)
@@ -280,10 +298,21 @@ partial class UserInterface
         ImGui.OpenPopup(name);
     }
 
-    internal void ShowToast(string message, int durationFrames = ToastMaxDisplayFrames)
+    internal void ShowToast(VmuPresenter presenter, string message, int durationFrames = ToastInfo.DefaultDurationFrames)
     {
-        _toastMessage = message;
-        _toastDisplayFrames = durationFrames;
+        var toastInfo = presenter == _game.PrimaryVmuPresenter ? _primaryToastInfo : _secondaryToastInfo;
+        toastInfo.Message = message;
+        toastInfo.DisplayFrames = durationFrames;
+        toastInfo.ShowImage = false;
+    }
+
+    internal void ShowScreenshotToast(VmuPresenter presenter, string message, int durationFrames = ToastInfo.DefaultDurationFrames)
+    {
+        var toastInfo = presenter == _game.PrimaryVmuPresenter ? _primaryToastInfo : _secondaryToastInfo;
+        toastInfo.Message = message;
+        toastInfo.DisplayFrames = durationFrames;
+        presenter.UpdateScreenTexture(toastInfo.ImageTexture);
+        toastInfo.ShowImage = true;
     }
 
     private void Unpause()
@@ -343,32 +372,55 @@ partial class UserInterface
 
     private void LayoutToast()
     {
-        if (_toastDisplayFrames == 0)
-            return;
+        layoutOne("PrimaryToast", _game.PrimaryVmuPresenter, _primaryToastInfo);
+        if (_game.UseSecondaryVmu)
+            layoutOne("SecondaryToast", _game.SecondaryVmuPresenter, _secondaryToastInfo);
 
-        if (_toastMessage is null)
-            throw new InvalidOperationException();
-
-        _toastDisplayFrames--;
-
-        var doFadeout = _toastDisplayFrames < ToastBeginFadeoutFrames;
-        if (doFadeout)
-            ImGui.PushStyleVar(ImGuiStyleVar.Alpha, ((float)_toastDisplayFrames) / ToastBeginFadeoutFrames);
-
-        var viewport = _game.GraphicsDevice.Viewport;
-        var textSize = ImGui.CalcTextSize(text: _toastMessage, wrapWidth: viewport.Width);
-        // TODO probably userinterface should own the const MenuBarHeight
-        ImGui.SetNextWindowPos(new Numerics.Vector2(x: 2, y: viewport.Height - textSize.Y - Game1.MenuBarHeight));
-        ImGui.SetNextWindowSize(textSize + new Numerics.Vector2(10, 20));
-        if (ImGui.Begin("Toast", ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoInputs | ImGuiWindowFlags.NoScrollbar))
+        void layoutOne(string id, VmuPresenter presenter, ToastInfo toastInfo)
         {
-            ImGui.TextWrapped(_toastMessage.Replace("%", "%%"));
+            if (toastInfo.DisplayFrames == 0)
+                return;
+
+            if (toastInfo.Message is null)
+                throw new InvalidOperationException();
+
+            toastInfo.DisplayFrames--;
+
+            var doFadeout = toastInfo.DisplayFrames < ToastInfo.BeginFadeoutFrames;
+            if (doFadeout)
+                ImGui.PushStyleVar(ImGuiStyleVar.Alpha, ((float)toastInfo.DisplayFrames) / ToastInfo.BeginFadeoutFrames * 0.8f);
+            else
+                ImGui.PushStyleVar(ImGuiStyleVar.Alpha, 0.8f);
+
+            const int padding = 20;
+            var bounds = presenter.Bounds;
+            var maxTextWidth = toastInfo.ShowImage
+                ? bounds.Width - Display.ScreenWidth - 2 * padding
+                : bounds.Width - padding;
+            var textSize = ImGui.CalcTextSize(text: toastInfo.Message, wrapWidth: maxTextWidth);
+            var toastWidth = Display.ScreenWidth + textSize.X + 2 * padding;
+            var toastHeight = Math.Max(Display.ScreenHeight, textSize.Y) + padding;
+            ImGui.SetNextWindowPos(new Numerics.Vector2(x: 2, y: bounds.Bottom - toastHeight - 2));
+            ImGui.SetNextWindowSize(new Numerics.Vector2(x: toastWidth, y: toastHeight));
+            if (ImGui.Begin(id, ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoInputs | ImGuiWindowFlags.NoScrollbar))
+            {
+                if (!doFadeout)
+                    ImGui.PopStyleVar();
+
+                if (toastInfo.ShowImage)
+                {
+                    var imageSize = new Numerics.Vector2(x: Display.ScreenWidth, y: Display.ScreenHeight);
+                    ImGui.Image(toastInfo.RawImageTexture, imageSize);
+                    ImGui.SameLine();
+                }
+                ImGui.TextWrapped(toastInfo.Message.Replace("%", "%%"));
+            }
+
+            ImGui.End();
+
+            if (doFadeout)
+                ImGui.PopStyleVar();
         }
-
-        ImGui.End();
-
-        if (doFadeout)
-            ImGui.PopStyleVar();
     }
 
     private void LayoutPrimaryMenuBar()
@@ -538,7 +590,7 @@ partial class UserInterface
             using (new DisabledScope(vmu.LoadedFilePath is null || vmu.IsOtherVmuConnected))
             {
                 if (ImGui.MenuItem("Save State"))
-                    SaveStateWithThumbnail(vmu);
+                    SaveStateWithThumbnail(presenter);
 
                 var stateInfo = vmu == _game.PrimaryVmu ? _primarySaveStateInfo : _secondarySaveStateInfo;
                 UpdateThumbnail(vmu, stateInfo);
@@ -546,7 +598,7 @@ partial class UserInterface
                 {
                     if (vmu.LoadStateById(id: _game.Configuration.CurrentSaveStateSlot.ToString(), saveOopsFile: true) is (false, var error))
                     {
-                        ShowToast(error ?? $"An unknown error occurred in '{nameof(Vmu.LoadStateById)}'.");
+                        ShowToast(presenter, error ?? $"An unknown error occurred in '{nameof(Vmu.LoadStateById)}'.");
                     }
                 }
 
@@ -592,11 +644,12 @@ partial class UserInterface
         }
     }
 
-    internal void SaveStateWithThumbnail(Vmu vmu)
+    internal void SaveStateWithThumbnail(VmuPresenter presenter)
     {
-        vmu.SaveState(_game.Configuration.CurrentSaveStateSlot.ToString());
-        var stateInfo = vmu == _game.PrimaryVmu ? _primarySaveStateInfo : _secondarySaveStateInfo;
+        presenter.Vmu.SaveState(_game.Configuration.CurrentSaveStateSlot.ToString());
+        var stateInfo = presenter == _game.PrimaryVmuPresenter ? _primarySaveStateInfo : _secondarySaveStateInfo;
         stateInfo.InvalidateThumbnail();
+        ShowScreenshotToast(presenter, $"Saved state to slot {_game.Configuration.CurrentSaveStateSlot+1}", durationFrames: 2 * 60);
     }
 
     private void UpdateThumbnail(Vmu vmu, SaveStateInfo stateInfo)
@@ -616,7 +669,7 @@ partial class UserInterface
         {
             var vmuScreenData = new Color[Display.ScreenWidth * Display.ScreenHeight];
             Array.Fill(vmuScreenData, _game.ColorPalette.Screen0);
-            if (filePath is null)
+            if (filePath is null || !File.Exists(filePath))
                 return vmuScreenData;
 
             try
@@ -631,10 +684,6 @@ partial class UserInterface
                 using var thumbnailStream = thumbnailEntry.Open();
                 thumbnailStream.ReadExactly(vmuBytes);
                 VmuPresenter.UpdateScreenData(vmuScreenData, vmuBytes, _game.ColorPalette);
-                return vmuScreenData;
-            }
-            catch (FileNotFoundException)
-            {
                 return vmuScreenData;
             }
             catch (InvalidDataException)

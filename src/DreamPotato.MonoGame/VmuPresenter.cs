@@ -119,13 +119,13 @@ class VmuPresenter
             LocalPaused = !LocalPaused;
 
         if (ButtonChecker.IsNewlyPressed(VmuButton.SaveState, previousKeys, keyboard, PreviousGamepad, gamepad))
-            _game1.UserInterface.SaveStateWithThumbnail(Vmu);
+            _game1.UserInterface.SaveStateWithThumbnail(this);
 
         if (ButtonChecker.IsNewlyPressed(VmuButton.LoadState, previousKeys, keyboard, PreviousGamepad, gamepad))
         {
             if (Vmu.LoadStateById(id: _game1.Configuration.CurrentSaveStateSlot.ToString(), saveOopsFile: true) is (false, var error))
             {
-                _game1.UserInterface.ShowToast(error ?? $"An unknown error occurred in {nameof(Vmu.LoadStateById)}.");
+                _game1.UserInterface.ShowToast(this, error ?? $"An unknown error occurred in {nameof(Vmu.LoadStateById)}.");
             }
         }
 
@@ -212,12 +212,7 @@ class VmuPresenter
         spriteBatch.Draw(
             _vmuScreenTexture,
             destinationRectangle: screenRectangle,
-            sourceRectangle: null,
-            color: Color.White,
-            rotation: 0,
-            origin: default,
-            effects: vmuIsEjected ? SpriteEffects.None : (SpriteEffects.FlipHorizontally | SpriteEffects.FlipVertically),
-            layerDepth: 0);
+            color: Color.White);
         spriteBatch.End();
 
         // Draw icons
@@ -348,6 +343,11 @@ class VmuPresenter
             LocalPaused = false;
     }
 
+    internal void UpdateScreenTexture(Texture2D texture)
+    {
+        texture.SetData(_vmuScreenData);
+    }
+
     internal void TakeScreenshot()
     {
         var now = DateTimeOffset.Now;
@@ -359,22 +359,8 @@ class VmuPresenter
 
         var filePath = Path.Combine(screenshotsFolder, $"{baseName}_{timeDescription}.png");
         using var outFile = File.Create(Path.Combine(Vmu.DataFolder, filePath));
-
-        if (!Vmu.IsDockedToDreamcast)
-        {
-            // Easy case, VMU texture is already properly oriented.
-            _vmuScreenTexture.SaveAsPng(outFile, _vmuScreenTexture.Width, _vmuScreenTexture.Height);
-        }
-        else
-        {
-            // Need to flip the image horizontally and vertically before saving
-            using var texture = new Texture2D(Graphics.GraphicsDevice, _vmuScreenTexture.Width, _vmuScreenTexture.Height);
-            _vmuScreenData.Reverse();
-            texture.SetData(_vmuScreenData);
-            _vmuScreenData.Reverse();
-            texture.SaveAsPng(outFile, texture.Width, texture.Height);
-        }
-
-        _game1.UserInterface.ShowToast($"Screenshot saved to {filePath}", durationFrames: 5 * 60);
+        _vmuScreenTexture.SaveAsPng(outFile, _vmuScreenTexture.Width, _vmuScreenTexture.Height);
+        var displayPath = Path.GetRelativePath(AppContext.BaseDirectory, filePath);
+        _game1.UserInterface.ShowScreenshotToast(this, $"Screenshot saved to {displayPath}", durationFrames: 3 * 60);
     }
 }

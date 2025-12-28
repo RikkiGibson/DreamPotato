@@ -230,13 +230,13 @@ public class Game1 : Game
             var otherVmu = vmu == PrimaryVmu ? SecondaryVmu : PrimaryVmu;
             if (otherVmu?.LoadedFilePath == filePath)
             {
-                _userInterface.ShowToast($"Cannot open {Path.GetFileName(filePath)} because it is already open on the other VMU.");
+                _userInterface.ShowToast(presenter, $"Cannot open {Path.GetFileName(filePath)} because it is already open on the other VMU.");
                 return false;
             }
 
             if (!File.Exists(filePath))
             {
-                _userInterface.ShowToast($"File not found: {Path.GetFileName(filePath)}");
+                _userInterface.ShowToast(presenter, $"File not found: {Path.GetFileName(filePath)}");
                 RecentFilesInfo = RecentFilesInfo with { RecentFiles = [..RecentFilesInfo.RecentFiles.Where(path => path != filePath)] };
                 RecentFilesInfo.Save();
                 return false;

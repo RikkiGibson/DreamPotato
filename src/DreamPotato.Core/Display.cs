@@ -72,6 +72,14 @@ public class Display(Cpu cpu)
             for (int right = 0; right < 0xc; right++, index++)
                 _bytes[index] = xram1[left | right];
         }
+
+        if (cpu.SFRs.P7.DreamcastConnected)
+        {
+            // Connected to Dreamcast, so the image is meant to be viewed "upside-down".
+            _bytes.Reverse();
+            for (int i = 0; i < _bytes.Length; i++)
+                _bytes[i] = BitHelpers.ReverseBits(_bytes[i]);
+        }
     }
 
     /// <summary>Get a string representation of the display contents for testing.</summary>
