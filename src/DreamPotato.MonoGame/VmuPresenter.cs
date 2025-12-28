@@ -65,7 +65,12 @@ class VmuPresenter
     internal readonly Texture2D _vmuMarginTexture;
 
     private Matrix _spriteTransformMatrix;
-    internal Rectangle ContentRectangle { get; private set; }
+
+    /// <summary>The size of the VMU screen and icons, scaled to fit within <see cref="Bounds"/>.</summary>
+    internal Point ContentSize { get; private set; }
+
+    /// <summary>The entire screen region, including margins, which bounds the VMU content.</summary>
+    internal Rectangle Bounds { get; private set; }
 
     private int SleepHeldFrameCount;
     internal GamePadState PreviousGamepad { get; private set; }
@@ -114,13 +119,13 @@ class VmuPresenter
             LocalPaused = !LocalPaused;
 
         if (ButtonChecker.IsNewlyPressed(VmuButton.SaveState, previousKeys, keyboard, PreviousGamepad, gamepad))
-            Vmu.SaveState(id: "0");
+            _game1.UserInterface.SaveStateWithThumbnail(this);
 
         if (ButtonChecker.IsNewlyPressed(VmuButton.LoadState, previousKeys, keyboard, PreviousGamepad, gamepad))
         {
-            if (Vmu.LoadStateById(id: "0", saveOopsFile: true) is (false, var error))
+            if (Vmu.LoadStateById(id: _game1.Configuration.CurrentSaveStateSlot.ToString(), saveOopsFile: true) is (false, var error))
             {
-                _game1.UserInterface.ShowToast(error ?? $"An unknown error occurred in {nameof(Vmu.LoadStateById)}.");
+                _game1.UserInterface.ShowToast(this, error ?? $"An unknown error occurred in {nameof(Vmu.LoadStateById)}.");
             }
         }
 
@@ -192,19 +197,7 @@ class VmuPresenter
 
     internal void Draw(SpriteBatch spriteBatch)
     {
-        var screenData = Vmu.Display.GetBytes();
-        int i = 0;
-        foreach (byte b in screenData)
-        {
-            _vmuScreenData[i++] = ReadColor(b, 7);
-            _vmuScreenData[i++] = ReadColor(b, 6);
-            _vmuScreenData[i++] = ReadColor(b, 5);
-            _vmuScreenData[i++] = ReadColor(b, 4);
-            _vmuScreenData[i++] = ReadColor(b, 3);
-            _vmuScreenData[i++] = ReadColor(b, 2);
-            _vmuScreenData[i++] = ReadColor(b, 1);
-            _vmuScreenData[i++] = ReadColor(b, 0);
-        }
+        UpdateScreenData(_vmuScreenData, Vmu.Display.GetBytes(), ColorPalette);
         _vmuScreenTexture.SetData(_vmuScreenData);
 
         // Use nearest neighbor scaling for the screen content
@@ -219,12 +212,7 @@ class VmuPresenter
         spriteBatch.Draw(
             _vmuScreenTexture,
             destinationRectangle: screenRectangle,
-            sourceRectangle: null,
-            color: Color.White,
-            rotation: 0,
-            origin: default,
-            effects: vmuIsEjected ? SpriteEffects.None : (SpriteEffects.FlipHorizontally | SpriteEffects.FlipVertically),
-            layerDepth: 0);
+            color: Color.White);
         spriteBatch.End();
 
         // Draw icons
@@ -273,10 +261,26 @@ class VmuPresenter
         }
 
         spriteBatch.End();
+    }
+
+    internal static void UpdateScreenData(Color[] dest, ReadOnlySpan<byte> src, ColorPalette colorPalette)
+    {
+        int i = 0;
+        foreach (byte b in src)
+        {
+            dest[i++] = ReadColor(b, 7);
+            dest[i++] = ReadColor(b, 6);
+            dest[i++] = ReadColor(b, 5);
+            dest[i++] = ReadColor(b, 4);
+            dest[i++] = ReadColor(b, 3);
+            dest[i++] = ReadColor(b, 2);
+            dest[i++] = ReadColor(b, 1);
+            dest[i++] = ReadColor(b, 0);
+        }
 
         Color ReadColor(byte b, byte bitAddress)
         {
-            return BitHelpers.ReadBit(b, bitAddress) ? ColorPalette.Screen1 : ColorPalette.Screen0;
+            return BitHelpers.ReadBit(b, bitAddress) ? colorPalette.Screen1 : colorPalette.Screen0;
         }
     }
 
@@ -295,12 +299,18 @@ class VmuPresenter
         float heightScale = (float)Math.Floor(
             (float)targetRectangle.Height / TotalContentHeight * MinVmuScale) / MinVmuScale;
 
-        float minScale = Math.Min(widthScale, heightScale);
-        Matrix scaleTransform = preserveAspectRatio
-            ? Matrix.CreateScale(minScale, minScale, 1)
-            : Matrix.CreateScale(widthScale, heightScale, 1);
+        if (preserveAspectRatio)
+        {
+            float minScale = Math.Min(widthScale, heightScale);
+            (widthScale, heightScale) = (minScale, minScale);
+        }
+
+        Matrix scaleTransform = Matrix.CreateScale(widthScale, heightScale, 1);
+        float idealWidth = widthScale * TotalContentWidth;
+        float idealHeight = heightScale * TotalContentHeight;
         _spriteTransformMatrix = scaleTransform * getTranslationTransform();
-        ContentRectangle = targetRectangle;
+        ContentSize = new Point((int)idealWidth, (int)idealHeight);
+        Bounds = targetRectangle;
 
         Matrix getTranslationTransform()
         {
@@ -309,14 +319,8 @@ class VmuPresenter
             // __|----|__ ideal
             // We are calculating the quantity denoted by '__' in the above sketch
             // Since we're using nearest neighbor scaling, we need to round to nearest integer, to keep it from looking blocky.
-            float idealWidthScale = preserveAspectRatio ? minScale : widthScale;
-            float idealWidth = idealWidthScale * TotalContentWidth;
             var xPosition = targetRectangle.X + (float)Math.Round((targetRectangle.Width - idealWidth) / 2);
-
-            // Do the same process for the vertical position
             // TODO(spi): consider if vertical centering is desirable here or just limiting the height of the 'targetRectangle' would be better
-            float idealHeightScale = preserveAspectRatio ? minScale : heightScale;
-            float idealHeight = idealHeightScale * TotalContentHeight;
             var yPosition = targetRectangle.Y + (float)Math.Round((targetRectangle.Height - idealHeight) / 2);
 
             return Matrix.CreateTranslation(xPosition, yPosition, zPosition: 0);
@@ -339,6 +343,11 @@ class VmuPresenter
             LocalPaused = false;
     }
 
+    internal void UpdateScreenTexture(Texture2D texture)
+    {
+        texture.SetData(_vmuScreenData);
+    }
+
     internal void TakeScreenshot()
     {
         var now = DateTimeOffset.Now;
@@ -350,22 +359,8 @@ class VmuPresenter
 
         var filePath = Path.Combine(screenshotsFolder, $"{baseName}_{timeDescription}.png");
         using var outFile = File.Create(Path.Combine(Vmu.DataFolder, filePath));
-
-        if (!Vmu.IsDockedToDreamcast)
-        {
-            // Easy case, VMU texture is already properly oriented.
-            _vmuScreenTexture.SaveAsPng(outFile, _vmuScreenTexture.Width, _vmuScreenTexture.Height);
-        }
-        else
-        {
-            // Need to flip the image horizontally and vertically before saving
-            using var texture = new Texture2D(Graphics.GraphicsDevice, _vmuScreenTexture.Width, _vmuScreenTexture.Height);
-            _vmuScreenData.Reverse();
-            texture.SetData(_vmuScreenData);
-            _vmuScreenData.Reverse();
-            texture.SaveAsPng(outFile, texture.Width, texture.Height);
-        }
-
-        _game1.UserInterface.ShowToast($"Screenshot saved to {filePath}", durationFrames: 5 * 60);
+        _vmuScreenTexture.SaveAsPng(outFile, _vmuScreenTexture.Width, _vmuScreenTexture.Height);
+        var displayPath = Path.GetRelativePath(AppContext.BaseDirectory, filePath);
+        _game1.UserInterface.ShowScreenshotToast(this, $"Screenshot saved to {displayPath}", durationFrames: 3 * 60);
     }
 }

@@ -104,17 +104,11 @@ public class Logger(LogLevel _minimumLogLevel, LogCategories _categories, Cpu? _
         var startIndex = _nextMessageIndex - recentCount;
         for (int i = 0; i < recentCount; i++)
         {
-            var currentIndex = modPositive(startIndex + i, _messages.Length);
+            var currentIndex = BitHelpers.ModPositive(startIndex + i, _messages.Length);
             if (_messages[currentIndex] is string message)
                 result.Add(message);
         }
 
         return result;
-
-        static int modPositive(int x, int m)
-        {
-            Debug.Assert(m > 0);
-            return (x % m + m) % m;
-        }
     }
 }

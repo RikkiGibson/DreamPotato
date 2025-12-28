@@ -3,13 +3,18 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 
 using DreamPotato.Core;
+
+using Humanizer;
 
 using ImGuiNET;
 
@@ -34,15 +39,15 @@ enum PendingCommandKind
 {
     None,
     NewVmu,
-    OpenVms,
     OpenVmu,
+    OpenRecent,
     Reset,
     Exit
 }
 
 readonly struct PendingCommand
 {
-    private PendingCommand(ConfirmationState confirmationState, PendingCommandKind kind, VmuPresenter? vmuPresenter)
+    private PendingCommand(ConfirmationState confirmationState, PendingCommandKind kind, VmuPresenter? vmuPresenter, string? filePath)
     {
         // If we are showing dialog or confirming something, there needs to be an actual command
         if (confirmationState is not ConfirmationState.None && kind is PendingCommandKind.None)
@@ -51,14 +56,52 @@ readonly struct PendingCommand
         State = confirmationState;
         Kind = kind;
         VmuPresenter = vmuPresenter;
+        FilePath = filePath;
     }
 
     public ConfirmationState State { get; }
     public PendingCommandKind Kind { get; }
     public VmuPresenter? VmuPresenter { get; }
+    public string? FilePath { get; }
 
-    public static PendingCommand ShowDialog(PendingCommandKind kind, VmuPresenter? vmuPresenter) => new(ConfirmationState.ShowDialog, kind, vmuPresenter);
-    public PendingCommand Confirmed() => new(ConfirmationState.Confirmed, Kind, VmuPresenter);
+    public static PendingCommand ShowDialog(PendingCommandKind kind, VmuPresenter? vmuPresenter, string? filePath) => new(ConfirmationState.ShowDialog, kind, vmuPresenter, filePath);
+    public PendingCommand Confirmed() => new(ConfirmationState.Confirmed, Kind, VmuPresenter, FilePath);
+}
+
+class SaveStateInfo
+{
+    public SaveStateInfo(GraphicsDevice graphics, ImGuiRenderer imGuiRenderer)
+    {
+        ThumbnailTexture = new Texture2D(graphics, Display.ScreenWidth, Display.ScreenHeight);
+        RawThumbnailTexture = imGuiRenderer.BindTexture(ThumbnailTexture);
+        StateTimeDescription = "";
+    }
+
+    public Texture2D ThumbnailTexture { get; }
+    public nint RawThumbnailTexture { get; }
+
+    public void InvalidateThumbnail() => StateFilePath = "<<unset>>";
+    public string? StateFilePath { get; set; } = "<<unset>>";
+    public string StateTimeDescription { get; set; }
+    public bool Exists { get; set; }
+}
+
+class ToastInfo
+{
+    public ToastInfo(GraphicsDevice graphics, ImGuiRenderer imGuiRenderer)
+    {
+        ImageTexture = new Texture2D(graphics, Display.ScreenWidth, Display.ScreenHeight);
+        RawImageTexture = imGuiRenderer.BindTexture(ImageTexture);
+    }
+
+    public string? Message { get; set; }
+    public Texture2D ImageTexture { get; }
+    public bool ShowImage { get; set; }
+    public nint RawImageTexture { get; }
+    public int DisplayFrames { get; set; }
+
+    public const int DefaultDurationFrames = 3 * 60;
+    public const int BeginFadeoutFrames = 30;
 }
 
 struct MappingEditState
@@ -102,21 +145,24 @@ struct MappingEditState
     public List<ButtonMapping>? ButtonMappings { get => _editedMappings as List<ButtonMapping>; set => _editedMappings = value; }
 }
 
-class UserInterface
+partial class UserInterface
 {
     private readonly Game1 _game;
 
+    // Set in Initialize()
+    //
     private ImGuiRenderer _imGuiRenderer = null!;
+    private SaveStateInfo _primarySaveStateInfo = null!;
+    private SaveStateInfo _secondarySaveStateInfo = null!;
+    private ToastInfo _primaryToastInfo = null!;
+    private ToastInfo _secondaryToastInfo = null!;
+
     private nint _rawDreamcastConnectedIconTexture;
     private nint _rawVmusConnectedIconTexture;
     private GCHandle _iniFilenameHandle;
+    // ---
 
     private MappingEditState _mappingEditState;
-
-    private string? _toastMessage;
-    private int _toastDisplayFrames;
-    private const int ToastMaxDisplayFrames = 2 * 60;
-    private const int ToastBeginFadeoutFrames = 30;
 
     private readonly string _displayVersion;
     private readonly string _commitId;
@@ -145,6 +191,7 @@ class UserInterface
         }
     }
 
+    [MemberNotNull(nameof(_imGuiRenderer), nameof(_primarySaveStateInfo), nameof(_secondarySaveStateInfo), nameof(_primaryToastInfo), nameof(_secondaryToastInfo))]
     internal void Initialize(Texture2D dreamcastConnectedIconTexture, Texture2D vmusConnectedIconTexture)
     {
         _imGuiRenderer = new ImGuiRenderer(_game);
@@ -164,6 +211,12 @@ class UserInterface
 
         _rawDreamcastConnectedIconTexture = _imGuiRenderer.BindTexture(dreamcastConnectedIconTexture);
         _rawVmusConnectedIconTexture = _imGuiRenderer.BindTexture(vmusConnectedIconTexture);
+
+        var graphicsDevice = _game.GraphicsDevice;
+        _primarySaveStateInfo = new SaveStateInfo(graphicsDevice, _imGuiRenderer);
+        _secondarySaveStateInfo = new SaveStateInfo(graphicsDevice, _imGuiRenderer);
+        _primaryToastInfo = new ToastInfo(graphicsDevice, _imGuiRenderer);
+        _secondaryToastInfo = new ToastInfo(graphicsDevice, _imGuiRenderer);
     }
 
     internal void Layout(GameTime gameTime)
@@ -179,10 +232,10 @@ class UserInterface
     }
 
     /// <summary>Show a modal asking user to confirm a "destructive" command</summary>
-    internal void ShowConfirmCommandDialog(PendingCommandKind commandKind, VmuPresenter? vmuPresenter)
+    internal void ShowConfirmCommandDialog(PendingCommandKind commandKind, VmuPresenter? vmuPresenter, string? filePath = null)
     {
         Pause();
-        PendingCommand = PendingCommand.ShowDialog(commandKind, vmuPresenter);
+        PendingCommand = PendingCommand.ShowDialog(commandKind, vmuPresenter, filePath);
     }
 
     private void Pause()
@@ -200,20 +253,16 @@ class UserInterface
         _game.LoadNewVmu(presenter);
     }
 
-    internal void OpenVmsDialog(VmuPresenter presenter)
+    internal void OpenRecentFile(VmuPresenter presenter, string filePath)
     {
         var vmu = presenter.Vmu;
-        if (vmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.OpenVms, State: ConfirmationState.Confirmed })
+        if (vmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.OpenRecent, State: ConfirmationState.Confirmed })
         {
-            ShowConfirmCommandDialog(PendingCommandKind.OpenVms, presenter);
+            ShowConfirmCommandDialog(PendingCommandKind.OpenRecent, presenter);
             return;
         }
 
-        var result = Dialog.FileOpen("vms", defaultPath: null);
-        if (result.IsOk)
-        {
-            _game.LoadAndStartVmsOrVmuFile(presenter, result.Path);
-        }
+        _game.LoadAndStartVmsOrVmuFile(presenter, filePath);
     }
 
     internal void OpenVmuDialog(VmuPresenter presenter)
@@ -225,7 +274,7 @@ class UserInterface
             return;
         }
 
-        var result = Dialog.FileOpen("vmu,bin", defaultPath: null);
+        var result = Dialog.FileOpen("vmu,bin,vms", defaultPath: null);
         if (result.IsOk)
         {
             _game.LoadAndStartVmsOrVmuFile(presenter, result.Path);
@@ -249,10 +298,21 @@ class UserInterface
         ImGui.OpenPopup(name);
     }
 
-    internal void ShowToast(string message, int durationFrames = ToastMaxDisplayFrames)
+    internal void ShowToast(VmuPresenter presenter, string message, int durationFrames = ToastInfo.DefaultDurationFrames)
     {
-        _toastMessage = message;
-        _toastDisplayFrames = durationFrames;
+        var toastInfo = presenter == _game.PrimaryVmuPresenter ? _primaryToastInfo : _secondaryToastInfo;
+        toastInfo.Message = message;
+        toastInfo.DisplayFrames = durationFrames;
+        toastInfo.ShowImage = false;
+    }
+
+    internal void ShowScreenshotToast(VmuPresenter presenter, string message, int durationFrames = ToastInfo.DefaultDurationFrames)
+    {
+        var toastInfo = presenter == _game.PrimaryVmuPresenter ? _primaryToastInfo : _secondaryToastInfo;
+        toastInfo.Message = message;
+        toastInfo.DisplayFrames = durationFrames;
+        presenter.UpdateScreenTexture(toastInfo.ImageTexture);
+        toastInfo.ShowImage = true;
     }
 
     private void Unpause()
@@ -297,7 +357,7 @@ class UserInterface
             if (message is null)
                 return;
 
-            var rectangle = presenter.ContentRectangle;
+            var rectangle = presenter.Bounds;
             var textSize = ImGui.CalcTextSize(message, wrapWidth: rectangle.Width);
             ImGui.SetNextWindowPos(new Numerics.Vector2(x: rectangle.X + 2, y: rectangle.Y + rectangle.Height - textSize.Y - Game1.MenuBarHeight));
             ImGui.SetNextWindowSize(textSize + new Numerics.Vector2(10, 20));
@@ -312,38 +372,65 @@ class UserInterface
 
     private void LayoutToast()
     {
-        if (_toastDisplayFrames == 0)
-            return;
+        layoutOne("PrimaryToast", _game.PrimaryVmuPresenter, _primaryToastInfo);
+        if (_game.UseSecondaryVmu)
+            layoutOne("SecondaryToast", _game.SecondaryVmuPresenter, _secondaryToastInfo);
 
-        if (_toastMessage is null)
-            throw new InvalidOperationException();
-
-        _toastDisplayFrames--;
-
-        var doFadeout = _toastDisplayFrames < ToastBeginFadeoutFrames;
-        if (doFadeout)
-            ImGui.PushStyleVar(ImGuiStyleVar.Alpha, ((float)_toastDisplayFrames) / ToastBeginFadeoutFrames);
-
-        var viewport = _game.GraphicsDevice.Viewport;
-        var textSize = ImGui.CalcTextSize(text: _toastMessage, wrapWidth: viewport.Width);
-        // TODO probably userinterface should own the const MenuBarHeight
-        ImGui.SetNextWindowPos(new Numerics.Vector2(x: 2, y: viewport.Height - textSize.Y - Game1.MenuBarHeight));
-        ImGui.SetNextWindowSize(textSize + new Numerics.Vector2(10, 20));
-        if (ImGui.Begin("Toast", ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoInputs | ImGuiWindowFlags.NoScrollbar))
+        void layoutOne(string id, VmuPresenter presenter, ToastInfo toastInfo)
         {
-            ImGui.TextWrapped(_toastMessage.Replace("%", "%%"));
+            if (toastInfo.DisplayFrames == 0)
+                return;
+
+            if (toastInfo.Message is null)
+                throw new InvalidOperationException();
+
+            toastInfo.DisplayFrames--;
+
+            var doFadeout = toastInfo.DisplayFrames < ToastInfo.BeginFadeoutFrames;
+            if (doFadeout)
+                ImGui.PushStyleVar(ImGuiStyleVar.Alpha, ((float)toastInfo.DisplayFrames) / ToastInfo.BeginFadeoutFrames * 0.8f);
+            else
+                ImGui.PushStyleVar(ImGuiStyleVar.Alpha, 0.8f);
+
+            const int padding = 20;
+            var bounds = presenter.Bounds;
+            var maxTextWidth = toastInfo.ShowImage
+                ? bounds.Width - Display.ScreenWidth - 2 * padding
+                : bounds.Width - padding;
+            var textSize = ImGui.CalcTextSize(text: toastInfo.Message, wrapWidth: maxTextWidth);
+            var toastWidth = Display.ScreenWidth + textSize.X + 2 * padding;
+            var toastHeight = Math.Max(Display.ScreenHeight, textSize.Y) + padding;
+            ImGui.SetNextWindowPos(new Numerics.Vector2(x: 2, y: bounds.Bottom - toastHeight - 2));
+            ImGui.SetNextWindowSize(new Numerics.Vector2(x: toastWidth, y: toastHeight));
+            if (ImGui.Begin(id, ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoInputs | ImGuiWindowFlags.NoScrollbar))
+            {
+                if (!doFadeout)
+                    ImGui.PopStyleVar();
+
+                if (toastInfo.ShowImage)
+                {
+                    var imageSize = new Numerics.Vector2(x: Display.ScreenWidth, y: Display.ScreenHeight);
+                    ImGui.Image(toastInfo.RawImageTexture, imageSize);
+                    ImGui.SameLine();
+                }
+                ImGui.TextWrapped(toastInfo.Message.Replace("%", "%%"));
+            }
+
+            ImGui.End();
+
+            if (doFadeout)
+                ImGui.PopStyleVar();
         }
-
-        ImGui.End();
-
-        if (doFadeout)
-            ImGui.PopStyleVar();
     }
 
     private void LayoutPrimaryMenuBar()
     {
         var presenter = _game.PrimaryVmuPresenter;
-        ImGui.BeginMainMenuBar();
+        var rectangle = _game.PrimaryMenuBarRectangle;
+        ImGui.SetNextWindowPos(new Numerics.Vector2(0, 0));
+        ImGui.SetNextWindowSize(new Numerics.Vector2(rectangle.Width, rectangle.Height));
+        ImGui.Begin("PrimaryMenuWindow", ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.MenuBar | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoBringToFrontOnFocus);
+        ImGui.BeginMenuBar();
         if (ImGui.BeginMenu("File"))
         {
             LayoutNewOpenSaveMenuItems(presenter);
@@ -442,7 +529,8 @@ class UserInterface
         }
 
         LayoutVmusConnectedIcon();
-        ImGui.EndMainMenuBar();
+        ImGui.EndMenuBar();
+        ImGui.End();
 
         if (doOpenSettings)
             OpenPopupAndPause("Settings");
@@ -502,21 +590,49 @@ class UserInterface
             using (new DisabledScope(vmu.LoadedFilePath is null || vmu.IsOtherVmuConnected))
             {
                 if (ImGui.MenuItem("Save State"))
-                {
-                    vmu.SaveState("0");
-                }
+                    SaveStateWithThumbnail(presenter);
 
-                if (ImGui.MenuItem("Load State"))
+                var stateInfo = vmu == _game.PrimaryVmu ? _primarySaveStateInfo : _secondarySaveStateInfo;
+                UpdateThumbnail(vmu, stateInfo);
+                if (ImGui.MenuItem("Load State", enabled: stateInfo.Exists))
                 {
-                    if (vmu.LoadStateById(id: "0", saveOopsFile: true) is (false, var error))
+                    if (vmu.LoadStateById(id: _game.Configuration.CurrentSaveStateSlot.ToString(), saveOopsFile: true) is (false, var error))
                     {
-                        ShowToast(error ?? $"An unknown error occurred in '{nameof(Vmu.LoadStateById)}'.");
+                        ShowToast(presenter, error ?? $"An unknown error occurred in '{nameof(Vmu.LoadStateById)}'.");
                     }
                 }
 
                 if (ImGui.MenuItem("Undo Load State"))
                 {
                     vmu.LoadOopsFile();
+                }
+
+                {
+                    // Select Save Slot
+                    ImGui.BeginGroup();
+                    ImGui.Image(stateInfo.RawThumbnailTexture, image_size: new Numerics.Vector2(Display.ScreenWidth, Display.ScreenHeight));
+
+                    ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 1); // make the prev/next buttons align nicely with the thumbnail.
+                    if (ImGui.ArrowButton(str_id: "PrevSaveState", dir: ImGuiDir.Left))
+                    {
+                        var newSlot = BitHelpers.ModPositive(_game.Configuration.CurrentSaveStateSlot - 1, 10);
+                        _game.Configuration_CurrentSaveStateSlotChanged(newSlot);
+                    }
+
+                    ImGui.SameLine();
+                    if (ImGui.ArrowButton(str_id: "NextSaveState", dir: ImGuiDir.Right))
+                    {
+                        var newSlot = BitHelpers.ModPositive(_game.Configuration.CurrentSaveStateSlot + 1, 10);
+                        _game.Configuration_CurrentSaveStateSlotChanged(newSlot);
+                    }
+                    ImGui.EndGroup();
+
+                    ImGui.SameLine();
+                    ImGui.BeginGroup();
+                    ImGui.Text($"Slot {_game.Configuration.CurrentSaveStateSlot + 1}");
+                    // Note: this 13 is kind of a magic number. It would need to be adjusted if the names of other menu items changed.
+                    ImGui.Text(BreakLines(stateInfo.StateTimeDescription, maxLineLength: 13));
+                    ImGui.EndGroup();
                 }
             }
 
@@ -525,6 +641,55 @@ class UserInterface
                 presenter.TakeScreenshot();
 
             ImGui.EndMenu();
+        }
+    }
+
+    internal void SaveStateWithThumbnail(VmuPresenter presenter)
+    {
+        presenter.Vmu.SaveState(_game.Configuration.CurrentSaveStateSlot.ToString());
+        var stateInfo = presenter == _game.PrimaryVmuPresenter ? _primarySaveStateInfo : _secondarySaveStateInfo;
+        stateInfo.InvalidateThumbnail();
+        ShowScreenshotToast(presenter, $"Saved state to slot {_game.Configuration.CurrentSaveStateSlot+1}", durationFrames: 2 * 60);
+    }
+
+    private void UpdateThumbnail(Vmu vmu, SaveStateInfo stateInfo)
+    {
+        var filePath = vmu.LoadedFilePath is null ? null : Vmu.GetSaveStatePath(vmu.LoadedFilePath, id: _game.Configuration.CurrentSaveStateSlot.ToString());
+
+        // thumbnail up to date
+        if (stateInfo.StateFilePath == filePath)
+            return;
+
+        var thumbnailData = getScreenData();
+        stateInfo.ThumbnailTexture.SetData(thumbnailData);
+        stateInfo.StateFilePath = filePath;
+        (stateInfo.Exists, stateInfo.StateTimeDescription) = File.Exists(filePath) ? (true, File.GetLastWriteTime(filePath).Humanize()) : (false, "");
+
+        Color[] getScreenData()
+        {
+            var vmuScreenData = new Color[Display.ScreenWidth * Display.ScreenHeight];
+            Array.Fill(vmuScreenData, _game.ColorPalette.Screen0);
+            if (filePath is null || !File.Exists(filePath))
+                return vmuScreenData;
+
+            try
+            {
+                using var stateFile = File.OpenRead(filePath);
+                using var zip = new ZipArchive(stateFile);
+
+                if (zip.GetEntry(Vmu.SaveState_ThumbnailFile) is not { } thumbnailEntry)
+                    return vmuScreenData;
+
+                var vmuBytes = new byte[Display.ScreenWidth * Display.ScreenHeight / 8];
+                using var thumbnailStream = thumbnailEntry.Open();
+                thumbnailStream.ReadExactly(vmuBytes);
+                VmuPresenter.UpdateScreenData(vmuScreenData, vmuBytes, _game.ColorPalette);
+                return vmuScreenData;
+            }
+            catch (InvalidDataException)
+            {
+                return vmuScreenData;
+            }
         }
     }
 
@@ -537,7 +702,7 @@ class UserInterface
         var rectangle = _game.SecondaryMenuBarRectangle;
         ImGui.SetNextWindowPos(new Numerics.Vector2(rectangle.X, rectangle.Y));
         ImGui.SetNextWindowSize(new Numerics.Vector2(rectangle.Width, rectangle.Height));
-        ImGui.Begin("SecondaryMenuWindow", ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.MenuBar | ImGuiWindowFlags.NoSavedSettings);
+        ImGui.Begin("SecondaryMenuWindow", ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.MenuBar | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoBringToFrontOnFocus);
         ImGui.BeginMenuBar();
         if (ImGui.BeginMenu(vmu.HasUnsavedChanges ? "* File" : "File"))
         {
@@ -613,11 +778,25 @@ class UserInterface
         if (ImGui.MenuItem("New VMU"))
             NewVmu(presenter);
 
-        if (ImGui.MenuItem("Open VMS (Game)"))
-            OpenVmsDialog(presenter);
-
-        if (ImGui.MenuItem("Open VMU (Memory Card)"))
+        if (ImGui.MenuItem("Open"))
             OpenVmuDialog(presenter);
+
+        var (displayFileNames, recentFilePaths) = calcRecentFilesInfo();
+        if (ImGui.BeginMenu("Open Recent", enabled: recentFilePaths.Any()))
+        {
+            for (int i = 0; i < recentFilePaths.Length; i++)
+            {
+                var recentFilePath = recentFilePaths[i];
+                if (recentFilePath is null)
+                    continue;
+
+                var fileName = displayFileNames[i];
+                if (ImGui.MenuItem(fileName))
+                    OpenRecentFile(presenter, recentFilePath);
+            }
+
+            ImGui.EndMenu();
+        }
 
         if (ImGui.MenuItem("Save As"))
         {
@@ -628,7 +807,49 @@ class UserInterface
             }
         }
 
-        // TODO: list recently opened VMU files?
+        (string[] displayFileNames, ImmutableArray<string> recentFiles) calcRecentFilesInfo()
+        {
+            var recentFiles = _game.RecentFilesInfo.RecentFiles;
+            const int maxFileNameLength = 18;
+            string[] displayFileNames = new string[recentFiles.Length];
+            for (var i = 0; i < recentFiles.Length; i++)
+            {
+                var fileName = Path.GetFileName(recentFiles[i]);
+                var oversize = fileName.Length > maxFileNameLength;
+                displayFileNames[i] = oversize ? BreakLines(fileName, maxFileNameLength) : fileName;
+            }
+
+            return (displayFileNames, recentFiles);
+        }
+    }
+
+    private static string BreakLines(ReadOnlySpan<char> span, int maxLineLength)
+    {
+        var builder = new StringBuilder();
+        var i = 0;
+        var previousMatchIndex = 0;
+        var pattern = BreakLinesPattern();
+        foreach (ValueMatch match in pattern.EnumerateMatches(span))
+        {
+            if (match.Index > i + maxLineLength)
+            {
+                // chunk must be non-empty
+                var endIndex = i == previousMatchIndex ? match.Index : previousMatchIndex;
+                builder.Append(span[i..endIndex]);
+                if (i != endIndex)
+                    i = endIndex;
+
+                if (i != span.Length)
+                    builder.AppendLine();
+            }
+
+            previousMatchIndex = match.Index;
+        }
+
+        if (i != span.Length)
+            builder.Append(span[i..]);
+
+        return builder.ToString();
     }
 
     private static readonly string[] AllDreamcastSlotNames = ["A", "B", "C", "D"];
@@ -682,7 +903,11 @@ class UserInterface
                 ImGui.Combo(label: "", ref selectedIndex, items: ColorPalette.AllPaletteNames, items_count: ColorPalette.AllPaletteNames.Length);
                 ImGui.PopID();
                 if (paletteIndex != selectedIndex)
+                {
                     _game.Configuration_PaletteChanged(ColorPalette.AllPalettes[selectedIndex]);
+                    _primarySaveStateInfo.InvalidateThumbnail();
+                    _secondarySaveStateInfo.InvalidateThumbnail();
+                }
             }
 
             // Dreamcast Port
@@ -1032,8 +1257,7 @@ class UserInterface
         var title = PendingCommand.Kind switch
         {
             PendingCommandKind.NewVmu => "Create new VMU without saving?",
-            PendingCommandKind.OpenVms => "Open VMS without saving?",
-            PendingCommandKind.OpenVmu => "Open VMU without saving?",
+            PendingCommandKind.OpenVmu or PendingCommandKind.OpenRecent => "Open without saving?",
             PendingCommandKind.Reset when !_game.UseSecondaryVmu => "Reset?",
             PendingCommandKind.Reset when PendingCommand.VmuPresenter == _game.PrimaryVmuPresenter => "Reset slot 1?",
             PendingCommandKind.Reset => "Reset slot 2?",
@@ -1041,14 +1265,17 @@ class UserInterface
             _ => throw new InvalidOperationException(),
         };
 
-        ImGui.Begin(title, ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.Modal | ImGuiWindowFlags.NoResize);
+        // Center the dialog on the current VMU when it first appears
+        if (PendingCommand.VmuPresenter is { Bounds: var bounds })
+            ImGui.SetNextWindowPos(new Numerics.Vector2((bounds.Left + bounds.Right) / 2, bounds.Top + 50), cond: ImGuiCond.Appearing, pivot: new Numerics.Vector2(0.5f, 0.5f));
+
+        if (ImGui.Begin(title, ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.Modal | ImGuiWindowFlags.NoResize))
         {
             ImGui.Text("Unsaved progress will be lost.");
 
             var confirmLabel = PendingCommand.Kind switch
             {
                 PendingCommandKind.NewVmu => "Create",
-                PendingCommandKind.OpenVms => "Open",
                 PendingCommandKind.OpenVmu => "Open",
                 PendingCommandKind.Reset => "Reset",
                 PendingCommandKind.Exit => "Exit",
@@ -1091,12 +1318,14 @@ class UserInterface
                     NewVmu(PendingCommand.VmuPresenter ?? throw new InvalidOperationException());
                     PendingCommand = default;
                     break;
-                case PendingCommandKind.OpenVms:
-                    OpenVmsDialog(PendingCommand.VmuPresenter ?? throw new InvalidOperationException());
-                    PendingCommand = default;
-                    break;
                 case PendingCommandKind.OpenVmu:
                     OpenVmuDialog(PendingCommand.VmuPresenter ?? throw new InvalidOperationException());
+                    PendingCommand = default;
+                    break;
+                case PendingCommandKind.OpenRecent:
+                    OpenRecentFile(
+                        PendingCommand.VmuPresenter ?? throw new InvalidOperationException(nameof(PendingCommand.VmuPresenter)),
+                        PendingCommand.FilePath ?? throw new InvalidOperationException(nameof(PendingCommand.FilePath)));
                     PendingCommand = default;
                     break;
                 default:
@@ -1104,6 +1333,9 @@ class UserInterface
             }
         }
     }
+
+    [GeneratedRegex(@"\b|_")]
+    private static partial Regex BreakLinesPattern();
 }
 
 /// <summary>

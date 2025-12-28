@@ -50,6 +50,7 @@ public class Game1 : Game
     /// </summary>
     internal bool UIPaused;
 
+    internal Rectangle PrimaryMenuBarRectangle;
     /// <summary>Note: comprises the whole screen region which secondary VMU menus can expand into.</summary>
     internal Rectangle SecondaryMenuBarRectangle;
     /// <summary>Only meaningful when <see cref="UseSecondaryVmu"/> is true.</summary>
@@ -229,7 +230,15 @@ public class Game1 : Game
             var otherVmu = vmu == PrimaryVmu ? SecondaryVmu : PrimaryVmu;
             if (otherVmu?.LoadedFilePath == filePath)
             {
-                _userInterface.ShowToast($"Cannot open {Path.GetFileName(filePath)} because it is already open on the other VMU.");
+                _userInterface.ShowToast(presenter, $"Cannot open {Path.GetFileName(filePath)} because it is already open on the other VMU.");
+                return false;
+            }
+
+            if (!File.Exists(filePath))
+            {
+                _userInterface.ShowToast(presenter, $"File not found: {Path.GetFileName(filePath)}");
+                RecentFilesInfo = RecentFilesInfo with { RecentFiles = [..RecentFilesInfo.RecentFiles.Where(path => path != filePath)] };
+                RecentFilesInfo.Save();
                 return false;
             }
 
@@ -261,6 +270,12 @@ public class Game1 : Game
     internal void Configuration_AnyButtonWakesFromSleepChanged(bool newValue)
     {
         Configuration = Configuration with { AnyButtonWakesFromSleep = newValue };
+    }
+
+    internal void Configuration_CurrentSaveStateSlotChanged(int newValue)
+    {
+        Configuration = Configuration with { CurrentSaveStateSlot = newValue };
+        Configuration.Save();
     }
 
     internal void Configuration_PreserveAspectRatioChanged(bool newValue)
@@ -316,21 +331,44 @@ public class Game1 : Game
         {
             if (usingBothSlots)
             {
-                var newHeight = _graphics.PreferredBackBufferHeight * 2;
+                //  ┌──────────────────────────────┐      ┬ H
+                //  │                              │      │
+                //  │    ┌────────────────────┐    │  ┬ h │
+                //  │    │                    │    │  │   │
+                //  │    │                    │    │  │   │
+                //  │    │                    │    │  │   │
+                //  │    │                    │    │  │   │
+                //  │    │                    │    │  │   │
+                //  │    │ ContentSize        │    │  │   │
+                //  │    └────────────────────┘    │  ┴   │
+                //  │ Viewport.Bounds              │      │
+                //  └──────────────────────────────┘      ┴
+                //        w
+                //       ├────────────────────┤
+                //   W
+                //  ├──────────────────────────────┤
+                var viewportBounds = GraphicsDevice.Viewport.Bounds;
+                var W = viewportBounds.Width;
+                var H = viewportBounds.Height;
+
+                var primaryVmuSize = PrimaryVmuPresenter.ContentSize;
+                var w = primaryVmuSize.X;
+                var h = primaryVmuSize.Y;
+
                 var safeArea = _graphics.GraphicsDevice.DisplayMode.TitleSafeArea;
-                // TODO: simply doubling the height, as long as it is within screen bounds, isn't really what we want.
-                // What we want, is the smallest increase in either dimension, which meets these constraints:
-                // - The window remains within the bounds of the user's screen
-                // - It preserves the current single VMU size as closely as possible (possibly getting smaller)
-                // - It changes the window size as little as possible while still meeting the VMU size constraint.
-                if (newHeight < safeArea.Bottom)
-                    _graphics.PreferredBackBufferHeight = newHeight;
+                var wGrow = 2*w - W;
+                var hGrow = 2*h - H;
+                // Grow either width or height by the smallest amount necessary
+                // to avoid shrinking the existing VMU. Do not shrink the window.
+                if (hGrow > wGrow)
+                    _graphics.PreferredBackBufferWidth = Math.Max(W, Math.Min(safeArea.Width, 2*w + 2*MenuBarHeight));
+                else
+                    _graphics.PreferredBackBufferHeight = Math.Max(H, Math.Min(safeArea.Height, 2*h + 2*MenuBarHeight));
             }
             else
             {
-                if (IsHorizontalLayout)
-                    _graphics.PreferredBackBufferWidth /= 2;
-                else
+                // Shrink if we were using a vertical layout. Otherwise leave it alone.
+                if (!IsHorizontalLayout)
                     _graphics.PreferredBackBufferHeight /= 2;
             }
 
@@ -402,6 +440,7 @@ public class Game1 : Game
 
         if (!UseSecondaryVmu)
         {
+            PrimaryMenuBarRectangle = viewport.Bounds;
             _primaryVmuPresenter.UpdateScaleMatrix(contentRectangle, Configuration.PreserveAspectRatio);
             return;
         }
@@ -411,26 +450,28 @@ public class Game1 : Game
         IsHorizontalLayout = Configuration.PreserveAspectRatio &&
             (float)contentRectangle.Height / VmuPresenter.TotalContentHeight < (float)contentRectangle.Width / VmuPresenter.TotalContentWidth;
 
-        (var slot1Rectangle, SecondaryMenuBarRectangle, var slot2Rectangle) = IsHorizontalLayout ? layoutHorizontal(contentRectangle) : layoutVertical(contentRectangle);
+        (PrimaryMenuBarRectangle, var slot1Rectangle, SecondaryMenuBarRectangle, var slot2Rectangle) = IsHorizontalLayout ? layoutHorizontal(contentRectangle) : layoutVertical(contentRectangle);
 
         _primaryVmuPresenter.UpdateScaleMatrix(slot1Rectangle, Configuration.PreserveAspectRatio);
         _secondaryVmuPresenter.UpdateScaleMatrix(slot2Rectangle, Configuration.PreserveAspectRatio);
 
-        static (Rectangle slot1Rectangle, Rectangle secondaryMenuBarRectangle, Rectangle slot2Rectangle) layoutHorizontal(Rectangle contentRectangle)
+        static (Rectangle primaryMenuBarRectangle, Rectangle slot1Rectangle, Rectangle secondaryMenuBarRectangle, Rectangle slot2Rectangle) layoutHorizontal(Rectangle contentRectangle)
         {
             var slot1Rectangle = contentRectangle with { Width = contentRectangle.Width / 2 };
-            var secondaryMenuBarRectangle = new Rectangle(x: slot1Rectangle.X + slot1Rectangle.Width, y: 0, width: slot1Rectangle.Width, height: MenuBarHeight + slot1Rectangle.Height);
+            var primaryMenuBarRectangle = new Rectangle(x: 0, y: 0, width: slot1Rectangle.Width, height: MenuBarHeight + slot1Rectangle.Height);
+            var secondaryMenuBarRectangle = primaryMenuBarRectangle with { X = primaryMenuBarRectangle.Width };
             var slot2Rectangle = contentRectangle with { Width = contentRectangle.Width / 2, X = slot1Rectangle.X + slot1Rectangle.Width };
-            return (slot1Rectangle, secondaryMenuBarRectangle, slot2Rectangle);
+            return (primaryMenuBarRectangle, slot1Rectangle, secondaryMenuBarRectangle, slot2Rectangle);
         }
 
-        static (Rectangle slot1Rectangle, Rectangle secondaryMenuBarRectangle, Rectangle slot2Rectangle) layoutVertical(Rectangle contentRectangle)
+        static (Rectangle primaryMenuBarRectangle, Rectangle slot1Rectangle, Rectangle secondaryMenuBarRectangle, Rectangle slot2Rectangle) layoutVertical(Rectangle contentRectangle)
         {
             // When a vertical layout is used, extra space needs to be reserved for a 2nd menu bar
             var slot1Rectangle = contentRectangle with { Height = (contentRectangle.Height - MenuBarHeight) / 2 };
-            var secondaryMenuBarRectangle = new Rectangle(x: 0, y: slot1Rectangle.Y + slot1Rectangle.Height, width: slot1Rectangle.Width, height: MenuBarHeight + slot1Rectangle.Height);
+            var primaryMenuBarRectangle = new Rectangle(x: 0, y: 0, width: slot1Rectangle.Width, height: MenuBarHeight + slot1Rectangle.Height);
+            var secondaryMenuBarRectangle = primaryMenuBarRectangle with { Y = primaryMenuBarRectangle.Height };
             var slot2Rectangle = contentRectangle with { Height = slot1Rectangle.Height, Y = secondaryMenuBarRectangle.Y + MenuBarHeight };
-            return (slot1Rectangle, secondaryMenuBarRectangle, slot2Rectangle);
+            return (primaryMenuBarRectangle, slot1Rectangle, secondaryMenuBarRectangle, slot2Rectangle);
         }
     }
 
