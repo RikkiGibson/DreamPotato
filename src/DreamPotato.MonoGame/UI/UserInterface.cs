@@ -429,7 +429,7 @@ partial class UserInterface
         var rectangle = _game.PrimaryMenuBarRectangle;
         ImGui.SetNextWindowPos(new Numerics.Vector2(0, 0));
         ImGui.SetNextWindowSize(new Numerics.Vector2(rectangle.Width, rectangle.Height));
-        ImGui.Begin("PrimaryMenuWindow", ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.MenuBar | ImGuiWindowFlags.NoSavedSettings);
+        ImGui.Begin("PrimaryMenuWindow", ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.MenuBar | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoBringToFrontOnFocus);
         ImGui.BeginMenuBar();
         if (ImGui.BeginMenu("File"))
         {
@@ -702,7 +702,7 @@ partial class UserInterface
         var rectangle = _game.SecondaryMenuBarRectangle;
         ImGui.SetNextWindowPos(new Numerics.Vector2(rectangle.X, rectangle.Y));
         ImGui.SetNextWindowSize(new Numerics.Vector2(rectangle.Width, rectangle.Height));
-        ImGui.Begin("SecondaryMenuWindow", ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.MenuBar | ImGuiWindowFlags.NoSavedSettings);
+        ImGui.Begin("SecondaryMenuWindow", ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.MenuBar | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoBringToFrontOnFocus);
         ImGui.BeginMenuBar();
         if (ImGui.BeginMenu(vmu.HasUnsavedChanges ? "* File" : "File"))
         {
@@ -1265,7 +1265,11 @@ partial class UserInterface
             _ => throw new InvalidOperationException(),
         };
 
-        ImGui.Begin(title, ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.Modal | ImGuiWindowFlags.NoResize);
+        // Center the dialog on the current VMU when it first appears
+        if (PendingCommand.VmuPresenter is { Bounds: var bounds })
+            ImGui.SetNextWindowPos(new Numerics.Vector2((bounds.Left + bounds.Right) / 2, bounds.Top + 50), cond: ImGuiCond.Appearing, pivot: new Numerics.Vector2(0.5f, 0.5f));
+
+        if (ImGui.Begin(title, ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.Modal | ImGuiWindowFlags.NoResize))
         {
             ImGui.Text("Unsaved progress will be lost.");
 
