@@ -331,21 +331,44 @@ public class Game1 : Game
         {
             if (usingBothSlots)
             {
-                var newHeight = _graphics.PreferredBackBufferHeight * 2;
+                //  ┌──────────────────────────────┐      ┬ H
+                //  │                              │      │
+                //  │    ┌────────────────────┐    │  ┬ h │
+                //  │    │                    │    │  │   │
+                //  │    │                    │    │  │   │
+                //  │    │                    │    │  │   │
+                //  │    │                    │    │  │   │
+                //  │    │                    │    │  │   │
+                //  │    │ ContentSize        │    │  │   │
+                //  │    └────────────────────┘    │  ┴   │
+                //  │ Viewport.Bounds              │      │
+                //  └──────────────────────────────┘      ┴
+                //        w
+                //       ├────────────────────┤
+                //   W
+                //  ├──────────────────────────────┤
+                var viewportBounds = GraphicsDevice.Viewport.Bounds;
+                var W = viewportBounds.Width;
+                var H = viewportBounds.Height;
+
+                var primaryVmuSize = PrimaryVmuPresenter.ContentSize;
+                var w = primaryVmuSize.X;
+                var h = primaryVmuSize.Y;
+
                 var safeArea = _graphics.GraphicsDevice.DisplayMode.TitleSafeArea;
-                // TODO: simply doubling the height, as long as it is within screen bounds, isn't really what we want.
-                // What we want, is the smallest increase in either dimension, which meets these constraints:
-                // - The window remains within the bounds of the user's screen
-                // - It preserves the current single VMU size as closely as possible (possibly getting smaller)
-                // - It changes the window size as little as possible while still meeting the VMU size constraint.
-                if (newHeight < safeArea.Bottom)
-                    _graphics.PreferredBackBufferHeight = newHeight;
+                var wGrow = 2*w - W;
+                var hGrow = 2*h - H;
+                // Grow either width or height by the smallest amount necessary
+                // to avoid shrinking the existing VMU. Do not shrink the window.
+                if (hGrow > wGrow)
+                    _graphics.PreferredBackBufferWidth = Math.Max(W, Math.Min(safeArea.Width, 2*w + 2*MenuBarHeight));
+                else
+                    _graphics.PreferredBackBufferHeight = Math.Max(H, Math.Min(safeArea.Height, 2*h + 2*MenuBarHeight));
             }
             else
             {
-                if (IsHorizontalLayout)
-                    _graphics.PreferredBackBufferWidth /= 2;
-                else
+                // Shrink if we were using a vertical layout. Otherwise leave it alone.
+                if (!IsHorizontalLayout)
                     _graphics.PreferredBackBufferHeight /= 2;
             }
 

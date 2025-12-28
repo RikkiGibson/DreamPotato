@@ -328,7 +328,7 @@ partial class UserInterface
             if (message is null)
                 return;
 
-            var rectangle = presenter.ContentRectangle;
+            var rectangle = presenter.Bounds;
             var textSize = ImGui.CalcTextSize(message, wrapWidth: rectangle.Width);
             ImGui.SetNextWindowPos(new Numerics.Vector2(x: rectangle.X + 2, y: rectangle.Y + rectangle.Height - textSize.Y - Game1.MenuBarHeight));
             ImGui.SetNextWindowSize(textSize + new Numerics.Vector2(10, 20));

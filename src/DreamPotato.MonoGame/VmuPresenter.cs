@@ -65,7 +65,12 @@ class VmuPresenter
     internal readonly Texture2D _vmuMarginTexture;
 
     private Matrix _spriteTransformMatrix;
-    internal Rectangle ContentRectangle { get; private set; }
+
+    /// <summary>The size of the VMU screen and icons, scaled to fit within <see cref="Bounds"/>.</summary>
+    internal Point ContentSize { get; private set; }
+
+    /// <summary>The entire screen region, including margins, which bounds the VMU content.</summary>
+    internal Rectangle Bounds { get; private set; }
 
     private int SleepHeldFrameCount;
     internal GamePadState PreviousGamepad { get; private set; }
@@ -299,12 +304,18 @@ class VmuPresenter
         float heightScale = (float)Math.Floor(
             (float)targetRectangle.Height / TotalContentHeight * MinVmuScale) / MinVmuScale;
 
-        float minScale = Math.Min(widthScale, heightScale);
-        Matrix scaleTransform = preserveAspectRatio
-            ? Matrix.CreateScale(minScale, minScale, 1)
-            : Matrix.CreateScale(widthScale, heightScale, 1);
+        if (preserveAspectRatio)
+        {
+            float minScale = Math.Min(widthScale, heightScale);
+            (widthScale, heightScale) = (minScale, minScale);
+        }
+
+        Matrix scaleTransform = Matrix.CreateScale(widthScale, heightScale, 1);
+        float idealWidth = widthScale * TotalContentWidth;
+        float idealHeight = heightScale * TotalContentHeight;
         _spriteTransformMatrix = scaleTransform * getTranslationTransform();
-        ContentRectangle = targetRectangle;
+        ContentSize = new Point((int)idealWidth, (int)idealHeight);
+        Bounds = targetRectangle;
 
         Matrix getTranslationTransform()
         {
@@ -313,14 +324,8 @@ class VmuPresenter
             // __|----|__ ideal
             // We are calculating the quantity denoted by '__' in the above sketch
             // Since we're using nearest neighbor scaling, we need to round to nearest integer, to keep it from looking blocky.
-            float idealWidthScale = preserveAspectRatio ? minScale : widthScale;
-            float idealWidth = idealWidthScale * TotalContentWidth;
             var xPosition = targetRectangle.X + (float)Math.Round((targetRectangle.Width - idealWidth) / 2);
-
-            // Do the same process for the vertical position
             // TODO(spi): consider if vertical centering is desirable here or just limiting the height of the 'targetRectangle' would be better
-            float idealHeightScale = preserveAspectRatio ? minScale : heightScale;
-            float idealHeight = idealHeightScale * TotalContentHeight;
             var yPosition = targetRectangle.Y + (float)Math.Round((targetRectangle.Height - idealHeight) / 2);
 
             return Matrix.CreateTranslation(xPosition, yPosition, zPosition: 0);
