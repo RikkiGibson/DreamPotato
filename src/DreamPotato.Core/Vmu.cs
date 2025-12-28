@@ -240,7 +240,7 @@ public class Vmu
     public static string GetSaveStatePath(string loadedFilePath, string id)
     {
         var filePath = $"{Path.GetFileNameWithoutExtension(loadedFilePath)}_{id}.dpstate";
-        return Path.Combine(DataFolder, filePath);
+        return Path.Combine(DataFolder, "SaveStates", filePath);
     }
 
     public bool SaveState(string id)
@@ -251,10 +251,9 @@ public class Vmu
         if (IsOtherVmuConnected)
            return false;
 
-        // TODO: it feels like it would be reasonable to zip/unzip the state implicitly.
-        // But, 194k is also not that hefty.
-        Debug.Assert(filePath.StartsWith(DataFolder, StringComparison.Ordinal));
-        Directory.CreateDirectory(DataFolder);
+        var directory = Path.GetDirectoryName(filePath);
+        Debug.Assert(directory != null && directory.StartsWith(DataFolder, StringComparison.Ordinal));
+        Directory.CreateDirectory(directory);
         using var fileStream = File.Create(filePath);
         using var zipArchive = new ZipArchive(fileStream, ZipArchiveMode.Create);
         zipArchive.Comment = SaveStateHeaderMessage;
