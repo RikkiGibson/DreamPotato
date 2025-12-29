@@ -74,11 +74,6 @@ jobs:
 
       - name: dotnet publish win-x64
         run: dotnet publish src/DreamPotato.MonoGame -r win-x64
-      - name: Upload win-x64
-        uses: actions/upload-artifact@v4
-        with:
-          name: DreamPotato-Windows-x64-dev
-          path: artifacts/publish/DreamPotato.MonoGame/release_win-x64/
 
       - name: Sign files
         uses: azure/trusted-signing-action@v0
@@ -94,6 +89,12 @@ jobs:
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
+
+      - name: Upload win-x64
+        uses: actions/upload-artifact@v4
+        with:
+          name: DreamPotato-Windows-x64-dev
+          path: artifacts/publish/DreamPotato.MonoGame/release_win-x64/
 
   PublishMac:
     runs-on: macos-latest
