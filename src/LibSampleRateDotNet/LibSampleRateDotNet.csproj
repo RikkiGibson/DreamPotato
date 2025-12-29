@@ -9,12 +9,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="DreamPotato.Tests" />
-    <InternalsVisibleTo Include="DreamPotato.SaveStateDiff" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="../LibSampleRateDotNet/LibSampleRateDotNet.csproj" />
+    <Content Include="samplerate.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,13 @@
+--config
+generate-helper-types
+multi-file
+--file
+include/samplerate.h
+--methodClassName
+LibSampleRate
+--namespace
+LibSampleRateDotNet
+--output
+lib/
+-l
+samplerate.dll

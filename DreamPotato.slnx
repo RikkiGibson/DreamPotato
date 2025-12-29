@@ -9,5 +9,6 @@
     <Project Path="src/DreamPotato.MonoGame/DreamPotato.MonoGame.csproj" />
     <Project Path="src/DreamPotato.SaveStateDiff/DreamPotato.SaveStateDiff.csproj" />
     <Project Path="src/DreamPotato.Tests/DreamPotato.Tests.csproj" />
+    <Project Path="src/LibSampleRateDotNet/LibSampleRateDotNet.csproj" />
   </Folder>
 </Solution>

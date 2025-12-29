@@ -1,7 +1,11 @@
 using System.Buffers.Binary;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Text;
 
 using DreamPotato.Core.SFRs;
+
+using LibSampleRateDotNet;
 
 namespace DreamPotato.Core;
 
@@ -28,11 +32,28 @@ public class Audio
     /// </summary>
     private readonly byte[] _pcmBuffer = new byte[2 * PcmBufferFilledSize];
 
+    // Note: if we ever care about tearing down these instances, then, 'Audio' and its containers should probably be IDisposable
+    private unsafe SRC_STATE_tag* srcState;
+
     internal Audio(Cpu cpu, Logger logger)
     {
         _cpu = cpu;
         _logger = logger;
         Volume = DefaultVolume;
+        unsafe
+        {
+            int error = 0;
+            srcState = LibSampleRate.src_new(
+                LibSampleRate.SRC_SINC_MEDIUM_QUALITY,
+                channels: 1,
+                &error);
+
+            if (srcState == null)
+            {
+                var errorString = Marshal.PtrToStringUTF8((IntPtr)LibSampleRate.src_strerror(error));
+                throw new Exception($"LibSampleRate error: {errorString}");
+            }
+        }
     }
 
     /// <summary>
@@ -176,6 +197,7 @@ public class Audio
         if (_pcmBufferIndex >= PcmBufferFilledSize)
         {
             _logger.LogDebug($"Submitting audio buffer of length {_pcmBufferIndex}", LogCategories.Audio);
+            // TODO: actually resample, using the src_process and src_short_to_float_array and similar helper functions.
             AudioBufferReady?.Invoke(new(_pcmBuffer, Start: 0, Length: _pcmBufferIndex));
             _pcmBufferIndex = 0;
             _pcmRemainder = 0;
