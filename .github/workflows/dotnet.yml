@@ -62,7 +62,6 @@ jobs:
 
   PublishWindows:
     runs-on: windows-latest
-    environment: WindowsSigned
     steps:
       - uses: actions/checkout@v4
       - name: Setup .NET
