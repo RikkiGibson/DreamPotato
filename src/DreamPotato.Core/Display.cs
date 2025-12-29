@@ -72,20 +72,45 @@ public class Display(Cpu cpu)
             for (int right = 0; right < 0xc; right++, index++)
                 _bytes[index] = xram1[left | right];
         }
+
+        if (cpu.SFRs.P7.DreamcastConnected)
+        {
+            // Connected to Dreamcast, so the image is meant to be viewed "upside-down".
+            _bytes.Reverse();
+            for (int i = 0; i < _bytes.Length; i++)
+                _bytes[i] = BitHelpers.ReverseBits(_bytes[i]);
+        }
     }
 
     /// <summary>Get a string representation of the display contents for testing.</summary>
-    public string GetBlockString()
+    public string ToTestDisplayString()
     {
         Draw();
 
         // Each character represents 2 bits, each from a row adjacent vertically.
-        var builder = new StringBuilder(capacity: ScreenHeight / 2 * (ScreenWidth + Environment.NewLine.Length));
         const int BytesPerRow = ScreenWidth / 8;
 
-        // Read corresponding bits from 2 rows
+        // Find the last row pair which contains non-blank pixels
+        // so we can truncate the trailing blank lines
+        var lastNonBlankRowPair = -1;
         for (int row = 0; row < ScreenHeight; row += 2)
         {
+            for (int i = 0; i < BytesPerRow; i++)
+            {
+                var upper = _bytes[row * BytesPerRow + i];
+                var lower = _bytes[(row + 1) * BytesPerRow + i];
+                if (upper != 0 || lower != 0)
+                {
+                    lastNonBlankRowPair = row;
+                }
+            }
+        }
+
+        var builder = new StringBuilder(capacity: lastNonBlankRowPair / 2 * (ScreenWidth + 1 /* for leading '|' */ + Environment.NewLine.Length));
+        // Read corresponding bits from 2 rows (where at least one is non-blank)
+        for (int row = 0; row <= lastNonBlankRowPair; row += 2)
+        {
+            builder.Append('|');
             for (int i = 0; i < BytesPerRow; i++)
             {
                 var upper = _bytes[row * BytesPerRow + i];
@@ -104,7 +129,22 @@ public class Display(Cpu cpu)
                     builder.Append(ch);
                 }
             }
-            builder.AppendLine();
+
+            var endIndex = builder.Length - 1;
+            var lineStartIndex = endIndex - ScreenWidth;
+            Debug.Assert(builder[lineStartIndex] == '|');
+            for (int i = endIndex; i >= lineStartIndex; i--)
+            {
+                if (builder[i] != ' ')
+                {
+                    // Trim trailing blank pixels in this row pair
+                    builder.Length = i + 1;
+                    break;
+                }
+            }
+
+            if (row != lastNonBlankRowPair)
+                builder.AppendLine();
         }
 
         return builder.ToString();

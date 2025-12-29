@@ -38,6 +38,7 @@
     <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.4" />
     <PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.4" />
     <PackageReference Include="NativeFileDialogSharp" Version="0.6.0-alpha" />
+    <PackageReference Include="Humanizer" Version="3.0.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../DreamPotato.Core/DreamPotato.Core.csproj" />

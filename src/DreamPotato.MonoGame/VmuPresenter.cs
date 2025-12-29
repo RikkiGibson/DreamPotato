@@ -4,6 +4,7 @@ namespace DreamPotato.MonoGame;
 using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 
 using DreamPotato.Core;
 
@@ -27,27 +28,34 @@ class VmuPresenter
         get;
         set
         {
-            if (Vmu.IsDocked && value)
+            if (Vmu.IsDockedToDreamcast && value)
                 throw new InvalidOperationException();
 
             field = value;
         }
     }
 
-    /// <summary>Are we paused either locally or globally?</summary>
+    /// <summary>Are we paused either locally or globally (UI)?</summary>
     internal bool EffectivePaused
         // A docked VMU should never be treated as paused because it is always responsive to the connected Dreamcast, in terms of LCD messages, saving/loading data, etc.
-        => !Vmu.IsDocked && (LocalPaused || _game1.GlobalPaused);
+        => !Vmu.IsDockedToDreamcast && (LocalPaused || _game1.UIPaused);
+
+    internal void ToggleLocalPause()
+    {
+        Debug.Assert(!Vmu.IsDockedToDreamcast);
+        LocalPaused = !LocalPaused;
+    }
 
     internal bool EffectiveFastForwarding
         // A docked VMU should never be treated as fast forwarding for the same reason it is not treated as paused.
-        => !Vmu.IsDocked && _game1.IsFastForwarding;
+        => !Vmu.IsDockedToDreamcast && _game1.IsFastForwarding;
 
     private bool IsFastForwarding => _game1.IsFastForwarding;
 
     private readonly Color[] _vmuScreenData = new Color[Display.ScreenWidth * Display.ScreenHeight];
     private readonly DynamicSoundEffectInstance _dynamicSound;
     internal ButtonChecker ButtonChecker { get; private set; }
+    internal int GamePadIndex { get; private set; }
 
     internal readonly Vmu Vmu;
     internal readonly IconTextures IconTextures;
@@ -57,10 +65,15 @@ class VmuPresenter
     internal readonly Texture2D _vmuMarginTexture;
 
     private Matrix _spriteTransformMatrix;
-    internal Rectangle ContentRectangle { get; private set; }
+
+    /// <summary>The size of the VMU screen and icons, scaled to fit within <see cref="Bounds"/>.</summary>
+    internal Point ContentSize { get; private set; }
+
+    /// <summary>The entire screen region, including margins, which bounds the VMU content.</summary>
+    internal Rectangle Bounds { get; private set; }
 
     private int SleepHeldFrameCount;
-
+    internal GamePadState PreviousGamepad { get; private set; }
     private const int MinVmuScale = 3;
     private const int ScaledWidth = Display.ScreenWidth * MinVmuScale;
     private const int ScaledHeight = Display.ScreenHeight * MinVmuScale;
@@ -96,23 +109,28 @@ class VmuPresenter
     internal void UpdateButtonChecker(InputMappings inputMappings)
     {
         ButtonChecker = new ButtonChecker(inputMappings);
+        GamePadIndex = inputMappings.GamePadIndex;
     }
 
-    internal void Update(GameTime gameTime, KeyboardState previousKeys, GamePadState previousGamepad, KeyboardState keyboard, GamePadState gamepad)
+    internal void Update(KeyboardState previousKeys, KeyboardState keyboard)
     {
-        if (!Vmu.IsDocked && ButtonChecker.IsNewlyPressed(VmuButton.Pause, previousKeys, keyboard, previousGamepad, gamepad))
+        var gamepad = GamePad.GetState(index: GamePadIndex);
+        if (!Vmu.IsDockedToDreamcast && ButtonChecker.IsNewlyPressed(VmuButton.Pause, previousKeys, keyboard, PreviousGamepad, gamepad))
             LocalPaused = !LocalPaused;
 
-        if (ButtonChecker.IsNewlyPressed(VmuButton.SaveState, previousKeys, keyboard, previousGamepad, gamepad))
-            Vmu.SaveState(id: "0");
+        if (ButtonChecker.IsNewlyPressed(VmuButton.SaveState, previousKeys, keyboard, PreviousGamepad, gamepad))
+            _game1.UserInterface.SaveStateWithThumbnail(this);
 
-        if (ButtonChecker.IsNewlyPressed(VmuButton.LoadState, previousKeys, keyboard, previousGamepad, gamepad))
+        if (ButtonChecker.IsNewlyPressed(VmuButton.LoadState, previousKeys, keyboard, PreviousGamepad, gamepad))
         {
-            if (Vmu.LoadStateById(id: "0", saveOopsFile: true) is (false, var error))
+            if (Vmu.LoadStateById(id: _game1.Configuration.CurrentSaveStateSlot.ToString(), saveOopsFile: true) is (false, var error))
             {
-                _game1.UserInterface.ShowToast(error ?? $"An unknown error occurred in {nameof(Vmu.LoadStateById)}.");
+                _game1.UserInterface.ShowToast(this, error ?? $"An unknown error occurred in {nameof(Vmu.LoadStateById)}.");
             }
         }
+
+        if (ButtonChecker.IsNewlyPressed(VmuButton.TakeScreenshot, previousKeys, keyboard, PreviousGamepad, gamepad))
+            TakeScreenshot();
 
         var newP3 = new Core.SFRs.P3()
         {
@@ -143,7 +161,7 @@ class VmuPresenter
         }
 
         if (SleepHeldFrameCount >= SleepToggleInsertEjectFrameCount
-            || ButtonChecker.IsNewlyPressed(VmuButton.InsertEject, previousKeys, keyboard, previousGamepad, gamepad))
+            || ButtonChecker.IsNewlyPressed(VmuButton.InsertEject, previousKeys, keyboard, PreviousGamepad, gamepad))
         {
             // Do not toggle insert/eject via sleep until sleep button is released and re-pressed
             SleepHeldFrameCount = -1;
@@ -157,6 +175,12 @@ class VmuPresenter
         }
 
         Vmu._cpu.SFRs.P3 = newP3;
+        PreviousGamepad = gamepad;
+    }
+
+    internal void UpdateAndRun(GameTime gameTime, KeyboardState previousKeys, KeyboardState keyboard)
+    {
+        Update(previousKeys, keyboard);
 
         var rate = EffectivePaused ? 0 :
             IsFastForwarding ? gameTime.ElapsedGameTime.Ticks * 2 :
@@ -173,25 +197,13 @@ class VmuPresenter
 
     internal void Draw(SpriteBatch spriteBatch)
     {
-        var screenData = Vmu.Display.GetBytes();
-        int i = 0;
-        foreach (byte b in screenData)
-        {
-            _vmuScreenData[i++] = ReadColor(b, 7);
-            _vmuScreenData[i++] = ReadColor(b, 6);
-            _vmuScreenData[i++] = ReadColor(b, 5);
-            _vmuScreenData[i++] = ReadColor(b, 4);
-            _vmuScreenData[i++] = ReadColor(b, 3);
-            _vmuScreenData[i++] = ReadColor(b, 2);
-            _vmuScreenData[i++] = ReadColor(b, 1);
-            _vmuScreenData[i++] = ReadColor(b, 0);
-        }
+        UpdateScreenData(_vmuScreenData, Vmu.Display.GetBytes(), ColorPalette);
         _vmuScreenTexture.SetData(_vmuScreenData);
 
         // Use nearest neighbor scaling for the screen content
         spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: _spriteTransformMatrix);
 
-        var vmuIsEjected = !Vmu.IsDocked;
+        var vmuIsEjected = !Vmu.IsDockedToDreamcast;
         var screenSize = new Point(x: ScaledWidth, y: ScaledHeight);
         var screenRectangle = vmuIsEjected
             ? new Rectangle(new Point(x: SideMargin, y: TopMargin), screenSize)
@@ -200,12 +212,7 @@ class VmuPresenter
         spriteBatch.Draw(
             _vmuScreenTexture,
             destinationRectangle: screenRectangle,
-            sourceRectangle: null,
-            color: Color.White,
-            rotation: 0,
-            origin: default,
-            effects: vmuIsEjected ? SpriteEffects.None : (SpriteEffects.FlipHorizontally | SpriteEffects.FlipVertically),
-            layerDepth: 0);
+            color: Color.White);
         spriteBatch.End();
 
         // Draw icons
@@ -254,10 +261,26 @@ class VmuPresenter
         }
 
         spriteBatch.End();
+    }
+
+    internal static void UpdateScreenData(Color[] dest, ReadOnlySpan<byte> src, ColorPalette colorPalette)
+    {
+        int i = 0;
+        foreach (byte b in src)
+        {
+            dest[i++] = ReadColor(b, 7);
+            dest[i++] = ReadColor(b, 6);
+            dest[i++] = ReadColor(b, 5);
+            dest[i++] = ReadColor(b, 4);
+            dest[i++] = ReadColor(b, 3);
+            dest[i++] = ReadColor(b, 2);
+            dest[i++] = ReadColor(b, 1);
+            dest[i++] = ReadColor(b, 0);
+        }
 
         Color ReadColor(byte b, byte bitAddress)
         {
-            return BitHelpers.ReadBit(b, bitAddress) ? ColorPalette.Screen1 : ColorPalette.Screen0;
+            return BitHelpers.ReadBit(b, bitAddress) ? colorPalette.Screen1 : colorPalette.Screen0;
         }
     }
 
@@ -276,12 +299,18 @@ class VmuPresenter
         float heightScale = (float)Math.Floor(
             (float)targetRectangle.Height / TotalContentHeight * MinVmuScale) / MinVmuScale;
 
-        float minScale = Math.Min(widthScale, heightScale);
-        Matrix scaleTransform = preserveAspectRatio
-            ? Matrix.CreateScale(minScale, minScale, 1)
-            : Matrix.CreateScale(widthScale, heightScale, 1);
+        if (preserveAspectRatio)
+        {
+            float minScale = Math.Min(widthScale, heightScale);
+            (widthScale, heightScale) = (minScale, minScale);
+        }
+
+        Matrix scaleTransform = Matrix.CreateScale(widthScale, heightScale, 1);
+        float idealWidth = widthScale * TotalContentWidth;
+        float idealHeight = heightScale * TotalContentHeight;
         _spriteTransformMatrix = scaleTransform * getTranslationTransform();
-        ContentRectangle = targetRectangle;
+        ContentSize = new Point((int)idealWidth, (int)idealHeight);
+        Bounds = targetRectangle;
 
         Matrix getTranslationTransform()
         {
@@ -290,14 +319,8 @@ class VmuPresenter
             // __|----|__ ideal
             // We are calculating the quantity denoted by '__' in the above sketch
             // Since we're using nearest neighbor scaling, we need to round to nearest integer, to keep it from looking blocky.
-            float idealWidthScale = preserveAspectRatio ? minScale : widthScale;
-            float idealWidth = idealWidthScale * TotalContentWidth;
             var xPosition = targetRectangle.X + (float)Math.Round((targetRectangle.Width - idealWidth) / 2);
-
-            // Do the same process for the vertical position
             // TODO(spi): consider if vertical centering is desirable here or just limiting the height of the 'targetRectangle' would be better
-            float idealHeightScale = preserveAspectRatio ? minScale : heightScale;
-            float idealHeight = idealHeightScale * TotalContentHeight;
             var yPosition = targetRectangle.Y + (float)Math.Round((targetRectangle.Height - idealHeight) / 2);
 
             return Matrix.CreateTranslation(xPosition, yPosition, zPosition: 0);
@@ -314,9 +337,30 @@ class VmuPresenter
 
     internal void DockOrEject()
     {
-        Vmu.DockOrEject();
+        Vmu.DockOrEjectToDreamcast();
         // Unpause when docking, so that we will be unpaused already when ejecting.
-        if (Vmu.IsDocked)
+        if (Vmu.IsDockedToDreamcast)
             LocalPaused = false;
+    }
+
+    internal void UpdateScreenTexture(Texture2D texture)
+    {
+        texture.SetData(_vmuScreenData);
+    }
+
+    internal void TakeScreenshot()
+    {
+        var now = DateTimeOffset.Now;
+        var timeDescription = now.ToString($"yyyy-MM-dd_HH-mm-ss");
+        var baseName = Path.GetFileNameWithoutExtension(Vmu.LoadedFilePath) ?? "DreamPotato";
+
+        var screenshotsFolder = Path.Combine(Vmu.DataFolder, "Screenshots");
+        Directory.CreateDirectory(screenshotsFolder);
+
+        var filePath = Path.Combine(screenshotsFolder, $"{baseName}_{timeDescription}.png");
+        using var outFile = File.Create(Path.Combine(Vmu.DataFolder, filePath));
+        _vmuScreenTexture.SaveAsPng(outFile, _vmuScreenTexture.Width, _vmuScreenTexture.Height);
+        var displayPath = Path.GetRelativePath(AppContext.BaseDirectory, filePath);
+        _game1.UserInterface.ShowScreenshotToast(this, $"Screenshot saved to {displayPath}", durationFrames: 3 * 60);
     }
 }

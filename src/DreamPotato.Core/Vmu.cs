@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Diagnostics;
+using System.IO.Compression;
 using System.Text;
 
 using DreamPotato.Core.SFRs;
@@ -166,7 +167,7 @@ public class Vmu
 
     public void SaveVmuAs(string filePath)
     {
-        if (IsDocked)
+        if (IsDockedToDreamcast)
             _cpu.ResyncMapleInbound();
 
         var fileStream = File.Open(filePath, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite);
@@ -174,7 +175,7 @@ public class Vmu
         LoadedFilePath = filePath;
         _cpu.HasUnsavedChanges = false;
         _cpu.VmuFileWriteStream = fileStream;
-        if (IsDocked)
+        if (IsDockedToDreamcast)
             _cpu.ResyncMapleOutbound();
     }
 
@@ -187,47 +188,88 @@ public class Vmu
     }
 
     /// <summary>Indicates whether the VMU is docked in the Dreamcast controller.</summary>
-    public bool IsDocked => _cpu.SFRs.P7.DreamcastConnected;
+    public bool IsDockedToDreamcast => _cpu.SFRs.P7.DreamcastConnected;
+
+    /// <summary>Indicates whether the VMU is connected to another VMU for serial I/O.</summary>
+    public bool IsOtherVmuConnected => _cpu.SFRs.P7.VmuConnected;
 
     // Toggle the docked/ejected state.
-    public void DockOrEject()
-        => _cpu.ConnectDreamcast(connect: !IsDocked);
+    public void DockOrEjectToDreamcast()
+        => DockOrEjectToDreamcast(connect: !IsDockedToDreamcast);
 
     // Dock or eject depending on a bool argument.
-    public void DockOrEject(bool connect)
-        => _cpu.ConnectDreamcast(connect);
+    public void DockOrEjectToDreamcast(bool connect)
+    {
+        if (IsOtherVmuConnected)
+        {
+            Debug.Assert(!IsDockedToDreamcast);
+            _cpu.DisconnectVmu();
+        }
+
+        _cpu.ConnectDreamcast(connect);
+    }
+
+    public void ConnectOrDisconnectVmu(Vmu other)
+    {
+        if (IsDockedToDreamcast)
+        {
+            Debug.Assert(!IsOtherVmuConnected);
+            _cpu.ConnectDreamcast(connect: false);
+        }
+
+        if (other.IsDockedToDreamcast)
+        {
+            Debug.Assert(!other.IsOtherVmuConnected);
+            other._cpu.ConnectDreamcast(connect: false);
+        }
+
+        if (IsOtherVmuConnected)
+            _cpu.DisconnectVmu();
+        else
+            _cpu.ConnectVmu(other._cpu);
+    }
 
     public static string DataFolder => Path.Combine(AppContext.BaseDirectory, "Data");
 
     public DreamcastSlot DreamcastSlot { get => _cpu.DreamcastSlot; set => _cpu.DreamcastSlot = value; }
 
     public const string RomFileName = "american_v1.05.bin";
-    public const string SaveStateHeaderMessage = "DreamPotatoSaveState";
-    public static readonly ReadOnlyMemory<byte> SaveStateHeaderBytes = Encoding.UTF8.GetBytes(SaveStateHeaderMessage);
-    public const int SaveStateVersion = 3;
+    public const string SaveStateHeaderMessage = $"DreamPotatoSaveStateV{SaveStateVersion}";
+    public const string SaveStateVersion = "4";
 
-    private static string GetSaveStatePath(string loadedFilePath, string id)
+    public static string GetSaveStatePath(string loadedFilePath, string id)
     {
         var filePath = $"{Path.GetFileNameWithoutExtension(loadedFilePath)}_{id}.dpstate";
-        return Path.Combine(DataFolder, filePath);
+        return Path.Combine(DataFolder, "SaveStates", filePath);
     }
 
     public bool SaveState(string id)
     {
-        if (LoadedFilePath is null ||  GetSaveStatePath(LoadedFilePath, id) is not string filePath)
+        if (LoadedFilePath is null || GetSaveStatePath(LoadedFilePath, id) is not string filePath)
             return false;
 
-        // TODO: it feels like it would be reasonable to zip/unzip the state implicitly.
-        // But, 194k is also not that hefty.
-        Debug.Assert(filePath.StartsWith(DataFolder, StringComparison.Ordinal));
-        Directory.CreateDirectory(DataFolder);
-        using var writeStream = File.Create(filePath);
-        writeStream.Write(SaveStateHeaderBytes.Span);
+        if (IsOtherVmuConnected)
+           return false;
 
-        Span<byte> bytes = [0, 0, 0, 0];
-        BinaryPrimitives.WriteInt32LittleEndian(bytes, SaveStateVersion);
-        writeStream.Write(bytes);
-        _cpu.SaveState(writeStream);
+        var directory = Path.GetDirectoryName(filePath);
+        Debug.Assert(directory != null && directory.StartsWith(DataFolder, StringComparison.Ordinal));
+        Directory.CreateDirectory(directory);
+        using var fileStream = File.Create(filePath);
+        using var zipArchive = new ZipArchive(fileStream, ZipArchiveMode.Create);
+        zipArchive.Comment = SaveStateHeaderMessage;
+
+        // Save thumbnail
+        var thumbnailBytes = Display.GetBytes();
+        using (var thumbnailStream = zipArchive.CreateEntry(SaveState_ThumbnailFile).Open())
+        {
+            thumbnailStream.Write(thumbnailBytes);
+        }
+
+        using (var cpuStateStream = zipArchive.CreateEntry(SaveState_CpuStateFile).Open())
+        {
+            _cpu.SaveState(cpuStateStream);
+        }
+
         return true;
     }
 
@@ -246,8 +288,14 @@ public class Vmu
         return LoadStateFromPath(filePath, saveOopsFile);
     }
 
+    public const string SaveState_ThumbnailFile = "Thumbnail.bin";
+    public const string SaveState_CpuStateFile = "CpuState.bin";
+
     public (bool success, string? error) LoadStateFromPath(string filePath, bool saveOopsFile)
     {
+        if (IsOtherVmuConnected)
+            return (false, "Cannot load state while connected to other VMU.");
+
         if (saveOopsFile)
         {
             if (!SaveOopsFile())
@@ -257,24 +305,24 @@ public class Vmu
         try
         {
             using var readStream = File.OpenRead(filePath);
+            using var zipArchive = new ZipArchive(readStream);
+            if (zipArchive.Comment != SaveStateHeaderMessage)
+                return (success: false, $"Outdated '{zipArchive.Comment}' is not supported. '{SaveStateHeaderMessage}'.");
 
-            byte[] buffer = new byte[SaveStateHeaderBytes.Length];
-            readStream.ReadExactly(buffer);
-            if (!buffer.SequenceEqual(SaveStateHeaderBytes.Span))
-                return (success: false, $"Unsupported save state. Bad header data: '{Encoding.UTF8.GetString(buffer)}'");
+            if (zipArchive.GetEntry(SaveState_CpuStateFile) is not { } cpuStateEntry)
+                return (success: false, $"'{SaveState_CpuStateFile}' not found.");
 
-            byte[] versionBytes = new byte[4];
-            readStream.ReadExactly(versionBytes);
-            int version = BinaryPrimitives.ReadInt32LittleEndian(versionBytes);
-            if (version != SaveStateVersion)
-                return (success: false, $"Unsupported save state version '{version}'. Version '{SaveStateVersion}' needed.");
-
-            _cpu.LoadState(readStream);
+            using var cpuStateStream = cpuStateEntry.Open();
+            _cpu.LoadState(cpuStateStream);
             return (true, null);
         }
         catch (FileNotFoundException)
         {
             return (false, $"Could not load state because '{filePath}' was not found.");
+        }
+        catch (InvalidDataException)
+        {
+            return (false, $"Invalid or outdated save state: '{filePath}'");
         }
     }
 }

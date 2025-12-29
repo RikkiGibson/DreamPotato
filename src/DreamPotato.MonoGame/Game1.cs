@@ -44,11 +44,13 @@ public class Game1 : Game
 
     // Dynamic state
     private KeyboardState _previousKeys;
-    private GamePadState _previousGamepad;
 
-    /// <summary>Global pause flag.</summary>
-    internal bool GlobalPaused;
+    /// <summary>
+    /// Pause flag for UI. Pauses all VMUs when true, while preserving pause state for after UI is closed.
+    /// </summary>
+    internal bool UIPaused;
 
+    internal Rectangle PrimaryMenuBarRectangle;
     /// <summary>Note: comprises the whole screen region which secondary VMU menus can expand into.</summary>
     internal Rectangle SecondaryMenuBarRectangle;
     /// <summary>Only meaningful when <see cref="UseSecondaryVmu"/> is true.</summary>
@@ -83,11 +85,12 @@ public class Game1 : Game
             IconClockTexture = Content.Load<Texture2D>("VMUIconClock"),
             IconIOTexture = Content.Load<Texture2D>("VMUIconIO"),
             IconSleepTexture = Content.Load<Texture2D>("VMUIconSleep"),
-            IconConnectedTexture = Content.Load<Texture2D>("DreamcastConnectedIcon"),
+            IconDreamcastConnectedTexture = Content.Load<Texture2D>("DreamcastConnectedIcon"),
+            IconVmusConnectedTexture = Content.Load<Texture2D>("VmusConnectedIcon"),
         };
 
         _userInterface = new UserInterface(this);
-        _userInterface.Initialize(textures.IconConnectedTexture);
+        _userInterface.Initialize(textures.IconDreamcastConnectedTexture, textures.IconVmusConnectedTexture);
 
         MapleMessageBroker = new MapleMessageBroker(LogLevel.Default);
         MapleMessageBroker.RestartServer(Configuration.DreamcastPort);
@@ -107,12 +110,12 @@ public class Game1 : Game
         UpdateScaleMatrix();
         UpdateAudioVolume();
 
-        Debug.Assert(!primaryVmu.IsDocked && !secondaryVmu.IsDocked);
+        Debug.Assert(!primaryVmu.IsDockedToDreamcast && !secondaryVmu.IsDockedToDreamcast);
         var connectionState = Configuration.VmuConnectionState;
-        primaryVmu.DockOrEject(connect: connectionState is VmuConnectionState.PrimaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
-        secondaryVmu.DockOrEject(connect: connectionState is VmuConnectionState.SecondaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
+        primaryVmu.DockOrEjectToDreamcast(connect: connectionState is VmuConnectionState.PrimaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
+        secondaryVmu.DockOrEjectToDreamcast(connect: connectionState is VmuConnectionState.SecondaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
         // Secondary must not be docked if primary is associated with slot 2
-        Debug.Assert(!(primaryVmu.DreamcastSlot == DreamcastSlot.Slot2 && secondaryVmu.IsDocked));
+        Debug.Assert(!(primaryVmu.DreamcastSlot == DreamcastSlot.Slot2 && secondaryVmu.IsDockedToDreamcast));
 
         if (Configuration.WindowPosition is { } windowPosition)
         {
@@ -155,7 +158,7 @@ public class Game1 : Game
         {
             ViewportSize = new ViewportSize(viewport.Width, viewport.Height),
             WindowPosition = new WindowPosition(position.X, position.Y),
-            VmuConnectionState = (PrimaryVmu.IsDocked, SecondaryVmu?.IsDocked) switch
+            VmuConnectionState = (PrimaryVmu.IsDockedToDreamcast, SecondaryVmu?.IsDockedToDreamcast) switch
             {
                 (true, true) => VmuConnectionState.PrimaryAndSecondaryDocked,
                 (true, false or null) => VmuConnectionState.PrimaryDocked,
@@ -227,7 +230,15 @@ public class Game1 : Game
             var otherVmu = vmu == PrimaryVmu ? SecondaryVmu : PrimaryVmu;
             if (otherVmu?.LoadedFilePath == filePath)
             {
-                _userInterface.ShowToast($"Cannot open {Path.GetFileName(filePath)} because it is already open on the other VMU.");
+                _userInterface.ShowToast(presenter, $"Cannot open {Path.GetFileName(filePath)} because it is already open on the other VMU.");
+                return false;
+            }
+
+            if (!File.Exists(filePath))
+            {
+                _userInterface.ShowToast(presenter, $"File not found: {Path.GetFileName(filePath)}");
+                RecentFilesInfo = RecentFilesInfo with { RecentFiles = [..RecentFilesInfo.RecentFiles.Where(path => path != filePath)] };
+                RecentFilesInfo.Save();
                 return false;
             }
 
@@ -261,6 +272,12 @@ public class Game1 : Game
         Configuration = Configuration with { AnyButtonWakesFromSleep = newValue };
     }
 
+    internal void Configuration_CurrentSaveStateSlotChanged(int newValue)
+    {
+        Configuration = Configuration with { CurrentSaveStateSlot = newValue };
+        Configuration.Save();
+    }
+
     internal void Configuration_PreserveAspectRatioChanged(bool newValue)
     {
         Configuration = Configuration with { PreserveAspectRatio = newValue };
@@ -292,23 +309,21 @@ public class Game1 : Game
         // Note that changing 'Configuration.ExpansionSlots' affects the nullability of 'SecondaryVmu'.
 
         // The secondary VMU must not be docked when the primary is associated with slot 2, otherwise they will stomp on each other's data
-        Debug.Assert(!(PrimaryVmu.DreamcastSlot == DreamcastSlot.Slot2 && SecondaryVmu?.IsDocked == true));
-        var wasDocked = PrimaryVmu.IsDocked;
-        if (wasDocked)
-            PrimaryVmu.DockOrEject();
+        Debug.Assert(!(PrimaryVmu.DreamcastSlot == DreamcastSlot.Slot2 && SecondaryVmu?.IsDockedToDreamcast == true));
+        var wasDocked = PrimaryVmu.IsDockedToDreamcast;
+        PrimaryVmu.DockOrEjectToDreamcast(connect: false);
 
-        var secondaryWasDocked = SecondaryVmu?.IsDocked == true;
-        if (secondaryWasDocked)
-            SecondaryVmu!.DockOrEject();
+        var secondaryWasDocked = SecondaryVmu?.IsDockedToDreamcast == true;
+        SecondaryVmu?.DockOrEjectToDreamcast(connect: false);
 
         Configuration = Configuration with { ExpansionSlots = newExpansionSlots };
         PrimaryVmu.DreamcastSlot = Configuration.ExpansionSlots is ExpansionSlots.Slot1 or ExpansionSlots.Slot1And2 ? DreamcastSlot.Slot1 : DreamcastSlot.Slot2;
 
         if (wasDocked)
-            PrimaryVmu.DockOrEject();
+            PrimaryVmu.DockOrEjectToDreamcast();
 
         if (secondaryWasDocked)
-            SecondaryVmu?.DockOrEject();
+            SecondaryVmu?.DockOrEjectToDreamcast();
 
         // Adjust the window size if changing from single slot to 2 slots.
         var usingBothSlots = newExpansionSlots == ExpansionSlots.Slot1And2;
@@ -316,13 +331,44 @@ public class Game1 : Game
         {
             if (usingBothSlots)
             {
-                _graphics.PreferredBackBufferHeight *= 2;
+                //  ┌──────────────────────────────┐      ┬ H
+                //  │                              │      │
+                //  │    ┌────────────────────┐    │  ┬ h │
+                //  │    │                    │    │  │   │
+                //  │    │                    │    │  │   │
+                //  │    │                    │    │  │   │
+                //  │    │                    │    │  │   │
+                //  │    │                    │    │  │   │
+                //  │    │ ContentSize        │    │  │   │
+                //  │    └────────────────────┘    │  ┴   │
+                //  │ Viewport.Bounds              │      │
+                //  └──────────────────────────────┘      ┴
+                //        w
+                //       ├────────────────────┤
+                //   W
+                //  ├──────────────────────────────┤
+                var viewportBounds = GraphicsDevice.Viewport.Bounds;
+                var W = viewportBounds.Width;
+                var H = viewportBounds.Height;
+
+                var primaryVmuSize = PrimaryVmuPresenter.ContentSize;
+                var w = primaryVmuSize.X;
+                var h = primaryVmuSize.Y;
+
+                var safeArea = _graphics.GraphicsDevice.DisplayMode.TitleSafeArea;
+                var wGrow = 2*w - W;
+                var hGrow = 2*h - H;
+                // Grow either width or height by the smallest amount necessary
+                // to avoid shrinking the existing VMU. Do not shrink the window.
+                if (hGrow > wGrow)
+                    _graphics.PreferredBackBufferWidth = Math.Max(W, Math.Min(safeArea.Width, 2*w + 2*MenuBarHeight));
+                else
+                    _graphics.PreferredBackBufferHeight = Math.Max(H, Math.Min(safeArea.Height, 2*h + 2*MenuBarHeight));
             }
             else
             {
-                if (IsHorizontalLayout)
-                    _graphics.PreferredBackBufferWidth /= 2;
-                else
+                // Shrink if we were using a vertical layout. Otherwise leave it alone.
+                if (!IsHorizontalLayout)
                     _graphics.PreferredBackBufferHeight /= 2;
             }
 
@@ -358,16 +404,16 @@ public class Game1 : Game
         Configuration.Save();
     }
 
-    internal void Configuration_DoneEditingButtonMappings(ImmutableArray<ButtonMapping> buttonMappings, bool forPrimary)
+    internal void Configuration_DoneEditingButtonMappings(ImmutableArray<ButtonMapping> buttonMappings, int gamePadIndex, bool forPrimary)
     {
         if (forPrimary)
         {
-            Configuration = Configuration with { PrimaryInput = Configuration.PrimaryInput with { ButtonMappings = buttonMappings } };
+            Configuration = Configuration with { PrimaryInput = Configuration.PrimaryInput with { ButtonMappings = buttonMappings, GamePadIndex = gamePadIndex } };
             _primaryVmuPresenter.UpdateButtonChecker(Configuration.PrimaryInput);
         }
         else
         {
-            Configuration = Configuration with { SecondaryInput = Configuration.SecondaryInput with { ButtonMappings = buttonMappings } };
+            Configuration = Configuration with { SecondaryInput = Configuration.SecondaryInput with { ButtonMappings = buttonMappings, GamePadIndex = gamePadIndex } };
             _secondaryVmuPresenter.UpdateButtonChecker(Configuration.SecondaryInput);
         }
 
@@ -394,6 +440,7 @@ public class Game1 : Game
 
         if (!UseSecondaryVmu)
         {
+            PrimaryMenuBarRectangle = viewport.Bounds;
             _primaryVmuPresenter.UpdateScaleMatrix(contentRectangle, Configuration.PreserveAspectRatio);
             return;
         }
@@ -403,26 +450,28 @@ public class Game1 : Game
         IsHorizontalLayout = Configuration.PreserveAspectRatio &&
             (float)contentRectangle.Height / VmuPresenter.TotalContentHeight < (float)contentRectangle.Width / VmuPresenter.TotalContentWidth;
 
-        (var slot1Rectangle, SecondaryMenuBarRectangle, var slot2Rectangle) = IsHorizontalLayout ? layoutHorizontal(contentRectangle) : layoutVertical(contentRectangle);
+        (PrimaryMenuBarRectangle, var slot1Rectangle, SecondaryMenuBarRectangle, var slot2Rectangle) = IsHorizontalLayout ? layoutHorizontal(contentRectangle) : layoutVertical(contentRectangle);
 
         _primaryVmuPresenter.UpdateScaleMatrix(slot1Rectangle, Configuration.PreserveAspectRatio);
         _secondaryVmuPresenter.UpdateScaleMatrix(slot2Rectangle, Configuration.PreserveAspectRatio);
 
-        static (Rectangle slot1Rectangle, Rectangle secondaryMenuBarRectangle, Rectangle slot2Rectangle) layoutHorizontal(Rectangle contentRectangle)
+        static (Rectangle primaryMenuBarRectangle, Rectangle slot1Rectangle, Rectangle secondaryMenuBarRectangle, Rectangle slot2Rectangle) layoutHorizontal(Rectangle contentRectangle)
         {
             var slot1Rectangle = contentRectangle with { Width = contentRectangle.Width / 2 };
-            var secondaryMenuBarRectangle = new Rectangle(x: slot1Rectangle.X + slot1Rectangle.Width, y: 0, width: slot1Rectangle.Width, height: MenuBarHeight + slot1Rectangle.Height);
+            var primaryMenuBarRectangle = new Rectangle(x: 0, y: 0, width: slot1Rectangle.Width, height: MenuBarHeight + slot1Rectangle.Height);
+            var secondaryMenuBarRectangle = primaryMenuBarRectangle with { X = primaryMenuBarRectangle.Width };
             var slot2Rectangle = contentRectangle with { Width = contentRectangle.Width / 2, X = slot1Rectangle.X + slot1Rectangle.Width };
-            return (slot1Rectangle, secondaryMenuBarRectangle, slot2Rectangle);
+            return (primaryMenuBarRectangle, slot1Rectangle, secondaryMenuBarRectangle, slot2Rectangle);
         }
 
-        static (Rectangle slot1Rectangle, Rectangle secondaryMenuBarRectangle, Rectangle slot2Rectangle) layoutVertical(Rectangle contentRectangle)
+        static (Rectangle primaryMenuBarRectangle, Rectangle slot1Rectangle, Rectangle secondaryMenuBarRectangle, Rectangle slot2Rectangle) layoutVertical(Rectangle contentRectangle)
         {
             // When a vertical layout is used, extra space needs to be reserved for a 2nd menu bar
             var slot1Rectangle = contentRectangle with { Height = (contentRectangle.Height - MenuBarHeight) / 2 };
-            var secondaryMenuBarRectangle = new Rectangle(x: 0, y: slot1Rectangle.Y + slot1Rectangle.Height, width: slot1Rectangle.Width, height: MenuBarHeight + slot1Rectangle.Height);
+            var primaryMenuBarRectangle = new Rectangle(x: 0, y: 0, width: slot1Rectangle.Width, height: MenuBarHeight + slot1Rectangle.Height);
+            var secondaryMenuBarRectangle = primaryMenuBarRectangle with { Y = primaryMenuBarRectangle.Height };
             var slot2Rectangle = contentRectangle with { Height = slot1Rectangle.Height, Y = secondaryMenuBarRectangle.Y + MenuBarHeight };
-            return (slot1Rectangle, secondaryMenuBarRectangle, slot2Rectangle);
+            return (primaryMenuBarRectangle, slot1Rectangle, secondaryMenuBarRectangle, slot2Rectangle);
         }
     }
 
@@ -471,16 +520,22 @@ public class Game1 : Game
     protected override void Update(GameTime gameTime)
     {
         var keyboard = Keyboard.GetState();
-        var gamepad = GamePad.GetState(PlayerIndex.One);
 
-        _primaryVmuPresenter.Update(gameTime, _previousKeys, _previousGamepad, keyboard, gamepad);
         if (UseSecondaryVmu)
-            _secondaryVmuPresenter.Update(gameTime, _previousKeys, _previousGamepad, keyboard, gamepad);
+        {
+            // For a VMU-to-VMU connection, the secondary should 'Update' only.
+            // In that case, the primary will run both CPUs in sync in its 'UpdateAndRun' call.
+            if (PrimaryVmu.IsOtherVmuConnected)
+                _secondaryVmuPresenter.Update(_previousKeys, keyboard);
+            else
+                _secondaryVmuPresenter.UpdateAndRun(gameTime, _previousKeys, keyboard);
+        }
+
+        _primaryVmuPresenter.UpdateAndRun(gameTime, _previousKeys, keyboard);
 
         MapleMessageBroker.RefreshIfNeeded();
 
         _previousKeys = keyboard;
-        _previousGamepad = gamepad;
         base.Update(gameTime);
     }
 
@@ -489,13 +544,13 @@ public class Game1 : Game
     {
         get
         {
-            if (GlobalPaused)
+            if (UIPaused)
                 return false;
 
-            if (_primaryVmuPresenter.ButtonChecker.IsPressed(VmuButton.FastForward, _previousKeys, _previousGamepad))
+            if (_primaryVmuPresenter.ButtonChecker.IsPressed(VmuButton.FastForward, _previousKeys, _primaryVmuPresenter.PreviousGamepad))
                 return true;
 
-            if (SecondaryVmuPresenter?.ButtonChecker.IsPressed(VmuButton.FastForward, _previousKeys, _previousGamepad) == true)
+            if (SecondaryVmuPresenter?.ButtonChecker.IsPressed(VmuButton.FastForward, _previousKeys, SecondaryVmuPresenter.PreviousGamepad) == true)
                 return true;
 
             return false;

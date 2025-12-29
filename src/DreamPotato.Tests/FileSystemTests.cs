@@ -15,7 +15,7 @@ public class FileSystemTests
         verifyRootBlock();
         verifyFATBlock();
 
-        fileSystem.WriteGameFile(HelloWorldTest.s_instructions, "HelloWorld", date);
+        fileSystem.WriteGameFile(File.ReadAllBytes("TestSource/helloworld.vms"), "HelloWorld", date);
 
         void verifyRootBlock()
         {
@@ -84,7 +84,7 @@ public class FileSystemTests
         var flash = new byte[Cpu.FlashSize];
         var fileSystem = new FileSystem(flash);
         fileSystem.InitializeFileSystem(date);
-        fileSystem.WriteGameFile(HelloWorldTest.s_instructions, "HelloWorld", date);
+        fileSystem.WriteGameFile(File.ReadAllBytes("TestSource/helloworld.vms"), "HelloWorld", date);
 
         var fatEntry = fileSystem.GetBlock(FileSystem.FATBlockId);
         ReadOnlySpan<byte> expectedFATStart = [
