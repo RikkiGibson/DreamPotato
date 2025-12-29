@@ -86,7 +86,7 @@ public class Game1 : Game
             IconIOTexture = Content.Load<Texture2D>("VMUIconIO"),
             IconSleepTexture = Content.Load<Texture2D>("VMUIconSleep"),
             IconDreamcastConnectedTexture = Content.Load<Texture2D>("DreamcastConnectedIcon"),
-            IconVmusConnectedTexture = Content.Load<Texture2D>("VmusConnectedIcon"),
+            IconVmusConnectedTexture = Content.Load<Texture2D>("VMUsConnectedIcon"),
         };
 
         _userInterface = new UserInterface(this);
