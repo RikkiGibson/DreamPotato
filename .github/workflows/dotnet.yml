@@ -41,7 +41,7 @@ jobs:
         list-suites: failed
         list-tests: failed
 
-  Publish:
+  PublishLinux:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -52,15 +52,6 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
 
-    # Windows
-    - name: dotnet publish win-x64
-      run: dotnet publish src/DreamPotato.MonoGame -r win-x64
-    - name: Upload win-x64
-      uses: actions/upload-artifact@v4
-      with:
-        name: DreamPotato-Windows-x64-dev
-        path: artifacts/publish/DreamPotato.MonoGame/release_win-x64/
-
     - name: dotnet publish linux-x64
       run: dotnet publish src/DreamPotato.MonoGame -r linux-x64
     - name: Upload Linux x64
@@ -68,6 +59,42 @@ jobs:
       with:
         name: DreamPotato-Linux-x64-dev
         path: artifacts/publish/DreamPotato.MonoGame/release_linux-x64/
+
+  PublishWindows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+      - name: Download resources
+        run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.MonoGame/Data/american_v1.05.bin
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: dotnet publish win-x64
+        run: dotnet publish src/DreamPotato.MonoGame -r win-x64
+
+      - if: ${{ github.event_name != 'pull_request' }}
+        name: Sign files
+        uses: azure/trusted-signing-action@v0
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: https://wus2.codesigning.azure.net
+          trusted-signing-account-name: DreamPotatoSigning
+          certificate-profile-name: DreamPotatoPublicCert
+          files-folder: artifacts/publish/DreamPotato.MonoGame/release_win-x64/
+          files-folder-filter: exe,dll
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Upload win-x64
+        uses: actions/upload-artifact@v4
+        with:
+          name: DreamPotato-Windows-x64-dev
+          path: artifacts/publish/DreamPotato.MonoGame/release_win-x64/
 
   PublishMac:
     runs-on: macos-latest
