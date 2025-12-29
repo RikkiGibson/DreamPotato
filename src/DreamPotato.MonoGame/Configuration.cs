@@ -121,7 +121,7 @@ public record Configuration(
     ];
 
     public static readonly ImmutableArray<KeyMapping> DefaultPrimaryKeyPreset = [.. KeyPreset_WASD, .. KeyPreset_MappedStateCommands];
-    public static readonly ImmutableArray<KeyMapping> DefaultSecondaryKeyPreset = [.. KeyPreset_WASD, .. KeyPreset_UnmappedStateCommands];
+    public static readonly ImmutableArray<KeyMapping> DefaultSecondaryKeyPreset = [.. KeyPreset_Arrows, .. KeyPreset_UnmappedStateCommands];
 
     public static readonly ImmutableArray<(string name, string description, ImmutableArray<KeyMapping> mappings)> AllPrimaryKeyPresets = [
         ("WASD", "Uses WASD for D-pad and IJKL for buttons", DefaultPrimaryKeyPreset),
