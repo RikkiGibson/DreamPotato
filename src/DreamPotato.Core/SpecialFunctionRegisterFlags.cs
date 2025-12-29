@@ -322,7 +322,7 @@ public struct Vccr
     }
 }
 
-/// <summary>SIO0 control register. VMD-103</summary>
+/// <summary>SIO0 control register. Controls the sending side of serial transfer. VMD-103</summary>
 public struct Scon0
 {
     private byte _value;
@@ -367,7 +367,7 @@ public struct Scon0
     /// 0: LSB first
     /// 1: MSB first
     /// </summary>
-    public bool LSBFirstSequence
+    public bool MSBFirstSequence
     {
         get => BitHelpers.ReadBit(_value, bit: 2);
         set => BitHelpers.WriteBit(ref _value, bit: 2, value);
@@ -376,6 +376,8 @@ public struct Scon0
     /// <summary>
     /// 0: Transfer in progress
     /// 1: Transfer ended
+    /// The transfer end flag becomes "1" after 8 bits (1 byte) have been transferred,
+    /// regardless of the transfer bit length control setting.
     /// </summary>
     public bool TransferEndFlag
     {
@@ -393,7 +395,7 @@ public struct Scon0
     }
 }
 
-/// <summary>SIO1 control register. VMD-103</summary>
+/// <summary>SIO1 control register. Controls the receiving side of serial transfer. VMD-103</summary>
 public struct Scon1
 {
     private byte _value;
@@ -432,7 +434,7 @@ public struct Scon1
     /// 0: LSB first
     /// 1: MSB first
     /// </summary>
-    public bool LSBFirstSequence
+    public bool MSBFirstSequence
     {
         get => BitHelpers.ReadBit(_value, bit: 2);
         set => BitHelpers.WriteBit(ref _value, bit: 2, value);
@@ -471,9 +473,55 @@ public struct P1
         get => BitHelpers.ReadBit(_value, bit: 7);
         set => BitHelpers.WriteBit(ref _value, bit: 7, value);
     }
+
+    /// <summary>SIO1 clock pin</summary>
+    public bool SCK1
+    {
+        get => BitHelpers.ReadBit(_value, bit: 5);
+        set => BitHelpers.WriteBit(ref _value, bit: 5, value);
+    }
+
+    public bool SB1
+    {
+        get => BitHelpers.ReadBit(_value, bit: 4);
+        set => BitHelpers.WriteBit(ref _value, bit: 4, value);
+    }
+
+    /// <summary>SIO1 output pin</summary>
+    public bool SO1
+    {
+        get => BitHelpers.ReadBit(_value, bit: 3);
+        set => BitHelpers.WriteBit(ref _value, bit: 3, value);
+    }
+
+    /// <summary>SIO0 clock pin</summary>
+    public bool SCK0
+    {
+        get => BitHelpers.ReadBit(_value, bit: 2);
+        set => BitHelpers.WriteBit(ref _value, bit: 2, value);
+    }
+
+    public bool SB0
+    {
+        get => BitHelpers.ReadBit(_value, bit: 1);
+        set => BitHelpers.WriteBit(ref _value, bit: 1, value);
+    }
+
+    /// <summary>SIO0 output pin</summary>
+    public bool SO0
+    {
+        get => BitHelpers.ReadBit(_value, bit: 0);
+        set => BitHelpers.WriteBit(ref _value, bit: 0, value);
+    }
 }
 
 /// <summary>Port 1 function control register. VMD-59</summary>
+/// <remarks>
+/// To use the function assigned to port 1, the corresponding port latch must be reset to "0".
+// For example, to use PWM, set P17FCR to "1" and reset P17 to "0".
+// The instructions BPC, DBNZ, INC, DEC, SET1, CLR1, NOT1 read port latch data. Other instructions
+// read data assigned to the port.
+/// </remarks>
 public struct P1Fcr
 {
     private byte _value;
@@ -481,10 +529,81 @@ public struct P1Fcr
     public P1Fcr(byte value) => _value = value;
     public static explicit operator byte(P1Fcr value) => value._value;
 
+    /// <summary>
+    /// Controls the value of <see cref="P1.PulseOutput"/>.
+    /// When true, the sum of PWM signal and port latch is output.
+    /// When false, the port latch is output.
+    /// </summary>
     public bool SelectPulseOutput
     {
         get => BitHelpers.ReadBit(_value, bit: 7);
         set => BitHelpers.WriteBit(ref _value, bit: 7, value);
+    }
+
+    /// <summary>
+    /// Controls the clock assigned to P15 for serial transfer 1.
+    /// When true, the sum of SCK1 and port latch data is output.
+    /// When false, the port latch data is output.
+    /// </summary>
+    public bool SelectP15
+    {
+        get => BitHelpers.ReadBit(_value, bit: 5);
+        set => BitHelpers.WriteBit(ref _value, bit: 5, value);
+    }
+
+    /// <summary>
+    /// Controls the data assigned to P14 for serial transfer 1.
+    /// When true, the sum of SB1 and port latch data is output.
+    /// When false, the port latch data is output.
+    /// </summary>
+    public bool SelectP14
+    {
+        get => BitHelpers.ReadBit(_value, bit: 4);
+        set => BitHelpers.WriteBit(ref _value, bit: 4, value);
+    }
+
+    /// <summary>
+    /// Controls the data assigned to P13 for serial transfer 1.
+    /// When true, the sum of S01 and port latch data is output.
+    /// When false, the port latch data is output.
+    /// </summary>
+    public bool SelectP13
+    {
+        get => BitHelpers.ReadBit(_value, bit: 3);
+        set => BitHelpers.WriteBit(ref _value, bit: 3, value);
+    }
+
+    /// <summary>
+    /// Controls the clock assigned to P12 for serial transfer 0.
+    /// When true, the sum of SCK0 and port latch data is output.
+    /// When false, the port latch data is output.
+    /// </summary>
+    public bool SelectP12
+    {
+        get => BitHelpers.ReadBit(_value, bit: 2);
+        set => BitHelpers.WriteBit(ref _value, bit: 2, value);
+    }
+
+    /// <summary>
+    /// Controls the data assigned to P11 for serial transfer 0.
+    /// When true, the sum of SB0 and port latch data is output.
+    /// When false, the port latch data is output.
+    /// </summary>
+    public bool SelectP11
+    {
+        get => BitHelpers.ReadBit(_value, bit: 1);
+        set => BitHelpers.WriteBit(ref _value, bit: 1, value);
+    }
+
+    /// <summary>
+    /// Controls the data assigned to P10 for serial transfer 1.
+    /// When true, the sum of S00 and port latch data is output.
+    /// When false, the port latch data is output.
+    /// </summary>
+    public bool SelectP10
+    {
+        get => BitHelpers.ReadBit(_value, bit: 0);
+        set => BitHelpers.WriteBit(ref _value, bit: 0, value);
     }
 }
 
@@ -580,6 +699,15 @@ public struct P7
     {
         get => BitHelpers.ReadBit(_value, bit: 0);
         set => BitHelpers.WriteBit(ref _value, bit: 0, value);
+    }
+
+    /// <summary>Is another VMU connected for serial IO?</summary>
+    public bool VmuConnected
+    {
+        get => this is { DreamcastConnected: false, IP0: false, IP1: true };
+        set => this = value
+            ? this with { DreamcastConnected = false, IP0 = false, IP1 = true }
+            : this with { IP1 = false };
     }
 }
 

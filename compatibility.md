@@ -20,7 +20,7 @@ Statuses:
   <tr>
     <td>Chao Adventure (Sonic Adventure)</td>
     <td>🟡</td>
-    <td>The basics appear to work. Not thoroughly tested.</td>
+    <td>The basics appear to work. VMU-to-VMU connections can freeze the game. Not thoroughly tested.</td>
   </tr>
   <tr>
     <td>Chao Adventure 2 (Sonic Adventure 2)</td>
@@ -41,6 +41,10 @@ Statuses:
     <td>Power Stone Mini (Power Stone)</td>
     <td>🟢</td>
     <td>Plays well. Speed is reasonably close to real hardware, though some audio timings are off.</td>
+  </tr>
+    <td>Power Stone Mini Book (Power Stone 2)</td>
+    <td>🟡</td>
+    <td>Runs, but VMU-to-VMU connectivity doesn't work.</td>
   </tr>
   <tr>
     <td>Soul Calibur 3-in-1 (Soul Calibur)</td>

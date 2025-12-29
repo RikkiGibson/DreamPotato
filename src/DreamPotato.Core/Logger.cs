@@ -28,6 +28,7 @@ public enum LogCategories
     SystemClock = 1 << 5,
     Audio = 1 << 6,
     Maple = 1 << 7,
+    SerialTransfer = 1 << 8,
 }
 
 public class Logger(LogLevel _minimumLogLevel, LogCategories _categories, Cpu? _cpu = null)
@@ -37,7 +38,12 @@ public class Logger(LogLevel _minimumLogLevel, LogCategories _categories, Cpu? _
     private readonly Cpu? _cpu = _cpu;
 
     // Rolling buffer of log messages.
-    private readonly string?[] _messages = new string[1000];
+    private readonly string?[] _messages
+#if DEBUG
+    = new string[50000];
+#else
+    = new string[1000];
+#endif
     private int _nextMessageIndex = 0;
 
     // TODO: CallerFilePath, CallerLineNumber
@@ -78,7 +84,7 @@ public class Logger(LogLevel _minimumLogLevel, LogCategories _categories, Cpu? _
             return;
 
         var timestamp = DateTimeOffset.Now;
-        var cpuDescription = _cpu is null ? $"" : (DefaultInterpolatedStringHandler)$" {_cpu.InstructionBank}@[{_cpu.Pc:X4}]";
+        var cpuDescription = _cpu is null ? $"" : (DefaultInterpolatedStringHandler)$" {_cpu.DisplayName}.{_cpu.InstructionBank}@[{_cpu.Pc:X4}]";
         string message = $"{timestamp.TimeOfDay}{cpuDescription.ToStringAndClear()}: [{level}] {handler.ToStringAndClear()}";
         if (level is LogLevel.Debug or LogLevel.Warning)
             Console.WriteLine(message);
@@ -98,17 +104,11 @@ public class Logger(LogLevel _minimumLogLevel, LogCategories _categories, Cpu? _
         var startIndex = _nextMessageIndex - recentCount;
         for (int i = 0; i < recentCount; i++)
         {
-            var currentIndex = modPositive(startIndex + i, _messages.Length);
+            var currentIndex = BitHelpers.ModPositive(startIndex + i, _messages.Length);
             if (_messages[currentIndex] is string message)
                 result.Add(message);
         }
 
         return result;
-
-        static int modPositive(int x, int m)
-        {
-            Debug.Assert(m > 0);
-            return (x % m + m) % m;
-        }
     }
 }

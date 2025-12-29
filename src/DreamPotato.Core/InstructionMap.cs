@@ -4,7 +4,7 @@ namespace DreamPotato.Core;
 
 // TODO: ideally we would use this map to maintain info on which regions of ROM are executable or not
 // we could then feed this info back into reverse engineering tools
-readonly struct InstructionMap()
+class InstructionMap(Logger _logger)
 {
     private readonly Instruction[][] _instructionBanks = [
         new Instruction[64 * 1024], // ROM
@@ -43,7 +43,7 @@ readonly struct InstructionMap()
             for (var i = offset + 1; i < end; i++)
             {
                 if (instructions[i].HasValue)
-                    throw new InvalidOperationException($"Cannot store instruction '{value}' because map already contains overlapping '{instructions[i]}'");
+                    _logger.LogError($"Error storing instruction '{value}'. Map already contains overlapping '{instructions[i]}'", LogCategories.Instructions);
             }
 
             // Ensure not overlapping with an earlier instruction
@@ -51,7 +51,7 @@ readonly struct InstructionMap()
             {
                 var inst = instructions[i];
                 if (inst.HasValue && i + inst.Size > offset)
-                    throw new InvalidOperationException($"Cannot store instruction '{value}' because map already contains overlapping '{instructions[i]}'");
+                    _logger.LogError($"Error storing instruction '{value}'. Map already contains overlapping '{instructions[i]}'", LogCategories.Instructions);
             }
 
             instructions[offset] = value;

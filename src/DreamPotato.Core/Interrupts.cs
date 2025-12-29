@@ -43,7 +43,7 @@ enum Interrupts : ushort
     INT2_T0L = 1 << 2,
 
     /// <summary>
-    /// External ID1 or internal Base timer overflow
+    /// External ID1 (VMU-to-VMU connection) or internal Base timer overflow
     /// </summary>
     INT3_BT = 1 << 3,
 
