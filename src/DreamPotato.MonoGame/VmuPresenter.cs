@@ -338,7 +338,15 @@ class VmuPresenter
     internal void DockOrEject()
     {
         Vmu.DockOrEjectToDreamcast();
-        // Unpause when docking, so that we will be unpaused already when ejecting.
+        // Pausing is disallowed while docked
+        if (Vmu.IsDockedToDreamcast)
+            LocalPaused = false;
+    }
+
+    internal void DockOrEject(bool dock)
+    {
+        Vmu.DockOrEjectToDreamcast(dock);
+        // Pausing is disallowed while docked
         if (Vmu.IsDockedToDreamcast)
             LocalPaused = false;
     }
