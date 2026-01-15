@@ -15,10 +15,14 @@ namespace DreamPotato.MonoGame;
 /// If true, skips the date initialization on startup.
 /// Specify false to get the real hardware behavior, like when batteries are first inserted in the VMU.
 /// </param>
+/// <param name="AutoDockEject">
+/// If true, automatically docks and ejects the VMU when a Dreamcast emulator is connected/disconnected.
+/// </param>
 public record Configuration(
     bool AutoInitializeDate = true,
     bool AnyButtonWakesFromSleep = true,
     bool PreserveAspectRatio = true,
+    bool AutoDockEject = true,
     int Volume = Audio.DefaultVolume,
     bool MuteSecondaryVmuAudio = true,
     string? ColorPaletteName = null,

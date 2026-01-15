@@ -112,12 +112,15 @@ public class MapleMessageBroker
     /// <summary>Called once per frame in order to "batch" refresh messages to the client.</summary>
     public void RefreshIfNeeded()
     {
-        if (_clientNeedsRefresh)
+        lock (_lock)
         {
-            // Send a message telling client to re-query devices
-            var written = _outboundMessages.Writer.TryWrite(MapleMessage.ResetMessage);
-            Debug.Assert(written); // Channel is unbounded, this should always succeed
-            _clientNeedsRefresh = false;
+            if (_clientNeedsRefresh)
+            {
+                // Send a message telling client to re-query devices
+                var written = _outboundMessages.Writer.TryWrite(MapleMessage.ResetMessage);
+                Debug.Assert(written); // Channel is unbounded, this should always succeed
+                _clientNeedsRefresh = false;
+            }
         }
     }
 
@@ -128,7 +131,7 @@ public class MapleMessageBroker
     }
 
     /// <summary>Can be called by threads besides the socket server thread.</summary>
-    internal bool IsConnected
+    public bool IsConnected
     {
         get
         {
