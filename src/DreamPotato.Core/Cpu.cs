@@ -1026,11 +1026,13 @@ public class Cpu
                     if (t1cnt.T1lRun)
                     {
                         var t1l = SFRs.T1L;
-                        if (t1cnt.ELDT1C)
+                        var pulseCompare = SFRs.PulseGeneratorCompare;
+                        // Pulse value needs to be greater than reload to generate sound
+                        // Otherwise the signal will be stuck at low
+                        // if (pulseCompare > SFRs.T1Lr)
                         {
                             var cpuClockHz = SFRs.Ocr.CpuClockHz;
-                            var t1lc = SFRs.T1Lc;
-                            var p1 = SFRs.P1 with { PulseOutput = t1lc <= t1l };
+                            var p1 = SFRs.P1 with { PulseOutput = t1l >= pulseCompare };
                             Audio.AddPulse(cpuClockHz, p1.PulseOutput);
                             SFRs.P1 = p1;
                         }
@@ -1039,6 +1041,9 @@ public class Cpu
                         if (t1l == 0)
                         {
                             t1l = SFRs.T1Lr;
+                            if (t1cnt.ELDT1C)
+                                SFRs.PulseGeneratorCompare = SFRs.T1Lc;
+
                             t1cnt.T1lOvf = true;
                             if (t1cnt.T1lIe)
                                 RequestedInterrupts |= Interrupts.T1;

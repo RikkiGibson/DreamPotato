@@ -1362,7 +1362,8 @@ public struct T1Cnt
     }
 
     /// <summary>
-    /// When enabled, PWM audio signal is output on <see cref="P1.PulseOutput"/>.
+    /// When enabled, <see cref="SpecialFunctionRegisters.PulseGeneratorCompare" /> is updated
+    /// from <see cref="SpecialFunctionRegisters.T1Lc"/> when the timer is reloaded.
     /// </summary>
     public bool ELDT1C
     {

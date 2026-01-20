@@ -18,6 +18,12 @@ public class SpecialFunctionRegisters
     /// </summary>
     private byte _t1hr, _t1lr;
 
+    /// <summary>
+    /// Pulse width for sound output.
+    /// When <see cref="T1Cnt.ELDT1C"/> is enabled, this is updated from <see cref="T1Lc"/> upon reload.
+    /// </summary>
+    internal byte PulseGeneratorCompare { get; set; }
+
     private readonly byte[] _rawMemory = new byte[Size];
     private readonly Cpu _cpu;
     private readonly byte[] _workRam;
@@ -287,11 +293,15 @@ public class SpecialFunctionRegisters
                 var oldT1cnt = new T1Cnt(_rawMemory[address]);
                 var t1cnt = new T1Cnt(value);
                 if (oldT1cnt.T1lRun != t1cnt.T1lRun)
+                {
                     T1L = T1Lr;
+                    if (t1cnt.ELDT1C)
+                        PulseGeneratorCompare = T1Lc;
+                }
 
                 // After writing new t1cnt value, potentially signal that audio playback should start
                 _rawMemory[address] = value;
-                _cpu.Audio.IsActive = t1cnt is { ELDT1C: true, T1lRun: true };
+                _cpu.Audio.IsActive = t1cnt.T1lRun;
                 return;
 
             case Ids.Sbuf0:
