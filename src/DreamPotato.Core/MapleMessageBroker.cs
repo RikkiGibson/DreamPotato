@@ -555,12 +555,14 @@ public class MapleMessageBroker
     {
         try
         {
-            using var listener = new Socket(SocketType.Stream, ProtocolType.Tcp);
-            listener.Bind(new IPEndPoint(IPAddress.IPv6Loopback, BasePort + (int)dreamcastPort));
-            listener.Listen(backlog: 1);
-
             while (true) // Accept a new client whenever one disconnects
             {
+                // Create listening socket
+                using var listener = new Socket(SocketType.Stream, ProtocolType.Tcp);
+                listener.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                listener.Bind(new IPEndPoint(IPAddress.IPv6Loopback, BasePort + (int)dreamcastPort));
+                listener.Listen(backlog: 1);
+
                 Logger.LogDebug("Waiting for client to connect", LogCategories.Maple);
                 var clientSocket = await listener.AcceptAsync(cancellationToken);
                 Logger.LogDebug("Client connected", LogCategories.Maple);
@@ -568,6 +570,7 @@ public class MapleMessageBroker
                 {
                     _clientSocket = clientSocket;
                 }
+                listener.Close();
 
                 var clientCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 await waitForClientDisconnectAsync(clientSocket, clientCancellationSource.Token);
