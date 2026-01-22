@@ -557,7 +557,7 @@ public class MapleMessageBroker
         {
             using var listener = new Socket(SocketType.Stream, ProtocolType.Tcp);
             listener.Bind(new IPEndPoint(IPAddress.IPv6Loopback, BasePort + (int)dreamcastPort));
-            listener.Listen(backlog: 1);
+            listener.Listen();
 
             while (true) // Accept a new client whenever one disconnects
             {
@@ -569,10 +569,7 @@ public class MapleMessageBroker
                     _clientSocket = clientSocket;
                 }
 
-                var clientCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                await waitForClientDisconnectAsync(clientSocket, clientCancellationSource.Token);
-                // Ensure all socket tasks are completed or canceled
-                clientCancellationSource.Cancel();
+                await handleOneClientAsync(listener, clientSocket, cancellationToken);
 
                 lock (_lock)
                 {
@@ -580,7 +577,7 @@ public class MapleMessageBroker
                     _clientSocket = null;
                 }
 
-                OnDisconnect();
+                onDisconnect();
             }
         }
         catch (Exception ex)
@@ -589,8 +586,21 @@ public class MapleMessageBroker
             throw;
         }
 
-        async Task waitForClientDisconnectAsync(Socket clientSocket, CancellationToken cancellationToken)
+        async Task handleOneClientAsync(Socket listener, Socket clientSocket, CancellationToken cancellationToken)
         {
+            var clientCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cancellationToken = clientCancellationSource.Token;
+
+            // Immediately drop other connections while the current client is connected
+            _ = Task.Run(async () =>
+            {
+                while (true)
+                {
+                    var droppedClient = await listener.AcceptAsync(cancellationToken);
+                    await droppedClient.DisconnectAsync(reuseSocket: false, cancellationToken);
+                }
+            }, cancellationToken);
+
             try
             {
                 await Task.WhenAny(
@@ -606,27 +616,29 @@ public class MapleMessageBroker
                 Logger.LogError(e.Message, LogCategories.Maple);
             }
 
+            // Ensure all socket tasks are completed or canceled
+            clientCancellationSource.Cancel();
             Logger.LogDebug("Client disconnected", LogCategories.Maple);
         }
-    }
 
-    private void OnDisconnect()
-    {
-        // discard all messages from the last connection
-        while (_slot1._inboundCpuMessages.Reader.TryRead(out _)) { }
-        while (_slot2._inboundCpuMessages.Reader.TryRead(out _)) { }
-        while (_outboundMessages.Reader.TryRead(out _)) { }
-
-        var additionalWords = new int[50];
-        additionalWords[0] = (int)MapleFunction.LCD;
-        var clearScreenMessage = new MapleMessage
+        void onDisconnect()
         {
-            Type = MapleMessageType.WriteBlock,
-            AdditionalWords = additionalWords,
-        };
-        bool written = _slot1._inboundCpuMessages.Writer.TryWrite(clearScreenMessage)
-            && _slot2._inboundCpuMessages.Writer.TryWrite(clearScreenMessage);
-        Debug.Assert(written);
+            // discard all messages from the last connection
+            while (_slot1._inboundCpuMessages.Reader.TryRead(out _)) { }
+            while (_slot2._inboundCpuMessages.Reader.TryRead(out _)) { }
+            while (_outboundMessages.Reader.TryRead(out _)) { }
+
+            var additionalWords = new int[50];
+            additionalWords[0] = (int)MapleFunction.LCD;
+            var clearScreenMessage = new MapleMessage
+            {
+                Type = MapleMessageType.WriteBlock,
+                AdditionalWords = additionalWords,
+            };
+            bool written = _slot1._inboundCpuMessages.Writer.TryWrite(clearScreenMessage)
+                && _slot2._inboundCpuMessages.Writer.TryWrite(clearScreenMessage);
+            Debug.Assert(written);
+        }
     }
 
     private class VmuInfo
