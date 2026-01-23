@@ -16,7 +16,7 @@ namespace DreamPotato.MonoGame;
 /// Specify false to get the real hardware behavior, like when batteries are first inserted in the VMU.
 /// </param>
 /// <param name="AutoDockEject">
-/// If true, automatically docks and ejects the VMU when a Dreamcast emulator is connected/disconnected.
+/// If true, automatically docks/ejects the VMU when a Dreamcast emulator is connected/disconnected.
 /// </param>
 public record Configuration(
     bool AutoInitializeDate = true,
