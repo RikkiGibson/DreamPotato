@@ -1026,13 +1026,19 @@ public class Cpu
                     if (t1cnt.T1lRun)
                     {
                         var t1l = SFRs.T1L;
-                        var pulseCompare = SFRs.PulseGeneratorCompare;
-                        // Pulse value needs to be greater than reload to generate sound
-                        // Otherwise the signal will be stuck at low
-                        // if (pulseCompare > SFRs.T1Lr)
+                        var t1lc = SFRs.T1Lc;
+                        // Audio signal goes from low to high according to the following pattern:
+                        // T1Lr       T1Lc       0xff
+                        // | -------- | -------- |
+                        // T1L starts at T1Lr, and signal is low,
+                        // until it reaches T1Lc where it is high until we reload again.
+                        // For example, the highest pitch the timer can produce, is
+                        // with T1Lr=254, T1Lc=255, which alternates low and high every cycle.
+                        // If T1Lc is not greater than T1Lr, there is no point where the signal is low, and thus no sound.
+                        if (t1lc > SFRs.T1Lr)
                         {
                             var cpuClockHz = SFRs.Ocr.CpuClockHz;
-                            var p1 = SFRs.P1 with { PulseOutput = t1l >= pulseCompare };
+                            var p1 = SFRs.P1 with { PulseOutput = t1l >= t1lc };
                             Audio.AddPulse(cpuClockHz, p1.PulseOutput);
                             SFRs.P1 = p1;
                         }
@@ -1041,9 +1047,6 @@ public class Cpu
                         if (t1l == 0)
                         {
                             t1l = SFRs.T1Lr;
-                            if (t1cnt.ELDT1C)
-                                SFRs.PulseGeneratorCompare = SFRs.T1Lc;
-
                             t1cnt.T1lOvf = true;
                             if (t1cnt.T1lIe)
                                 RequestedInterrupts |= Interrupts.T1;
