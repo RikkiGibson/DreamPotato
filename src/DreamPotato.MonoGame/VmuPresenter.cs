@@ -60,7 +60,7 @@ class VmuPresenter
     internal readonly Vmu Vmu;
     internal readonly IconTextures IconTextures;
     internal readonly GraphicsDeviceManager Graphics;
-    internal readonly Texture2D _vmuScreenTexture;
+    internal Texture2D _vmuScreenTexture, _vmuScreenTexture2;
     internal readonly Texture2D _vmuBorderTexture;
     internal readonly Texture2D _vmuMarginTexture;
 
@@ -97,6 +97,8 @@ class VmuPresenter
         UpdateButtonChecker(inputMappings);
 
         _vmuScreenTexture = new Texture2D(graphics.GraphicsDevice, Display.ScreenWidth, Display.ScreenHeight);
+        _vmuScreenTexture2 = new Texture2D(graphics.GraphicsDevice, Display.ScreenWidth, Display.ScreenHeight);
+
         _vmuBorderTexture = new Texture2D(graphics.GraphicsDevice, 1, 1);
         _vmuMarginTexture = new Texture2D(graphics.GraphicsDevice, 1, 1);
 
@@ -198,6 +200,8 @@ class VmuPresenter
     internal void Draw(SpriteBatch spriteBatch)
     {
         UpdateScreenData(_vmuScreenData, Vmu.Display.GetBytes(), ColorPalette);
+        (_vmuScreenTexture, _vmuScreenTexture2) = (_vmuScreenTexture2, _vmuScreenTexture);
+        _vmuScreenTexture = new Texture2D(_game1.GraphicsDevice, Display.ScreenWidth, Display.ScreenHeight);
         _vmuScreenTexture.SetData(_vmuScreenData);
 
         // Use nearest neighbor scaling for the screen content
