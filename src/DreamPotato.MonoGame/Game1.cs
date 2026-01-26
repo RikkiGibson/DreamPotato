@@ -133,7 +133,7 @@ public class Game1 : Game
             var vmu = presenter.Vmu;
             vmu.InitializeFlash(date);
             if (Configuration.AutoInitializeDate)
-                vmu.InitializeDate(date);
+                vmu.InitializeRTCDate(date);
 
             vmu.LoadRom();
             if (vmsOrVmuFilePath != null && File.Exists(vmsOrVmuFilePath))
@@ -200,10 +200,11 @@ public class Game1 : Game
     internal void LoadAndStartVmsOrVmuFile(VmuPresenter presenter, string filePath)
     {
         var vmu = presenter.Vmu;
+        var date = DateTimeOffset.Now;
         var extension = Path.GetExtension(filePath);
         if (extension.Equals(".vms", StringComparison.OrdinalIgnoreCase))
         {
-            vmu.LoadGameVms(filePath, DateTime.Now);
+            vmu.LoadGameVms(filePath, date, autoInitializeRTCDate: Configuration.AutoInitializeDate);
         }
         else if (extension.Equals(".vmu", StringComparison.OrdinalIgnoreCase)
             || extension.Equals(".bin", StringComparison.OrdinalIgnoreCase))
@@ -241,7 +242,7 @@ public class Game1 : Game
                 return false;
             }
 
-            vmu.LoadVmu(filePath, DateTime.Now);
+            vmu.LoadVmu(filePath, rtcDate: Configuration.AutoInitializeDate ? date : null);
             return true;
         }
     }
