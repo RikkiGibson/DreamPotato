@@ -195,10 +195,10 @@ public class Vmu
 
     // Toggle the docked/ejected state.
     public void DockOrEjectToDreamcast()
-        => DockOrEjectToDreamcast(connect: !IsDockedToDreamcast);
+        => DockOrEjectToDreamcast(dock: !IsDockedToDreamcast);
 
     // Dock or eject depending on a bool argument.
-    public void DockOrEjectToDreamcast(bool connect)
+    public void DockOrEjectToDreamcast(bool dock)
     {
         if (IsOtherVmuConnected)
         {
@@ -206,7 +206,7 @@ public class Vmu
             _cpu.DisconnectVmu();
         }
 
-        _cpu.ConnectDreamcast(connect);
+        _cpu.ConnectDreamcast(dock);
     }
 
     public void ConnectOrDisconnectVmu(Vmu other)
