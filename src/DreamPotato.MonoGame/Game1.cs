@@ -70,7 +70,6 @@ public class Game1 : Game
     protected override void Initialize()
     {
         Configuration = Configuration.Load();
-        Configuration.Save();
         ColorPalette = ColorPalette.AllPalettes.FirstOrDefault(palette => palette.Name == Configuration.ColorPaletteName) ?? ColorPalette.AllPalettes[0];
 
         var windowSize = Configuration.ViewportSize;
