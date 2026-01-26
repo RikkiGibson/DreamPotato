@@ -1362,7 +1362,10 @@ public struct T1Cnt
     }
 
     /// <summary>
-    /// When enabled, PWM audio signal is output on <see cref="P1.PulseOutput"/>.
+    /// When enabled, a new compare value is sent to the pulse generator when T1Lc is set.
+    /// A new compare value is also sent when T1L is stopped and restarted.
+    /// User code usually stops T1L when changing the reload/compare audio parameters.
+    /// So, in practice, it's very rare for this flag to meaningfully influence audio generation.
     /// </summary>
     public bool ELDT1C
     {

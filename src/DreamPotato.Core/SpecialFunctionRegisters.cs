@@ -291,7 +291,7 @@ public class SpecialFunctionRegisters
 
                 // After writing new t1cnt value, potentially signal that audio playback should start
                 _rawMemory[address] = value;
-                _cpu.Audio.IsActive = t1cnt is { ELDT1C: true, T1lRun: true };
+                _cpu.Audio.IsActive = t1cnt.T1lRun;
                 return;
 
             case Ids.Sbuf0:

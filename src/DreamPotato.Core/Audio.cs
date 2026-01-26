@@ -153,6 +153,8 @@ public class Audio
     /// </summary>
     internal void AddPulse(int cpuClockHz, bool value)
     {
+        Debug.Assert(IsActive);
+
         // Audio playback is disabled. Don't bother synthesizing audio
         if (Volume == 0)
             return;
