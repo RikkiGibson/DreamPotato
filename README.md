@@ -21,7 +21,9 @@ See [compatibility.md](compatibility.md) for the current compatibility status of
 
 [![DreamPotato Flycast Integration Demo](./docs/images/demo-video-thumbnail.png)](https://www.youtube.com/watch?v=EN8Y3UX_TDM)
 
-DreamPotato can connect to [Flycast](https://github.com/flyinghead/flycast) to support an experience similar to using a real Dreamcast and VMU together. This now works with the [latest master branch builds of Flycast](https://flyinghead.github.io/flycast-builds/).
+DreamPotato can connect to [Flycast](https://github.com/flyinghead/flycast) to support an experience similar to using a real Dreamcast and VMU together.
+
+**NOTE**: The latest Flycast 2.6 stable release has a known issue with DreamPotato. Currently it's necessary to use a [master branch build](https://flyinghead.github.io/flycast-builds/) of Flycast. At time of writing, the build from 2026-01-28 (commit 21eb24f) is known to work.
 
 Instructions:
 1) Open the Flycast controller settings. Enable "**Use Physical VMU Memory**". Enable "**Use Network Expansion Devices**" for the controller port you want to use to connect.
