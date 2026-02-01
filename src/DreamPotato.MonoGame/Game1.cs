@@ -118,6 +118,8 @@ public class Game1 : Game
         secondaryVmu.DockOrEjectToDreamcast(dock: connectionState is VmuConnectionState.SecondaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
         // Secondary must not be docked if primary is associated with slot 2
         Debug.Assert(!(primaryVmu.DreamcastSlot == DreamcastSlot.Slot2 && secondaryVmu.IsDockedToDreamcast));
+        // Secondary must not be docked if it is not being used
+        Debug.Assert(UseSecondaryVmu || !_secondaryVmuPresenter.Vmu.IsDockedToDreamcast);
 
         if (Configuration.WindowPosition is { } windowPosition)
         {
@@ -534,8 +536,8 @@ public class Game1 : Game
         {
             if (Configuration.AutoDockEject)
             {
-                _primaryVmuPresenter.DockOrEject(isConnected);
-                _secondaryVmuPresenter.DockOrEject(isConnected);
+                PrimaryVmuPresenter.DockOrEject(isConnected);
+                SecondaryVmuPresenter?.DockOrEject(isConnected);
             }
 
             _previousIsConnected = isConnected;
