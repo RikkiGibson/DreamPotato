@@ -45,6 +45,9 @@ public class Game1 : Game
     // Dynamic state
     private KeyboardState _previousKeys;
 
+    /// <summary>Maple connection status from the previous frame.</summary>
+    private bool _previousIsConnected;
+
     /// <summary>
     /// Pause flag for UI. Pauses all VMUs when true, while preserving pause state for after UI is closed.
     /// </summary>
@@ -111,10 +114,12 @@ public class Game1 : Game
 
         Debug.Assert(!primaryVmu.IsDockedToDreamcast && !secondaryVmu.IsDockedToDreamcast);
         var connectionState = Configuration.VmuConnectionState;
-        primaryVmu.DockOrEjectToDreamcast(connect: connectionState is VmuConnectionState.PrimaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
-        secondaryVmu.DockOrEjectToDreamcast(connect: connectionState is VmuConnectionState.SecondaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
+        primaryVmu.DockOrEjectToDreamcast(dock: connectionState is VmuConnectionState.PrimaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
+        secondaryVmu.DockOrEjectToDreamcast(dock: connectionState is VmuConnectionState.SecondaryDocked or VmuConnectionState.PrimaryAndSecondaryDocked);
         // Secondary must not be docked if primary is associated with slot 2
         Debug.Assert(!(primaryVmu.DreamcastSlot == DreamcastSlot.Slot2 && secondaryVmu.IsDockedToDreamcast));
+        // Secondary must not be docked if it is not being used
+        Debug.Assert(UseSecondaryVmu || !_secondaryVmuPresenter.Vmu.IsDockedToDreamcast);
 
         if (Configuration.WindowPosition is { } windowPosition)
         {
@@ -284,6 +289,11 @@ public class Game1 : Game
         UpdateScaleMatrix();
     }
 
+    internal void Configuration_AutoDockEjectChanged(bool newValue)
+    {
+        Configuration = Configuration with { AutoDockEject = newValue };
+    }
+
     internal void Configuration_VolumeChanged(int newVolume)
     {
         Configuration = Configuration with { Volume = newVolume };
@@ -311,10 +321,10 @@ public class Game1 : Game
         // The secondary VMU must not be docked when the primary is associated with slot 2, otherwise they will stomp on each other's data
         Debug.Assert(!(PrimaryVmu.DreamcastSlot == DreamcastSlot.Slot2 && SecondaryVmu?.IsDockedToDreamcast == true));
         var wasDocked = PrimaryVmu.IsDockedToDreamcast;
-        PrimaryVmu.DockOrEjectToDreamcast(connect: false);
+        PrimaryVmu.DockOrEjectToDreamcast(dock: false);
 
         var secondaryWasDocked = SecondaryVmu?.IsDockedToDreamcast == true;
-        SecondaryVmu?.DockOrEjectToDreamcast(connect: false);
+        SecondaryVmu?.DockOrEjectToDreamcast(dock: false);
 
         Configuration = Configuration with { ExpansionSlots = newExpansionSlots };
         PrimaryVmu.DreamcastSlot = Configuration.ExpansionSlots is ExpansionSlots.Slot1 or ExpansionSlots.Slot1And2 ? DreamcastSlot.Slot1 : DreamcastSlot.Slot2;
@@ -520,6 +530,18 @@ public class Game1 : Game
     protected override void Update(GameTime gameTime)
     {
         var keyboard = Keyboard.GetState();
+
+        var isConnected = MapleMessageBroker.IsConnected;
+        if (_previousIsConnected != isConnected)
+        {
+            if (Configuration.AutoDockEject)
+            {
+                PrimaryVmuPresenter.DockOrEject(isConnected);
+                SecondaryVmuPresenter?.DockOrEject(isConnected);
+            }
+
+            _previousIsConnected = isConnected;
+        }
 
         if (UseSecondaryVmu)
         {

@@ -869,15 +869,17 @@ partial class UserInterface
             if (Checkbox("Auto-initialize date on startup", ref autoInitializeDate, paddingY: 1))
                 _game.Configuration_AutoInitializeDateChanged(autoInitializeDate);
 
-
             var anyButtonWakesFromSleep = configuration.AnyButtonWakesFromSleep;
             if (Checkbox("Any button wakes from sleep", ref anyButtonWakesFromSleep, paddingY: 1))
                 _game.Configuration_AnyButtonWakesFromSleepChanged(anyButtonWakesFromSleep);
 
-
             var preserveAspectRatio = configuration.PreserveAspectRatio;
             if (Checkbox("Preserve aspect ratio", ref preserveAspectRatio, paddingY: 1))
                 _game.Configuration_PreserveAspectRatioChanged(preserveAspectRatio);
+
+            var autoDockEject = configuration.AutoDockEject;
+            if (Checkbox("Dock/eject when Flycast connected", ref autoDockEject, paddingY: 1))
+                _game.Configuration_AutoDockEjectChanged(autoDockEject);
 
             // Volume
             ImGui.Text("Volume");

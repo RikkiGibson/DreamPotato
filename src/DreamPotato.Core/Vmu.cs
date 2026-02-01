@@ -42,23 +42,24 @@ public class Vmu
 
         _cpu.Pc = BuiltInCodeSymbols.BIOSAfterDateIsSet;
 
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Century_Bcd, FileSystem.ToBinaryCodedDecimal(date.Year / 100 % 100));
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Year_Bcd, FileSystem.ToBinaryCodedDecimal(date.Year % 100));
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Month_Bcd, FileSystem.ToBinaryCodedDecimal(date.Month));
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Day_Bcd, FileSystem.ToBinaryCodedDecimal(date.Day));
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Hour_Bcd, FileSystem.ToBinaryCodedDecimal(date.Hour));
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Minute_Bcd, FileSystem.ToBinaryCodedDecimal(date.Minute));
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Second_Bcd, FileSystem.ToBinaryCodedDecimal(date.Second));
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Year_Msb, (byte)(date.Year >> 8 & 0xff));
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Year_Lsb, (byte)(date.Year & 0xff));
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Month, (byte)date.Month);
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Day, (byte)date.Day);
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Hour, (byte)date.Hour);
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Minute, (byte)date.Minute);
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Second, (byte)date.Second);
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_HalfSecond, (byte)(date.Millisecond >= 500 ? 1 : 0));
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_LeapYear, (byte)(DateTime.IsLeapYear(date.Year) ? 1 : 0));
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_DateSet, 0xff);
+        var ramBank0 = _cpu.Memory.Direct_AccessMainRam0();
+        ramBank0[BuiltInRamSymbols.DateTime_Century_Bcd] = FileSystem.ToBinaryCodedDecimal(date.Year / 100 % 100);
+        ramBank0[BuiltInRamSymbols.DateTime_Year_Bcd] = FileSystem.ToBinaryCodedDecimal(date.Year % 100);
+        ramBank0[BuiltInRamSymbols.DateTime_Month_Bcd] = FileSystem.ToBinaryCodedDecimal(date.Month);
+        ramBank0[BuiltInRamSymbols.DateTime_Day_Bcd] = FileSystem.ToBinaryCodedDecimal(date.Day);
+        ramBank0[BuiltInRamSymbols.DateTime_Hour_Bcd] = FileSystem.ToBinaryCodedDecimal(date.Hour);
+        ramBank0[BuiltInRamSymbols.DateTime_Minute_Bcd] = FileSystem.ToBinaryCodedDecimal(date.Minute);
+        ramBank0[BuiltInRamSymbols.DateTime_Second_Bcd] = FileSystem.ToBinaryCodedDecimal(date.Second);
+        ramBank0[BuiltInRamSymbols.DateTime_Year_Msb] = (byte)(date.Year >> 8 & 0xff);
+        ramBank0[BuiltInRamSymbols.DateTime_Year_Lsb] = (byte)(date.Year & 0xff);
+        ramBank0[BuiltInRamSymbols.DateTime_Month] = (byte)date.Month;
+        ramBank0[BuiltInRamSymbols.DateTime_Day] = (byte)date.Day;
+        ramBank0[BuiltInRamSymbols.DateTime_Hour] = (byte)date.Hour;
+        ramBank0[BuiltInRamSymbols.DateTime_Minute] = (byte)date.Minute;
+        ramBank0[BuiltInRamSymbols.DateTime_Second] = (byte)date.Second;
+        ramBank0[BuiltInRamSymbols.DateTime_HalfSecond] = (byte)(date.Millisecond >= 500 ? 1 : 0);
+        ramBank0[BuiltInRamSymbols.DateTime_LeapYear] = (byte)(DateTime.IsLeapYear(date.Year) ? 1 : 0);
+        ramBank0[BuiltInRamSymbols.DateTime_DateSet] = 0xff;
 
         // Following SFR writes are based on examining memory state from manual date initialization.
         _cpu.SFRs.Ie = new Ie { PriorityControl0 = true, PriorityControl1 = true, MasterInterruptEnable = true };
@@ -190,10 +191,10 @@ public class Vmu
 
     // Toggle the docked/ejected state.
     public void DockOrEjectToDreamcast()
-        => DockOrEjectToDreamcast(connect: !IsDockedToDreamcast);
+        => DockOrEjectToDreamcast(dock: !IsDockedToDreamcast);
 
     // Dock or eject depending on a bool argument.
-    public void DockOrEjectToDreamcast(bool connect)
+    public void DockOrEjectToDreamcast(bool dock)
     {
         if (IsOtherVmuConnected)
         {
@@ -201,7 +202,7 @@ public class Vmu
             _cpu.DisconnectVmu();
         }
 
-        _cpu.ConnectDreamcast(connect);
+        _cpu.ConnectDreamcast(dock);
     }
 
     public void ConnectOrDisconnectVmu(Vmu other)
