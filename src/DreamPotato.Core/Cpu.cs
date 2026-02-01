@@ -435,7 +435,8 @@ public class Cpu
             // Alternatively we could just let the CPU continue to run while docked,
             // but that has significant negative impact on host CPU utilization.
             //
-            // TODO: this is buggy when AutoInitializeDate is disabled.
+            // https://github.com/RikkiGibson/DreamPotato/issues/29
+            // this is buggy when AutoInitializeDate is disabled.
             // This doesn't give the VMU enough time to set everything up. Instead it is interrupted partway thru clearing the screen and plays part of the startup beep.
             // Similar problems would exist if the VMU were running software that ignores the INT0 (dreamcast connected) interrupt.
             // We might want to instead allow the VMU to run while connected, in the ordinary loop, until we detect a condition that indicates it's OK to stop running.
