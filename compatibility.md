@@ -71,8 +71,8 @@ Statuses:
   </tr>
   <tr>
     <td>Mini Pacman by Tyro</td>
-    <td>🟡</td>
-    <td>Sound does not work. It seems like ELDT1C is never set. More investigation needed.</td>
+    <td>🟢</td>
+    <td>Plays well. Sound works.</td>
   </tr>
   <tr>
     <td>NvmU (NASU on the go!)</td>

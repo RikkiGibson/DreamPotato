@@ -35,7 +35,7 @@ public class Vmu
         _fileSystem.InitializeFileSystem(date);
     }
 
-    public void InitializeDate(DateTimeOffset date)
+    public void InitializeRTCDate(DateTimeOffset date)
     {
         if (_cpu.Pc != 0 || _cpu.InstructionBank != InstructionBank.ROM)
             throw new InvalidOperationException("Date should only be initialized at startup");
@@ -79,11 +79,11 @@ public class Vmu
         _cpu.SFRs.Btcr = new Btcr(0x79);
     }
 
-    public void Reset(DateTimeOffset? date)
+    public void Reset(DateTimeOffset? rtcDate)
     {
         _cpu.Reset();
-        if (date.HasValue)
-            InitializeDate(date.GetValueOrDefault());
+        if (rtcDate.HasValue)
+            InitializeRTCDate(rtcDate.GetValueOrDefault());
     }
 
     public void LoadRom()
@@ -114,7 +114,7 @@ public class Vmu
         _cpu.ResyncMapleOutbound();
     }
 
-    public void LoadGameVms(string filePath, DateTimeOffset? date)
+    public void LoadGameVms(string filePath, DateTimeOffset date, bool autoInitializeRTCDate)
     {
         if (!filePath.EndsWith(".vms", StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException($"VMS file '{filePath}' must have .vms extension.", nameof(filePath));
@@ -123,17 +123,14 @@ public class Vmu
         if (fileInfo.Length > Cpu.InstructionBankSize)
             throw new ArgumentException($"VMS file '{filePath}' must be 64KB or smaller to be loaded.", nameof(filePath));
 
-        _cpu.Reset();
-        if (date.HasValue)
-            InitializeDate(date.GetValueOrDefault());
+        Reset(autoInitializeRTCDate ? date : null);
 
-        var fileSystemDate = date ?? DateTime.Now;
-        _fileSystem.InitializeFileSystem(fileSystemDate);
+        _fileSystem.InitializeFileSystem(date);
 
         var gameData = File.ReadAllBytes(filePath);
         var fileName = Path.GetFileNameWithoutExtension(filePath);
         fileName = fileName.Substring(0, Math.Min(FileSystem.DirectoryEntryFileNameLength, fileName.Length));
-        _fileSystem.WriteGameFile(gameData, fileName, fileSystemDate);
+        _fileSystem.WriteGameFile(gameData, fileName, date);
         LoadedFilePath = filePath;
         _cpu.HasUnsavedChanges = false;
         _cpu.VmuFileWriteStream = null;
@@ -141,7 +138,7 @@ public class Vmu
         _cpu.ResyncMapleOutbound();
     }
 
-    public void LoadVmu(string filePath, DateTimeOffset? date)
+    public void LoadVmu(string filePath, DateTimeOffset? rtcDate)
     {
         // TODO: loading a wrong file type should just show a toast or something, not crash the emu.
         if (!filePath.EndsWith(".vmu", StringComparison.OrdinalIgnoreCase) && !filePath.EndsWith(".bin", StringComparison.OrdinalIgnoreCase))
@@ -154,9 +151,7 @@ public class Vmu
         // NB: lifetime of the VMU file stream is managed by _cpu.
         var fileStream = fileInfo.Open(FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
 
-        _cpu.Reset();
-        if (date.HasValue)
-            InitializeDate(date.GetValueOrDefault());
+        Reset(rtcDate);
 
         fileStream.ReadExactly(_cpu.Flash);
         LoadedFilePath = filePath;

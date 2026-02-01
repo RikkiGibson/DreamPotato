@@ -6,7 +6,7 @@ reporoot="$(realpath $scriptroot/../../..)"
 artifacts="$reporoot/artifacts"
 
 echo "Running dotnet publish..."
-dotnet publish $project -c Release -r osx-arm64 --self-contained
+dotnet publish $project -c Release -r osx-arm64 --self-contained -p:DebugSymbols=False
 
 echo "Copying artifacts to app bundle '$artifacts/mac-arm64/DreamPotato.app'..."
 mkdir -p $artifacts/mac-arm64/DreamPotato.app/Contents/MacOS/
