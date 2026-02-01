@@ -286,12 +286,15 @@ public class SpecialFunctionRegisters
             case Ids.T1Cnt:
                 var oldT1cnt = new T1Cnt(_rawMemory[address]);
                 var t1cnt = new T1Cnt(value);
-                if (oldT1cnt.T1lRun != t1cnt.T1lRun)
-                    T1L = T1Lr;
+                var t1lRun = t1cnt.T1lRun;
+                if (oldT1cnt.T1lRun != t1lRun)
+                {
+                    var t1lr = T1Lr;
+                    T1L = t1lr;
+                    _cpu.Audio.OnT1LRunChanged(t1lRun, t1lr, T1Lc);
+                }
 
-                // After writing new t1cnt value, potentially signal that audio playback should start
                 _rawMemory[address] = value;
-                _cpu.Audio.IsActive = t1cnt.T1lRun;
                 return;
 
             case Ids.Sbuf0:
