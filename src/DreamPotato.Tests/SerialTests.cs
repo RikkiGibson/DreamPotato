@@ -103,7 +103,7 @@ public class SerialTests
         cpuTx.DisplayName = "Sender";
         cpuTx.DreamcastSlot = DreamcastSlot.Slot1;
         vmuTx.LoadRom();
-        vmuTx.LoadGameVms("TestSource/helloworld.vms", date: DateTimeOffset.Parse("09/09/1999"));
+        vmuTx.LoadGameVms("TestSource/helloworld.vms", date: DateTimeOffset.Parse("09/09/1999"), autoInitializeRTCDate: true);
 
         const long halfSecond = TimeSpan.TicksPerSecond / 2;
         cpuTx.Run(halfSecond);
