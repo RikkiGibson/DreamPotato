@@ -258,8 +258,7 @@ public class SpecialFunctionRegisters
             case Ids.Ie:
                 var oldIe = new Ie(_rawMemory[address]);
                 var newIe = new Ie(value);
-                if (!oldIe.MasterInterruptEnable && newIe.MasterInterruptEnable)
-                    _cpu.ResetInterruptState();
+                _cpu.ResetInterruptState();
 
                 if (oldIe.MasterInterruptEnable != newIe.MasterInterruptEnable)
                     _logger.LogDebug($"Master Interrupt Enable changed from {oldIe.MasterInterruptEnable} to {newIe.MasterInterruptEnable}", LogCategories.Interrupts);

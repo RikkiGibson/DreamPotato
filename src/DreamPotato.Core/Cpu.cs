@@ -772,8 +772,10 @@ public class Cpu
 
     internal void ResetInterruptState()
     {
-        // TODO this is kind of a hack to ensure that interrupts are not serviced
-        // until one instruction after master interrupt enable is set.
+        // VMD-145: During execution of the RETI instruction or an instruction (MOV, ST, etc.) that writes to one of the special function
+        // registers listed below, or while writing to flash memory, interrupt request flag acceptance processing is not performed.
+        // (Not 100% clear, but it appears to list the registers IE, IP, SP, "special function registers in the function block that accepts the interrupt".)
+
         // TODO write a test program specifically for investigating how this works properly.
         _interruptServicingState = InterruptServicingState.ReturnedFromInterrupt;
     }
@@ -1126,42 +1128,50 @@ public class Cpu
         void requestLevelDrivenInterrupts()
         {
             // TODO: I suspect master interrupt disable should have an effect here
+            //
+            // TODO implement VMD-145:
+            // If INT0 or INT1 are set to "highest" priority by the interrupt priority control flag (IE1, IE0),
+            // interrupt processing occurs regardless of the master interrupt enable flag.
+            //
+            if (_interruptServicingState != InterruptServicingState.Ready)
+                return;
+
             // Level triggered interrupts keep getting triggered each cycle
             // Edge triggered interrupts are triggered in SFRs when the value changes
             var i01cr = SFRs.I01Cr;
-            if (i01cr.Int0Enable && i01cr.Int0LevelTriggered && i01cr.Int0Source == i01cr.Int0HighTriggered && !currentlyServicing(Interrupts.INT0))
+            if (i01cr.Int0Enable && i01cr.Int0LevelTriggered && i01cr.Int0Source == i01cr.Int0HighTriggered)
                 RequestedInterrupts |= Interrupts.INT0;
 
-            if (i01cr.Int1Enable && i01cr.Int1LevelTriggered && i01cr.Int0Source == i01cr.Int1HighTriggered && !currentlyServicing(Interrupts.INT1))
+            if (i01cr.Int1Enable && i01cr.Int1LevelTriggered && i01cr.Int0Source == i01cr.Int1HighTriggered)
                 RequestedInterrupts |= Interrupts.INT1;
 
             // Empirical testing shows that timer interrupts are "level driven"
             // in that if the source flag is not cleared, the interrupt is generated continuously.
             var t0cnt = SFRs.T0Cnt;
-            if (t0cnt.T0lIe && t0cnt.T0lOvf && !currentlyServicing(Interrupts.INT2_T0L))
+            if (t0cnt.T0lIe && t0cnt.T0lOvf)
                 RequestedInterrupts |= Interrupts.INT2_T0L;
 
-            if (t0cnt.T0hIe && t0cnt.T0hOvf && !currentlyServicing(Interrupts.T0H))
+            if (t0cnt.T0hIe && t0cnt.T0hOvf)
                 RequestedInterrupts |= Interrupts.T0H;
 
             var t1cnt = SFRs.T1Cnt;
-            if (t1cnt.T1lIe && t1cnt.T1lOvf && !currentlyServicing(Interrupts.T1))
+            if (t1cnt.T1lIe && t1cnt.T1lOvf)
                 RequestedInterrupts |= Interrupts.T1;
 
-            if (t1cnt.T1hIe && t1cnt.T1hOvf && !currentlyServicing(Interrupts.T1))
+            if (t1cnt.T1hIe && t1cnt.T1hOvf)
                 RequestedInterrupts |= Interrupts.T1;
 
             var btcr = SFRs.Btcr;
-            if (btcr.Int0Enable && btcr.Int0Source && !currentlyServicing(Interrupts.INT3_BT))
+            if (btcr.Int0Enable && btcr.Int0Source)
                 RequestedInterrupts |= Interrupts.INT3_BT;
 
-            if (btcr.Int1Enable && btcr.Int1Source && !currentlyServicing(Interrupts.INT3_BT))
+            if (btcr.Int1Enable && btcr.Int1Source)
                 RequestedInterrupts |= Interrupts.INT3_BT;
 
-            if (SFRs.Scon0 is { InterruptEnable: true, TransferEndFlag: true } && !currentlyServicing(Interrupts.SIO0))
+            if (SFRs.Scon0 is { InterruptEnable: true, TransferEndFlag: true })
                 RequestedInterrupts |= Interrupts.SIO0;
 
-            if (SFRs.Scon1 is { InterruptEnable: true, TransferEndFlag: true } && !currentlyServicing(Interrupts.SIO1))
+            if (SFRs.Scon1 is { InterruptEnable: true, TransferEndFlag: true })
                 RequestedInterrupts |= Interrupts.SIO1;
 
             var p3int = SFRs.P3Int;
@@ -1177,19 +1187,6 @@ public class Cpu
                     RequestedInterrupts |= Interrupts.P3;
                 }
                 SFRs.P3Int = p3int;
-            }
-
-            // TODO: it might be cleaner to just wait to clear RequestedInterrupts until RETI and the interrupt is popped off of _servicingInterrupts.
-            bool currentlyServicing(Interrupts interrupt)
-            {
-                Debug.Assert(BitHelpers.IsPowerOfTwo((int)interrupt));
-                for (int i = 0; i < _interruptsCount; i++)
-                {
-                    if (_servicingInterrupts[i] == interrupt)
-                        return true;
-                }
-
-                return false;
             }
         }
     }

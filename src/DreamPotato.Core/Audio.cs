@@ -201,7 +201,9 @@ public class Audio
 
         if (cpuClockHz is not (OscillatorHz.Quartz / 6 or OscillatorHz.Quartz / 12))
         {
-            _logger.LogWarning($"Bad pulse hz! {cpuClockHz}", LogCategories.Audio);
+            _logger.LogWarning(
+                $"Sample rate not compatible with clock {_cpu.SFRs.Ocr.SystemClockSelector}.",
+                LogCategories.Audio);
         }
 
         var sampleRateAndRemainder = SampleRate + _pcmRemainder;
@@ -233,7 +235,7 @@ public class Audio
             return;
 
         _logger.LogDebug($"EndAudio: Submitting audio buffer of length {_pcmBufferIndex}", LogCategories.Audio);
-        if (_cpu.SFRs.Ocr.CpuClockHz is not (OscillatorHz.Quartz / 6) or (OscillatorHz.Quartz / 12))
+        if (_cpu.SFRs.Ocr.CpuClockHz is not ((OscillatorHz.Quartz / 6) or (OscillatorHz.Quartz / 12)))
         {
             _logger.LogWarning(
                 $"Sample rate not compatible with clock {_cpu.SFRs.Ocr.SystemClockSelector}.",
