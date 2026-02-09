@@ -87,8 +87,8 @@ game_end:
 ;   ///                    DREAMCAST HEADER                   ///
 ;  /////////////////////////////////////////////////////////////
     .org $200
-    .byte "SioRx           " ; ................... 16-byte Title
-    .byte "Serial Reception test           " ; ... 32-byte Descr1tion
+    .byte "IntDelays       " ; ................... 16-byte Title
+    .byte "Interrupt Handling Delays Test  " ; ... 32-byte Descr1tion
 
 ;    /////////////////////////////////////////////////////////////
 ;   ///                       GAME ICON                       ///
@@ -148,12 +148,16 @@ st ypos
 ; Regs to check:
 ; IE, IP, SP, I01CR,
 ; I23CR, T0CNT, BTCR, T1CNT
-; SCON0, SCON1, RFB, P3INT
+; SCON0, SCON1, RFB(?), P3INT
+; PCON, OCR
 
 ; 1st SFR to check: IE
 clr1 IE,7 ; master interrupt disable
 mov #%00001100, BTCR ; set btint1 enable and source
-set1 IE, 7 ; write to IE
+ld IE
+set1 acc, 7
+set1 IE, 7 ; enable interrupts
+st IE ; write to IE. Note we 'double store' to make this uniform with other checks
 mov #1, flag ; question: does btint1 run before or after this inst?
 
 ; 2nd SFR to check: IP
@@ -186,9 +190,108 @@ set1 IE, 7 ; enable interrupts
 st I01CR
 mov #1, flag ; question: does btint1 run before or after this inst?
 
-; Next row. 5th SFR to check...
-; mov #0, xpos
-; inc ypos
+; Next row. 5th SFR to check: I23CR
+mov #0, xpos
+inc ypos
+mov #0, flag
+clr1 IE,7 ; master interrupt disable
+mov #%00001100, BTCR ; set btint1 enable and source
+ld I23CR
+set1 IE, 7 ; enable interrupts
+st I23CR
+mov #1, flag ; question: does btint1 run before or after this inst?
+
+; 6th SFR to check: T0CNT
+inc xpos
+mov #0, flag
+clr1 IE,7 ; master interrupt disable
+mov #%00001100, BTCR ; set btint1 enable and source
+ld T0CNT
+set1 IE, 7 ; enable interrupts
+st T0CNT
+mov #1, flag ; question: does btint1 run before or after this inst?
+
+; 7th SFR to check: BTCR
+inc xpos
+mov #0, flag
+clr1 IE,7 ; master interrupt disable
+mov #%00001100, BTCR ; set btint1 enable and source
+ld BTCR
+set1 IE, 7 ; enable interrupts
+st BTCR
+mov #1, flag ; question: does btint1 run before or after this inst?
+
+; 8th SFR to check: T1CNT
+inc xpos
+mov #0, flag
+clr1 IE,7 ; master interrupt disable
+mov #%00001100, BTCR ; set btint1 enable and source
+ld T1CNT
+set1 IE, 7 ; enable interrupts
+st T1CNT
+mov #1, flag ; question: does btint1 run before or after this inst?
+
+; Next row. 9th SFR to check: SCON0
+mov #0, xpos
+inc ypos
+mov #0, flag
+clr1 IE,7 ; master interrupt disable
+mov #%00001100, BTCR ; set btint1 enable and source
+ld SCON0
+set1 IE, 7 ; enable interrupts
+st SCON0
+mov #1, flag ; question: does btint1 run before or after this inst?
+
+; 10th SFR to check: SCON1
+inc xpos
+mov #0, flag
+clr1 IE,7 ; master interrupt disable
+mov #%00001100, BTCR ; set btint1 enable and source
+ld SCON1
+set1 IE, 7 ; enable interrupts
+st SCON1
+mov #1, flag ; question: does btint1 run before or after this inst?
+
+; 11th SFR to check: RFB. TODO: what is the address of RFB? It's not documented
+inc xpos
+; mov #0, flag
+; clr1 IE,7 ; master interrupt disable
+; mov #%00001100, BTCR ; set btint1 enable and source
+; ld RFB
+; set1 IE, 7 ; enable interrupts
+; st RFB
+; mov #1, flag ; question: does btint1 run before or after this inst?
+
+; 12th SFR to check: P3INT
+inc xpos
+mov #0, flag
+clr1 IE,7 ; master interrupt disable
+mov #%00001100, BTCR ; set btint1 enable and source
+ld P3INT
+set1 IE, 7 ; enable interrupts
+st P3INT
+mov #1, flag ; question: does btint1 run before or after this inst?
+
+; Next row. 13th SFR to check: PCON
+mov #0, xpos
+inc ypos
+mov #0, flag
+clr1 IE,7 ; master interrupt disable
+mov #%00001100, BTCR ; set btint1 enable and source
+ld PCON
+set1 IE, 7 ; enable interrupts
+st PCON
+mov #1, flag ; question: does btint1 run before or after this inst?
+
+; 14th SFR to check: OCR
+inc xpos
+mov #0, flag
+clr1 IE,7 ; master interrupt disable
+mov #%00001100, BTCR ; set btint1 enable and source
+ld OCR
+set1 IE, 7 ; enable interrupts
+st OCR
+mov #1, flag ; question: does btint1 run before or after this inst?
 
 
 ; Done working. Wait for mode button (to exit)
@@ -408,6 +511,9 @@ int_BaseTimer:
   st b
   ld flag ; Draw the flag value to screen
   call putch
+
+  inc flag ; Inc'ing the flag demonstrates we do not handle the interrupt again until flag is reset to 0
+  ; i.e. writing a 2 using this routine indicates a bug.
 
   pop c
   pop b
