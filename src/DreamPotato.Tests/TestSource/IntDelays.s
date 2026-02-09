@@ -114,18 +114,6 @@ r2 = $2      ; Indirect address register 2
 
 ; variables
 
-work1 = $10 ; Work (used in put2digit)
-
-; General strategy:
-; clr1 IE,7 ; disable interrupts
-; mov #%0000_1100, BTCR ; set btint1 enable and source
-; ld REG
-; set1 IE,7 ; enable interrupts
-; st REG
-; set1 flags1,0 ; whatever bit for the specific thing we care about.
-; inc xpos
-; 
-
 flag = $11
 xpos = $12 ; x tile position to draw flag
 ypos = $13 ; y tile position to draw flag
@@ -305,35 +293,6 @@ next4: ; ** [M] (mode) Button Check **
 finish: ; ** Application End Processing **
   call BattChkOn ; Turns on the low battery automatic detection function
   jmp game_end ; Application end
-
-; *-------------------------------------------------------------------------*
-; * Displaying a two-digit value *
-; * Inputs: acc: Numeric value *
-; * c: Horizontal position of character*
-; * b: Vertical position of character*
-; *-------------------------------------------------------------------------*
-put2digit:
-  push b ; Pushes the coordinate data onto the stack
-  push c ;
-  st c ; Calculates the tens digit and the ones digit
-  xor acc ; ( acc = acc/10, work1 = acc mod 10 )
-  mov #10,b ;
-  div ;
-  ld b ;
-  st work1 ; Stores the ones digit in work1
-  ld c ;
-  pop c ; Pops the coordinate values into (c, b)
-  pop b ;
-  push b ; Pushes the coordinates onto the stack again
-  push c ;
-  call putch ; Displays the tens digit
-  ld work1 ; Loads the ones digit
-  pop c ; Pops the coordinate values into (c, b)
-  pop b ;
-  inc c ; Moves the display coordinates to the right
-  call putch ; Displays the ones digit
-
-  ret ; put2digit end
 
 ; *-------------------------------------------------------------------------*
 ; * Clearing the LCD Display Image *
