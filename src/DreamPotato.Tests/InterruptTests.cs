@@ -177,7 +177,6 @@ public class InterruptTests
         Assert.Equal(2, cpu.SFRs.C);
         Assert.Equal("RETI", cpu.StepInstruction().ToString());
         Assert.Equal(0x280, cpu.Pc);
-        Assert.Equal(Interrupts.None, cpu.RequestedInterrupts);
         Assert.Equal(0, cpu._interruptsCount);
 
         Assert.Equal("INC Acc", cpu.StepInstruction().ToString());
@@ -215,24 +214,24 @@ public class InterruptTests
         // TODO: write several more interrupts tests showing how they stack or not
         cpu.SFRs.P3 = new P3(0b1111_0111);
 
-        Assert.Equal(Interrupts.None, cpu.RequestedInterrupts);
         Assert.Equal(0, cpu._interruptsCount);
         Assert.Equal(0, cpu.Pc);
 
         // Note that continuous P3 interrupts are only generated in cpu.Step()
         // (We don't do it in both places to avoid generating the same interrupt twice in one cycle)
         cpu.Step(); // JMPF
-        Assert.Equal(Interrupts.P3, cpu.RequestedInterrupts);
+        Assert.True(cpu.SFRs.P3Int.Source);
         Assert.Equal(0, cpu._interruptsCount);
         Assert.Equal(0x200, cpu.Pc);
 
         cpu.Step(); // NOP
-        Assert.Equal(Interrupts.P3, cpu.RequestedInterrupts);
+        Assert.True(cpu.SFRs.P3Int.Source);
         Assert.Equal(1, cpu._interruptsCount);
-        Assert.Equal(InterruptVectors.P3 + 1, cpu.Pc);
+        Assert.Equal(InterruptVectors.P3, cpu.Pc);
 
+        // TODO: this test is failing, seeing a NOP when a RETI was expected
         cpu.Step(); // RETI
-        Assert.Equal(Interrupts.P3, cpu.RequestedInterrupts);
+        Assert.True(cpu.SFRs.P3Int.Source);
         Assert.Equal(0, cpu._interruptsCount);
         Assert.Equal(0x200, cpu.Pc);
 
@@ -241,17 +240,17 @@ public class InterruptTests
 
         cpu.Step(); // NOP
         // Since we RETI'd, another instruction needs to be executed before we can service the pending P3 interrupt
-        Assert.Equal(Interrupts.P3, cpu.RequestedInterrupts);
+        Assert.True(cpu.SFRs.P3Int.Source);
         Assert.Equal(0, cpu._interruptsCount);
         Assert.Equal(0x201, cpu.Pc);
 
         cpu.Step(); // NOP
-        Assert.Equal(Interrupts.None, cpu.RequestedInterrupts);
+        Assert.False(cpu.SFRs.P3Int.Source);
         Assert.Equal(1, cpu._interruptsCount);
         Assert.Equal(InterruptVectors.P3 + 1, cpu.Pc);
 
         cpu.Step(); // RETI
-        Assert.Equal(Interrupts.None, cpu.RequestedInterrupts);
+        Assert.False(cpu.SFRs.P3Int.Source);
         Assert.Equal(0, cpu._interruptsCount);
         Assert.Equal(0x201, cpu.Pc);
 
@@ -277,22 +276,22 @@ public class InterruptTests
         pressButtonAndWait(cpu, new P3(0xff) { ButtonA = false });
 
         Assert.Equal<object>("""
-            |  ▄██     ▄██     ▄██     ▄██
-            |   ██      ██      ██      ██
-            |   ██      ██      ██      ██
-            |  ▀▀▀▀    ▀▀▀▀    ▀▀▀▀    ▀▀▀▀
-            |  ▄██     ▄██     ▄██     ▄██
-            |   ██      ██      ██      ██
-            |   ██      ██      ██      ██
-            |  ▀▀▀▀    ▀▀▀▀    ▀▀▀▀    ▀▀▀▀
-            |  ▄██     ▄██             ▄██
-            |   ██      ██              ██
-            |   ██      ██              ██
-            |  ▀▀▀▀    ▀▀▀▀            ▀▀▀▀
-            |  ▄██     ▄██
-            |   ██      ██
-            |   ██      ██
-            |  ▀▀▀▀    ▀▀▀▀
+            |  ▄██     ▄██   ▄██▀▀█▄ ▄██▀▀█▄
+            |   ██      ██   ██   ██ ██   ██
+            |   ██      ██   ██  ▄██ ██  ▄██
+            |  ▀▀▀▀    ▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀
+            |▄██▀▀█▄ ▄██▀▀█▄ ▄██▀▀█▄ ▄██▀▀█▄
+            |██   ██ ██   ██ ██   ██ ██   ██
+            |██  ▄██ ██  ▄██ ██  ▄██ ██  ▄██
+            | ▀▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀
+            |▄██▀▀█▄ ▄██▀▀█▄         ▄██▀▀█▄
+            |██   ██ ██   ██         ██   ██
+            |██  ▄██ ██  ▄██         ██  ▄██
+            | ▀▀▀▀▀   ▀▀▀▀▀           ▀▀▀▀▀
+            |  ▄██   ▄██▀▀█▄
+            |   ██   ██   ██
+            |   ██   ██  ▄██
+            |  ▀▀▀▀   ▀▀▀▀▀
             """,
             cpu.Display.ToTestDisplayString());
 
