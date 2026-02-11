@@ -1,4 +1,4 @@
-; Program for determining which register writes prevent interrupts from being serviced on the next instruction.
+; Program for determining the sequence in which timers induce interrupts and when those interrupts are serviced
 
 ;    /////////////////////////////////////////////////////////////
 ;   ///                        VECTORS                        ///
@@ -6,46 +6,48 @@
     .org 0   ; entry point
   jmpf main
     .org $03 ; External int. (INTO)
-  jmp int_03
+InterruptVectors:
+  jmp .int_03
     .org $0B ; External int. (INT1)
-  jmp int_0b
+  jmp .int_0b
     .org $13 ; External int. (INT2) and Timer 0 low
-  jmp int_13
+  jmp .int_13
     .org $1B ; External int. (INT3) and base timer
-  jmp int_1b
+  jmp .int_1b
     .org $23 ; Timer 0 high
-  jmp int_23
+  jmp .int_23
     .org $2B ; Timer 1 Low and High
-  jmp int_2b
+  jmp .int_2b
     .org $33 ; Serial IO 1
-  jmp int_33
+  jmp .int_33
     .org $3B ; Serial IO 2
-  jmp int_3b
+  jmp .int_3b
     .org $43 ; VMU to VMU comms
-  jmp int_43
+  jmp .int_43
     .org $4B ; Port 3 interrupt
-  jmp int_4b
+  jmp .int_4b
 
 ;    /////////////////////////////////////////////////////////////
 ;   ///                    INTERRUPT HANDLERS                 ///
 ;  /////////////////////////////////////////////////////////////
-int_03:
+.int_03:
   reti
-int_0b:
+.int_0b:
   reti
-int_13:
+.int_13:
   reti
-int_23:
+.int_23:
   reti
-int_2b:
+.int_2b:
+  call int_T1
   reti
-int_33:
+.int_33:
   reti
-int_3b:
+.int_3b:
   reti
-int_43:
+.int_43:
   reti
-int_4b:
+.int_4b:
   clr1 p3int,1 ; interrupt flag clear
   reti
 
@@ -87,8 +89,8 @@ game_end:
 ;   ///                    DREAMCAST HEADER                   ///
 ;  /////////////////////////////////////////////////////////////
     .org $200
-    .byte "IntDelays       " ; ................... 16-byte Title
-    .byte "Interrupt Handling Delays Test  " ; ... 32-byte Descr1tion
+    .byte "TimerIntSeq1    " ; ................... 16-byte Title
+    .byte "Timer Interrupt Sequence Test 1 " ; ... 32-byte Descr1tion
 
 ;    /////////////////////////////////////////////////////////////
 ;   ///                       GAME ICON                       ///
@@ -120,172 +122,120 @@ ypos = $13 ; y tile position to draw flag
 
 LowBattChk = $6e ; Low battery detection flag (RAM bank 0)
 
+
+;
 ; *-------------------------------------------------------------------------*
 ; * User program *
 ; *-------------------------------------------------------------------------*
+;
+;
+;
+;
+;
+;
 main:
   call cls ; Clears the LCD display
   call BattChkOff ; Turns off the low battery automatic detection function
 start:
 
-xor acc ; zero out acc 
+xor acc ; zero out acc
 st flag ; init variables
 st xpos
 st ypos
+st BTCR
+st T1LC
 
-; Regs to check:
-; IE, IP, SP, I01CR,
-; I23CR, T0CNT, BTCR, T1CNT
-; SCON0, SCON1, RFB(?), P3INT
-; PCON, OCR
-
-; 1st SFR to check: IE
+; 1st: how long from enabling the timer, till interrupt occurring?
+; REAL HW: 2
 clr1 IE,7 ; master interrupt disable
-mov #%00001100, BTCR ; set btint1 enable and source
-ld IE
-set1 acc, 7
-set1 IE, 7 ; enable interrupts
-st IE ; write to IE. Note we 'double store' to make this uniform with other checks
-mov #1, flag ; question: does btint1 run before or after this inst?
+mov #0, T1CNT
+mov #$ff, T1L ; Set T1L reload value
+set1 IE,7 ; master interrupt enable
+mov #%01000001, T1CNT ; T1LRUN (run T1L) | T1LIE (enable T1L interrupt)
+inc flag ; question: what is the value of 'flag' when T1 interrupt actually runs?
+inc flag
+inc flag
+inc flag
 
-; 2nd SFR to check: IP
+; 2nd: try seeing what is in T1L when it gets an extra cycle to run before expiring.
+; REAL HW: 3
 inc xpos
-mov #0, flag
 clr1 IE,7 ; master interrupt disable
-mov #%00001100, BTCR ; set btint1 enable and source
-ld IP
-set1 IE, 7 ; enable interrupts
-st IP
-mov #1, flag ; question: does btint1 run before or after this inst?
+mov #0, flag
+mov #0, T1CNT
+mov #$fe, T1L ; Set T1L reload value
+mov #0, T1LC ; Set compare value (disable audio)
+set1 IE,7 ; master interrupt enable
+mov #%01000001, T1CNT ; T1LRUN (run T1L) | T1LIE (enable T1L interrupt)
+inc flag ; question: what is the value of 'flag' when T1 interrupt actually runs?
+inc flag
+inc flag
+inc flag
 
-; 3rd SFR to check: SP
+; 3rd: what do we read from T1L, the cycle after enabling it?
+; REAL HW: FE (display 8)
 inc xpos
-mov #0, flag
 clr1 IE,7 ; master interrupt disable
-mov #%00001100, BTCR ; set btint1 enable and source
-inc SP
-set1 IE, 7 ; enable interrupts
-dec SP ; scary..hope this doesn't destabilize the VMU
-mov #1, flag ; question: does btint1 run before or after this inst?
+mov #0, flag
+mov #0, T1CNT
+mov #$fd, T1L ; Set T1L reload value
+mov #0, T1LC ; Set compare value (disable audio)
+set1 IE,7 ; master interrupt enable
+mov #%01000001, T1CNT ; T1LRUN (run T1L) | T1LIE (enable T1L interrupt)
+ld T1L
+nop
+nop
+nop
+nop
 
-; 4th SFR to check: I01CR
+; 4th: what do we read from T1L, if we set reload value first before enabling it?
+; REAL HW: FE (display 8)
 inc xpos
-mov #0, flag
 clr1 IE,7 ; master interrupt disable
-mov #%00001100, BTCR ; set btint1 enable and source
-not1 I01CR, 0 ; toggle int0
-set1 IE, 7 ; enable interrupts
-not1 I01CR, 0 ; toggle int0
-mov #1, flag ; question: does btint1 run before or after this inst?
-
-; Next row. 5th SFR to check: I23CR
-mov #0, xpos
-inc ypos
 mov #0, flag
-clr1 IE,7 ; master interrupt disable
-mov #%00001100, BTCR ; set btint1 enable and source
-not1 I23CR, 1 ; toggle int2
-set1 IE, 7 ; enable interrupts
-not1 I23CR, 1 ; toggle int2
-mov #1, flag ; question: does btint1 run before or after this inst?
+mov #$fd, T1L ; Set T1L reload value
+mov #0, T1CNT
+mov #0, T1LC ; Set compare value (disable audio)
+set1 IE,7 ; master interrupt enable
+mov #%01000001, T1CNT ; T1LRUN (run T1L) | T1LIE (enable T1L interrupt)
+ld T1L
+nop
+nop
+nop
+nop
 
-; 6th SFR to check: T0CNT
+; 5th: what do we read from T1LOVF the cycle after enabling it
+; REAL HW: 5 (instantly set)
 inc xpos
-mov #0, flag
 clr1 IE,7 ; master interrupt disable
-mov #%00001100, BTCR ; set btint1 enable and source
-not1 T0CNT, 0 ; toggle t0lie
-set1 IE, 7 ; enable interrupts
-not1 T0CNT, 0 ; toggle t0lie
-mov #1, flag ; question: does btint1 run before or after this inst?
+xor acc
+mov #0, flag
+mov #$ff, T1L ; Set T1L reload value
+mov #0, T1CNT
+set1 IE,7 ; master interrupt enable
+mov #%01000001, T1CNT ; T1LRUN (run T1L) | T1LIE (enable T1L interrupt)
+ld T1CNT
+nop
+nop
+nop
 
-; 7th SFR to check: BTCR
+; 6th: what do we read from T1LOVF the 2nd cycle after enabling it
+; REAL HW: (instantly set)
 inc xpos
-mov #0, flag
 clr1 IE,7 ; master interrupt disable
-mov #%00001100, BTCR ; set btint1 enable and source
-ld BTCR
-not1 BTCR, 0 ; toggle btint0
-set1 IE, 7 ; enable interrupts
-not1 BTCR, 0 ; toggle btint0
-mov #1, flag ; question: does btint1 run before or after this inst?
-
-; 8th SFR to check: T1CNT
-inc xpos
+xor acc
 mov #0, flag
-clr1 IE,7 ; master interrupt disable
-mov #%00001100, BTCR ; set btint1 enable and source
-not1 T1CNT, 0 ; toggle t1lie
-set1 IE, 7 ; enable interrupts
-not1 T1CNT, 0 ; toggle t1lie
-mov #1, flag ; question: does btint1 run before or after this inst?
-
-; Next row. 9th SFR to check: SCON0
-mov #0, xpos
-inc ypos
-mov #0, flag
-clr1 IE,7 ; master interrupt disable
-mov #%00001100, BTCR ; set btint1 enable and source
-not1 SCON0, 0 ; toggle scon0ie
-set1 IE, 7 ; enable interrupts
-not1 SCON0, 0 ; toggle scon0ie
-mov #1, flag ; question: does btint1 run before or after this inst?
-
-; 10th SFR to check: SCON1
-inc xpos
-mov #0, flag
-clr1 IE,7 ; master interrupt disable
-mov #%00001100, BTCR ; set btint1 enable and source
-not1 SCON1, 0 ; toggle scon0ie
-set1 IE, 7 ; enable interrupts
-not1 SCON1, 0 ; toggle scon0ie
-mov #1, flag ; question: does btint1 run before or after this inst?
-
-; 11th SFR to check: RFB. TODO: what is the address of RFB? It's not documented
-inc xpos
-; mov #0, flag
-; clr1 IE,7 ; master interrupt disable
-; mov #%00001100, BTCR ; set btint1 enable and source
-; ld RFB
-; set1 IE, 7 ; enable interrupts
-; st RFB
-; mov #1, flag ; question: does btint1 run before or after this inst?
-
-; 12th SFR to check: P3INT
-inc xpos
-mov #0, flag
-clr1 IE,7 ; master interrupt disable
-mov #%00001100, BTCR ; set btint1 enable and source
-not1 P3INT, 0 ; toggle P3 int enable
-set1 IE, 7 ; enable interrupts
-not1 P3INT, 0 ; toggle P3 int enable
-mov #1, flag ; question: does btint1 run before or after this inst?
-
-; Next row. 13th SFR to check: PCON
-mov #0, xpos
-inc ypos
-mov #0, flag
-clr1 IE,7 ; master interrupt disable
-mov #%00001100, BTCR ; set btint1 enable and source
-ld PCON
-set1 IE, 7 ; enable interrupts
-st PCON
-mov #1, flag ; question: does btint1 run before or after this inst?
-
-; 14th SFR to check: OCR
-inc xpos
-mov #0, flag
-clr1 IE,7 ; master interrupt disable
-mov #%00001100, BTCR ; set btint1 enable and source
-push OCR ; Pushes the OCR value onto the stack
-mov #osc_rc, OCR ; Specifies the system clock
-set1 IE, 7 ; enable interrupts
-pop OCR
-mov #1, flag ; question: does btint1 run before or after this inst?
-
+mov #$ff, T1L ; Set T1L reload value
+mov #0, T1CNT
+set1 IE,7 ; master interrupt enable
+mov #%01000001, T1CNT ; T1LRUN (run T1L) | T1LIE (enable T1L interrupt)
+nop
+ld T1CNT
+nop
+nop
+nop
 
 ; Done working. Wait for mode button (to exit)
-mov #0, BTCR
 next4: ; ** [M] (mode) Button Check **
   ld P3
   bn acc,6,finish ; If the [M] button is pressed, the application ends
@@ -295,6 +245,17 @@ next4: ; ** [M] (mode) Button Check **
 finish: ; ** Application End Processing **
   call BattChkOn ; Turns on the low battery automatic detection function
   jmp game_end ; Application end
+
+;
+; *-------------------------------------------------------------------------*
+; Helper Subroutines
+; *-------------------------------------------------------------------------*
+;
+;
+;
+;
+;
+;
 
 ; *-------------------------------------------------------------------------*
 ; * Clearing the LCD Display Image *
@@ -458,6 +419,15 @@ BattChkOff:
 ; * Base Timer Interrupt Handler *
 ; *-------------------------------------------------------------------------*
 int_BaseTimer:
+  clr1 BTCR,1 ; Clears the base timer interrupt source
+  clr1 BTCR,3 ; Clears the base timer interrupt source
+  ret ; User interrupt processing end
+
+
+; *-------------------------------------------------------------------------*
+; * T1 Interrupt Handler *
+; *-------------------------------------------------------------------------*
+int_T1:
   push PSW ; Pushes the PSW value onto the stack
   push acc
   push b
@@ -465,6 +435,30 @@ int_BaseTimer:
 
   set1 PSW,1 ; Selects data RAM bank 1
 
+  be #%01000011, .accSourceFlagSet
+  be #%01000001, .accSourceFlagClear
+  be #$fd, .accWasFD
+  be #$fe, .accWasFE
+  be #$ff, .accWasFF
+  br .draw
+
+.accSourceFlagSet:
+  mov #5, flag
+  br .draw
+.accSourceFlagClear:
+  mov #6, flag
+  br .draw
+.accWasFD:
+  mov #7, flag
+  br .draw
+.accWasFE:
+  mov #8, flag
+  br .draw
+.accWasFF:
+  mov #9, flag
+  br .draw
+
+.draw:
   ; Draw the digit for 'flag' at position (b,c)
   ld xpos
   st c
@@ -473,14 +467,14 @@ int_BaseTimer:
   ld flag ; Draw the flag value to screen
   call putch
 
-  inc flag ; Inc'ing the flag demonstrates we do not handle the interrupt again until flag is reset to 0
-  ; i.e. writing a 2 using this routine indicates a bug.
+  ld flag ; Modify the flag so we notice if we end up running the ISR twice
+  add #4
+  st flag
 
   pop c
   pop b
   pop acc
   pop PSW ; Pops the PSW value off of the stack
 
-  clr1 BTCR,1 ; Clears the base timer interrupt source
-  clr1 BTCR,3 ; Clears the base timer interrupt source
+  mov #0, T1CNT
   ret ; User interrupt processing end
