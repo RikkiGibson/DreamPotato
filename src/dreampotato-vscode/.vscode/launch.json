@@ -11,6 +11,11 @@
 			"request": "launch",
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}"
+			],
+			"sourceMaps": true,
+			"preLaunchTask": "npm: compile",
+			"outFiles": [
+				"${workspaceFolder}/out/**/*.js"
 			]
 		}
 	]

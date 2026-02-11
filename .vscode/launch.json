@@ -42,8 +42,13 @@
         "name": "Launch Extension",
         "type": "extensionHost",
         "request": "launch",
+        "preLaunchTask": "npm: compile extension",
         "args": [
           "--extensionDevelopmentPath=${workspaceFolder}/src/dreampotato-vscode"
+        ],
+        "sourceMaps": true,
+        "outFiles": [
+          "${workspaceFolder}/src/dreampotato-vscode/out/**/*.js"
         ]
       }
     ],

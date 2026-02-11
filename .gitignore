@@ -486,3 +486,5 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+src/dreampotato-vscode/out
