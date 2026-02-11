@@ -6,13 +6,64 @@
         {
             "label": "waterbear assemble",
             "type": "shell",
-            "command": [
-                "waterbear",
-                "assemble",
+            "command": "dotnet",
+            "args": [
+                "run",
+                "--project",
+                "${workspaceFolder}/src/DreamPotato.Watcher/DreamPotato.Watcher.csproj",
+                "--",
                 "${file}",
-                "--output",
+                "${fileDirname}/${fileBasenameNoExtension}.vms",
+                "--once"
+            ],
+            "group": "build",
+            "problemMatcher": {
+                "owner": "waterbear",
+                "fileLocation": "absolute",
+                "pattern": {
+                    "regexp": "^(.+)\\((\\d+),(\\d+),(\\d+),(\\d+)\\):\\s+(error|warning):\\s+(.+)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "endLine": 4,
+                    "endColumn": 5,
+                    "severity": 6,
+                    "message": 7
+                }
+            }
+        },
+        {
+            "label": "waterbear watch",
+            "type": "shell",
+            "command": "dotnet",
+            "args": [
+                "run",
+                "--project",
+                "${workspaceFolder}/src/DreamPotato.Watcher/DreamPotato.Watcher.csproj",
+                "--",
+                "${file}",
                 "${fileDirname}/${fileBasenameNoExtension}.vms"
             ],
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "waterbear",
+                "fileLocation": "absolute",
+                "pattern": {
+                    "regexp": "^(.+)\\((\\d+),(\\d+),(\\d+),(\\d+)\\):\\s+(error|warning):\\s+(.+)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "endLine": 4,
+                    "endColumn": 5,
+                    "severity": 6,
+                    "message": 7
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^(Watching|\\[\\d+:\\d+:\\d+\\] File changed)",
+                    "endsPattern": "^Build (succeeded|failed)"
+                }
+            },
             "group": "build"
         },
         {
