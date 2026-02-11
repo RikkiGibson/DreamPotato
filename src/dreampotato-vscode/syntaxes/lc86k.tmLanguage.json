@@ -32,23 +32,27 @@
       "patterns": [
         {
           "name": "keyword.directive.lc86k",
-          "match": "\\.(org|byte|include|cnop|word|long|ascii|asciiz|align|equ|set|macro|endm|end|section|globl|global|text|data|bss)\\b"
+          "match": "\\.(byte|word|text|string|org|cnop)\\b"
+        },
+        {
+          "name": "keyword.directive.include.lc86k",
+          "match": "\\.include( (asm|word|text|string|org|include|cnop))?\\b"
         }
       ]
     },
     "instruction": {
       "patterns": [
         {
-          "name": "keyword.instruction.lc86k",
-          "match": "\\b(add|addc|and|be|bn|bp|br|bne|call|clr1|dbnz|inc|dec|jmpf|jmp|ld|ldf|mov|mul|not1|or|pop|push|reti|ret|ror|rorc|set1|st|stf|sub|xor|bp|bnz|bne|bn|be|call|jmpf|jmp|ret|reti)\\b"
+          "name": "entity.name.function.instruction.lc86k",
+          "match": "(?i)\\b(add|addc|sub|subc|inc|dec|mul|div|and|or|xor|rol|rolc|ror|rorc|ld|st|mov|ldc|ldf|stf|push|pop|xch|jmp|jmpf|br|brf|bz|bnz|bp|bpc|bn|dbnz|be|bne|call|callf|callr|ret|reti|clr1|set1|not1|nop)\\b"
         }
       ]
     },
     "register": {
       "patterns": [
         {
-          "name": "variable.language.register.lc86k",
-          "match": "\\b(ACC|PSW|B|C|TRL|TRH|SP|PCON|IE|IP|EXT|OCR|T0CNT|T0L|T0H|T1CNT|T1L|T1H|SCON0|SBUF0|SBR|SCON1|SBUF1|P1|P1DDR|P1FCR|P3DDR|P3INT|P7|I01CR|I23CR|ISL|VSEL|VRMAD1|VRMAD2|VTRBF|BTCR|XBNK|XRAM|@r[0-3]|[0-f])\\b"
+          "name": "variable.parameter.register.lc86k",
+          "match": "(?i)\\b(acc|psw|b|c|trl|trh|sp|pcon|ie|ip|ext|ocr|t0cnt|t0prr|t0l|t0lr|t0h|t0hr|t1cnt|t1lc|t1l|t1hc|t1h|mcr|stad|cnr|tdr|xbnk|vccr|scon0|sbuf0|sbr|scon1|sbuf1|p1|p1ddr|p1fcr|p3|p3ddr|p3int|fpr|p7|i01cr|i23cr|isl|mplsw|mplsta|mplrst|vsel|vrmad1|vrmad2|vtrbf|vlreg|btcr|@r[0-3]|[0-f])\\b"
         }
       ]
     },
