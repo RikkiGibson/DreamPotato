@@ -6,7 +6,7 @@ export class Lc86kDocumentSymbolProvider implements vscode.DocumentSymbolProvide
         token: vscode.CancellationToken
     ): vscode.DocumentSymbol[] {
         const symbols: vscode.DocumentSymbol[] = [];
-        let currentGlobalSymbol: vscode.DocumentSymbol | null = null;
+        let currentGlobalLabel: vscode.DocumentSymbol | null = null;
 
         for (let i = 0; i < document.lineCount; i++) {
             if (token.isCancellationRequested) {
@@ -28,20 +28,21 @@ export class Lc86kDocumentSymbolProvider implements vscode.DocumentSymbolProvide
                     i, name.length
                 );
 
-                if (currentGlobalSymbol) {
-                    currentGlobalSymbol.range = new vscode.Range(
-                        currentGlobalSymbol.range.start,
-                        range.end
+                // End the current global label range and start a new global label.
+                if (currentGlobalLabel) {
+                    currentGlobalLabel.range = new vscode.Range(
+                        currentGlobalLabel.range.start,
+                        range.start
                     );
                 }
-                currentGlobalSymbol = new vscode.DocumentSymbol(
+                currentGlobalLabel = new vscode.DocumentSymbol(
                     name,
                     '',
                     vscode.SymbolKind.Function,
                     range,
                     selectionRange
                 );
-                symbols.push(currentGlobalSymbol);
+                symbols.push(currentGlobalLabel);
                 continue;
             }
 
@@ -65,8 +66,8 @@ export class Lc86kDocumentSymbolProvider implements vscode.DocumentSymbolProvide
                     selectionRange
                 );
 
-                if (currentGlobalSymbol) {
-                    currentGlobalSymbol.children.push(localSymbol);
+                if (currentGlobalLabel) {
+                    currentGlobalLabel.children.push(localSymbol);
                 } else {
                     symbols.push(localSymbol);
                 }
@@ -100,10 +101,10 @@ export class Lc86kDocumentSymbolProvider implements vscode.DocumentSymbolProvide
             }
         }
 
-        if (currentGlobalSymbol) {
+        if (currentGlobalLabel) {
             let lastLine = document.lineAt(document.lineCount - 1);
-            currentGlobalSymbol.range = new vscode.Range(
-                currentGlobalSymbol.range.start,
+            currentGlobalLabel.range = new vscode.Range(
+                currentGlobalLabel.range.start,
                 lastLine.range.end
             );
         }
