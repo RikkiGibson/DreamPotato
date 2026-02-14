@@ -1,13 +1,33 @@
 import * as vscode from 'vscode';
 
+
+type AsmKind = "globalLabel" | "localLabel" | "const";
+class AsmSymbol extends vscode.DocumentSymbol {
+    asmKind: AsmKind;
+
+    constructor(asmKind: AsmKind, name: string, detail: string, kind: vscode.SymbolKind, range: vscode.Range, selectionRange: vscode.Range) {
+        super(name, detail, kind, range, selectionRange);
+        this.asmKind = asmKind;
+    }
+}
+
 export class Lc86kDocumentSymbolProvider implements vscode.DocumentSymbolProvider {
     provideDocumentSymbols(
         document: vscode.TextDocument,
         token: vscode.CancellationToken
     ): vscode.DocumentSymbol[] {
-        const symbols: vscode.DocumentSymbol[] = [];
-        let currentGlobalLabel: vscode.DocumentSymbol | null = null;
+        const asmSymbols = this.findAsmSymbols(document, token);
+        this.setRanges(document, asmSymbols);
+        return asmSymbols;
+    }
 
+    findAsmSymbols(
+        document: vscode.TextDocument,
+        token: vscode.CancellationToken
+    ): AsmSymbol[] {
+        const symbols: AsmSymbol[] = [];
+
+        let currentGlobalSymbol: AsmSymbol | undefined;
         for (let i = 0; i < document.lineCount; i++) {
             if (token.isCancellationRequested) {
                 return symbols;
@@ -16,60 +36,51 @@ export class Lc86kDocumentSymbolProvider implements vscode.DocumentSymbolProvide
             const line = document.lineAt(i);
             const text = line.text;
 
-            const globalMatch = text.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*:/);
-            if (globalMatch) {
-                const name = globalMatch[1];
+            function assertHasValue(value: number | undefined): number {
+                if (value == null) {
+                    throw new Error();
+                }
+
+                return value;
+            }
+
+            function eatLabel(kind: "globalLabel" | "localLabel", match: RegExpMatchArray): AsmSymbol {
+                var startCharacter = assertHasValue(match.index);
                 const range = new vscode.Range(
-                    i, 0,
-                    i, line.text.length
+                    i, startCharacter,
+                    i, startCharacter + match[0].length
                 );
                 const selectionRange = new vscode.Range(
-                    i, 0,
-                    i, name.length
+                    i, startCharacter,
+                    i, startCharacter // note: this is adjusted in a later step.
                 );
+                const name = match[1];
 
-                // End the current global label range and start a new global label.
-                if (currentGlobalLabel) {
-                    currentGlobalLabel.range = new vscode.Range(
-                        currentGlobalLabel.range.start,
-                        range.start
-                    );
-                }
-                currentGlobalLabel = new vscode.DocumentSymbol(
+                const detail = ''; // TODO: search upward for comments
+                return new AsmSymbol(
+                    kind,
                     name,
-                    '',
+                    detail,
                     vscode.SymbolKind.Function,
                     range,
                     selectionRange
                 );
-                symbols.push(currentGlobalLabel);
+            }
+
+            const globalMatch = text.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*:/);
+            if (globalMatch) {
+                currentGlobalSymbol = eatLabel("globalLabel", globalMatch);
+                symbols.push(currentGlobalSymbol);
                 continue;
             }
 
             const localMatch = text.match(/^(\.[a-zA-Z_][a-zA-Z0-9_]*)\s*:/);
             if (localMatch) {
-                const name = localMatch[1];
-                const range = new vscode.Range(
-                    i, 0,
-                    i, line.text.length
-                );
-                const selectionRange = new vscode.Range(
-                    i, 0,
-                    i, name.length
-                );
-
-                const localSymbol = new vscode.DocumentSymbol(
-                    name,
-                    '',
-                    vscode.SymbolKind.Method,
-                    range,
-                    selectionRange
-                );
-
-                if (currentGlobalLabel) {
-                    currentGlobalLabel.children.push(localSymbol);
+                const localLabel = eatLabel("localLabel", localMatch);
+                if (currentGlobalSymbol) {
+                    currentGlobalSymbol.children.push(localLabel);
                 } else {
-                    symbols.push(localSymbol);
+                    symbols.push(localLabel);
                 }
 
                 continue;
@@ -88,27 +99,53 @@ export class Lc86kDocumentSymbolProvider implements vscode.DocumentSymbolProvide
                     i, name.length
                 );
 
-                const constSymbol = new vscode.DocumentSymbol(
+                symbols.push(new AsmSymbol(
+                    "const",
                     name,
                     value,
                     vscode.SymbolKind.Constant,
                     range,
                     selectionRange
-                );
-                symbols.push(constSymbol);
+                ));
 
                 continue;
             }
         }
 
-        if (currentGlobalLabel) {
-            let lastLine = document.lineAt(document.lineCount - 1);
-            currentGlobalLabel.range = new vscode.Range(
-                currentGlobalLabel.range.start,
-                lastLine.range.end
-            );
+        return symbols;
+    }
+
+    setRanges(document: vscode.TextDocument, asmSymbols: AsmSymbol[]) {
+        const documentEndPos = document.lineAt(document.lineCount - 1).range.end;
+        for (let i = 0; i < asmSymbols.length; i++) {
+            const symbol = asmSymbols[i];
+            if (symbol.asmKind == "globalLabel") {
+                setLabelRange(asmSymbols, i, documentEndPos);
+                for (let j = 0; j < symbol.children.length; j++) {
+                    setLabelRange(symbol.children as AsmSymbol[], j, symbol.range.end);
+                }
+            }
+            else if (symbol.asmKind == "localLabel") {
+                setLabelRange(asmSymbols, i, documentEndPos);
+            }
+            else if (symbol.asmKind == "const") {
+                continue;
+            }
+            else {
+                throw new Error();
+            }
         }
 
-        return symbols;
+        function setLabelRange(siblingSymbols: AsmSymbol[], index: number, containerEndPos: vscode.Position) {
+            const symbol = siblingSymbols[index];
+            if (index === siblingSymbols.length - 1) {
+                symbol.range = new vscode.Range(symbol.range.start, containerEndPos);
+                return;
+            }
+
+            const nextSibling = siblingSymbols[index + 1];
+            const endTextLine = document.lineAt(nextSibling.range.end.line - 1);
+            symbol.range = new vscode.Range(symbol.range.start, endTextLine.range.end);
+        }
     }
 }
