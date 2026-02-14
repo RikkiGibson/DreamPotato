@@ -7,6 +7,10 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.languages.registerDocumentSymbolProvider(
             { language: 'lc86k' },
             symbolProvider
+        ),
+        vscode.languages.registerDefinitionProvider(
+            { language: 'lc86k' },
+            symbolProvider
         )
     );
 }

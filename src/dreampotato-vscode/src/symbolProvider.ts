@@ -1,5 +1,7 @@
-import * as vscode from 'vscode';
+// Extremely quick and dirty symbol provider for lc86k asm.
+// The ultimate goal is to throw this away and write a waterbear LSP instead.
 
+import * as vscode from 'vscode';
 
 type AsmKind = "globalLabel" | "localLabel" | "const";
 class AsmSymbol extends vscode.DocumentSymbol {
@@ -11,7 +13,29 @@ class AsmSymbol extends vscode.DocumentSymbol {
     }
 }
 
-export class Lc86kDocumentSymbolProvider implements vscode.DocumentSymbolProvider {
+export class Lc86kDocumentSymbolProvider implements vscode.DocumentSymbolProvider, vscode.DefinitionProvider {
+    provideDefinition(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.ProviderResult<vscode.Definition | vscode.DefinitionLink[]> {
+        const identifier = getPossibleLabelName(document, position);
+        if (!identifier) {
+            return;
+        }
+
+        const symbols = this.findAsmSymbols(document, token);
+        this.setRanges(document, symbols);
+        for (const symbol of symbols) {
+            if (symbol.name.localeCompare(identifier, undefined, {sensitivity: "base" }) === 0) {
+                return new vscode.Location(document.uri, symbol.selectionRange);
+            }
+
+            // Local label only matches if contained within associated global label range
+            for (const localLabel of symbol.children) {
+                if (symbol.range.contains(position) && localLabel.name.localeCompare(identifier, undefined, {sensitivity: "base" }) === 0) {
+                    return new vscode.Location(document.uri, localLabel.selectionRange);
+                }
+            }
+        }
+    }
+
     provideDocumentSymbols(
         document: vscode.TextDocument,
         token: vscode.CancellationToken
@@ -148,4 +172,23 @@ export class Lc86kDocumentSymbolProvider implements vscode.DocumentSymbolProvide
             symbol.range = new vscode.Range(symbol.range.start, endTextLine.range.end);
         }
     }
+}
+
+function getPossibleLabelName(document: vscode.TextDocument, position: vscode.Position): string | undefined {
+    const textLine = document.lineAt(position);
+    if (textLine.isEmptyOrWhitespace) {
+        return;
+    }
+
+    // Scan backwards to start of identifier
+    let startChar = position.character;
+    while (startChar > 0
+        && startChar > textLine.firstNonWhitespaceCharacterIndex
+        && textLine.text[startChar - 1].match(/[a-zA-Z0-9_.]/)) {
+
+        startChar--;
+    }
+
+    const match = textLine.text.slice(startChar).match(/.?[a-zA-Z_][a-zA-Z0-9_]*/);
+    return match ? match[0] : undefined;
 }
