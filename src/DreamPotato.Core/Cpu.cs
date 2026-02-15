@@ -855,8 +855,8 @@ public class Cpu
         // TODO: hold mode doesn't even tick timers. only external interrupts wake the VMU.
         if (SFRs.Pcon.HaltMode)
         {
-            tickCpuClockedTimers(1);
             handleInterrupts();
+            tickCpuClockedTimers(1);
             // TODO: we didn't really execute this (PC not incremented), but, we did consume 1 cycle.
             // We probably want a different type here or a HALT "pseudo-instruction".
             return new Instruction(Pc, Operations.NOP);
@@ -878,8 +878,8 @@ public class Cpu
             // https://github.com/gyrovorbis/vmu-bios-disassembly/blob/923d28f99d43a03fad81342bf5650cf94e287d03/american_v1.05.s#L4219
             // https://github.com/RikkiGibson/DreamPotato/pull/14#discussion_r2628643313
             Pc += inst.Size;
-            tickCpuClockedTimers(inst.Cycles);
             handleInterrupts();
+            tickCpuClockedTimers(inst.Cycles);
             return inst;
         }
 
@@ -933,8 +933,8 @@ public class Cpu
             default: Throw(inst); break;
         }
 
-        tickCpuClockedTimers(inst.Cycles);
         handleInterrupts();
+        tickCpuClockedTimers(inst.Cycles);
         return inst;
 
         static void Throw(Instruction inst) => throw new InvalidOperationException($"Unknown operation '{inst}'");
@@ -1023,6 +1023,11 @@ public class Cpu
                         {
                             t1l = SFRs.T1Lr;
                             Audio.OnT1LReloaded(t1cnt, t1l, SFRs.T1Lc);
+
+                            // TODO: basically need to test internal triggering behavior with every interrupt and decide if a check like this is needed
+                            if (!t1cnt.T1lOvf)
+                                MarkInterruptsNotReady();
+
                             t1cnt.T1lOvf = true;
                         }
 
