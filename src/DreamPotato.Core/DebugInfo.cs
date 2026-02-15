@@ -4,7 +4,7 @@ namespace DreamPotato.Core;
 
 // TODO: ideally we would use this map to maintain info on which regions of ROM are executable or not
 // we could then feed this info back into reverse engineering tools
-class InstructionMap(Logger _logger)
+class DebugInfo(Logger _logger)
 {
     private readonly Instruction[][] _instructionBanks = [
         new Instruction[64 * 1024], // ROM
