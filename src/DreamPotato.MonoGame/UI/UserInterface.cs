@@ -330,6 +330,7 @@ partial class UserInterface
         LayoutSecondaryMenuBar();
 
         LayoutSettings();
+        LayoutDebugger();
 
         LayoutKeyMapping();
         LayoutEditKey();
@@ -341,7 +342,8 @@ partial class UserInterface
 
         LayoutFastForwardOrPauseIndicators();
         LayoutToast();
-}
+    }
+
 
     private void LayoutFastForwardOrPauseIndicators()
     {
@@ -649,7 +651,7 @@ partial class UserInterface
         presenter.Vmu.SaveState(_game.Configuration.CurrentSaveStateSlot.ToString());
         var stateInfo = presenter == _game.PrimaryVmuPresenter ? _primarySaveStateInfo : _secondarySaveStateInfo;
         stateInfo.InvalidateThumbnail();
-        ShowScreenshotToast(presenter, $"Saved state to slot {_game.Configuration.CurrentSaveStateSlot+1}", durationFrames: 2 * 60);
+        ShowScreenshotToast(presenter, $"Saved state to slot {_game.Configuration.CurrentSaveStateSlot + 1}", durationFrames: 2 * 60);
     }
 
     private void UpdateThumbnail(Vmu vmu, SaveStateInfo stateInfo)
@@ -937,6 +939,43 @@ partial class UserInterface
         }
     }
 
+    private void LayoutDebugger()
+    {
+        ImGui.Begin("Debugger");
+        {
+            ImGui.Text("Hello");
+            // List ROM, Flash tabs
+
+            ImGui.BeginTable("disasm", columns: 3, flags: ImGuiTableFlags.BordersInnerV);
+            ImGui.TableSetupColumn("breakpoints", ImGuiTableColumnFlags.WidthFixed);
+            ImGui.TableSetupColumn("addresses", ImGuiTableColumnFlags.WidthFixed);
+            ImGui.TableSetupColumn("instructions", ImGuiTableColumnFlags.WidthStretch);
+
+            int index = 0;
+            foreach (var (offset, disasm) in _game.PrimaryVmu.DebugInfo.GetDisassembly())
+            {
+                ImGui.PushID(index);
+                ImGui.TableNextColumn();
+                ImGui.PushID("breakpoint");
+                bool b = false;
+                ImGui.Checkbox("", ref b);
+                ImGui.PopID();
+
+                ImGui.TableNextColumn();
+                ImGui.Text(offset.ToString("X4"));
+
+                ImGui.TableNextColumn();
+                ImGui.Text(disasm);
+                ImGui.PopID();
+
+                index++;
+            }
+            ImGui.EndTable();
+
+            ImGui.End();
+        }
+    }
+
     private void LayoutKeyMapping()
     {
         if (_mappingEditState.KeyMappings is null)
@@ -1083,7 +1122,7 @@ partial class UserInterface
             var previewValue = _mappingEditState.GamePadIndex switch
             {
                 InputMappings.GamePadIndex_None => "None",
-                var index => $"{_mappingEditState.GamePadIndex+1}: {GamePad.GetCapabilities(index).DisplayName ?? "<not found>"}"
+                var index => $"{_mappingEditState.GamePadIndex + 1}: {GamePad.GetCapabilities(index).DisplayName ?? "<not found>"}"
             };
             if (ImGui.BeginCombo(label: "", previewValue))
             {
@@ -1098,7 +1137,7 @@ partial class UserInterface
                     if (!capabilities.IsConnected)
                         continue;
 
-                    if (ImGui.Selectable($"{i+1}: {capabilities.DisplayName}"))
+                    if (ImGui.Selectable($"{i + 1}: {capabilities.DisplayName}"))
                         _mappingEditState.GamePadIndex = i;
                 }
 

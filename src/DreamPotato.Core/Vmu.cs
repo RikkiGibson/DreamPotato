@@ -96,6 +96,7 @@ public class Vmu
             if (bios.Length != Cpu.InstructionBankSize)
                 throw new ArgumentException($"VMU ROM '{filePath}' needs to be exactly 64KB in size.", nameof(filePath));
             bios.AsSpan().CopyTo(_cpu.ROM);
+            _cpu.DebugInfo.Load(InstructionBank.ROM, _cpu.ROM);
         }
         catch (FileNotFoundException ex)
         {
@@ -228,6 +229,7 @@ public class Vmu
     public static string DataFolder => Path.Combine(AppContext.BaseDirectory, "Data");
 
     public DreamcastSlot DreamcastSlot { get => _cpu.DreamcastSlot; set => _cpu.DreamcastSlot = value; }
+    public DebugInfo DebugInfo => _cpu.DebugInfo;
 
     public const string RomFileName = "american_v1.05.bin";
     public const string SaveStateHeaderMessage = $"DreamPotatoSaveStateV{SaveStateVersion}";

@@ -217,7 +217,7 @@ public class Cpu
         _flashWriteUnlockSequence = 0;
         Memory.Reset();
 #if DEBUG
-        DebugInfo.Clear();
+        // DebugInfo.Clear();
 #endif
         SyncInstructionBank();
     }
@@ -879,7 +879,7 @@ public class Cpu
 
         var inst = InstructionDecoder.Decode(CurrentROMBank, Pc);
 #if DEBUG
-        DebugInfo[InstructionBank, Pc] = inst;
+        DebugInfo[InstructionBank, Pc] = new(inst, Executed: true);
 #endif
 
         if (InstructionBank == InstructionBank.ROM
