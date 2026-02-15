@@ -3,99 +3,101 @@
 ;    /////////////////////////////////////////////////////////////
 ;   ///                        VECTORS                        ///
 ;  /////////////////////////////////////////////////////////////
-    .org 0   ; entry point
+.org 0   ; entry point
   jmpf main
-    .org $03 ; External int. (INTO)
-  jmp int_03
-    .org $0B ; External int. (INT1)
-  jmp int_0b
-    .org $13 ; External int. (INT2) and Timer 0 low
-  jmp int_13
-    .org $1B ; External int. (INT3) and base timer
+
+Interrupts:
+.org $03 ; External int. (INTO)
+  jmp .int_03
+.org $0B ; External int. (INT1)
+  jmp .int_0b
+.org $13 ; External int. (INT2) and Timer 0 low
+  jmp .int_13
+.org $1B ; External int. (INT3) and base timer
   jmp int_1b
-    .org $23 ; Timer 0 high
-  jmp int_23
-    .org $2B ; Timer 1 Low and High
-  jmp int_2b
-    .org $33 ; Serial IO 1
-  jmp int_33
-    .org $3B ; Serial IO 2
-  jmp int_3b
-    .org $43 ; VMU to VMU comms
-  jmp int_43
-    .org $4B ; Port 3 interrupt
-  jmp int_4b
+.org $23 ; Timer 0 high
+  jmp .int_23
+.org $2B ; Timer 1 Low and High
+  jmp .int_2b
+.org $33 ; Serial IO 1
+  jmp .int_33
+.org $3B ; Serial IO 2
+  jmp .int_3b
+.org $43 ; VMU to VMU comms
+  jmp .int_43
+.org $4B ; Port 3 interrupt
+  jmp .int_4b
 
 ;    /////////////////////////////////////////////////////////////
 ;   ///                    INTERRUPT HANDLERS                 ///
 ;  /////////////////////////////////////////////////////////////
-int_03:
+.int_03:
   reti
-int_0b:
+.int_0b:
   reti
-int_13:
+.int_13:
   reti
-int_23:
+.int_23:
   reti
-int_2b:
+.int_2b:
   reti
-int_33:
+.int_33:
   reti
-int_3b:
+.int_3b:
   reti
-int_43:
+.int_43:
   reti
-int_4b:
+.int_4b:
   clr1 p3int,1 ; interrupt flag clear
   reti
 
 ;    /////////////////////////////////////////////////////////////
 ;   ///                EXTERNAL PROGRAMS                      ///
 ;  /////////////////////////////////////////////////////////////
-    .org $100
+.org $100
 fm_wrt_ex:
-    not1 EXT, 0   ;
+  not1 EXT, 0   ;
   jmpf fm_wrt_ex  ; return to BIOS
   ret
-    .org $110
+.org $110
 fm_vrf_ex:
     not1 EXT, 0   ;
   jmpf fm_vrf_ex  ; return to BIOS
   ret
-    .org $120
+.org $120
 fm_prd_ex:
-    not1 EXT, 0   ;
+  not1 EXT, 0   ;
   jmpf fm_prd_ex  ; return to BIOS
   ret
-    .org $130
+.org $130
 int_1b:
 timer_ex:
   push ie
   clr1 ie,7 ; interrupt prohibition
-    not1 EXT, 0   ;
+  not1 EXT, 0   ;
   jmpf timer_ex   ; return to BIOS
   call int_BaseTimer ; User interrupt processing
   pop ie
   reti
-    .org $1F0
+.org $1F0
 game_end:
-    not1 EXT, 0   ;
+  not1 EXT, 0   ;
   jmpf game_end ; return to BIOS
 
 
 ;    /////////////////////////////////////////////////////////////
 ;   ///                    DREAMCAST HEADER                   ///
 ;  /////////////////////////////////////////////////////////////
-    .org $200
+.org $200
     .byte "IntDelays       " ; ................... 16-byte Title
     .byte "Interrupt Handling Delays Test  " ; ... 32-byte Descr1tion
 
 ;    /////////////////////////////////////////////////////////////
 ;   ///                       GAME ICON                       ///
 ;  /////////////////////////////////////////////////////////////
-    .org $240 ; >>> ICON HEADER
-    .org $260 ; >>> PALETTE TABLE
-    .org $280 ; >>> ICON DATA
+.org $240 ; >>> ICON HEADER
+.org $260 ; >>> PALETTE TABLE
+.org $280 ; >>> ICON DATA
 
 ;    //////////////////////////////////////////////////////////////
 ;   ///                 INTERRUPT DELAYS SAMPLE.               ///
@@ -126,166 +128,167 @@ LowBattChk = $6e ; Low battery detection flag (RAM bank 0)
 main:
   call cls ; Clears the LCD display
   call BattChkOff ; Turns off the low battery automatic detection function
-start:
 
-xor acc ; zero out acc 
-st flag ; init variables
-st xpos
-st ypos
+  start:
 
-; Regs to check:
-; IE, IP, SP, I01CR,
-; I23CR, T0CNT, BTCR, T1CNT
-; SCON0, SCON1, RFB(?), P3INT
-; PCON, OCR
+  xor acc ; zero out acc 
+  st flag ; init variables
+  st xpos
+  st ypos
 
-; 1st SFR to check: IE
-clr1 IE,7 ; master interrupt disable
-mov #%00001100, BTCR ; set btint1 enable and source
-ld IE
-set1 acc, 7
-set1 IE, 7 ; enable interrupts
-st IE ; write to IE. Note we 'double store' to make this uniform with other checks
-mov #1, flag ; question: does btint1 run before or after this inst?
+  ; Regs to check:
+  ; IE, IP, SP, I01CR,
+  ; I23CR, T0CNT, BTCR, T1CNT
+  ; SCON0, SCON1, RFB(?), P3INT
+  ; PCON, OCR
 
-; 2nd SFR to check: IP
-inc xpos
-mov #0, flag
-clr1 IE,7 ; master interrupt disable
-mov #%00001100, BTCR ; set btint1 enable and source
-ld IP
-set1 IE, 7 ; enable interrupts
-st IP
-mov #1, flag ; question: does btint1 run before or after this inst?
+  ; 1st SFR to check: IE
+  clr1 IE,7 ; master interrupt disable
+  mov #%00001100, BTCR ; set btint1 enable and source
+  ld IE
+  set1 acc, 7
+  set1 IE, 7 ; enable interrupts
+  st IE ; write to IE. Note we 'double store' to make this uniform with other checks
+  mov #1, flag ; question: does btint1 run before or after this inst?
 
-; 3rd SFR to check: SP
-inc xpos
-mov #0, flag
-clr1 IE,7 ; master interrupt disable
-mov #%00001100, BTCR ; set btint1 enable and source
-inc SP
-set1 IE, 7 ; enable interrupts
-dec SP ; scary..hope this doesn't destabilize the VMU
-mov #1, flag ; question: does btint1 run before or after this inst?
+  ; 2nd SFR to check: IP
+  inc xpos
+  mov #0, flag
+  clr1 IE,7 ; master interrupt disable
+  mov #%00001100, BTCR ; set btint1 enable and source
+  ld IP
+  set1 IE, 7 ; enable interrupts
+  st IP
+  mov #1, flag ; question: does btint1 run before or after this inst?
 
-; 4th SFR to check: I01CR
-inc xpos
-mov #0, flag
-clr1 IE,7 ; master interrupt disable
-mov #%00001100, BTCR ; set btint1 enable and source
-not1 I01CR, 0 ; toggle int0
-set1 IE, 7 ; enable interrupts
-not1 I01CR, 0 ; toggle int0
-mov #1, flag ; question: does btint1 run before or after this inst?
+  ; 3rd SFR to check: SP
+  inc xpos
+  mov #0, flag
+  clr1 IE,7 ; master interrupt disable
+  mov #%00001100, BTCR ; set btint1 enable and source
+  inc SP
+  set1 IE, 7 ; enable interrupts
+  dec SP ; scary..hope this doesn't destabilize the VMU
+  mov #1, flag ; question: does btint1 run before or after this inst?
 
-; Next row. 5th SFR to check: I23CR
-mov #0, xpos
-inc ypos
-mov #0, flag
-clr1 IE,7 ; master interrupt disable
-mov #%00001100, BTCR ; set btint1 enable and source
-not1 I23CR, 1 ; toggle int2
-set1 IE, 7 ; enable interrupts
-not1 I23CR, 1 ; toggle int2
-mov #1, flag ; question: does btint1 run before or after this inst?
+  ; 4th SFR to check: I01CR
+  inc xpos
+  mov #0, flag
+  clr1 IE,7 ; master interrupt disable
+  mov #%00001100, BTCR ; set btint1 enable and source
+  not1 I01CR, 0 ; toggle int0
+  set1 IE, 7 ; enable interrupts
+  not1 I01CR, 0 ; toggle int0
+  mov #1, flag ; question: does btint1 run before or after this inst?
 
-; 6th SFR to check: T0CNT
-inc xpos
-mov #0, flag
-clr1 IE,7 ; master interrupt disable
-mov #%00001100, BTCR ; set btint1 enable and source
-not1 T0CNT, 0 ; toggle t0lie
-set1 IE, 7 ; enable interrupts
-not1 T0CNT, 0 ; toggle t0lie
-mov #1, flag ; question: does btint1 run before or after this inst?
+  ; Next row. 5th SFR to check: I23CR
+  mov #0, xpos
+  inc ypos
+  mov #0, flag
+  clr1 IE,7 ; master interrupt disable
+  mov #%00001100, BTCR ; set btint1 enable and source
+  not1 I23CR, 1 ; toggle int2
+  set1 IE, 7 ; enable interrupts
+  not1 I23CR, 1 ; toggle int2
+  mov #1, flag ; question: does btint1 run before or after this inst?
 
-; 7th SFR to check: BTCR
-inc xpos
-mov #0, flag
-clr1 IE,7 ; master interrupt disable
-mov #%00001100, BTCR ; set btint1 enable and source
-ld BTCR
-not1 BTCR, 0 ; toggle btint0
-set1 IE, 7 ; enable interrupts
-not1 BTCR, 0 ; toggle btint0
-mov #1, flag ; question: does btint1 run before or after this inst?
+  ; 6th SFR to check: T0CNT
+  inc xpos
+  mov #0, flag
+  clr1 IE,7 ; master interrupt disable
+  mov #%00001100, BTCR ; set btint1 enable and source
+  not1 T0CNT, 0 ; toggle t0lie
+  set1 IE, 7 ; enable interrupts
+  not1 T0CNT, 0 ; toggle t0lie
+  mov #1, flag ; question: does btint1 run before or after this inst?
 
-; 8th SFR to check: T1CNT
-inc xpos
-mov #0, flag
-clr1 IE,7 ; master interrupt disable
-mov #%00001100, BTCR ; set btint1 enable and source
-not1 T1CNT, 0 ; toggle t1lie
-set1 IE, 7 ; enable interrupts
-not1 T1CNT, 0 ; toggle t1lie
-mov #1, flag ; question: does btint1 run before or after this inst?
+  ; 7th SFR to check: BTCR
+  inc xpos
+  mov #0, flag
+  clr1 IE,7 ; master interrupt disable
+  mov #%00001100, BTCR ; set btint1 enable and source
+  ld BTCR
+  not1 BTCR, 0 ; toggle btint0
+  set1 IE, 7 ; enable interrupts
+  not1 BTCR, 0 ; toggle btint0
+  mov #1, flag ; question: does btint1 run before or after this inst?
 
-; Next row. 9th SFR to check: SCON0
-mov #0, xpos
-inc ypos
-mov #0, flag
-clr1 IE,7 ; master interrupt disable
-mov #%00001100, BTCR ; set btint1 enable and source
-not1 SCON0, 0 ; toggle scon0ie
-set1 IE, 7 ; enable interrupts
-not1 SCON0, 0 ; toggle scon0ie
-mov #1, flag ; question: does btint1 run before or after this inst?
+  ; 8th SFR to check: T1CNT
+  inc xpos
+  mov #0, flag
+  clr1 IE,7 ; master interrupt disable
+  mov #%00001100, BTCR ; set btint1 enable and source
+  not1 T1CNT, 0 ; toggle t1lie
+  set1 IE, 7 ; enable interrupts
+  not1 T1CNT, 0 ; toggle t1lie
+  mov #1, flag ; question: does btint1 run before or after this inst?
 
-; 10th SFR to check: SCON1
-inc xpos
-mov #0, flag
-clr1 IE,7 ; master interrupt disable
-mov #%00001100, BTCR ; set btint1 enable and source
-not1 SCON1, 0 ; toggle scon0ie
-set1 IE, 7 ; enable interrupts
-not1 SCON1, 0 ; toggle scon0ie
-mov #1, flag ; question: does btint1 run before or after this inst?
+  ; Next row. 9th SFR to check: SCON0
+  mov #0, xpos
+  inc ypos
+  mov #0, flag
+  clr1 IE,7 ; master interrupt disable
+  mov #%00001100, BTCR ; set btint1 enable and source
+  not1 SCON0, 0 ; toggle scon0ie
+  set1 IE, 7 ; enable interrupts
+  not1 SCON0, 0 ; toggle scon0ie
+  mov #1, flag ; question: does btint1 run before or after this inst?
 
-; 11th SFR to check: RFB. TODO: what is the address of RFB? It's not documented
-inc xpos
-; mov #0, flag
-; clr1 IE,7 ; master interrupt disable
-; mov #%00001100, BTCR ; set btint1 enable and source
-; ld RFB
-; set1 IE, 7 ; enable interrupts
-; st RFB
-; mov #1, flag ; question: does btint1 run before or after this inst?
+  ; 10th SFR to check: SCON1
+  inc xpos
+  mov #0, flag
+  clr1 IE,7 ; master interrupt disable
+  mov #%00001100, BTCR ; set btint1 enable and source
+  not1 SCON1, 0 ; toggle scon0ie
+  set1 IE, 7 ; enable interrupts
+  not1 SCON1, 0 ; toggle scon0ie
+  mov #1, flag ; question: does btint1 run before or after this inst?
 
-; 12th SFR to check: P3INT
-inc xpos
-mov #0, flag
-clr1 IE,7 ; master interrupt disable
-mov #%00001100, BTCR ; set btint1 enable and source
-not1 P3INT, 0 ; toggle P3 int enable
-set1 IE, 7 ; enable interrupts
-not1 P3INT, 0 ; toggle P3 int enable
-mov #1, flag ; question: does btint1 run before or after this inst?
+  ; 11th SFR to check: RFB. TODO: what is the address of RFB? It's not documented
+  inc xpos
+  ; mov #0, flag
+  ; clr1 IE,7 ; master interrupt disable
+  ; mov #%00001100, BTCR ; set btint1 enable and source
+  ; ld RFB
+  ; set1 IE, 7 ; enable interrupts
+  ; st RFB
+  ; mov #1, flag ; question: does btint1 run before or after this inst?
 
-; Next row. 13th SFR to check: PCON
-mov #0, xpos
-inc ypos
-mov #0, flag
-clr1 IE,7 ; master interrupt disable
-mov #%00001100, BTCR ; set btint1 enable and source
-ld PCON
-set1 IE, 7 ; enable interrupts
-st PCON
-mov #1, flag ; question: does btint1 run before or after this inst?
+  ; 12th SFR to check: P3INT
+  inc xpos
+  mov #0, flag
+  clr1 IE,7 ; master interrupt disable
+  mov #%00001100, BTCR ; set btint1 enable and source
+  not1 P3INT, 0 ; toggle P3 int enable
+  set1 IE, 7 ; enable interrupts
+  not1 P3INT, 0 ; toggle P3 int enable
+  mov #1, flag ; question: does btint1 run before or after this inst?
 
-; 14th SFR to check: OCR
-inc xpos
-mov #0, flag
-clr1 IE,7 ; master interrupt disable
-mov #%00001100, BTCR ; set btint1 enable and source
-push OCR ; Pushes the OCR value onto the stack
-mov #osc_rc, OCR ; Specifies the system clock
-set1 IE, 7 ; enable interrupts
-pop OCR
-mov #1, flag ; question: does btint1 run before or after this inst?
+  ; Next row. 13th SFR to check: PCON
+  mov #0, xpos
+  inc ypos
+  mov #0, flag
+  clr1 IE,7 ; master interrupt disable
+  mov #%00001100, BTCR ; set btint1 enable and source
+  ld PCON
+  set1 IE, 7 ; enable interrupts
+  st PCON
+  mov #1, flag ; question: does btint1 run before or after this inst?
+
+  ; 14th SFR to check: OCR
+  inc xpos
+  mov #0, flag
+  clr1 IE,7 ; master interrupt disable
+  mov #%00001100, BTCR ; set btint1 enable and source
+  push OCR ; Pushes the OCR value onto the stack
+  mov #osc_rc, OCR ; Specifies the system clock
+  set1 IE, 7 ; enable interrupts
+  pop OCR
+  mov #1, flag ; question: does btint1 run before or after this inst?
 
 
-; Done working. Wait for mode button (to exit)
-mov #0, BTCR
+  ; Done working. Wait for mode button (to exit)
+  mov #0, BTCR
 next4: ; ** [M] (mode) Button Check **
   ld P3
   bn acc,6,finish ; If the [M] button is pressed, the application ends
