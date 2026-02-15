@@ -941,11 +941,8 @@ partial class UserInterface
 
     private void LayoutDebugger()
     {
-        ImGui.Begin("Debugger");
+        if (ImGui.Begin("Debugger"))
         {
-            ImGui.Text("Hello");
-            // List ROM, Flash tabs
-
             ImGui.BeginTable("disasm", columns: 3, flags: ImGuiTableFlags.BordersInnerV);
             ImGui.TableSetupColumn("breakpoints", ImGuiTableColumnFlags.WidthFixed);
             ImGui.TableSetupColumn("addresses", ImGuiTableColumnFlags.WidthFixed);
@@ -970,10 +967,11 @@ partial class UserInterface
 
                 index++;
             }
-            ImGui.EndTable();
 
-            ImGui.End();
+            ImGui.EndTable();
         }
+
+        ImGui.End();
     }
 
     private void LayoutKeyMapping()
