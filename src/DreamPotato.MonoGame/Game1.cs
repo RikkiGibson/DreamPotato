@@ -454,14 +454,16 @@ public class Game1 : Game
             // This will do to start with, though
             var viewport = _graphics.GraphicsDevice.Viewport;
             var contentRectangle = viewport.Bounds;
-            contentRectangle.Width /= 4;
+            if (_userInterface.Debugger_Show)
+                contentRectangle.Width /= 3;
+
             contentRectangle.Height -= MenuBarHeight;
             contentRectangle.Y += MenuBarHeight;
             return contentRectangle;
         }
     }
 
-    private void UpdateScaleMatrix()
+    internal void UpdateScaleMatrix()
     {
         var viewport = _graphics.GraphicsDevice.Viewport;
         var contentRectangle = AllVmuContentRectangle;

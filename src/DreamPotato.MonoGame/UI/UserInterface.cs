@@ -169,7 +169,12 @@ partial class UserInterface
     private readonly string _commitId;
 
     // Debugger UI state
-    private int _debug_ScrollToInstructionIndex = -1;
+
+    private static readonly uint Debug_ColorPc = ImGui.GetColorU32(new Numerics.Vector4(99.0f/255, 92.0f/255, 31.0f/255, 1));
+    private static readonly uint Debug_ColorStack = ImGui.GetColorU32(new Numerics.Vector4(53.0f/255, 50.0f/255, 18.0f/255, 1));
+
+    internal bool Debugger_Show = false;
+    private int _debugger_ScrollToInstructionIndex = -1;
 
     internal PendingCommand PendingCommand { get; private set; }
 
@@ -646,6 +651,12 @@ partial class UserInterface
             if (ImGui.MenuItem("Take Screenshot"))
                 presenter.TakeScreenshot();
 
+            if (ImGui.MenuItem(Debugger_Show ? "Close Debugger" : "Open Debugger"))
+            {
+                Debugger_Show = !Debugger_Show;
+                _game.UpdateScaleMatrix();
+            }
+
             ImGui.EndMenu();
         }
     }
@@ -943,20 +954,23 @@ partial class UserInterface
         }
     }
 
-    private static readonly uint Debug_ColorPc = ImGui.GetColorU32(new Numerics.Vector4(99.0f/255, 92.0f/255, 31.0f/255, 1));
-    private static readonly uint Debug_ColorStack = ImGui.GetColorU32(new Numerics.Vector4(53.0f/255, 50.0f/255, 18.0f/255, 1));
-
     private void LayoutDebugger()
     {
-        if (ImGui.Begin("Debugger", ImGuiWindowFlags.NoScrollbar))
+        var localDebuggerShow = Debugger_Show;
+        if (!localDebuggerShow)
+            return;
+
+        if (ImGui.Begin("Debugger", ref Debugger_Show, ImGuiWindowFlags.NoScrollbar))
         {
             if (ImGui.BeginTabBar("InstructionBanks"))
             {
+                // Note: We need to drop down into unsafe code, to pass `p_open: null`, and also pass `flags`.
+                // See https://github.com/ImGuiNET/ImGui.NET/issues/135
                 unsafe
                 {
                     fixed (byte* label = "ROM"u8)
                     {
-                        var flags = _debug_ScrollToInstructionIndex != -1 && _game.PrimaryVmu._cpu.CurrentInstructionBankId == InstructionBank.ROM ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
+                        var flags = _debugger_ScrollToInstructionIndex != -1 && _game.PrimaryVmu._cpu.CurrentInstructionBankId == InstructionBank.ROM ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
                         if (ImGuiNative.igBeginTabItem(label, p_open: null, flags) != 0)
                         {
                             layoutTab(InstructionBank.ROM);
@@ -966,7 +980,7 @@ partial class UserInterface
 
                     fixed (byte* label = "FlashBank0"u8)
                     {
-                        var flags = _debug_ScrollToInstructionIndex != -1 && _game.PrimaryVmu._cpu.CurrentInstructionBankId == InstructionBank.FlashBank0 ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
+                        var flags = _debugger_ScrollToInstructionIndex != -1 && _game.PrimaryVmu._cpu.CurrentInstructionBankId == InstructionBank.FlashBank0 ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
                         if (ImGuiNative.igBeginTabItem(label, p_open: null, flags) != 0)
                         {
                             layoutTab(InstructionBank.FlashBank0);
@@ -979,7 +993,12 @@ partial class UserInterface
             }
         }
 
+        if (localDebuggerShow != Debugger_Show)
+            _game.UpdateScaleMatrix();
+
+        // Note: End() is called even when Begin() returned false to handle collapsed state
         ImGui.End();
+
 
         void layoutTab(InstructionBank bankId)
         {
@@ -1022,9 +1041,9 @@ partial class UserInterface
 
                 clipper.Begin(disasm.Count);
 
-                bool doScrollToInstruction = _debug_ScrollToInstructionIndex != -1 && executingInThisBank;
+                bool doScrollToInstruction = _debugger_ScrollToInstructionIndex != -1 && executingInThisBank;
                 if (doScrollToInstruction)
-                    clipper.IncludeItemByIndex(_debug_ScrollToInstructionIndex);
+                    clipper.IncludeItemByIndex(_debugger_ScrollToInstructionIndex);
 
                 while (clipper.Step())
                 {
@@ -1061,10 +1080,10 @@ partial class UserInterface
                         ImGui.Text(inst.DisplayInstruction());
                         ImGui.PopID();
 
-                        if (doScrollToInstruction && i == _debug_ScrollToInstructionIndex)
+                        if (doScrollToInstruction && i == _debugger_ScrollToInstructionIndex)
                         {
                             ImGui.SetScrollHereY();
-                            _debug_ScrollToInstructionIndex = -1;
+                            _debugger_ScrollToInstructionIndex = -1;
                         }
                     }
                 }
@@ -1126,7 +1145,7 @@ partial class UserInterface
         var debugInfo = _game.PrimaryVmu.DebugInfo;
         var bankInfo = debugInfo.CurrentBankInfo;
         var index = bankInfo.BinarySearchInstructions(info.Offset);
-        _debug_ScrollToInstructionIndex = index;
+        _debugger_ScrollToInstructionIndex = index;
     }
 
     private void LayoutKeyMapping()
