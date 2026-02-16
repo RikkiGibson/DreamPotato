@@ -90,7 +90,7 @@ public class Cpu
             _ => throw new InvalidOperationException()
         };
 
-    internal InstructionBank CurrentInstructionBankId { get; private set; }
+    public InstructionBank CurrentInstructionBankId { get; private set; }
 
     public readonly Memory Memory;
     public readonly Audio Audio;
@@ -167,7 +167,7 @@ public class Cpu
     private Cpu? _otherCpu;
 
     /// <summary>NOTE: not part of hardware state, so not serialized</summary>
-    public DebuggingState DebuggingState = DebuggingState.Run;
+    public DebuggingState DebuggingState { get; internal set; } = DebuggingState.Run;
 
     // TODO: update save state format
     // Now, loading state can change the used expansion slots, in addition to changing whether we are docked.
@@ -1220,12 +1220,21 @@ public class Cpu
 
         void handleBreakpoints()
         {
-            var breakpoints = DebugInfo.GetBankInfo(CurrentInstructionBankId).Breakpoints;
-            foreach (var breakpoint in breakpoints)
+            if (DebuggingState == DebuggingState.StepIn)
             {
+                DebugInfo.FireDebugBreak();
+                return;
+            }
+
+            var breakpoints = DebugInfo.GetBankInfo(CurrentInstructionBankId).Breakpoints;
+            for (int i = 0; i < breakpoints.Count; i++)
+            {
+                var breakpoint = breakpoints[i];
                 if (breakpoint.Enabled && breakpoint.Offset == Pc)
                 {
-                    DebuggingState = DebuggingState.Break;
+                    DebugInfo.FireDebugBreak();
+                    if (breakpoint.Implicit)
+                        breakpoints.RemoveAt(i);
                 }
             }
         }
@@ -2051,4 +2060,5 @@ public enum DebuggingState
 {
     Run,
     Break,
+    StepIn,
 }

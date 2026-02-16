@@ -134,6 +134,8 @@ public class Game1 : Game
 
         _spriteBatch = new SpriteBatch(GraphicsDevice);
 
+        primaryVmu.DebugInfo.DebugBreak += _userInterface.OnDebugBreak;
+
         base.Initialize();
 
         void initializeVmu(VmuPresenter presenter, DateTimeOffset date, string? vmsOrVmuFilePath)

@@ -31,8 +31,10 @@ public readonly struct InstructionDebugInfo : IComparable<InstructionDebugInfo>
 
 public class BreakpointInfo
 {
-    public bool Enabled;
-    public ushort Offset;
+    /// <summary>true if the breakpoint is created for a temporary purpose, and shouldn't appear in UI. e.g. breakpoints created for 'step' commands.</summary>
+    public bool Implicit;
+    public required bool Enabled;
+    public required ushort Offset;
 }
 
 public class BankDebugInfo
@@ -42,6 +44,30 @@ public class BankDebugInfo
 
     /// <summary>Not necessarily sorted.</summary>
     public readonly List<BreakpointInfo> Breakpoints = [];
+
+    public int BinarySearchInstructions(ushort offset)
+    {
+        var item = new InstructionDebugInfo(new Instruction() { Offset = offset }, executed: false);
+        return Instructions.BinarySearch(item);
+    }
+
+    public InstructionDebugInfo GetStepOverDest(ushort offset)
+    {
+        // Step Over goal: skip calls, etc.
+        if (BinarySearchInstructions(offset) is >= 0 and var index)
+        {
+            var inst = Instructions[index];
+            // Stepping over a call means breaking on the RET after the call.
+            // TODO: Oops, this doesn't handle reentrancy. Need stack info first..
+            if (inst.Operation.Kind == OperationKind.CALL)
+            {
+                if (index + 1 < Instructions.Count)
+                    return Instructions[index + 1];
+            }
+        }
+
+        return default;
+    }
 
     internal void Clear()
     {
@@ -59,17 +85,41 @@ public class DebugInfo(Cpu cpu)
         new(), // FlashBank1
     ];
 
+    public DebuggingState DebuggingState => cpu.DebuggingState;
+    public BankDebugInfo CurrentBankInfo => GetBankInfo(cpu.CurrentInstructionBankId);
+
+    public event Action<InstructionDebugInfo>? DebugBreak;
+    public void FireDebugBreak()
+    {
+        cpu.DebuggingState = DebuggingState.Break;
+        var bankInfo = CurrentBankInfo;
+        var index = bankInfo.BinarySearchInstructions(cpu.ProgramCounter);
+        Debug.Assert(index >= 0 && index < bankInfo.Instructions.Count);
+        DebugBreak?.Invoke(bankInfo.Instructions[index]);
+    }
+
+    public void ToggleDebugBreak()
+    {
+        if (cpu.DebuggingState == DebuggingState.Break)
+        {
+            cpu.DebuggingState = DebuggingState.Run;
+            return;
+        }
+
+        FireDebugBreak();
+    }
+
+    public void StepIn()
+    {
+        cpu.DebuggingState = DebuggingState.StepIn;
+    }
+
     public InstructionDebugInfo this[InstructionBank bankId, ushort offset]
     {
         get
         {
-            var bank = _bankInfos[(int)bankId].Instructions;
-            var index = bank.BinarySearch(new InstructionDebugInfo(new Instruction() { Offset = offset }, executed: false));
-            if (index < 0)
-                return default;
-
-            var inst = bank[index];
-            return inst;
+            var bankInfo = _bankInfos[(int)bankId];
+            return bankInfo.BinarySearchInstructions(offset) is >= 0 and var index ? bankInfo.Instructions[index] : default;
         }
         set
         {
@@ -265,6 +315,9 @@ public class DebugInfo(Cpu cpu)
 
     internal void MarkExecutable(InstructionBank bankId, Instruction inst)
     {
+        // TODO2: If this is a new code path, Load() it
+        // Also mark branches that can reach this inst via 'push/return'.
+        // persist such code paths in symbol files.
         if (_bankInfos[(int)bankId].Instructions.Count == 0)
             Load(bankId);
 

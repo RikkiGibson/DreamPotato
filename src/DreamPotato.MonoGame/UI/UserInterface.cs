@@ -168,6 +168,9 @@ partial class UserInterface
     private readonly string _displayVersion;
     private readonly string _commitId;
 
+    // Debugger UI state
+    private int _debug_ScrollToInstructionIndex = -1;
+
     internal PendingCommand PendingCommand { get; private set; }
 
     public UserInterface(Game1 game)
@@ -949,16 +952,27 @@ partial class UserInterface
         {
             if (ImGui.BeginTabBar("InstructionBanks"))
             {
-                if (ImGui.BeginTabItem(InstructionBank.ROM.ToString()))
+                unsafe
                 {
-                    layoutTab(InstructionBank.ROM);
-                    ImGui.EndTabItem();
-                }
+                    fixed (byte* label = "ROM"u8)
+                    {
+                        var flags = _debug_ScrollToInstructionIndex != -1 && _game.PrimaryVmu._cpu.CurrentInstructionBankId == InstructionBank.ROM ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
+                        if (ImGuiNative.igBeginTabItem(label, p_open: null, flags) != 0)
+                        {
+                            layoutTab(InstructionBank.ROM);
+                            ImGui.EndTabItem();
+                        }
+                    }
 
-                if (ImGui.BeginTabItem(InstructionBank.FlashBank0.ToString()))
-                {
-                    layoutTab(InstructionBank.FlashBank0);
-                    ImGui.EndTabItem();
+                    fixed (byte* label = "FlashBank0"u8)
+                    {
+                        var flags = _debug_ScrollToInstructionIndex != -1 && _game.PrimaryVmu._cpu.CurrentInstructionBankId == InstructionBank.FlashBank0 ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
+                        if (ImGuiNative.igBeginTabItem(label, p_open: null, flags) != 0)
+                        {
+                            layoutTab(InstructionBank.FlashBank0);
+                            ImGui.EndTabItem();
+                        }
+                    }
                 }
 
                 ImGui.EndTabBar();
@@ -994,6 +1008,7 @@ partial class UserInterface
                 ImGui.TableSetupColumn("addresses", ImGuiTableColumnFlags.WidthFixed);
                 ImGui.TableSetupColumn("instructions");
 
+                var executingInThisBank = bankId == _game.PrimaryVmu._cpu.CurrentInstructionBankId;
                 var bankInfo = _game.PrimaryVmu.DebugInfo.GetBankInfo(bankId);
                 var disasm = bankInfo.Instructions;
 
@@ -1006,6 +1021,11 @@ partial class UserInterface
                 }
 
                 clipper.Begin(disasm.Count);
+
+                bool doScrollToInstruction = _debug_ScrollToInstructionIndex != -1 && executingInThisBank;
+                if (doScrollToInstruction)
+                    clipper.IncludeItemByIndex(_debug_ScrollToInstructionIndex);
+
                 while (clipper.Step())
                 {
                     for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
@@ -1013,7 +1033,7 @@ partial class UserInterface
                         ImGui.PushID(i);
                         ImGui.TableNextColumn();
                         var inst = disasm[i];
-                        if (_game.PrimaryVmu._cpu.ProgramCounter == inst.Offset)
+                        if (executingInThisBank && _game.PrimaryVmu._cpu.ProgramCounter == inst.Offset)
                             ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, Debug_ColorPc);
 
                         ImGui.PushID("breakpoint");
@@ -1040,6 +1060,12 @@ partial class UserInterface
                         ImGui.TableNextColumn();
                         ImGui.Text(inst.DisplayInstruction());
                         ImGui.PopID();
+
+                        if (doScrollToInstruction && i == _debug_ScrollToInstructionIndex)
+                        {
+                            ImGui.SetScrollHereY();
+                            _debug_ScrollToInstructionIndex = -1;
+                        }
                     }
                 }
 
@@ -1049,10 +1075,17 @@ partial class UserInterface
 
         void layoutControls()
         {
-            var breakState = _game.PrimaryVmu._cpu.DebuggingState == DebuggingState.Break;
+            var debugInfo = _game.PrimaryVmu.DebugInfo;
+            var bankInfo = _game.PrimaryVmu.DebugInfo.CurrentBankInfo;
+            var breakState = debugInfo.DebuggingState == DebuggingState.Break;
             if (ImGui.Checkbox("Break", ref breakState))
             {
-                _game.PrimaryVmu._cpu.DebuggingState = breakState ? DebuggingState.Break : DebuggingState.Run;
+                debugInfo.ToggleDebugBreak();
+            }
+
+            if (ImGui.Button("Step In"))
+            {
+                debugInfo.StepIn();
             }
         }
 
@@ -1086,6 +1119,14 @@ partial class UserInterface
                 ImGui.EndTable();
             }
         }
+    }
+
+    internal void OnDebugBreak(InstructionDebugInfo info)
+    {
+        var debugInfo = _game.PrimaryVmu.DebugInfo;
+        var bankInfo = debugInfo.CurrentBankInfo;
+        var index = bankInfo.BinarySearchInstructions(info.Offset);
+        _debug_ScrollToInstructionIndex = index;
     }
 
     private void LayoutKeyMapping()
