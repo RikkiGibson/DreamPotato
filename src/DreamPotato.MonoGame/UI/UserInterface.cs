@@ -940,6 +940,9 @@ partial class UserInterface
         }
     }
 
+    private static readonly uint Debug_ColorPc = ImGui.GetColorU32(new Numerics.Vector4(99.0f/255, 92.0f/255, 31.0f/255, 1));
+    private static readonly uint Debug_ColorStack = ImGui.GetColorU32(new Numerics.Vector4(53.0f/255, 50.0f/255, 18.0f/255, 1));
+
     private void LayoutDebugger()
     {
         if (ImGui.Begin("Debugger", ImGuiWindowFlags.NoScrollbar))
@@ -969,13 +972,14 @@ partial class UserInterface
             if (ImGui.BeginTable(bankId.ToString(), columns: 2, ImGuiTableFlags.Resizable))
             {
                 ImGui.TableSetupColumn("Disassembly", ImGuiTableColumnFlags.WidthStretch);
-                ImGui.TableSetupColumn("Breakpoints");
+                ImGui.TableSetupColumn("Tools");
                 ImGui.TableHeadersRow();
 
                 ImGui.TableNextColumn();
                 layoutDisasm(bankId);
 
                 ImGui.TableNextColumn();
+                layoutControls();
                 layoutBreakpoints(bankId);
 
                 ImGui.EndTable();
@@ -1008,9 +1012,12 @@ partial class UserInterface
                     {
                         ImGui.PushID(i);
                         ImGui.TableNextColumn();
+                        var inst = disasm[i];
+                        if (_game.PrimaryVmu._cpu.ProgramCounter == inst.Offset)
+                            ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, Debug_ColorPc);
+
                         ImGui.PushID("breakpoint");
 
-                        var inst = disasm[i];
                         var bpIndex = bankInfo.Breakpoints.FindIndex(bp => bp.Offset == inst.Offset);
                         var breakpointExists = bpIndex != -1;
                         if (ImGui.Checkbox("", ref breakpointExists))
@@ -1037,6 +1044,15 @@ partial class UserInterface
                 }
 
                 ImGui.EndTable();
+            }
+        }
+
+        void layoutControls()
+        {
+            var breakState = _game.PrimaryVmu._cpu.DebuggingState == DebuggingState.Break;
+            if (ImGui.Checkbox("Break", ref breakState))
+            {
+                _game.PrimaryVmu._cpu.DebuggingState = breakState ? DebuggingState.Break : DebuggingState.Run;
             }
         }
 

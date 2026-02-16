@@ -104,6 +104,7 @@ public class Cpu
     private int MapleIOIconTimeout;
 
     internal ushort Pc;
+    public ushort ProgramCounter => Pc;
 
     /// <summary>
     /// After <see cref="Run(long)"/> is called, stores how many more ticks were run than requested,
@@ -164,6 +165,9 @@ public class Cpu
 
     /// <summary>The CPU of another VMU, connected for serial I/O.</summary>
     private Cpu? _otherCpu;
+
+    /// <summary>NOTE: not part of hardware state, so not serialized</summary>
+    public DebuggingState DebuggingState = DebuggingState.Run;
 
     // TODO: update save state format
     // Now, loading state can change the used expansion slots, in addition to changing whether we are docked.
@@ -365,6 +369,11 @@ public class Cpu
 
     public long Run(long ticksToRun)
     {
+        if (DebuggingState == DebuggingState.Break)
+        {
+            return ticksToRun;
+        }
+
         if (SFRs.P7.VmuConnected && _otherCpu is null)
         {
             // If this errors when there isn't a real connection scenario taking place, then, there might be a need to distinguish
@@ -391,7 +400,7 @@ public class Cpu
         ticksToRun -= TicksOverrun;
 
         long ticksSoFar = 0;
-        while (ticksSoFar < ticksToRun)
+        while (DebuggingState != DebuggingState.Break && ticksSoFar < ticksToRun)
         {
             ticksSoFar += StepTicks();
         }
@@ -403,7 +412,7 @@ public class Cpu
         {
             var thisTicksToRun = inputTicksToRun - @this.TicksOverrun;
             var otherTicksToRun = inputTicksToRun - other.TicksOverrun;
-            while (thisTicksToRun > 0 || otherTicksToRun > 0)
+            while (@this.DebuggingState != DebuggingState.Break && other.DebuggingState != DebuggingState.Break && (thisTicksToRun > 0 || otherTicksToRun > 0))
             {
                 // Execute one instruction for whichever VMU is further behind in time.
                 if (thisTicksToRun > otherTicksToRun)
@@ -864,6 +873,12 @@ public class Cpu
 
     internal Instruction StepInstruction()
     {
+        if (DebuggingState == DebuggingState.Break)
+        {
+            // Do not tick any timers, etc.
+            return new Instruction(Pc, Operations.NOP);
+        }
+
         ServiceInterruptIfNeeded();
         AdvanceInterruptState();
 
@@ -950,10 +965,10 @@ public class Cpu
 
         tickCpuClockedTimers(inst.Cycles);
         requestLevelDrivenInterrupts();
+        handleBreakpoints();
         return inst;
 
         static void Throw(Instruction inst) => throw new InvalidOperationException($"Unknown operation '{inst}'");
-
 
         void tickCpuClockedTimers(byte cycles)
         {
@@ -1200,6 +1215,18 @@ public class Cpu
                 }
 
                 return false;
+            }
+        }
+
+        void handleBreakpoints()
+        {
+            var breakpoints = DebugInfo.GetBankInfo(CurrentInstructionBankId).Breakpoints;
+            foreach (var breakpoint in breakpoints)
+            {
+                if (breakpoint.Enabled && breakpoint.Offset == Pc)
+                {
+                    DebuggingState = DebuggingState.Break;
+                }
             }
         }
     }
@@ -2018,4 +2045,10 @@ public class Cpu
         Logger.LogTrace($"{inst}", LogCategories.Instructions);
         Pc += inst.Size;
     }
+}
+
+public enum DebuggingState
+{
+    Run,
+    Break,
 }
