@@ -879,7 +879,7 @@ public class Cpu
 
         var inst = InstructionDecoder.Decode(CurrentROMBank, Pc);
 #if DEBUG
-        DebugInfo[InstructionBank, Pc] = new(inst, Executed: true);
+        DebugInfo[InstructionBank, Pc] = new(inst, executed: true);
 #endif
 
         if (InstructionBank == InstructionBank.ROM

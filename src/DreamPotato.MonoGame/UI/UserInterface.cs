@@ -948,24 +948,36 @@ partial class UserInterface
             ImGui.TableSetupColumn("addresses", ImGuiTableColumnFlags.WidthFixed);
             ImGui.TableSetupColumn("instructions", ImGuiTableColumnFlags.WidthStretch);
 
-            int index = 0;
-            foreach (var (offset, disasm) in _game.PrimaryVmu.DebugInfo.GetDisassembly())
+            var disasm = _game.PrimaryVmu.DebugInfo.GetDisassembly(Core.SFRs.InstructionBank.ROM);
+
+            // Render only the visible list items
+            var clipperData = new ImGuiListClipper();
+            ImGuiListClipperPtr clipper;
+            unsafe
             {
-                ImGui.PushID(index);
-                ImGui.TableNextColumn();
-                ImGui.PushID("breakpoint");
-                bool b = false;
-                ImGui.Checkbox("", ref b);
-                ImGui.PopID();
+                clipper = new ImGuiListClipperPtr(&clipperData);
+            }
 
-                ImGui.TableNextColumn();
-                ImGui.Text(offset.ToString("X4"));
+            clipper.Begin(disasm.Count);
+            while (clipper.Step())
+            {
+                for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
+                {
+                    ImGui.PushID(i);
+                    ImGui.TableNextColumn();
+                    ImGui.PushID("breakpoint");
+                    bool b = false;
+                    ImGui.Checkbox("", ref b);
+                    ImGui.PopID();
 
-                ImGui.TableNextColumn();
-                ImGui.Text(disasm);
-                ImGui.PopID();
+                    var inst = disasm[i];
+                    ImGui.TableNextColumn();
+                    ImGui.Text(inst.Offset.ToString("X4"));
 
-                index++;
+                    ImGui.TableNextColumn();
+                    ImGui.Text(inst.DisplayInstruction());
+                    ImGui.PopID();
+                }
             }
 
             ImGui.EndTable();
