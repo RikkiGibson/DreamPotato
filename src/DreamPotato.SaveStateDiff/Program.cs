@@ -31,8 +31,8 @@ for (int i = 0; i < Cpu.FlashSize; i++)
 }
 
 // InstructionBank
-if (cpu1.InstructionBank != cpu2.InstructionBank)
-    Console.WriteLine($"InstructionBank difference: 0x{cpu1.InstructionBank:X} <-> 0x{cpu2.InstructionBank:X}");
+if (cpu1.CurrentInstructionBankId != cpu2.CurrentInstructionBankId)
+    Console.WriteLine($"InstructionBank difference: 0x{cpu1.CurrentInstructionBankId:X} <-> 0x{cpu2.CurrentInstructionBankId:X}");
 
 // Pc
 if (cpu1.Pc != cpu2.Pc)

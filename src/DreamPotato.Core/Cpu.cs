@@ -79,15 +79,18 @@ public class Cpu
     /// Note that we need an extra bit of state here. We can't just look at the value of <see cref="SpecialFunctionRegisters.Ext"/>.
     /// The bank is only actually switched when using a jmpf instruction.
     /// </remarks>
-    public Span<byte> CurrentROMBank => InstructionBank switch
-    {
-        InstructionBank.ROM => ROM,
-        InstructionBank.FlashBank0 => FlashBank0,
-        InstructionBank.FlashBank1 => FlashBank1,
-        _ => throw new InvalidOperationException()
-    };
+    public Span<byte> CurrentInstructionBank => GetRomBank(CurrentInstructionBankId);
 
-    internal InstructionBank InstructionBank { get; private set; }
+    public Span<byte> GetRomBank(InstructionBank bankId) =>
+        bankId switch
+        {
+            InstructionBank.ROM => ROM,
+            InstructionBank.FlashBank0 => FlashBank0,
+            InstructionBank.FlashBank1 => FlashBank1,
+            _ => throw new InvalidOperationException()
+        };
+
+    internal InstructionBank CurrentInstructionBankId { get; private set; }
 
     public readonly Memory Memory;
     public readonly Audio Audio;
@@ -187,7 +190,7 @@ public class Cpu
         Audio = new Audio(this, Logger);
         Display = new Display(this);
 #if DEBUG
-        DebugInfo = new DebugInfo(Logger);
+        DebugInfo = new DebugInfo(this);
 #endif
         MapleMessageBroker = mapleMessageBroker ?? new MapleMessageBroker(LogLevel.Default);
         SetInstructionBank(InstructionBank.ROM);
@@ -199,8 +202,8 @@ public class Cpu
             : DreamcastSlot != DreamcastSlot.Dreamcast ? $"{DreamcastSlot}: "
             : "";
         var halt = SFRs.Pcon.HaltMode ? "HALT " : "";
-        var currentInstruction = InstructionDecoder.Decode(CurrentROMBank, Pc);
-        return $"{nameLabel}{InstructionBank}@[{Pc:X4}] {halt}{currentInstruction}";
+        var currentInstruction = InstructionDecoder.Decode(CurrentInstructionBank, Pc);
+        return $"{nameLabel}{CurrentInstructionBankId}@[{Pc:X4}] {halt}{currentInstruction}";
     }
 
     public void Reset()
@@ -216,9 +219,6 @@ public class Cpu
         _interruptServicingState = InterruptServicingState.Ready;
         _flashWriteUnlockSequence = 0;
         Memory.Reset();
-#if DEBUG
-        // DebugInfo.Clear();
-#endif
         SyncInstructionBank();
     }
 
@@ -230,7 +230,7 @@ public class Cpu
         // NOTE: both save and load operations should write/read the fields in declaration order.
         writeStream.Write(ROM);
         writeStream.Write(Flash);
-        writeStream.WriteByte((byte)InstructionBank);
+        writeStream.WriteByte((byte)CurrentInstructionBankId);
         Memory.SaveState(writeStream);
 
         Span<byte> buffer = [0, 0, 0, 0, 0, 0, 0, 0];
@@ -280,7 +280,7 @@ public class Cpu
         if (VmuFileHandle is not null)
             RandomAccess.Write(VmuFileHandle, Flash, fileOffset: 0);
 
-        InstructionBank = (InstructionBank)readStream.ReadByte();
+        CurrentInstructionBankId = (InstructionBank)readStream.ReadByte();
         Memory.LoadState(readStream);
 
         Span<byte> buffer = [0, 0, 0, 0, 0, 0, 0, 0];
@@ -323,7 +323,7 @@ public class Cpu
     }
 
     /// <summary>
-    /// Updates <see cref="InstructionBank"/> to match <see cref="Ext.InstructionBank"/>.
+    /// Updates <see cref="CurrentInstructionBankId"/> to match <see cref="Ext.InstructionBank"/>.
     /// </summary>
     private void SyncInstructionBank()
     {
@@ -336,7 +336,7 @@ public class Cpu
             }
         }
 
-        InstructionBank = newBank;
+        CurrentInstructionBankId = newBank;
     }
 
     /// <summary>
@@ -346,7 +346,7 @@ public class Cpu
     public void SetInstructionBank(InstructionBank bank)
     {
         SFRs.Ext = SFRs.Ext with { InstructionBank = bank };
-        InstructionBank = bank;
+        CurrentInstructionBankId = bank;
     }
 
     public byte ReadRam(int address)
@@ -877,12 +877,12 @@ public class Cpu
             return new Instruction(Pc, Operations.NOP);
         }
 
-        var inst = InstructionDecoder.Decode(CurrentROMBank, Pc);
+        var inst = InstructionDecoder.Decode(CurrentInstructionBank, Pc);
 #if DEBUG
-        DebugInfo[InstructionBank, Pc] = new(inst, executed: true);
+        DebugInfo.MarkExecutable(CurrentInstructionBankId, inst);
 #endif
 
-        if (InstructionBank == InstructionBank.ROM
+        if (CurrentInstructionBankId == InstructionBank.ROM
             && Pc == 0x2515
             && inst.ToString() == "DEC 1")
         {
@@ -1584,7 +1584,7 @@ public class Cpu
         // For a program running in flash memory, bank 0 of flash memory is accessed.
         // TODO: Cannot access bank 1 of flash memory. System BIOS function must be used instead.
         var address = ((SFRs.Trh << 8) | SFRs.Trl) + SFRs.Acc;
-        SFRs.Acc = CurrentROMBank[address];
+        SFRs.Acc = CurrentInstructionBank[address];
         Logger.LogTrace($"{inst} Acc={SFRs.Acc:X} address={address:X}", LogCategories.Instructions);
         Pc += inst.Size;
     }
@@ -1944,7 +1944,7 @@ public class Cpu
     /// <summary>Store the accumulator to flash memory. Intended for use only by BIOS. Undocumented.</summary>
     private void Op_STF(Instruction inst)
     {
-        if (InstructionBank != InstructionBank.ROM)
+        if (CurrentInstructionBankId != InstructionBank.ROM)
             Logger.LogWarning("Executing STF outside of ROM!");
 
         var a16 = SFRs.Trl | (SFRs.Trh << 8);
@@ -1986,7 +1986,7 @@ public class Cpu
             var a17 = a16 | (SFRs.FPR.FlashAddressBank ? InstructionBankSize : 0);
             Flash[a17] = value;
 #if DEBUG
-            DebugInfo[InstructionBank, (ushort)a16] = default;
+            DebugInfo[CurrentInstructionBankId, (ushort)a16] = default;
 #endif
             if (VmuFileHandle is not null)
             {

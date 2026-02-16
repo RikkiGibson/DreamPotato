@@ -13,6 +13,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 
 using DreamPotato.Core;
+using DreamPotato.Core.SFRs;
 
 using Humanizer;
 
@@ -941,49 +942,134 @@ partial class UserInterface
 
     private void LayoutDebugger()
     {
-        if (ImGui.Begin("Debugger"))
+        if (ImGui.Begin("Debugger", ImGuiWindowFlags.NoScrollbar))
         {
-            ImGui.BeginTable("disasm", columns: 3, flags: ImGuiTableFlags.BordersInnerV);
-            ImGui.TableSetupColumn("breakpoints", ImGuiTableColumnFlags.WidthFixed);
-            ImGui.TableSetupColumn("addresses", ImGuiTableColumnFlags.WidthFixed);
-            ImGui.TableSetupColumn("instructions", ImGuiTableColumnFlags.WidthStretch);
-
-            var disasm = _game.PrimaryVmu.DebugInfo.GetDisassembly(Core.SFRs.InstructionBank.ROM);
-
-            // Render only the visible list items
-            var clipperData = new ImGuiListClipper();
-            ImGuiListClipperPtr clipper;
-            unsafe
+            if (ImGui.BeginTabBar("InstructionBanks"))
             {
-                clipper = new ImGuiListClipperPtr(&clipperData);
+                if (ImGui.BeginTabItem(InstructionBank.ROM.ToString()))
+                {
+                    layoutTab(InstructionBank.ROM);
+                    ImGui.EndTabItem();
+                }
+
+                if (ImGui.BeginTabItem(InstructionBank.FlashBank0.ToString()))
+                {
+                    layoutTab(InstructionBank.FlashBank0);
+                    ImGui.EndTabItem();
+                }
+
+                ImGui.EndTabBar();
             }
+        }
 
-            clipper.Begin(disasm.Count);
-            while (clipper.Step())
+        ImGui.End();
+
+        void layoutTab(InstructionBank bankId)
+        {
+            if (ImGui.BeginTable(bankId.ToString(), columns: 2, ImGuiTableFlags.Resizable))
             {
-                for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
+                ImGui.TableSetupColumn("Disassembly", ImGuiTableColumnFlags.WidthStretch);
+                ImGui.TableSetupColumn("Breakpoints");
+                ImGui.TableHeadersRow();
+
+                ImGui.TableNextColumn();
+                layoutDisasm(bankId);
+
+                ImGui.TableNextColumn();
+                layoutBreakpoints(bankId);
+
+                ImGui.EndTable();
+            }
+        }
+
+        void layoutDisasm(InstructionBank bankId)
+        {
+            if (ImGui.BeginTable("disasm", columns: 3, flags: ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.ScrollY))
+            {
+                ImGui.TableSetupColumn("breakpoints", ImGuiTableColumnFlags.WidthFixed);
+                ImGui.TableSetupColumn("addresses", ImGuiTableColumnFlags.WidthFixed);
+                ImGui.TableSetupColumn("instructions");
+
+                var bankInfo = _game.PrimaryVmu.DebugInfo.GetBankInfo(bankId);
+                var disasm = bankInfo.Instructions;
+
+                // Render only the visible list items
+                var clipperData = new ImGuiListClipper();
+                ImGuiListClipperPtr clipper;
+                unsafe
+                {
+                    clipper = new ImGuiListClipperPtr(&clipperData);
+                }
+
+                clipper.Begin(disasm.Count);
+                while (clipper.Step())
+                {
+                    for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
+                    {
+                        ImGui.PushID(i);
+                        ImGui.TableNextColumn();
+                        ImGui.PushID("breakpoint");
+
+                        var inst = disasm[i];
+                        var bpIndex = bankInfo.Breakpoints.FindIndex(bp => bp.Offset == inst.Offset);
+                        var breakpointExists = bpIndex != -1;
+                        if (ImGui.Checkbox("", ref breakpointExists))
+                        {
+                            if (breakpointExists) // Create new
+                            {
+                                bankInfo.Breakpoints.Add(new BreakpointInfo { Enabled = true, Offset = inst.Offset });
+                            }
+                            else if (bpIndex != -1) // Remove
+                            {
+                                bankInfo.Breakpoints.RemoveAt(bpIndex);
+                            }
+                        }
+
+                        ImGui.PopID();
+
+                        ImGui.TableNextColumn();
+                        ImGui.Text(inst.Offset.ToString("X4"));
+
+                        ImGui.TableNextColumn();
+                        ImGui.Text(inst.DisplayInstruction());
+                        ImGui.PopID();
+                    }
+                }
+
+                ImGui.EndTable();
+            }
+        }
+
+        void layoutBreakpoints(InstructionBank bankId)
+        {
+            if (ImGui.BeginTable("Breakpoints", columns: 3, flags: ImGuiTableFlags.BordersInnerV))
+            {
+                ImGui.TableSetupColumn("breakpoints", ImGuiTableColumnFlags.WidthFixed);
+                ImGui.TableSetupColumn("addresses", ImGuiTableColumnFlags.WidthFixed);
+                ImGui.TableSetupColumn("symbols", ImGuiTableColumnFlags.WidthStretch);
+
+                var breakpoints = _game.PrimaryVmu.DebugInfo.GetBankInfo(bankId).Breakpoints;
+                for (var i = 0; i < breakpoints.Count; i++)
                 {
                     ImGui.PushID(i);
                     ImGui.TableNextColumn();
-                    ImGui.PushID("breakpoint");
-                    bool b = false;
-                    ImGui.Checkbox("", ref b);
-                    ImGui.PopID();
 
-                    var inst = disasm[i];
+                    bool enabled = breakpoints[i].Enabled;
+                    if (ImGui.Checkbox("", ref enabled))
+                        breakpoints[i].Enabled = enabled;
+
                     ImGui.TableNextColumn();
-                    ImGui.Text(inst.Offset.ToString("X4"));
+                    ImGui.Text(breakpoints[i].Offset.ToString("X4"));
 
+                    var inst = _game.PrimaryVmu.DebugInfo[bankId, breakpoints[i].Offset];
                     ImGui.TableNextColumn();
                     ImGui.Text(inst.DisplayInstruction());
                     ImGui.PopID();
                 }
+
+                ImGui.EndTable();
             }
-
-            ImGui.EndTable();
         }
-
-        ImGui.End();
     }
 
     private void LayoutKeyMapping()

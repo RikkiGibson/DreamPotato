@@ -37,7 +37,7 @@ public class Vmu
 
     public void InitializeRTCDate(DateTimeOffset date)
     {
-        if (_cpu.Pc != 0 || _cpu.InstructionBank != InstructionBank.ROM)
+        if (_cpu.Pc != 0 || _cpu.CurrentInstructionBankId != InstructionBank.ROM)
             throw new InvalidOperationException("Date should only be initialized at startup");
 
         _cpu.Pc = BuiltInCodeSymbols.BIOSAfterDateIsSet;
@@ -96,7 +96,7 @@ public class Vmu
             if (bios.Length != Cpu.InstructionBankSize)
                 throw new ArgumentException($"VMU ROM '{filePath}' needs to be exactly 64KB in size.", nameof(filePath));
             bios.AsSpan().CopyTo(_cpu.ROM);
-            _cpu.DebugInfo.Load(InstructionBank.ROM, _cpu.ROM);
+            _cpu.DebugInfo.Load(InstructionBank.ROM);
         }
         catch (FileNotFoundException ex)
         {
@@ -114,6 +114,7 @@ public class Vmu
         _cpu.HasUnsavedChanges = false;
         _cpu.VmuFileWriteStream = null;
         _cpu.ResyncMapleOutbound();
+        _cpu.DebugInfo.ClearFlash();
     }
 
     public void LoadGameVms(string filePath, DateTimeOffset date, bool autoInitializeRTCDate)
@@ -136,6 +137,7 @@ public class Vmu
         LoadedFilePath = filePath;
         _cpu.HasUnsavedChanges = false;
         _cpu.VmuFileWriteStream = null;
+        _cpu.DebugInfo.ClearFlash();
 
         _cpu.ResyncMapleOutbound();
     }
@@ -156,6 +158,7 @@ public class Vmu
         Reset(rtcDate);
 
         fileStream.ReadExactly(_cpu.Flash);
+        _cpu.DebugInfo.ClearFlash();
         LoadedFilePath = filePath;
         _cpu.HasUnsavedChanges = false;
         _cpu.VmuFileWriteStream = fileStream;

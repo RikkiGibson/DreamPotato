@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Diagnostics;
 
 using DreamPotato.Core.SFRs;
@@ -28,22 +29,41 @@ public readonly struct InstructionDebugInfo : IComparable<InstructionDebugInfo>
     }
 }
 
-// TODO: ideally we would use this map to maintain info on which regions of ROM are executable or not
-// we could then feed this info back into reverse engineering tools
-public class DebugInfo(Logger _logger)
+public class BreakpointInfo
 {
-    // Sorted lists of instructions for each bank.
-    private readonly List<InstructionDebugInfo>[] _instructionBanks = [
-        [], // ROM
-        [], // FlashBank0
-        [], // FlashBank1
+    public bool Enabled;
+    public ushort Offset;
+}
+
+public class BankDebugInfo
+{
+    /// <summary>NOTE: must be sorted by Offset.</summary>
+    public readonly List<InstructionDebugInfo> Instructions = [];
+
+    /// <summary>Not necessarily sorted.</summary>
+    public readonly List<BreakpointInfo> Breakpoints = [];
+
+    internal void Clear()
+    {
+        Instructions.Clear();
+        Breakpoints.Clear();
+    }
+}
+
+public class DebugInfo(Cpu cpu)
+{
+    /// <summary>Sorted lists of instructions for each bank.</summary>
+    private readonly ImmutableArray<BankDebugInfo> _bankInfos = [
+        new(), // ROM
+        new(), // FlashBank0
+        new(), // FlashBank1
     ];
 
-    internal InstructionDebugInfo this[InstructionBank bankId, ushort offset]
+    public InstructionDebugInfo this[InstructionBank bankId, ushort offset]
     {
         get
         {
-            var bank = _instructionBanks[(int)bankId];
+            var bank = _bankInfos[(int)bankId].Instructions;
             var index = bank.BinarySearch(new InstructionDebugInfo(new Instruction() { Offset = offset }, executed: false));
             if (index < 0)
                 return default;
@@ -53,7 +73,7 @@ public class DebugInfo(Logger _logger)
         }
         set
         {
-            var bank = _instructionBanks[(int)bankId];
+            var bank = _bankInfos[(int)bankId].Instructions;
             var index = bank.BinarySearch(new InstructionDebugInfo(new Instruction() { Offset = offset }, executed: false));
 
             // Already had an inst at this offset, replace it
@@ -89,8 +109,9 @@ public class DebugInfo(Logger _logger)
     // Search 'content' for executable instructions.
     // Note: VMU code doesn't have "data" vs "code" segments. Everything is just in the binary.
     // i.e. pushing an address to stack and returning to it is not accounted for yet.
-    public void Load(InstructionBank bankId, ReadOnlySpan<byte> content)
+    public void Load(InstructionBank bankId)
     {
+        var content = cpu.GetRomBank(bankId);
         // Walk all reachable executable code paths and populate the instruction map
         var pendingBranches = new Stack<ushort>([
             0, // Entry point
@@ -227,23 +248,26 @@ public class DebugInfo(Logger _logger)
         }
     }
 
-    public IReadOnlyList<InstructionDebugInfo> GetDisassembly(InstructionBank bankId)
+    public BankDebugInfo GetBankInfo(InstructionBank bankId)
     {
-        return _instructionBanks[(int)bankId];
+        if (_bankInfos[(int)bankId].Instructions.Count == 0)
+            Load(bankId);
+
+        return _bankInfos[(int)bankId];
     }
 
-    public void Clear()
+    /// <summary>Call when loading a new VMU file or similar to keep stale instructions from appearing in debugger.</summary>
+    public void ClearFlash()
     {
-        foreach (var bank in _instructionBanks)
-        {
-            bank.Clear();
-        }
+        _bankInfos[(int)InstructionBank.FlashBank0].Clear();
+        _bankInfos[(int)InstructionBank.FlashBank1].Clear();
     }
 
-    public string Dump(InstructionBank bank)
+    internal void MarkExecutable(InstructionBank bankId, Instruction inst)
     {
-        // TODO: dump contents of instruction bank to text
-        // print offsets and instruction data
-        return "";
+        if (_bankInfos[(int)bankId].Instructions.Count == 0)
+            Load(bankId);
+
+        this[bankId, inst.Offset] = new InstructionDebugInfo(inst, executed: true);
     }
 }

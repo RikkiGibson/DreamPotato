@@ -84,7 +84,7 @@ public class Logger(LogLevel _minimumLogLevel, LogCategories _categories, Cpu? _
             return;
 
         var timestamp = DateTimeOffset.Now;
-        var cpuDescription = _cpu is null ? $"" : (DefaultInterpolatedStringHandler)$" {_cpu.DisplayName}.{_cpu.InstructionBank}@[{_cpu.Pc:X4}]";
+        var cpuDescription = _cpu is null ? $"" : (DefaultInterpolatedStringHandler)$" {_cpu.DisplayName}.{_cpu.CurrentInstructionBankId}@[{_cpu.Pc:X4}]";
         string message = $"{timestamp.TimeOfDay}{cpuDescription.ToStringAndClear()}: [{level}] {handler.ToStringAndClear()}";
         if (level is LogLevel.Debug or LogLevel.Warning)
             Console.WriteLine(message);
