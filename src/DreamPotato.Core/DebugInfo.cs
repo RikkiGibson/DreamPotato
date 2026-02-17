@@ -127,10 +127,16 @@ public class DebugInfo(Cpu cpu)
             var index = bank.BinarySearch(new InstructionDebugInfo(new Instruction() { Offset = offset }, executed: false));
 
             // Already had an inst at this offset, replace it
+            // TODO2: this seems wrong. Need to test this code and generalize within reason.
+            // When we insert an instruction, we could overlap with N number of following instructions, which need to be removed.
+            // Need to verify this invariant.
+            // Note: When 'value.HasInstruction == false', this should be treated as a remove operation only
             if (index >= 0)
             {
-                bank[index] = value;
-                return;
+                if (value.HasInstruction)
+                    bank[index] = value;
+                else
+                    bank.RemoveAt(index);
             }
 
             var nextIndex = ~index;
@@ -140,17 +146,19 @@ public class DebugInfo(Cpu cpu)
             if (nextIndex < bank.Count)
             {
                 var nextOffset = bank[nextIndex].Offset;
-                if (value.Offset + value.Size > nextOffset)
+                var size = value.HasInstruction ? value.Size : 0;
+                if (offset + size > nextOffset)
                     bank.RemoveAt(nextIndex);
             }
 
-            bank.Insert(nextIndex, value);
+            if (value.HasInstruction)
+                bank.Insert(nextIndex, value);
 
             // Check previous element for overlap
             if (nextIndex > 0)
             {
                 var prev = bank[nextIndex - 1];
-                if (prev.Offset + prev.Size > value.Offset)
+                if (prev.Offset + prev.Size > offset)
                     bank.RemoveAt(nextIndex - 1);
             }
         }
