@@ -39,9 +39,7 @@ public class Cpu
     internal Span<byte> FlashBank0 => Flash.AsSpan(0, FlashBankSize);
     internal Span<byte> FlashBank1 => Flash.AsSpan(FlashBankSize, FlashBankSize);
 
-#if DEBUG
     internal readonly DebugInfo DebugInfo;
-#endif
 
     internal event Action? UnsavedChangesDetected;
     internal bool HasUnsavedChanges
@@ -193,9 +191,7 @@ public class Cpu
         Memory = new Memory(this, Logger);
         Audio = new Audio(this, Logger);
         Display = new Display(this);
-#if DEBUG
         DebugInfo = new DebugInfo(this);
-#endif
         MapleMessageBroker = mapleMessageBroker ?? new MapleMessageBroker(LogLevel.Default);
         SetInstructionBank(InstructionBank.ROM);
     }
@@ -893,9 +889,7 @@ public class Cpu
         }
 
         var inst = InstructionDecoder.Decode(CurrentInstructionBank, Pc);
-#if DEBUG
         DebugInfo.MarkExecutable(CurrentInstructionBankId, inst);
-#endif
 
         if (CurrentInstructionBankId == InstructionBank.ROM
             && Pc == 0x2515
@@ -2021,9 +2015,7 @@ public class Cpu
         {
             var a17 = a16 | (SFRs.FPR.FlashAddressBank ? InstructionBankSize : 0);
             Flash[a17] = value;
-#if DEBUG
             DebugInfo.CurrentBankInfo.ClearInstruction(a16);
-#endif
             if (VmuFileHandle is not null)
             {
                 var absoluteAddress = (SFRs.FPR.FlashAddressBank ? (1 << 16) : 0) | a16;
