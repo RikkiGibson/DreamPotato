@@ -73,6 +73,8 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
         var endOffset = value.EndOffset;
         var index = BinarySearchInstructions(offset);
 
+        // Instructions take up a range of the 'offset' space,
+        // but only a single value of the 'index' space:
         //        |NOP| JMPF 1234 | LD 42 |
         // offset | 0 | 1 | 2 | 3 | 4 | 5 |
         // index  | 0 | 1         | 2     |
@@ -86,10 +88,12 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
 
             // Replace the instruction at 'index'
             bank[index] = value;
+            index++;
             // Delete any instructions which are now overlapping with the inserted instruction
-            while (index+1 < bank.Count && bank[index+1].Offset < endOffset)
-                bank.RemoveAt(index+1);
+            while (index < bank.Count && bank[index].Offset < endOffset)
+                bank.RemoveAt(index);
 
+            VerifyOffsets();
             return;
         }
 
@@ -97,21 +101,41 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
         // After:  |   | JMPF 1234 |   |
         // offset  | 0 | 1 | 2 | 3 | 4 |
 
-        // Did not have an inst at this offset.
+        // Did not have an existing inst with the same offset.
         // BinarySearch gave us the index of the next instruction if any, or 'bank.Count'.
         // Insert it and delete any instructions that overlap
         index = ~index;
         Debug.Assert(index >= 0);
 
         // Remove later instructions that overlap with 'value'
+        // e.g. above sample: 'NOP', 'ST 42'
         while (index < bank.Count && bank[index].Offset < endOffset)
             bank.RemoveAt(index);
 
         bank.Insert(index, value);
 
         // Remove earlier instructions that overlap with 'value'
-        for (var prevIndex = index - 1; prevIndex > 0 && bank[prevIndex].EndOffset >= value.Offset; prevIndex--)
+        // e.g. above sample: 'LD 42'
+        for (var prevIndex = index - 1; prevIndex >= 0 && bank[prevIndex].EndOffset > value.Offset; prevIndex--)
             bank.RemoveAt(prevIndex);
+
+        VerifyOffsets();
+    }
+
+    void VerifyOffsets()
+    {
+        // Invariants:
+        // 1. Instructions are sorted by Offset
+        // 2. Offset must *always* increase from one to the next entry
+        // Note: The offset space doesn't need to be "saturated", i.e. there can be potentially a large gap from one to the next Offset
+        var offset = -1;
+        foreach (var inst in _instructions)
+        {
+            if (offset >= inst.Offset)
+                throw new InvalidOperationException();
+
+            offset = inst.Offset;
+        }
     }
 
     public InstructionDebugInfo GetStepOverDest(ushort offset)
