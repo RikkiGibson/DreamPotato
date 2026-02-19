@@ -654,6 +654,9 @@ partial class UserInterface
             if (ImGui.MenuItem(Debugger_Show ? "Close Debugger" : "Open Debugger"))
             {
                 Debugger_Show = !Debugger_Show;
+                if (Debugger_Show)
+                    _game.InitializeDebugInfo();
+
                 _game.UpdateScaleMatrix();
             }
 
@@ -960,6 +963,9 @@ partial class UserInterface
         if (!localDebuggerShow)
             return;
 
+        var debugInfo = _game.PrimaryVmu.LazyDebugInfo;
+        Debug.Assert(debugInfo is not null);
+
         if (ImGui.Begin("Debugger", ref Debugger_Show, ImGuiWindowFlags.NoScrollbar))
         {
             if (ImGui.BeginTabBar("InstructionBanks"))
@@ -1028,7 +1034,7 @@ partial class UserInterface
                 ImGui.TableSetupColumn("instructions");
 
                 var executingInThisBank = bankId == _game.PrimaryVmu._cpu.CurrentInstructionBankId;
-                var bankInfo = _game.PrimaryVmu.DebugInfo.GetBankInfo(bankId);
+                var bankInfo = debugInfo.GetBankInfo(bankId);
                 var disasm = bankInfo.Instructions;
 
                 // Render only the visible list items
@@ -1094,8 +1100,7 @@ partial class UserInterface
 
         void layoutControls()
         {
-            var debugInfo = _game.PrimaryVmu.DebugInfo;
-            var bankInfo = _game.PrimaryVmu.DebugInfo.CurrentBankInfo;
+            var bankInfo = debugInfo.CurrentBankInfo;
             var breakState = debugInfo.DebuggingState == DebuggingState.Break;
             if (ImGui.Checkbox("Break", ref breakState))
             {
@@ -1116,7 +1121,7 @@ partial class UserInterface
                 ImGui.TableSetupColumn("addresses", ImGuiTableColumnFlags.WidthFixed);
                 ImGui.TableSetupColumn("symbols", ImGuiTableColumnFlags.WidthStretch);
 
-                var bankInfo = _game.PrimaryVmu.DebugInfo.GetBankInfo(bankId);
+                var bankInfo = debugInfo.GetBankInfo(bankId);
                 var breakpoints = bankInfo.Breakpoints;
                 for (var i = 0; i < breakpoints.Count; i++)
                 {
@@ -1130,7 +1135,9 @@ partial class UserInterface
                     ImGui.TableNextColumn();
                     ImGui.Text(breakpoints[i].Offset.ToString("X4"));
 
-                    var inst = bankInfo.GetInstruction(breakpoints[i].Offset);
+                    // If you place a breakpoint at an offset,
+                    // it means you think the offset has executable code in it
+                    var inst = bankInfo.GetOrLoadInstruction(breakpoints[i].Offset);
                     ImGui.TableNextColumn();
                     ImGui.Text(inst.DisplayInstruction());
                     ImGui.PopID();
@@ -1143,7 +1150,8 @@ partial class UserInterface
 
     internal void OnDebugBreak(InstructionDebugInfo info)
     {
-        var debugInfo = _game.PrimaryVmu.DebugInfo;
+        var debugInfo = _game.PrimaryVmu.LazyDebugInfo;
+        Debug.Assert(debugInfo is not null);
         var bankInfo = debugInfo.CurrentBankInfo;
         var index = bankInfo.BinarySearchInstructions(info.Offset);
         _debugger_ScrollToInstructionIndex = index;

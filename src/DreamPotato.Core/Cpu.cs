@@ -39,7 +39,8 @@ public class Cpu
     internal Span<byte> FlashBank0 => Flash.AsSpan(0, FlashBankSize);
     internal Span<byte> FlashBank1 => Flash.AsSpan(FlashBankSize, FlashBankSize);
 
-    internal readonly DebugInfo DebugInfo;
+    internal DebugInfo? LazyDebugInfo { get; private set; }
+    internal DebugInfo GetOrCreateDebugInfo() => LazyDebugInfo ??= new(this);
 
     internal event Action? UnsavedChangesDetected;
     internal bool HasUnsavedChanges
@@ -191,7 +192,6 @@ public class Cpu
         Memory = new Memory(this, Logger);
         Audio = new Audio(this, Logger);
         Display = new Display(this);
-        DebugInfo = new DebugInfo(this);
         MapleMessageBroker = mapleMessageBroker ?? new MapleMessageBroker(LogLevel.Default);
         SetInstructionBank(InstructionBank.ROM);
     }
@@ -889,7 +889,7 @@ public class Cpu
         }
 
         var inst = InstructionDecoder.Decode(CurrentInstructionBank, Pc);
-        DebugInfo.MarkExecutable(CurrentInstructionBankId, inst);
+        LazyDebugInfo?.MarkExecutable(CurrentInstructionBankId, inst);
 
         if (CurrentInstructionBankId == InstructionBank.ROM
             && Pc == 0x2515
@@ -1214,19 +1214,22 @@ public class Cpu
 
         void handleBreakpoints()
         {
+            if (LazyDebugInfo is null)
+                return;
+
             if (DebuggingState == DebuggingState.StepIn)
             {
-                DebugInfo.FireDebugBreak();
+                LazyDebugInfo.FireDebugBreak();
                 return;
             }
 
-            var breakpoints = DebugInfo.GetBankInfo(CurrentInstructionBankId).Breakpoints;
+            var breakpoints = LazyDebugInfo.GetBankInfo(CurrentInstructionBankId).Breakpoints;
             for (int i = 0; i < breakpoints.Count; i++)
             {
                 var breakpoint = breakpoints[i];
                 if (breakpoint.Enabled && breakpoint.Offset == Pc)
                 {
-                    DebugInfo.FireDebugBreak();
+                    LazyDebugInfo.FireDebugBreak();
                     if (breakpoint.Implicit)
                         breakpoints.RemoveAt(i);
                 }
@@ -2015,7 +2018,7 @@ public class Cpu
         {
             var a17 = a16 | (SFRs.FPR.FlashAddressBank ? InstructionBankSize : 0);
             Flash[a17] = value;
-            DebugInfo.CurrentBankInfo.ClearInstruction(a16);
+            LazyDebugInfo?.CurrentBankInfo.ClearInstruction(a16);
             if (VmuFileHandle is not null)
             {
                 var absoluteAddress = (SFRs.FPR.FlashAddressBank ? (1 << 16) : 0) | a16;

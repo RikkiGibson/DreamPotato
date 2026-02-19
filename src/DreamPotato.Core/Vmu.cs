@@ -113,7 +113,7 @@ public class Vmu
         _cpu.HasUnsavedChanges = false;
         _cpu.VmuFileWriteStream = null;
         _cpu.ResyncMapleOutbound();
-        _cpu.DebugInfo.ClearFlash();
+        _cpu.LazyDebugInfo?.ClearFlash();
     }
 
     public void LoadGameVms(string filePath, DateTimeOffset date, bool autoInitializeRTCDate)
@@ -136,7 +136,7 @@ public class Vmu
         LoadedFilePath = filePath;
         _cpu.HasUnsavedChanges = false;
         _cpu.VmuFileWriteStream = null;
-        _cpu.DebugInfo.ClearFlash();
+        _cpu.LazyDebugInfo?.ClearFlash();
 
         _cpu.ResyncMapleOutbound();
     }
@@ -157,7 +157,7 @@ public class Vmu
         Reset(rtcDate);
 
         fileStream.ReadExactly(_cpu.Flash);
-        _cpu.DebugInfo.ClearFlash();
+        _cpu.LazyDebugInfo?.ClearFlash();
         LoadedFilePath = filePath;
         _cpu.HasUnsavedChanges = false;
         _cpu.VmuFileWriteStream = fileStream;
@@ -231,7 +231,8 @@ public class Vmu
     public static string DataFolder => Path.Combine(AppContext.BaseDirectory, "Data");
 
     public DreamcastSlot DreamcastSlot { get => _cpu.DreamcastSlot; set => _cpu.DreamcastSlot = value; }
-    public DebugInfo DebugInfo => _cpu.DebugInfo;
+    public DebugInfo GetOrCreateDebugInfo() => _cpu.GetOrCreateDebugInfo();
+    public DebugInfo? LazyDebugInfo => _cpu.LazyDebugInfo;
 
     public const string RomFileName = "american_v1.05.bin";
     public const string SaveStateHeaderMessage = $"DreamPotatoSaveStateV{SaveStateVersion}";

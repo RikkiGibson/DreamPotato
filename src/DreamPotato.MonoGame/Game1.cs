@@ -134,8 +134,6 @@ public class Game1 : Game
 
         _spriteBatch = new SpriteBatch(GraphicsDevice);
 
-        primaryVmu.DebugInfo.DebugBreak += _userInterface.OnDebugBreak;
-
         base.Initialize();
 
         void initializeVmu(VmuPresenter presenter, DateTimeOffset date, string? vmsOrVmuFilePath)
@@ -609,5 +607,14 @@ public class Game1 : Game
         _userInterface.Layout(gameTime);
 
         base.Draw(gameTime);
+    }
+
+    internal void InitializeDebugInfo()
+    {
+        if (PrimaryVmu.LazyDebugInfo is {})
+            return;
+
+        var debugInfo = PrimaryVmu.GetOrCreateDebugInfo();
+        debugInfo.DebugBreak += _userInterface.OnDebugBreak;
     }
 }

@@ -57,6 +57,19 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
         return _instructions.BinarySearch(item);
     }
 
+    public InstructionDebugInfo GetOrLoadInstruction(ushort offset)
+    {
+        var instruction = GetInstruction(offset);
+        if (!instruction.HasInstruction)
+        {
+            Load([offset]);
+            instruction = GetInstruction(offset);
+            Debug.Assert(instruction.HasInstruction);
+        }
+
+        return instruction;
+    }
+
     public InstructionDebugInfo GetInstruction(ushort offset)
     {
         var index = BinarySearchInstructions(offset);
@@ -153,20 +166,11 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
         return default;
     }
 
-    /// <summary>
-    /// Search 'content' for executable instructions.
-    /// Note: VMU code doesn't have "data" vs "code" segments. Everything is just in the binary.
-    /// i.e. pushing an address to stack and returning to it is not accounted for yet.
-    /// </summary>
+    /// <summary>Search the default set of entry points for executable instructions.</summary>
     public void Load()
     {
-        // TODO2: need a version to take an address for loading a specific code path
-        // e.g. for push+ret scenario
-
-        var content = cpu.GetRomBank(bankId);
-        // Walk all reachable executable code paths and populate the instruction map
-        var pendingBranches = new Stack<ushort>([
-            0, // Entry point
+        Load([
+            0, // Main entry point
             InterruptVectors.INT0,
             InterruptVectors.INT1,
             InterruptVectors.INT2_T0L,
@@ -177,7 +181,23 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
             InterruptVectors.SIO1,
             InterruptVectors.Maple,
             InterruptVectors.P3,
+            // ROM external programs
+            ..bankId == InstructionBank.ROM ? (ReadOnlySpan<ushort>)[
+                BuiltInCodeSymbols.BIOSWriteFlash,
+                BuiltInCodeSymbols.BIOSVerifyFlash,
+                BuiltInCodeSymbols.BIOSExit,
+                BuiltInCodeSymbols.BIOSReadFlash,
+                BuiltInCodeSymbols.BIOSClockTick
+            ] : []
         ]);
+    }
+
+    /// <summary>Search a specific list of entry points for instructions.</summary>
+    public void Load(ushort[] entryPoints)
+    {
+        var content = cpu.GetRomBank(bankId);
+        // Walk all reachable executable code paths and populate the instruction map
+        var pendingBranches = new Stack<ushort>(entryPoints);
 
         while (pendingBranches.Count != 0)
         {
@@ -332,9 +352,8 @@ public class DebugInfo(Cpu cpu)
     {
         cpu.DebuggingState = DebuggingState.Break;
         var bankInfo = CurrentBankInfo;
-        var index = bankInfo.BinarySearchInstructions(cpu.ProgramCounter);
-        Debug.Assert(index >= 0 && index < bankInfo.Instructions.Count);
-        DebugBreak?.Invoke(bankInfo.Instructions[index]);
+        var instructionInfo = bankInfo.GetOrLoadInstruction(cpu.ProgramCounter);
+        DebugBreak?.Invoke(instructionInfo);
     }
 
     public void ToggleDebugBreak()
