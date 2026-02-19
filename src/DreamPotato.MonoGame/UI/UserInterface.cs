@@ -1116,7 +1116,8 @@ partial class UserInterface
                 ImGui.TableSetupColumn("addresses", ImGuiTableColumnFlags.WidthFixed);
                 ImGui.TableSetupColumn("symbols", ImGuiTableColumnFlags.WidthStretch);
 
-                var breakpoints = _game.PrimaryVmu.DebugInfo.GetBankInfo(bankId).Breakpoints;
+                var bankInfo = _game.PrimaryVmu.DebugInfo.GetBankInfo(bankId);
+                var breakpoints = bankInfo.Breakpoints;
                 for (var i = 0; i < breakpoints.Count; i++)
                 {
                     ImGui.PushID(i);
@@ -1129,7 +1130,7 @@ partial class UserInterface
                     ImGui.TableNextColumn();
                     ImGui.Text(breakpoints[i].Offset.ToString("X4"));
 
-                    var inst = _game.PrimaryVmu.DebugInfo[bankId, breakpoints[i].Offset];
+                    var inst = bankInfo.GetInstruction(breakpoints[i].Offset);
                     ImGui.TableNextColumn();
                     ImGui.Text(inst.DisplayInstruction());
                     ImGui.PopID();

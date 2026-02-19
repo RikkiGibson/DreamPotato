@@ -1983,7 +1983,7 @@ public class Cpu
         if (CurrentInstructionBankId != InstructionBank.ROM)
             Logger.LogWarning("Executing STF outside of ROM!");
 
-        var a16 = SFRs.Trl | (SFRs.Trh << 8);
+        var a16 = (ushort)(SFRs.Trl | (SFRs.Trh << 8));
         var value = SFRs.Acc;
 
         // Sequence number when flash is first unlocked for writing
@@ -2022,7 +2022,7 @@ public class Cpu
             var a17 = a16 | (SFRs.FPR.FlashAddressBank ? InstructionBankSize : 0);
             Flash[a17] = value;
 #if DEBUG
-            DebugInfo[CurrentInstructionBankId, (ushort)a16] = default;
+            DebugInfo.CurrentBankInfo.ClearInstruction(a16);
 #endif
             if (VmuFileHandle is not null)
             {

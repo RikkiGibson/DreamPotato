@@ -21,12 +21,17 @@ public readonly struct InstructionDebugInfo : IComparable<InstructionDebugInfo>
     public byte Size => Instruction.Size;
     public ushort Offset => Instruction.Offset;
 
+    public ushort EndOffset => (ushort)(Offset + Size);
+
     public string DisplayInstruction() => Instruction.ToString();
 
     public int CompareTo(InstructionDebugInfo other)
     {
         return Offset.CompareTo(other.Offset);
     }
+
+    public override string ToString()
+        => $"({Instruction}, Executed={Executed})";
 }
 
 public class BreakpointInfo
@@ -37,10 +42,11 @@ public class BreakpointInfo
     public required ushort Offset;
 }
 
-public class BankDebugInfo
+public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
 {
     /// <summary>NOTE: must be sorted by Offset.</summary>
-    public readonly List<InstructionDebugInfo> Instructions = [];
+    public IReadOnlyList<InstructionDebugInfo> Instructions => _instructions;
+    private readonly List<InstructionDebugInfo> _instructions = [];
 
     /// <summary>Not necessarily sorted.</summary>
     public readonly List<BreakpointInfo> Breakpoints = [];
@@ -48,7 +54,64 @@ public class BankDebugInfo
     public int BinarySearchInstructions(ushort offset)
     {
         var item = new InstructionDebugInfo(new Instruction() { Offset = offset }, executed: false);
-        return Instructions.BinarySearch(item);
+        return _instructions.BinarySearch(item);
+    }
+
+    public InstructionDebugInfo GetInstruction(ushort offset)
+    {
+        var index = BinarySearchInstructions(offset);
+        return index < 0 ? default : Instructions[index];
+    }
+
+    public void SetInstruction(InstructionDebugInfo value)
+    {
+        if (!value.HasInstruction)
+            throw new InvalidOperationException();
+
+        var bank = _instructions;
+        var offset = value.Offset;
+        var endOffset = value.EndOffset;
+        var index = BinarySearchInstructions(offset);
+
+        //        |NOP| JMPF 1234 | LD 42 |
+        // offset | 0 | 1 | 2 | 3 | 4 | 5 |
+        // index  | 0 | 1         | 2     |
+
+        // Already had an inst at this offset, replace it
+        if (index >= 0)
+        {
+            // Before: |NOP|NOP|NOP|
+            // After:  | JMPF 1234 |
+            // offset  | 0 | 1 | 2 |
+
+            // Replace the instruction at 'index'
+            bank[index] = value;
+            // Delete any instructions which are now overlapping with the inserted instruction
+            while (index+1 < bank.Count && bank[index+1].Offset < endOffset)
+                bank.RemoveAt(index+1);
+
+            return;
+        }
+
+        // Before: | LD 42 |NOP| ST 42 |
+        // After:  |   | JMPF 1234 |   |
+        // offset  | 0 | 1 | 2 | 3 | 4 |
+
+        // Did not have an inst at this offset.
+        // BinarySearch gave us the index of the next instruction if any, or 'bank.Count'.
+        // Insert it and delete any instructions that overlap
+        index = ~index;
+        Debug.Assert(index >= 0);
+
+        // Remove later instructions that overlap with 'value'
+        while (index < bank.Count && bank[index].Offset < endOffset)
+            bank.RemoveAt(index);
+
+        bank.Insert(index, value);
+
+        // Remove earlier instructions that overlap with 'value'
+        for (var prevIndex = index - 1; prevIndex > 0 && bank[prevIndex].EndOffset >= value.Offset; prevIndex--)
+            bank.RemoveAt(prevIndex);
     }
 
     public InstructionDebugInfo GetStepOverDest(ushort offset)
@@ -69,106 +132,16 @@ public class BankDebugInfo
         return default;
     }
 
-    internal void Clear()
+    /// <summary>
+    /// Search 'content' for executable instructions.
+    /// Note: VMU code doesn't have "data" vs "code" segments. Everything is just in the binary.
+    /// i.e. pushing an address to stack and returning to it is not accounted for yet.
+    /// </summary>
+    public void Load()
     {
-        Instructions.Clear();
-        Breakpoints.Clear();
-    }
-}
+        // TODO2: need a version to take an address for loading a specific code path
+        // e.g. for push+ret scenario
 
-public class DebugInfo(Cpu cpu)
-{
-    /// <summary>Sorted lists of instructions for each bank.</summary>
-    private readonly ImmutableArray<BankDebugInfo> _bankInfos = [
-        new(), // ROM
-        new(), // FlashBank0
-        new(), // FlashBank1
-    ];
-
-    public DebuggingState DebuggingState => cpu.DebuggingState;
-    public BankDebugInfo CurrentBankInfo => GetBankInfo(cpu.CurrentInstructionBankId);
-
-    public event Action<InstructionDebugInfo>? DebugBreak;
-    public void FireDebugBreak()
-    {
-        cpu.DebuggingState = DebuggingState.Break;
-        var bankInfo = CurrentBankInfo;
-        var index = bankInfo.BinarySearchInstructions(cpu.ProgramCounter);
-        Debug.Assert(index >= 0 && index < bankInfo.Instructions.Count);
-        DebugBreak?.Invoke(bankInfo.Instructions[index]);
-    }
-
-    public void ToggleDebugBreak()
-    {
-        if (cpu.DebuggingState == DebuggingState.Break)
-        {
-            cpu.DebuggingState = DebuggingState.Run;
-            return;
-        }
-
-        FireDebugBreak();
-    }
-
-    public void StepIn()
-    {
-        cpu.DebuggingState = DebuggingState.StepIn;
-    }
-
-    public InstructionDebugInfo this[InstructionBank bankId, ushort offset]
-    {
-        get
-        {
-            var bankInfo = _bankInfos[(int)bankId];
-            return bankInfo.BinarySearchInstructions(offset) is >= 0 and var index ? bankInfo.Instructions[index] : default;
-        }
-        set
-        {
-            var bank = _bankInfos[(int)bankId].Instructions;
-            var index = bank.BinarySearch(new InstructionDebugInfo(new Instruction() { Offset = offset }, executed: false));
-
-            // Already had an inst at this offset, replace it
-            // TODO2: this seems wrong. Need to test this code and generalize within reason.
-            // When we insert an instruction, we could overlap with N number of following instructions, which need to be removed.
-            // Need to verify this invariant.
-            // Note: When 'value.HasInstruction == false', this should be treated as a remove operation only
-            if (index >= 0)
-            {
-                if (value.HasInstruction)
-                    bank[index] = value;
-                else
-                    bank.RemoveAt(index);
-            }
-
-            var nextIndex = ~index;
-            Debug.Assert(nextIndex >= 0);
-
-            // Check next element for overlap
-            if (nextIndex < bank.Count)
-            {
-                var nextOffset = bank[nextIndex].Offset;
-                var size = value.HasInstruction ? value.Size : 0;
-                if (offset + size > nextOffset)
-                    bank.RemoveAt(nextIndex);
-            }
-
-            if (value.HasInstruction)
-                bank.Insert(nextIndex, value);
-
-            // Check previous element for overlap
-            if (nextIndex > 0)
-            {
-                var prev = bank[nextIndex - 1];
-                if (prev.Offset + prev.Size > offset)
-                    bank.RemoveAt(nextIndex - 1);
-            }
-        }
-    }
-
-    // Search 'content' for executable instructions.
-    // Note: VMU code doesn't have "data" vs "code" segments. Everything is just in the binary.
-    // i.e. pushing an address to stack and returning to it is not accounted for yet.
-    public void Load(InstructionBank bankId)
-    {
         var content = cpu.GetRomBank(bankId);
         // Walk all reachable executable code paths and populate the instruction map
         var pendingBranches = new Stack<ushort>([
@@ -194,10 +167,10 @@ public class DebugInfo(Cpu cpu)
             var inst = InstructionDecoder.Decode(content, offset);
 
             // Already visited
-            if (this[bankId, offset].HasInstruction)
+            if (this.GetInstruction(offset).HasInstruction)
                 continue;
 
-            this[bankId, offset] = new(inst, executed: false);
+            this.SetInstruction(new(inst, executed: false));
 
             // Process unconditional branches
             switch (inst.Kind)
@@ -306,12 +279,66 @@ public class DebugInfo(Cpu cpu)
         }
     }
 
+    internal void Clear()
+    {
+        _instructions.Clear();
+        Breakpoints.Clear();
+    }
+
+    internal void ClearInstruction(ushort offset)
+    {
+        // TODO2: this should delete any instr which overlaps with 'offset'
+        var index = BinarySearchInstructions(offset);
+        if (index >= 0)
+            _instructions.RemoveAt(index);
+    }
+}
+
+public class DebugInfo(Cpu cpu)
+{
+    /// <summary>Sorted lists of instructions for each bank.</summary>
+    private readonly ImmutableArray<BankDebugInfo> _bankInfos = [
+        new(cpu, InstructionBank.ROM),
+        new(cpu, InstructionBank.FlashBank0),
+        new(cpu, InstructionBank.FlashBank1),
+    ];
+
+    public DebuggingState DebuggingState => cpu.DebuggingState;
+    public BankDebugInfo CurrentBankInfo => GetBankInfo(cpu.CurrentInstructionBankId);
+
+    public event Action<InstructionDebugInfo>? DebugBreak;
+    public void FireDebugBreak()
+    {
+        cpu.DebuggingState = DebuggingState.Break;
+        var bankInfo = CurrentBankInfo;
+        var index = bankInfo.BinarySearchInstructions(cpu.ProgramCounter);
+        Debug.Assert(index >= 0 && index < bankInfo.Instructions.Count);
+        DebugBreak?.Invoke(bankInfo.Instructions[index]);
+    }
+
+    public void ToggleDebugBreak()
+    {
+        if (cpu.DebuggingState == DebuggingState.Break)
+        {
+            cpu.DebuggingState = DebuggingState.Run;
+            return;
+        }
+
+        FireDebugBreak();
+    }
+
+    public void StepIn()
+    {
+        cpu.DebuggingState = DebuggingState.StepIn;
+    }
+
     public BankDebugInfo GetBankInfo(InstructionBank bankId)
     {
-        if (_bankInfos[(int)bankId].Instructions.Count == 0)
-            Load(bankId);
+        var info = _bankInfos[(int)bankId];
+        if (info.Instructions.Count == 0)
+            info.Load();
 
-        return _bankInfos[(int)bankId];
+        return info;
     }
 
     /// <summary>Call when loading a new VMU file or similar to keep stale instructions from appearing in debugger.</summary>
@@ -323,12 +350,13 @@ public class DebugInfo(Cpu cpu)
 
     internal void MarkExecutable(InstructionBank bankId, Instruction inst)
     {
+        var bankInfo = GetBankInfo(bankId);
         // TODO2: If this is a new code path, Load() it
         // Also mark branches that can reach this inst via 'push/return'.
         // persist such code paths in symbol files.
-        if (_bankInfos[(int)bankId].Instructions.Count == 0)
-            Load(bankId);
+        if (bankInfo.Instructions.Count == 0)
+            bankInfo.Load();
 
-        this[bankId, inst.Offset] = new InstructionDebugInfo(inst, executed: true);
+        bankInfo.SetInstruction(new InstructionDebugInfo(inst, executed: true));
     }
 }
