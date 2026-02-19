@@ -93,7 +93,6 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
             while (index < bank.Count && bank[index].Offset < endOffset)
                 bank.RemoveAt(index);
 
-            VerifyOffsets();
             return;
         }
 
@@ -118,8 +117,6 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
         // e.g. above sample: 'LD 42'
         for (var prevIndex = index - 1; prevIndex >= 0 && bank[prevIndex].EndOffset > value.Offset; prevIndex--)
             bank.RemoveAt(prevIndex);
-
-        VerifyOffsets();
     }
 
     void VerifyOffsets()
