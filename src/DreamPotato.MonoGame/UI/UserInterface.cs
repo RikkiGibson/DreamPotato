@@ -1019,6 +1019,7 @@ partial class UserInterface
 
                 ImGui.TableNextColumn();
                 layoutControls();
+                ImGui.Separator();
                 layoutBreakpoints(bankId);
                 layoutStack();
 
@@ -1060,7 +1061,24 @@ partial class UserInterface
                         ImGui.TableNextColumn();
                         var inst = disasm[i];
                         if (executingInThisBank && _game.PrimaryVmu._cpu.ProgramCounter == inst.Offset)
+                        {
                             ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, Debug_ColorPc);
+                        }
+                        else
+                        {
+                            foreach (var entry in _game.PrimaryVmu._cpu.StackData)
+                            {
+                                if (entry.Kind == StackValueKind.Push)
+                                    continue;
+                                
+                                var returnAddr = entry.Value;
+                                if (inst.Offset == returnAddr)
+                                {
+                                    ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, Debug_ColorStack);
+                                    break;
+                                }
+                            }
+                        }
 
                         ImGui.PushID("breakpoint");
 
@@ -1116,6 +1134,8 @@ partial class UserInterface
 
         void layoutBreakpoints(InstructionBank bankId)
         {
+            ImGui.Text("Breakpoints");
+            ImGui.Separator();
             if (ImGui.BeginTable("Breakpoints", columns: 3, flags: ImGuiTableFlags.BordersInnerV))
             {
                 ImGui.TableSetupColumn("breakpoints", ImGuiTableColumnFlags.WidthFixed);
@@ -1150,54 +1170,82 @@ partial class UserInterface
 
         void layoutStack()
         {
+            ImGui.Text("Stack");
+            ImGui.Separator();
             if (ImGui.BeginTable("stack", columns: 3, flags: ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.ScrollY))
             {
-                ImGui.TableHeader("Stack");
-
                 ImGui.TableSetupColumn("breakpoints", ImGuiTableColumnFlags.WidthFixed);
                 ImGui.TableSetupColumn("addresses", ImGuiTableColumnFlags.WidthFixed);
                 ImGui.TableSetupColumn("instructions");
 
-                var stackData = _game.PrimaryVmu._cpu.StackData;
-                for (var i = 0; i < stackData.Count; i++)
-                {
-                    var entry = stackData[i];
-                    if (entry.Kind == StackValueKind.Push)
-                        continue; // TODO2: display these
-
-                    ImGui.PushID(i);
-                    ImGui.TableNextColumn();
-
-                    var bankInfo = debugInfo.GetBankInfo(entry.BankId);
-                    var returnAddr = entry.Value;
-                    var bpIndex = bankInfo.Breakpoints.FindIndex(bp => bp.Offset == returnAddr);
-                    var breakpointExists = bpIndex != -1;
-
-                    ImGui.PushID("breakpoint");
-                    if (ImGui.Checkbox("", ref breakpointExists))
-                    {
-                        if (breakpointExists) // Create new
-                        {
-                            bankInfo.Breakpoints.Add(new BreakpointInfo { Enabled = true, Offset = returnAddr });
-                        }
-                        else if (bpIndex != -1) // Remove
-                        {
-                            bankInfo.Breakpoints.RemoveAt(bpIndex);
-                        }
-                    }
-                    ImGui.PopID();
-
-                    ImGui.TableNextColumn();
-
-                    var inst = bankInfo.GetOrLoadInstruction(returnAddr);
-                    ImGui.Text(inst.Offset.ToString("X4"));
-
-                    ImGui.TableNextColumn();
-                    ImGui.Text(inst.DisplayInstruction());
-                    ImGui.PopID();
-                }
+                var cpu = _game.PrimaryVmu._cpu;
+                var stackData = cpu.StackData;
+                // always show a stack entry for "where we are right now"
+                layoutStackEntry(
+                    stackData.Count,
+                    new StackEntry(
+                        StackValueKind.CallReturn,
+                        Source: 0,
+                        Value: cpu.ProgramCounter,
+                        Offset: 0,
+                        cpu.CurrentInstructionBankId));
+                for (var i = stackData.Count - 1; i >= 0; i--)
+                    layoutStackEntry(i, stackData[i]);
 
                 ImGui.EndTable();
+            }
+            
+            void layoutStackEntry(int i, StackEntry entry)
+            {
+                if (entry.Kind == StackValueKind.Push)
+                    return; // TODO2: display these
+
+                ImGui.PushID(i);
+                ImGui.TableNextColumn();
+
+                var bankInfo = debugInfo.GetBankInfo(entry.BankId);
+                var returnAddr = entry.Value;
+                var bpIndex = bankInfo.Breakpoints.FindIndex(bp => bp.Offset == returnAddr);
+                var breakpointExists = bpIndex != -1;
+
+                ImGui.PushID("breakpoint");
+                if (ImGui.Checkbox("", ref breakpointExists))
+                {
+                    if (breakpointExists) // Create new
+                    {
+                        bankInfo.Breakpoints.Add(new BreakpointInfo { Enabled = true, Offset = returnAddr });
+                    }
+                    else if (bpIndex != -1) // Remove
+                    {
+                        bankInfo.Breakpoints.RemoveAt(bpIndex);
+                    }
+                }
+                ImGui.PopID();
+
+                ImGui.TableNextColumn();
+
+                var index = bankInfo.BinarySearchInstructions(returnAddr);
+                if (index < 0)
+                {
+                    // If we got here, it means the code we were returning to,
+                    // was overwritten in flash, while we were still going to return to it.
+                    ImGui.Text("ERROR");
+                    ImGui.TableNextColumn();
+                    ImGui.Text("");
+                }
+                else
+                {
+                    var inst = bankInfo.Instructions[index];
+                    if (ImGui.Selectable(inst.Offset.ToString("X4")))
+                    {
+                        // TODO2: needs to jump to appropriate bank
+                        _debugger_ScrollToInstructionIndex = index;
+                    }
+                    ImGui.TableNextColumn();
+                    ImGui.Text(inst.DisplayInstruction());
+                }
+
+                ImGui.PopID();
             }
         }
     }
