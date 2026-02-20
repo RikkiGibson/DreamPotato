@@ -1020,6 +1020,7 @@ partial class UserInterface
                 ImGui.TableNextColumn();
                 layoutControls();
                 layoutBreakpoints(bankId);
+                layoutStack();
 
                 ImGui.EndTable();
             }
@@ -1138,6 +1139,59 @@ partial class UserInterface
                     // If you place a breakpoint at an offset,
                     // it means you think the offset has executable code in it
                     var inst = bankInfo.GetOrLoadInstruction(breakpoints[i].Offset);
+                    ImGui.TableNextColumn();
+                    ImGui.Text(inst.DisplayInstruction());
+                    ImGui.PopID();
+                }
+
+                ImGui.EndTable();
+            }
+        }
+
+        void layoutStack()
+        {
+            if (ImGui.BeginTable("stack", columns: 3, flags: ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.ScrollY))
+            {
+                ImGui.TableHeader("Stack");
+
+                ImGui.TableSetupColumn("breakpoints", ImGuiTableColumnFlags.WidthFixed);
+                ImGui.TableSetupColumn("addresses", ImGuiTableColumnFlags.WidthFixed);
+                ImGui.TableSetupColumn("instructions");
+
+                var stackData = _game.PrimaryVmu._cpu.StackData;
+                for (var i = 0; i < stackData.Count; i++)
+                {
+                    var entry = stackData[i];
+                    if (entry.Kind == StackValueKind.Push)
+                        continue; // TODO2: display these
+
+                    ImGui.PushID(i);
+                    ImGui.TableNextColumn();
+
+                    var bankInfo = debugInfo.GetBankInfo(entry.BankId);
+                    var returnAddr = entry.Value;
+                    var bpIndex = bankInfo.Breakpoints.FindIndex(bp => bp.Offset == returnAddr);
+                    var breakpointExists = bpIndex != -1;
+
+                    ImGui.PushID("breakpoint");
+                    if (ImGui.Checkbox("", ref breakpointExists))
+                    {
+                        if (breakpointExists) // Create new
+                        {
+                            bankInfo.Breakpoints.Add(new BreakpointInfo { Enabled = true, Offset = returnAddr });
+                        }
+                        else if (bpIndex != -1) // Remove
+                        {
+                            bankInfo.Breakpoints.RemoveAt(bpIndex);
+                        }
+                    }
+                    ImGui.PopID();
+
+                    ImGui.TableNextColumn();
+
+                    var inst = bankInfo.GetOrLoadInstruction(returnAddr);
+                    ImGui.Text(inst.Offset.ToString("X4"));
+
                     ImGui.TableNextColumn();
                     ImGui.Text(inst.DisplayInstruction());
                     ImGui.PopID();

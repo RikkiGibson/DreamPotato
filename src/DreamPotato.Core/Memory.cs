@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics;
 
+using DreamPotato.Core.SFRs;
+
 namespace DreamPotato.Core;
 
 /// <summary>
@@ -335,3 +337,41 @@ public class Memory
         }
     }
 }
+
+public enum StackValueKind : byte
+{
+    /// <summary>
+    /// TODO: Unsure what to do with this.
+    /// Probably reserved for when user manually messes with SP, directly writes values, etc.
+    /// </summary>
+    Unknown,
+
+    /// <summary>A value added using the PUSH instruction.</summary>
+    Push,
+
+    /// <summary>Return address of a CALL or similar instruction.</summary>
+    CallReturn,
+
+    /// <summary>Return address of an interrupt service routine call.</summary>
+    InterruptReturn,
+
+}
+
+/// <param name="Source">
+/// Meaning depends on the Kind.
+/// - Push: the operand of the 'PUSH d9' instruction.
+/// - CallReturn: the address of the routine we called.
+/// - InterruptReturn: the address of the ISR.
+/// </param>
+/// <param name="Value">
+/// The actual value stored on the VMU stack.
+/// For 'Push' this is 1 byte. For Returns, it is 2 bytes.
+/// </param>
+/// <param name="Offset">
+/// Address where the value is stored in the VMU stack.
+/// </param>
+/// <param name="BankId">
+/// The instruction bank we were in when the value was pushed.
+/// This is needed to resolve a memory address for a Return case
+/// </param>
+public record struct StackEntry(StackValueKind Kind, ushort Source, ushort Value, ushort Offset, InstructionBank BankId);

@@ -168,8 +168,15 @@ public class Cpu
     /// <summary>NOTE: not part of hardware state, so not serialized</summary>
     public DebuggingState DebuggingState { get; internal set; } = DebuggingState.Run;
 
-    // TODO: update save state format
-    // Now, loading state can change the used expansion slots, in addition to changing whether we are docked.
+    /// <summary>
+    /// Note: this is used for debugging, but, not stored on DebugInfo,
+    /// becuase it must always be calc'd/managed, and not created on demand.
+    /// </summary>
+    public List<StackEntry> StackData { get; private set; } = [];
+
+    public StackEntry MakeStackEntry(StackValueKind kind, ushort source, ushort value)
+        => new StackEntry(kind, source, value, SFRs.Sp, CurrentInstructionBankId);
+
     internal DreamcastSlot DreamcastSlot
     {
         get;
@@ -219,6 +226,7 @@ public class Cpu
         _interruptServicingState = InterruptServicingState.Ready;
         _flashWriteUnlockSequence = 0;
         Memory.Reset();
+        StackData.Clear();
         SyncInstructionBank();
     }
 
@@ -769,9 +777,11 @@ public class Cpu
             RequestedInterrupts &= ~interrupt;
             SFRs.Pcon = SFRs.Pcon with { HaltMode = false };
 
-            Memory.PushStack((byte)Pc);
-            Memory.PushStack((byte)(Pc >> 8));
+            var stackValue = Pc;
+            Memory.PushStack((byte)stackValue);
+            Memory.PushStack((byte)(stackValue >> 8));
             Pc = routineAddress;
+            StackData.Push(MakeStackEntry(StackValueKind.InterruptReturn, source: Pc, value: stackValue));
         }
     }
 
@@ -1627,6 +1637,11 @@ public class Cpu
         // (SP) <- (SP) + 1, ((SP)) <- (d9)
         var operand = FetchOperand(inst.Parameters[0], inst.Arg0);
         Memory.PushStack(operand);
+        StackData.Push(MakeStackEntry(
+            StackValueKind.Push,
+            source: inst.Arg0,
+            value: operand));
+
         Logger.LogTrace($"{inst} Sp({SFRs.Sp:X})={operand:X}", LogCategories.Instructions);
         Pc += inst.Size;
     }
@@ -1637,6 +1652,11 @@ public class Cpu
         var dAddress = GetOperandAddress(inst.Parameters[0], inst.Arg0);
         var value = Memory.PopStack();
         WriteRam(dAddress, value);
+
+        var stackValue = StackData.Pop();
+        if (stackValue.Kind != StackValueKind.Push)
+            Logger.LogDebug($"{inst} read an unexpected stack value of kind '{stackValue.Kind}'");
+
         Logger.LogTrace($"{inst} value={value:X}", LogCategories.Instructions);
 
         Pc += inst.Size;
@@ -1864,11 +1884,14 @@ public class Cpu
 
         Logger.LogTrace($"{inst}", LogCategories.Instructions);
         Pc += inst.Size;
-        Memory.PushStack((byte)Pc);
-        Memory.PushStack((byte)(Pc >> 8));
+        var stackValue = Pc;
+        Memory.PushStack((byte)stackValue);
+        Memory.PushStack((byte)(stackValue >> 8));
 
         Pc &= 0b1111_0000__0000_0000;
         Pc |= a12;
+
+        StackData.Push(MakeStackEntry(StackValueKind.CallReturn, source: Pc, value: stackValue));
     }
 
     /// <summary>Far absolute subroutine call</summary>
@@ -1880,9 +1903,12 @@ public class Cpu
         var a16 = inst.Arg0;
         Logger.LogTrace($"{inst}", LogCategories.Instructions);
         Pc += 3;
-        Memory.PushStack((byte)Pc);
-        Memory.PushStack((byte)(Pc >> 8));
+        var stackValue = Pc;
+        Memory.PushStack((byte)stackValue);
+        Memory.PushStack((byte)(stackValue >> 8));
         Pc = a16;
+
+        StackData.Push(MakeStackEntry(StackValueKind.CallReturn, source: Pc, value: stackValue));
     }
 
     /// <summary>Far relative subroutine call</summary>
@@ -1893,9 +1919,11 @@ public class Cpu
         var r16 = inst.Arg0;
         Logger.LogTrace($"{inst}", LogCategories.Instructions);
         Pc += inst.Size;
-        Memory.PushStack((byte)Pc);
-        Memory.PushStack((byte)(Pc >> 8));
+        var stackValue = Pc;
+        Memory.PushStack((byte)stackValue);
+        Memory.PushStack((byte)(stackValue >> 8));
         Pc = (ushort)(Pc - 1 + r16);
+        StackData.Push(MakeStackEntry(StackValueKind.CallReturn, source: Pc, value: stackValue));
     }
 
     /// <summary>Return from subroutine</summary>
@@ -1906,6 +1934,18 @@ public class Cpu
         var Pc15_8 = Memory.PopStack();
         var Pc7_0 = Memory.PopStack();
         Pc = (ushort)(Pc15_8 << 8 | Pc7_0);
+
+        var stackEntry = StackData.Pop();
+        if (stackEntry.Kind == StackValueKind.Push)
+        {
+            Logger.LogDebug("Detected a PUSH+RET.");
+            if (StackData.Pop() is { Kind: not StackValueKind.Push } badValue)
+                Logger.LogError($"Returned to a mix of a Push value and a {badValue.Kind} value. Stack debug data is corrupted. {badValue}");
+        }
+        else if (stackEntry.Kind != StackValueKind.CallReturn)
+        {
+            Logger.LogDebug($"{inst} used unexpected stack value {stackEntry}");
+        }
     }
 
     /// <summary>Return from interrupt</summary>
@@ -1922,6 +1962,18 @@ public class Cpu
         var Pc15_8 = Memory.PopStack();
         var Pc7_0 = Memory.PopStack();
         Pc = (ushort)(Pc15_8 << 8 | Pc7_0);
+
+        var stackEntry = StackData.Pop();
+        if (stackEntry.Kind == StackValueKind.Push)
+        {
+            Logger.LogWarning("Detected a PUSH/RETI.");
+            if (StackData.Pop() is { Kind: not StackValueKind.Push } badValue)
+                Logger.LogError($"Returned to a mix of a Push value and a {badValue.Kind} value. Stack debug data is corrupted. {badValue}");
+        }
+        else if (stackEntry.Kind != StackValueKind.InterruptReturn)
+        {
+            Logger.LogDebug($"{inst} used unexpected stack value {stackEntry}");
+        }
     }
 
     /// <summary>Clear direct bit</summary>
