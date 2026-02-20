@@ -165,9 +165,6 @@ public class Cpu
     /// <summary>The CPU of another VMU, connected for serial I/O.</summary>
     private Cpu? _otherCpu;
 
-    /// <summary>NOTE: not part of hardware state, so not serialized</summary>
-    public DebuggingState DebuggingState { get; internal set; } = DebuggingState.Run;
-
     /// <summary>
     /// Note: this is used for debugging, but, not stored on DebugInfo,
     /// becuase it must always be calc'd/managed, and not created on demand.
@@ -373,7 +370,7 @@ public class Cpu
 
     public long Run(long ticksToRun)
     {
-        if (DebuggingState == DebuggingState.Break)
+        if (LazyDebugInfo?.DebuggingState == DebuggingState.Break)
         {
             return ticksToRun;
         }
@@ -404,7 +401,7 @@ public class Cpu
         ticksToRun -= TicksOverrun;
 
         long ticksSoFar = 0;
-        while (DebuggingState != DebuggingState.Break && ticksSoFar < ticksToRun)
+        while (LazyDebugInfo?.DebuggingState != DebuggingState.Break && ticksSoFar < ticksToRun)
         {
             ticksSoFar += StepTicks();
         }
@@ -416,7 +413,9 @@ public class Cpu
         {
             var thisTicksToRun = inputTicksToRun - @this.TicksOverrun;
             var otherTicksToRun = inputTicksToRun - other.TicksOverrun;
-            while (@this.DebuggingState != DebuggingState.Break && other.DebuggingState != DebuggingState.Break && (thisTicksToRun > 0 || otherTicksToRun > 0))
+            while (@this.LazyDebugInfo?.DebuggingState != DebuggingState.Break
+                && other.LazyDebugInfo?.DebuggingState != DebuggingState.Break
+                && (thisTicksToRun > 0 || otherTicksToRun > 0))
             {
                 // Execute one instruction for whichever VMU is further behind in time.
                 if (thisTicksToRun > otherTicksToRun)
@@ -879,7 +878,7 @@ public class Cpu
 
     internal Instruction StepInstruction()
     {
-        if (DebuggingState == DebuggingState.Break)
+        if (LazyDebugInfo?.DebuggingState == DebuggingState.Break)
         {
             // Do not tick any timers, etc.
             return new Instruction(Pc, Operations.NOP);
@@ -1227,7 +1226,7 @@ public class Cpu
             if (LazyDebugInfo is null)
                 return;
 
-            if (DebuggingState == DebuggingState.StepIn)
+            if (LazyDebugInfo.DebuggingState == DebuggingState.StepIn)
             {
                 LazyDebugInfo.FireDebugBreak();
                 return;

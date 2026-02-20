@@ -344,13 +344,14 @@ public class DebugInfo(Cpu cpu)
         new(cpu, InstructionBank.FlashBank1),
     ];
 
-    public DebuggingState DebuggingState => cpu.DebuggingState;
+    public DebuggingState DebuggingState { get; internal set; } = DebuggingState.Run;
+
     public BankDebugInfo CurrentBankInfo => GetBankInfo(cpu.CurrentInstructionBankId);
 
     public event Action<InstructionDebugInfo>? DebugBreak;
     public void FireDebugBreak()
     {
-        cpu.DebuggingState = DebuggingState.Break;
+        DebuggingState = DebuggingState.Break;
         var bankInfo = CurrentBankInfo;
         var instructionInfo = bankInfo.GetOrLoadInstruction(cpu.ProgramCounter);
         DebugBreak?.Invoke(instructionInfo);
@@ -358,9 +359,9 @@ public class DebugInfo(Cpu cpu)
 
     public void ToggleDebugBreak()
     {
-        if (cpu.DebuggingState == DebuggingState.Break)
+        if (DebuggingState == DebuggingState.Break)
         {
-            cpu.DebuggingState = DebuggingState.Run;
+            DebuggingState = DebuggingState.Run;
             return;
         }
 
@@ -369,7 +370,7 @@ public class DebugInfo(Cpu cpu)
 
     public void StepIn()
     {
-        cpu.DebuggingState = DebuggingState.StepIn;
+        DebuggingState = DebuggingState.StepIn;
     }
 
     public BankDebugInfo GetBankInfo(InstructionBank bankId)
