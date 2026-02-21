@@ -1945,6 +1945,12 @@ public class Cpu
         {
             Logger.LogDebug($"{inst} used unexpected stack value {stackEntry}");
         }
+
+        if (LazyDebugInfo is { DebuggingState: DebuggingState.StepOut, StepOutOffset: var offset } debugInfo
+            && stackEntry.Offset == offset)
+        {
+            debugInfo.FireDebugBreak();
+        }
     }
 
     /// <summary>Return from interrupt</summary>
@@ -1972,6 +1978,12 @@ public class Cpu
         else if (stackEntry.Kind != StackValueKind.InterruptReturn)
         {
             Logger.LogDebug($"{inst} used unexpected stack value {stackEntry}");
+        }
+
+        if (LazyDebugInfo is { DebuggingState: DebuggingState.StepOut, StepOutOffset: var offset } debugInfo
+            && stackEntry.Offset == offset)
+        {
+            debugInfo.FireDebugBreak();
         }
     }
 
@@ -2107,4 +2119,5 @@ public enum DebuggingState
     Run,
     Break,
     StepIn,
+    StepOut,
 }

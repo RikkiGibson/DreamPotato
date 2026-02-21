@@ -344,7 +344,9 @@ public class DebugInfo(Cpu cpu)
         new(cpu, InstructionBank.FlashBank1),
     ];
 
-    public DebuggingState DebuggingState { get; internal set; } = DebuggingState.Run;
+    public DebuggingState DebuggingState { get; private set; } = DebuggingState.Run;
+    /// <summary>Stack offset of the related return address of a 'step over/step out' command.</summary>
+    public ushort StepOutOffset { get; private set; }
 
     public BankDebugInfo CurrentBankInfo => GetBankInfo(cpu.CurrentInstructionBankId);
 
@@ -371,6 +373,17 @@ public class DebugInfo(Cpu cpu)
     public void StepIn()
     {
         DebuggingState = DebuggingState.StepIn;
+    }
+
+    public void StepOut()
+    {
+        // Can only step out, if there is something to step out of
+        var lastCall = cpu.StackData.LastOrDefault(entry => entry.Kind is StackValueKind.CallReturn or StackValueKind.InterruptReturn);
+        if (lastCall.Kind == StackValueKind.Unknown)
+            return;
+
+        DebuggingState = DebuggingState.StepOut;
+        StepOutOffset = lastCall.Offset;
     }
 
     public BankDebugInfo GetBankInfo(InstructionBank bankId)

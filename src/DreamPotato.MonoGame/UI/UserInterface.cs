@@ -1122,14 +1122,13 @@ partial class UserInterface
             var bankInfo = debugInfo.CurrentBankInfo;
             var breakState = debugInfo.DebuggingState == DebuggingState.Break;
             if (ImGui.Checkbox("Break", ref breakState))
-            {
                 debugInfo.ToggleDebugBreak();
-            }
 
             if (ImGui.Button("Step In"))
-            {
                 debugInfo.StepIn();
-            }
+
+            if (ImGui.Button("Step Out"))
+                debugInfo.StepOut();
         }
 
         void layoutBreakpoints(InstructionBank bankId)
