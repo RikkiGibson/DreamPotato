@@ -142,7 +142,7 @@ public class Cpu
     /// </summary>
     internal byte SerialTransferTimer;
 
-    internal Interrupts RequestedInterrupts;
+    // internal Interrupts RequestedInterrupts;
     private InterruptServicingState _interruptServicingState;
 
     /// <summary>
@@ -210,7 +210,7 @@ public class Cpu
         StepCycleTicksPerSecondRemainder = 0;
         BaseTimer = 0;
         BaseTimerTicksRemaining = 0;
-        RequestedInterrupts = Interrupts.None;
+        // RequestedInterrupts = Interrupts.None;
         Array.Clear(_servicingInterrupts);
         _interruptsCount = 0;
         _interruptServicingState = InterruptServicingState.Ready;
@@ -242,7 +242,7 @@ public class Cpu
         writeStream.WriteByte(T0Scale);
         writeStream.WriteByte(SerialBitCount);
         writeStream.WriteByte(SerialTransferTimer);
-        writeUInt16(buffer, (ushort)RequestedInterrupts);
+        writeUInt16(buffer, 0); // TODO remove+update savestate format.
         writeStream.WriteByte((byte)_interruptServicingState);
         for (int i = 0; i < _servicingInterrupts.Length; i++)
         {
@@ -292,7 +292,7 @@ public class Cpu
         T0Scale = (byte)readStream.ReadByte();
         SerialBitCount = (byte)readStream.ReadByte();
         SerialTransferTimer = (byte)readStream.ReadByte();
-        RequestedInterrupts = (Interrupts)readUInt16(buffer);
+        _ = (Interrupts)readUInt16(buffer); // TODO: update savestate format
         _interruptServicingState = (InterruptServicingState)readStream.ReadByte();
         for (int i = 0; i < _servicingInterrupts.Length; i++)
         {
@@ -554,19 +554,11 @@ public class Cpu
 
         // level trigger: just need to be at the right level to trigger it
         if (isLevelTriggered && (isHighTriggered == connect))
-        {
             i01cr.Int0Source = true;
-            if (i01cr.Int0Enable)
-                RequestedInterrupts |= Interrupts.INT0;
-        }
 
         // edge trigger: need to transition to the desired level to trigger it
         if (!isLevelTriggered && (oldP7.DreamcastConnected != connect) && (isHighTriggered == connect))
-        {
             i01cr.Int0Source = true;
-            if (i01cr.Int0Enable)
-                RequestedInterrupts |= Interrupts.INT0;
-        }
 
         SFRs.I01Cr = i01cr;
     }
@@ -593,8 +585,11 @@ public class Cpu
 
         static void raiseInt3IfNeeded(Cpu cpu)
         {
-            if (cpu.SFRs.I23Cr is { Int3Enable: true, Int3RisingEdgeDetection: true })
-                cpu.RequestedInterrupts |= Interrupts.INT3_BT;
+            if (cpu.SFRs.I23Cr is { Int3Enable: true, Int3RisingEdgeDetection: true } i23cr)
+            {
+                i23cr.Int3Source = true;
+                cpu.SFRs.I23Cr = i23cr;
+            }
         }
     }
 
@@ -615,8 +610,11 @@ public class Cpu
 
         static void raiseInt3IfNeeded(Cpu cpu)
         {
-            if (cpu.SFRs.I23Cr is { Int3Enable: true, Int3FallingEdgeDetection: true })
-                cpu.RequestedInterrupts |= Interrupts.INT3_BT;
+            if (cpu.SFRs.I23Cr is { Int3Enable: true, Int3FallingEdgeDetection: true } i23cr)
+            {
+                i23cr.Int3Source = true;
+                cpu.SFRs.I23Cr = i23cr;
+            }
         }
     }
 
@@ -633,122 +631,121 @@ public class Cpu
         var isLevelTriggered = i01cr.Int1LevelTriggered;
         var isHighTriggered = i01cr.Int1HighTriggered;
 
-        // level trigger: just need to be at the right level to trigger it
-        if (isLevelTriggered && (isHighTriggered == voltageLevel))
-        {
-            i01cr.Int1Source = true;
-            if (i01cr.Int1Enable)
-                RequestedInterrupts |= Interrupts.INT1;
-        }
-
+        // level trigger is handled in 'requestLevelDrivenInterrupts'
         // edge trigger: need to transition to the desired level to trigger it
         if (!isLevelTriggered && (oldP7.LowVoltage != voltageLevel) && (isHighTriggered == voltageLevel))
         {
             i01cr.Int1Source = true;
-            if (i01cr.Int1Enable)
-                RequestedInterrupts |= Interrupts.INT1;
+            SFRs.I01Cr = i01cr;
         }
     }
     #endregion
 
     private void ServiceInterruptIfNeeded()
     {
-        if (RequestedInterrupts == Interrupts.None)
-            return;
-
         if (_interruptServicingState != InterruptServicingState.Ready)
             return;
 
+        // TODO: test program to verify real hardware behavior
         if (_interruptsCount >= InterruptsCountMax)
-            return;
-
-        var ie = SFRs.Ie;
-        if (!ie.MasterInterruptEnable)
             return;
 
         var currentInterrupt = _interruptsCount == 0 ? Interrupts.None : _servicingInterrupts[_interruptsCount - 1];
         Debug.Assert(BitHelpers.IsPowerOfTwo((int)currentInterrupt));
 
-        // Highest Priority
-        if (ie.Int0Priority && shouldServiceInterrupt(Interrupts.INT0))
+        // Highest Priority are serviced even if master interrupt enable bit is cleared
+        // TODO: test program to verify real hardware behavior
+        var ie = SFRs.Ie;
+        if (ie.Int0Priority
+            && Interrupts.INT0.IsHigherPriorityThan(currentInterrupt)
+            && SFRs.I01Cr is { Int0Enable: true, Int0Source: true })
         {
             serviceInterrupt(Interrupts.INT0, InterruptVectors.INT0);
             return;
         }
-        if (ie.Int1Priority && shouldServiceInterrupt(Interrupts.INT1))
+        if (ie.Int1Priority
+            && Interrupts.INT1.IsHigherPriorityThan(currentInterrupt)
+            && SFRs.I01Cr is { Int1Enable: true, Int1Source: true })
         {
             serviceInterrupt(Interrupts.INT1, InterruptVectors.INT1);
             return;
         }
 
-        // High Priority
-        var interruptPriority = SFRs.Ip;
-        if (tryServiceOneInterrupt(highPriority: true))
+        if (!ie.MasterInterruptEnable)
             return;
 
-        tryServiceOneInterrupt(highPriority: false);
+        // High Priority
+        var interruptPriority = SFRs.Ip;
+        if (tryServiceOneInterrupt(highPriorityOnly: true))
+            return;
 
-        bool tryServiceOneInterrupt(bool highPriority)
+        // Low priority
+        tryServiceOneInterrupt(highPriorityOnly: false);
+
+        bool tryServiceOneInterrupt(bool highPriorityOnly)
         {
-            if ((!highPriority || interruptPriority.Int2_T0L) && shouldServiceInterrupt(Interrupts.INT2_T0L))
+            if (Interrupts.INT2_T0L.IsHigherPriorityThan(currentInterrupt)
+                && (!highPriorityOnly || interruptPriority.Int2_T0L)
+                && (SFRs.T0Cnt is { T0lIe: true, T0lOvf: true } || SFRs.I23Cr is { Int2Enable: true, Int2Source: true }))
             {
                 serviceInterrupt(Interrupts.INT2_T0L, InterruptVectors.INT2_T0L);
                 return true;
             }
 
-            if ((!highPriority || interruptPriority.Int3_BaseTimer) && shouldServiceInterrupt(Interrupts.INT3_BT))
+            if (Interrupts.INT3_BT.IsHigherPriorityThan(currentInterrupt)
+                && (!highPriorityOnly || interruptPriority.Int3_BaseTimer)
+                && SFRs.Btcr is { Int0Enable: true, Int0Source: true } or { Int1Enable: true, Int1Source: true })
             {
                 serviceInterrupt(Interrupts.INT3_BT, InterruptVectors.INT3_BT);
                 return true;
             }
 
-            if ((!highPriority || interruptPriority.T0H) && shouldServiceInterrupt(Interrupts.T0H))
+            if (Interrupts.T0H.IsHigherPriorityThan(currentInterrupt)
+                && (!highPriorityOnly || interruptPriority.T0H) && SFRs.T0Cnt is { T0hIe: true, T0hOvf: true })
             {
                 serviceInterrupt(Interrupts.T0H, InterruptVectors.T0H);
                 return true;
             }
 
-            if ((!highPriority || interruptPriority.T1) && shouldServiceInterrupt(Interrupts.T1))
+            if (Interrupts.T1.IsHigherPriorityThan(currentInterrupt)
+                && (!highPriorityOnly || interruptPriority.T1) && SFRs.T1Cnt is { T1lIe: true, T1lOvf: true } or { T1hIe: true, T1hOvf: true })
             {
                 serviceInterrupt(Interrupts.T1, InterruptVectors.T1);
                 return true;
             }
 
-            if ((!highPriority || interruptPriority.Sio0) && shouldServiceInterrupt(Interrupts.SIO0))
+            if (Interrupts.SIO0.IsHigherPriorityThan(currentInterrupt)
+                && (!highPriorityOnly || interruptPriority.Sio0) && SFRs.Scon0 is { InterruptEnable: true, TransferEndFlag: true })
             {
                 serviceInterrupt(Interrupts.SIO0, InterruptVectors.SIO0);
                 return true;
             }
 
-            if ((!highPriority || interruptPriority.Sio1) && shouldServiceInterrupt(Interrupts.SIO1))
+            if (Interrupts.SIO1.IsHigherPriorityThan(currentInterrupt)
+                && (!highPriorityOnly || interruptPriority.Sio1) && SFRs.Scon1 is { InterruptEnable: true, TransferEndFlag: true })
             {
                 serviceInterrupt(Interrupts.SIO1, InterruptVectors.SIO1);
                 return true;
             }
 
-            if ((!highPriority || interruptPriority.Maple) && shouldServiceInterrupt(Interrupts.Maple))
+            // NOTE: We do not actually generate a Maple interrupt ever.
+            // In practice we handle maple transfers using a "high level emulation".
+            // Leaving the stub here in case we ever wanted to recognize the enable/source bits for this interrupt.
+            if (Interrupts.Maple.IsHigherPriorityThan(currentInterrupt)
+                && (!highPriorityOnly || interruptPriority.Maple) && false)
             {
                 serviceInterrupt(Interrupts.Maple, InterruptVectors.Maple);
                 return true;
             }
 
-            if ((!highPriority || interruptPriority.Port3) && shouldServiceInterrupt(Interrupts.P3))
+            if (Interrupts.P3.IsHigherPriorityThan(currentInterrupt)
+                && (!highPriorityOnly || interruptPriority.Port3) && SFRs.P3Int is { Enable: true, Source: true })
             {
                 serviceInterrupt(Interrupts.P3, InterruptVectors.P3);
                 return true;
             }
 
             return false;
-        }
-
-        bool shouldServiceInterrupt(Interrupts candidateInterrupt)
-        {
-            Debug.Assert(BitHelpers.IsPowerOfTwo((int)candidateInterrupt));
-
-            // TODO: does priority factor in at all when interrupting one interrupt with another?
-            // It feels like if so, the "priority bits" in the interrupt control registers need to factor in.
-            return (RequestedInterrupts & candidateInterrupt) != 0
-                && candidateInterrupt.IsHigherPriorityThan(currentInterrupt);
         }
 
         void serviceInterrupt(Interrupts interrupt, ushort routineAddress)
@@ -761,7 +758,6 @@ public class Cpu
             if (_interruptsCount > 1)
             { // breakpoint holder
             }
-            RequestedInterrupts &= ~interrupt;
             SFRs.Pcon = SFRs.Pcon with { HaltMode = false };
 
             Memory.PushStack((byte)Pc);
@@ -770,18 +766,20 @@ public class Cpu
         }
     }
 
-    internal void ResetInterruptState()
+    /// <summary>
+    /// VMD-145: During execution of the RETI instruction or an instruction (MOV, ST, etc.) that writes to one of the special function
+    /// registers listed below, or while writing to flash memory, interrupt request flag acceptance processing is not performed.
+    ///
+    /// From empirical testing, it looks like writes to IE, IP, and PCON should also do this.
+    /// </summary>
+    internal void MarkInterruptsNotReady()
     {
-        // TODO this is kind of a hack to ensure that interrupts are not serviced
-        // until one instruction after master interrupt enable is set.
-        // TODO write a test program specifically for investigating how this works properly.
-        _interruptServicingState = InterruptServicingState.ReturnedFromInterrupt;
+        _interruptServicingState = InterruptServicingState.NotReady;
     }
 
-    private void AdvanceInterruptState()
+    private void MarkInterruptsReady()
     {
-        if (_interruptServicingState == InterruptServicingState.ReturnedFromInterrupt)
-            _interruptServicingState = InterruptServicingState.Ready;
+        _interruptServicingState = InterruptServicingState.Ready;
     }
 
     /// <summary>Execute a single instruction and tick the base timer.</summary>
@@ -833,11 +831,6 @@ public class Cpu
             if ((currentBtTicks / int1Rate) < (newBtTicks / int1Rate))
             {
                 btcr.Int1Source = true;
-                if (btcr.Int1Enable)
-                {
-                    Logger.LogDebug("Requesting BTInt1", LogCategories.Interrupts);
-                    RequestedInterrupts |= Interrupts.INT3_BT;
-                }
             }
 
             var int0Rate = btcr.Int0CycleRate;
@@ -846,11 +839,6 @@ public class Cpu
             if ((currentBtTicks / int0Rate) < (newBtTicks / int0Rate))
             {
                 btcr.Int0Source = true;
-                if (btcr.Int0Enable)
-                {
-                    Logger.LogDebug("Requesting BTInt0", LogCategories.Interrupts);
-                    RequestedInterrupts |= Interrupts.INT3_BT;
-                }
             }
 
             BaseTimer = (ushort)(newBtTicks % BaseTimerMax);
@@ -864,14 +852,11 @@ public class Cpu
 
     internal Instruction StepInstruction()
     {
-        ServiceInterruptIfNeeded();
-        AdvanceInterruptState();
-
         // TODO: hold mode doesn't even tick timers. only external interrupts wake the VMU.
         if (SFRs.Pcon.HaltMode)
         {
+            handleInterrupts();
             tickCpuClockedTimers(1);
-            requestLevelDrivenInterrupts();
             // TODO: we didn't really execute this (PC not incremented), but, we did consume 1 cycle.
             // We probably want a different type here or a HALT "pseudo-instruction".
             return new Instruction(Pc, Operations.NOP);
@@ -893,8 +878,8 @@ public class Cpu
             // https://github.com/gyrovorbis/vmu-bios-disassembly/blob/923d28f99d43a03fad81342bf5650cf94e287d03/american_v1.05.s#L4219
             // https://github.com/RikkiGibson/DreamPotato/pull/14#discussion_r2628643313
             Pc += inst.Size;
+            handleInterrupts();
             tickCpuClockedTimers(inst.Cycles);
-            requestLevelDrivenInterrupts();
             return inst;
         }
 
@@ -948,12 +933,11 @@ public class Cpu
             default: Throw(inst); break;
         }
 
+        handleInterrupts();
         tickCpuClockedTimers(inst.Cycles);
-        requestLevelDrivenInterrupts();
         return inst;
 
         static void Throw(Instruction inst) => throw new InvalidOperationException($"Unknown operation '{inst}'");
-
 
         void tickCpuClockedTimers(byte cycles)
         {
@@ -994,8 +978,6 @@ public class Cpu
                             if (!t0cnt.T0Long) // interrupt for overflow only in 8-bit mode
                             {
                                 t0cnt.T0lOvf = true;
-                                if (t0cnt.T0lIe)
-                                    RequestedInterrupts |= Interrupts.INT2_T0L;
                             }
                         }
                     }
@@ -1011,8 +993,6 @@ public class Cpu
                         {
                             t0h = SFRs.T0Hr;
                             t0cnt.T0hOvf = true;
-                            if (t0cnt.T0hIe)
-                                RequestedInterrupts |= Interrupts.T0H;
                         }
                     }
                 }
@@ -1032,30 +1012,23 @@ public class Cpu
                     if (t1cnt.T1lRun)
                     {
                         var t1l = SFRs.T1L;
-                        var t1lc = SFRs.T1Lc;
-                        // Audio signal goes from low to high according to the following pattern:
-                        // T1Lr       T1Lc       0xff
-                        // | -------- | -------- |
-                        // T1L starts at T1Lr, and signal is low,
-                        // until it reaches T1Lc where it is high until we reload again.
-                        // For example, the highest pitch the timer can produce, is
-                        // with T1Lr=254, T1Lc=255, which alternates low and high every cycle.
-                        // If T1Lc is not greater than T1Lr, there is no point where the signal is low, and thus no sound.
-                        if (t1lc > SFRs.T1Lr)
+                        if (Audio.IsActive)
                         {
                             var cpuClockHz = SFRs.Ocr.CpuClockHz;
-                            var p1 = SFRs.P1 with { PulseOutput = t1l >= t1lc };
-                            Audio.AddPulse(cpuClockHz, p1.PulseOutput);
-                            SFRs.P1 = p1;
+                            SFRs.P1 = SFRs.P1 with { PulseOutput = Audio.AddPulse(cpuClockHz, t1l) };
                         }
 
                         t1l++;
                         if (t1l == 0)
                         {
                             t1l = SFRs.T1Lr;
+                            Audio.OnT1LReloaded(t1cnt, t1l, SFRs.T1Lc);
+
+                            // TODO: basically need to test internal triggering behavior with every interrupt and decide if a check like this is needed
+                            if (!t1cnt.T1lOvf)
+                                MarkInterruptsNotReady();
+
                             t1cnt.T1lOvf = true;
-                            if (t1cnt.T1lIe)
-                                RequestedInterrupts |= Interrupts.T1;
                         }
 
                         SFRs.T1L = t1l;
@@ -1071,8 +1044,6 @@ public class Cpu
                             {
                                 t1h = SFRs.T1Hr;
                                 t1cnt.T1hOvf = true;
-                                if (t1cnt.T1hIe)
-                                    RequestedInterrupts |= Interrupts.T1;
                             }
 
                             SFRs.T1H = t1h;
@@ -1133,50 +1104,30 @@ public class Cpu
             }
         }
 
+        void handleInterrupts()
+        {
+            requestLevelDrivenInterrupts();
+            ServiceInterruptIfNeeded();
+            MarkInterruptsReady();
+        }
+
         void requestLevelDrivenInterrupts()
         {
-            // TODO: I suspect master interrupt disable should have an effect here
-            // Level triggered interrupts keep getting triggered each cycle
-            // Edge triggered interrupts are triggered in SFRs when the value changes
             var i01cr = SFRs.I01Cr;
-            if (i01cr.Int0Enable && i01cr.Int0LevelTriggered && i01cr.Int0Source == i01cr.Int0HighTriggered && !currentlyServicing(Interrupts.INT0))
-                RequestedInterrupts |= Interrupts.INT0;
+            var p7 = SFRs.P7;
+            if (i01cr.Int0Enable && i01cr.Int0LevelTriggered && p7.DreamcastConnected == i01cr.Int0HighTriggered)
+            {
+                i01cr.Int0Source = true;
+                SFRs.I01Cr = i01cr;
+            }
 
-            if (i01cr.Int1Enable && i01cr.Int1LevelTriggered && i01cr.Int0Source == i01cr.Int1HighTriggered && !currentlyServicing(Interrupts.INT1))
-                RequestedInterrupts |= Interrupts.INT1;
-
-            // Empirical testing shows that timer interrupts are "level driven"
-            // in that if the source flag is not cleared, the interrupt is generated continuously.
-            var t0cnt = SFRs.T0Cnt;
-            if (t0cnt.T0lIe && t0cnt.T0lOvf && !currentlyServicing(Interrupts.INT2_T0L))
-                RequestedInterrupts |= Interrupts.INT2_T0L;
-
-            if (t0cnt.T0hIe && t0cnt.T0hOvf && !currentlyServicing(Interrupts.T0H))
-                RequestedInterrupts |= Interrupts.T0H;
-
-            var t1cnt = SFRs.T1Cnt;
-            if (t1cnt.T1lIe && t1cnt.T1lOvf && !currentlyServicing(Interrupts.T1))
-                RequestedInterrupts |= Interrupts.T1;
-
-            if (t1cnt.T1hIe && t1cnt.T1hOvf && !currentlyServicing(Interrupts.T1))
-                RequestedInterrupts |= Interrupts.T1;
-
-            var btcr = SFRs.Btcr;
-            if (btcr.Int0Enable && btcr.Int0Source && !currentlyServicing(Interrupts.INT3_BT))
-                RequestedInterrupts |= Interrupts.INT3_BT;
-
-            if (btcr.Int1Enable && btcr.Int1Source && !currentlyServicing(Interrupts.INT3_BT))
-                RequestedInterrupts |= Interrupts.INT3_BT;
-
-            if (SFRs.Scon0 is { InterruptEnable: true, TransferEndFlag: true } && !currentlyServicing(Interrupts.SIO0))
-                RequestedInterrupts |= Interrupts.SIO0;
-
-            if (SFRs.Scon1 is { InterruptEnable: true, TransferEndFlag: true } && !currentlyServicing(Interrupts.SIO1))
-                RequestedInterrupts |= Interrupts.SIO1;
+            if (i01cr.Int1Enable && i01cr.Int1LevelTriggered && p7.LowVoltage == i01cr.Int1HighTriggered)
+            {
+                i01cr.Int1Source = true;
+                SFRs.I01Cr = i01cr;
+            }
 
             var p3int = SFRs.P3Int;
-            // NB: non-continuous interrupts are generated in SFRs.P3.set (i.e. only when P3 changes)
-            // TODO: empirical test if holding a button continuously just keeps setting the source flag.
             if (p3int.Enable && p3int.Continuous)
             {
                 var p3Raw = (byte)SFRs.P3;
@@ -1184,24 +1135,11 @@ public class Cpu
                 {
                     Logger.LogDebug($"Requesting interrupt P3 Continuous={p3int.Continuous} Value=0b{p3Raw:b}", LogCategories.Interrupts);
                     p3int.Source = true;
-                    RequestedInterrupts |= Interrupts.P3;
+                    SFRs.P3Int = p3int;
                 }
-                SFRs.P3Int = p3int;
-            }
-
-            // TODO: it might be cleaner to just wait to clear RequestedInterrupts until RETI and the interrupt is popped off of _servicingInterrupts.
-            bool currentlyServicing(Interrupts interrupt)
-            {
-                Debug.Assert(BitHelpers.IsPowerOfTwo((int)interrupt));
-                for (int i = 0; i < _interruptsCount; i++)
-                {
-                    if (_servicingInterrupts[i] == interrupt)
-                        return true;
-                }
-
-                return false;
             }
         }
+
     }
 
     private void ReceiveSerialTransferBit(bool bit, bool isEnd)
@@ -1879,11 +1817,16 @@ public class Cpu
     private void Op_RETI(Instruction inst)
     {
         // (PC15 to 8) <- ((SP)), (SP) <- (SP) - 1, (PC7 to 0) <- ((SP)), (SP) <- (SP) -1
-        _interruptServicingState = InterruptServicingState.ReturnedFromInterrupt;
+        MarkInterruptsNotReady();
         if (_interruptsCount > 0)
+        {
             _interruptsCount--;
+            _servicingInterrupts[_interruptsCount] = Interrupts.None;
+        }
         else
+        {
             Logger.LogError($"Returning from interrupt, but no interrupt was being serviced!", LogCategories.Interrupts);
+        }
 
         Logger.LogTrace($"{inst}", LogCategories.Instructions);
         var Pc15_8 = Memory.PopStack();

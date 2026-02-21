@@ -5,16 +5,8 @@ namespace DreamPotato.Core;
 
 enum InterruptServicingState : byte
 {
-    /// <summary>
-    /// Ready to service an interrupt.
-    /// </summary>
     Ready,
-
-    /// <summary>
-    /// Returned from an interrupt in the previous instruction.
-    /// Not ready to service again until another instruction is executed.
-    /// </summary>
-    ReturnedFromInterrupt,
+    NotReady,
 }
 
 /// <summary>

@@ -194,14 +194,11 @@ public class SpecialFunctionRegisters
                 goto default;
 
             case Ids.Pcon:
+                _cpu.MarkInterruptsNotReady();
                 var oldPcon = new Pcon(_rawMemory[address]);
                 var newPcon = new Pcon(value);
-
-                if (!oldPcon.HaltMode && newPcon.HaltMode)
-                    _logger.LogTrace("Entering halt mode", LogCategories.Halt);
-
-                if (oldPcon.HaltMode && !newPcon.HaltMode)
-                    _logger.LogTrace("Exiting halt mode", LogCategories.Halt);
+                if (!oldPcon.HaltMode != newPcon.HaltMode)
+                    _logger.LogTrace($"Halt mode changed from {oldPcon.HaltMode} to {newPcon.HaltMode}", LogCategories.Halt);
 
                 goto default;
 
@@ -255,12 +252,14 @@ public class SpecialFunctionRegisters
 
                 goto default;
 
+            case Ids.Ip:
+                _cpu.MarkInterruptsNotReady();
+                goto default;
+
             case Ids.Ie:
+                _cpu.MarkInterruptsNotReady();
                 var oldIe = new Ie(_rawMemory[address]);
                 var newIe = new Ie(value);
-                if (!oldIe.MasterInterruptEnable && newIe.MasterInterruptEnable)
-                    _cpu.ResetInterruptState();
-
                 if (oldIe.MasterInterruptEnable != newIe.MasterInterruptEnable)
                     _logger.LogDebug($"Master Interrupt Enable changed from {oldIe.MasterInterruptEnable} to {newIe.MasterInterruptEnable}", LogCategories.Interrupts);
 
@@ -286,12 +285,15 @@ public class SpecialFunctionRegisters
             case Ids.T1Cnt:
                 var oldT1cnt = new T1Cnt(_rawMemory[address]);
                 var t1cnt = new T1Cnt(value);
-                if (oldT1cnt.T1lRun != t1cnt.T1lRun)
-                    T1L = T1Lr;
+                var t1lRun = t1cnt.T1lRun;
+                if (oldT1cnt.T1lRun != t1lRun)
+                {
+                    var t1lr = T1Lr;
+                    T1L = t1lr;
+                    _cpu.Audio.OnT1LRunChanged(t1lRun, t1lr, T1Lc);
+                }
 
-                // After writing new t1cnt value, potentially signal that audio playback should start
                 _rawMemory[address] = value;
-                _cpu.Audio.IsActive = t1cnt.T1lRun;
                 return;
 
             case Ids.Sbuf0:
@@ -676,7 +678,6 @@ public class SpecialFunctionRegisters
                 {
                     _logger.LogDebug($"Requesting interrupt P3 Continuous={p3int.Continuous} Before=0b{p3Raw:b} After=0b{valueRaw:b}");
                     p3int.Source = true;
-                    _cpu.RequestedInterrupts |= Interrupts.P3;
                 }
                 P3Int = p3int;
             }
