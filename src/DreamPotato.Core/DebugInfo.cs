@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Text;
 
 using DreamPotato.Core.SFRs;
 
@@ -24,6 +25,24 @@ public readonly struct InstructionDebugInfo : IComparable<InstructionDebugInfo>
     public ushort EndOffset => (ushort)(Offset + Size);
 
     public string DisplayInstruction() => Instruction.ToString();
+
+    public string DisplayArgumentValues(Cpu cpu)
+    {
+        var builder = new StringBuilder();
+        for (int i = 0; i < Instruction.Parameters.Length; i++)
+        {
+            var param = Instruction.Parameters[i];
+            if (param.Kind is ParameterKind.D9 or ParameterKind.Ri)
+            {
+                var arg = Instruction.GetArgument(i);
+                builder.Append('[');
+                Instruction.DisplayArgument(builder, param, arg);
+                builder.AppendFormat("] = {0:X2}H", cpu.FetchOperand(param, arg));
+                builder.AppendLine();
+            }
+        }
+        return builder.ToString();
+    }
 
     public int CompareTo(InstructionDebugInfo other)
     {

@@ -1035,7 +1035,8 @@ partial class UserInterface
                 ImGui.TableSetupColumn("addresses", ImGuiTableColumnFlags.WidthFixed);
                 ImGui.TableSetupColumn("instructions");
 
-                var executingInThisBank = bankId == _game.PrimaryVmu._cpu.CurrentInstructionBankId;
+                var cpu = _game.PrimaryVmu._cpu;
+                var executingInThisBank = bankId == cpu.CurrentInstructionBankId;
                 var bankInfo = debugInfo.GetBankInfo(bankId);
                 var disasm = bankInfo.Instructions;
 
@@ -1060,6 +1061,8 @@ partial class UserInterface
                         ImGui.PushID(i);
                         ImGui.TableNextColumn();
                         var inst = disasm[i];
+
+                        // Set background color
                         if (executingInThisBank && _game.PrimaryVmu._cpu.ProgramCounter == inst.Offset)
                         {
                             ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, Debug_ColorPc);
@@ -1070,7 +1073,7 @@ partial class UserInterface
                             {
                                 if (entry.Kind == StackValueKind.Push)
                                     continue;
-                                
+
                                 var returnAddr = entry.Value;
                                 if (inst.Offset == returnAddr)
                                 {
@@ -1109,6 +1112,16 @@ partial class UserInterface
                         {
                             ImGui.SetScrollHereY();
                             _debugger_ScrollToInstructionIndex = -1;
+                        }
+
+                        if (ImGui.IsItemHovered())
+                        {
+                            var argumentValues = inst.DisplayArgumentValues(_game.PrimaryVmu._cpu);
+                            if (argumentValues.Length != 0 && ImGui.BeginTooltip())
+                            {
+                                ImGui.Text(inst.DisplayArgumentValues(_game.PrimaryVmu._cpu));
+                                ImGui.EndTooltip();
+                            }
                         }
                     }
                 }
