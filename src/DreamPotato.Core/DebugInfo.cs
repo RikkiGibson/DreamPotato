@@ -36,8 +36,6 @@ public readonly struct InstructionDebugInfo : IComparable<InstructionDebugInfo>
 
 public class BreakpointInfo
 {
-    /// <summary>true if the breakpoint is created for a temporary purpose, and shouldn't appear in UI. e.g. breakpoints created for 'step' commands.</summary>
-    public bool Implicit;
     public required bool Enabled;
     public required ushort Offset;
 }

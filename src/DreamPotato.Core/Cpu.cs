@@ -1237,11 +1237,7 @@ public class Cpu
             {
                 var breakpoint = breakpoints[i];
                 if (breakpoint.Enabled && breakpoint.Offset == Pc)
-                {
                     LazyDebugInfo.FireDebugBreak();
-                    if (breakpoint.Implicit)
-                        breakpoints.RemoveAt(i);
-                }
             }
         }
     }
