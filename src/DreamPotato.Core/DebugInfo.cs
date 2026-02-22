@@ -59,6 +59,19 @@ public class BreakpointInfo
     public required ushort Offset;
 }
 
+public class WatchInfo
+{
+    public required ushort Offset;
+
+    public override string ToString()
+    {
+        if ((Offset & 0x100) != 0 && SpecialFunctionRegisterIds.GetName((byte)Offset) is { } name)
+            return name;
+
+        return $"{Offset:X4}H";
+    }
+}
+
 public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
 {
     /// <summary>NOTE: must be sorted by Offset.</summary>
@@ -364,6 +377,13 @@ public class DebugInfo(Cpu cpu)
     public DebuggingState DebuggingState { get; private set; } = DebuggingState.Run;
     /// <summary>Stack offset of the related return address of a 'step over/step out' command.</summary>
     public ushort StepOutOffset { get; private set; }
+
+    public readonly List<WatchInfo> Watches = [
+        new() { Offset = 0x100 | SpecialFunctionRegisterIds.Acc },
+        new() { Offset = 0x100 | SpecialFunctionRegisterIds.Psw },
+        new() { Offset = 0x100 | SpecialFunctionRegisterIds.B },
+        new() { Offset = 0x100 | SpecialFunctionRegisterIds.C },
+    ];
 
     public BankDebugInfo CurrentBankInfo => GetBankInfo(cpu.CurrentInstructionBankId);
 

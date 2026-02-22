@@ -1021,6 +1021,7 @@ partial class UserInterface
                 layoutControls();
                 ImGui.Separator();
                 layoutBreakpoints(bankId);
+                layoutWatch();
                 layoutStack();
 
                 ImGui.EndTable();
@@ -1166,11 +1167,16 @@ partial class UserInterface
                         breakpoints[i].Enabled = enabled;
 
                     ImGui.TableNextColumn();
-                    ImGui.Text(breakpoints[i].Offset.ToString("X4"));
 
                     // If you place a breakpoint at an offset,
                     // it means you think the offset has executable code in it
                     var inst = bankInfo.GetOrLoadInstruction(breakpoints[i].Offset);
+                    if (ImGui.Selectable(inst.Offset.ToString("X4")))
+                    {
+                        // TODO2: needs to jump to appropriate bank
+                        _debugger_ScrollToInstructionIndex = bankInfo.BinarySearchInstructions(inst.Offset);
+                    }
+
                     ImGui.TableNextColumn();
                     ImGui.Text(inst.DisplayInstruction());
                     ImGui.PopID();
@@ -1184,7 +1190,7 @@ partial class UserInterface
         {
             ImGui.Text("Stack");
             ImGui.Separator();
-            if (ImGui.BeginTable("stack", columns: 3, flags: ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.ScrollY))
+            if (ImGui.BeginTable("stack", columns: 3, flags: ImGuiTableFlags.BordersInnerV))
             {
                 ImGui.TableSetupColumn("breakpoints", ImGuiTableColumnFlags.WidthFixed);
                 ImGui.TableSetupColumn("addresses", ImGuiTableColumnFlags.WidthFixed);
@@ -1258,6 +1264,33 @@ partial class UserInterface
                 }
 
                 ImGui.PopID();
+            }
+        }
+
+        void layoutWatch()
+        {
+            ImGui.Text("Watch");
+            ImGui.Separator();
+            if (ImGui.BeginTable("watch", columns: 2, flags: ImGuiTableFlags.BordersInnerV))
+            {
+                ImGui.TableSetupColumn("expression");
+                ImGui.TableSetupColumn("value");
+
+                var cpu = _game.PrimaryVmu._cpu;
+                var watches = debugInfo.Watches;
+                for (int i = 0; i < watches.Count; i++)
+                {
+                    var watch = watches[i];
+                    ImGui.TableNextColumn();
+                    ImGui.Text(watch.ToString());
+
+                    ImGui.TableNextColumn();
+                    // TODO: User should be able to specify custom watches and bank they are watching
+                    // TODO: reads in this context must not have side effects (e.g. Vtrbf)
+                    ImGui.Text($"{cpu.ReadRam(watch.Offset):X2}H");
+                }
+
+                ImGui.EndTable();
             }
         }
     }
