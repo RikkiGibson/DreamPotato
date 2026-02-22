@@ -989,7 +989,7 @@ partial class UserInterface
 
                     fixed (byte* label = "FlashBank0"u8)
                     {
-                        var flags = Debugger_ScrollToInstruction is { bankId: InstructionBank.ROM } ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
+                        var flags = Debugger_ScrollToInstruction is { bankId: InstructionBank.FlashBank0 } ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
                         if (ImGuiNative.igBeginTabItem(label, p_open: null, flags) != 0)
                         {
                             layoutTab(InstructionBank.FlashBank0);

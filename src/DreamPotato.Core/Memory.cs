@@ -360,8 +360,8 @@ public enum StackValueKind : byte
 /// <param name="Source">
 /// Meaning depends on the Kind.
 /// - Push: the operand of the 'PUSH d9' instruction.
-/// - CallReturn: the address of the routine we called.
-/// - InterruptReturn: the address of the ISR.
+/// - CallReturn: the address of the associated CALL instruction
+/// - InterruptReturn: address of the instruction being executed when we were interrupted. Sometimes the same as 'Value'.
 /// </param>
 /// <param name="Value">
 /// The actual value stored on the VMU stack.

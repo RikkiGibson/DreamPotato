@@ -61,6 +61,7 @@ public class BreakpointInfo
 
 public class WatchInfo
 {
+    // TODO: watch items need to include any necessary bank flags, etc. to precisely identify a memory location
     public required ushort Offset;
 
     public override string ToString()
@@ -164,7 +165,8 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
             bank.RemoveAt(prevIndex);
     }
 
-    void VerifyOffsets()
+    // TODO: figure out where is appropriate to check this in debug mode
+    private void VerifyOffsets()
     {
         // Invariants:
         // 1. Instructions are sorted by Offset
@@ -196,7 +198,7 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
             InterruptVectors.Maple,
             InterruptVectors.P3,
             // ROM external programs
-            ..bankId == InstructionBank.ROM ? (ReadOnlySpan<ushort>)[
+            .. bankId == InstructionBank.ROM ? (ReadOnlySpan<ushort>)[
                 BuiltInCodeSymbols.BIOSWriteFlash,
                 BuiltInCodeSymbols.BIOSVerifyFlash,
                 BuiltInCodeSymbols.BIOSExit,
@@ -219,12 +221,11 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
             if (offset >= content.Length)
                 continue;
 
-            var inst = InstructionDecoder.Decode(content, offset);
-
             // Already visited
             if (this.GetInstruction(offset).HasInstruction)
                 continue;
 
+            var inst = InstructionDecoder.Decode(content, offset);
             this.SetInstruction(new(inst, executed: false));
 
             // Process unconditional branches

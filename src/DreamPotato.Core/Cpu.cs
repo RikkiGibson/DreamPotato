@@ -1702,6 +1702,8 @@ public class Cpu
         WriteRam(dAddress, value);
 
         var stackValue = StackData.Pop();
+        // TODO: As-is, the StackData is corrupted at this point.
+        // If this stack entry is an address, we should probably edit the entry to hold the remaining value
         if (stackValue.Kind != StackValueKind.Push)
             Logger.LogDebug($"{inst} read an unexpected stack value of kind '{stackValue.Kind}'");
 
