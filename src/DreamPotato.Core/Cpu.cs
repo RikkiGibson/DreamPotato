@@ -39,9 +39,8 @@ public class Cpu
     internal Span<byte> FlashBank0 => Flash.AsSpan(0, FlashBankSize);
     internal Span<byte> FlashBank1 => Flash.AsSpan(FlashBankSize, FlashBankSize);
 
-#if DEBUG
-    internal readonly InstructionMap InstructionMap;
-#endif
+    internal DebugInfo? LazyDebugInfo { get; private set; }
+    internal DebugInfo GetOrCreateDebugInfo() => LazyDebugInfo ??= new(this);
 
     internal event Action? UnsavedChangesDetected;
     internal bool HasUnsavedChanges
@@ -79,15 +78,18 @@ public class Cpu
     /// Note that we need an extra bit of state here. We can't just look at the value of <see cref="SpecialFunctionRegisters.Ext"/>.
     /// The bank is only actually switched when using a jmpf instruction.
     /// </remarks>
-    public Span<byte> CurrentROMBank => InstructionBank switch
-    {
-        InstructionBank.ROM => ROM,
-        InstructionBank.FlashBank0 => FlashBank0,
-        InstructionBank.FlashBank1 => FlashBank1,
-        _ => throw new InvalidOperationException()
-    };
+    public Span<byte> CurrentInstructionBank => GetRomBank(CurrentInstructionBankId);
 
-    internal InstructionBank InstructionBank { get; private set; }
+    public Span<byte> GetRomBank(InstructionBank bankId) =>
+        bankId switch
+        {
+            InstructionBank.ROM => ROM,
+            InstructionBank.FlashBank0 => FlashBank0,
+            InstructionBank.FlashBank1 => FlashBank1,
+            _ => throw new InvalidOperationException()
+        };
+
+    public InstructionBank CurrentInstructionBankId { get; private set; }
 
     public readonly Memory Memory;
     public readonly Audio Audio;
@@ -101,6 +103,7 @@ public class Cpu
     private int MapleIOIconTimeout;
 
     internal ushort Pc;
+    public ushort ProgramCounter => Pc;
 
     /// <summary>
     /// After <see cref="Run(long)"/> is called, stores how many more ticks were run than requested,
@@ -159,11 +162,21 @@ public class Cpu
 
     internal int _flashWriteUnlockSequence;
 
+    /// <summary>
+    /// Note: this is used for debugging, but, not stored on DebugInfo,
+    /// becuase it must always be calc'd/managed, and not created on demand.
+    /// </summary>
+    public List<StackEntry> StackData { get; private set; } = [];
+
+    public StackEntry MakeStackEntry(StackValueKind kind, ushort source, ushort value)
+        => new StackEntry(kind, source, value, SFRs.Sp, CurrentInstructionBankId);
+
     /// <summary>The CPU of another VMU, connected for serial I/O.</summary>
+    /// <remarks>Not tracked in save states.</remarks>
     private Cpu? _otherCpu;
 
-    // TODO: update save state format
-    // Now, loading state can change the used expansion slots, in addition to changing whether we are docked.
+    /// <summary>The associated Dreamcast controller expansion slot for this VMU.</summary>
+    /// <remarks>Not tracked in save states.</remarks>
     internal DreamcastSlot DreamcastSlot
     {
         get;
@@ -186,9 +199,6 @@ public class Cpu
         Memory = new Memory(this, Logger);
         Audio = new Audio(this, Logger);
         Display = new Display(this);
-#if DEBUG
-        InstructionMap = new InstructionMap(Logger);
-#endif
         MapleMessageBroker = mapleMessageBroker ?? new MapleMessageBroker(LogLevel.Default);
         SetInstructionBank(InstructionBank.ROM);
     }
@@ -199,8 +209,8 @@ public class Cpu
             : DreamcastSlot != DreamcastSlot.Dreamcast ? $"{DreamcastSlot}: "
             : "";
         var halt = SFRs.Pcon.HaltMode ? "HALT " : "";
-        var currentInstruction = InstructionDecoder.Decode(CurrentROMBank, Pc);
-        return $"{nameLabel}{InstructionBank}@[{Pc:X4}] {halt}{currentInstruction}";
+        var currentInstruction = InstructionDecoder.Decode(CurrentInstructionBank, Pc);
+        return $"{nameLabel}{CurrentInstructionBankId}@[{Pc:X4}] {halt}{currentInstruction}";
     }
 
     public void Reset()
@@ -216,9 +226,7 @@ public class Cpu
         _interruptServicingState = InterruptServicingState.Ready;
         _flashWriteUnlockSequence = 0;
         Memory.Reset();
-#if DEBUG
-        InstructionMap.Clear();
-#endif
+        StackData.Clear();
         SyncInstructionBank();
     }
 
@@ -230,7 +238,7 @@ public class Cpu
         // NOTE: both save and load operations should write/read the fields in declaration order.
         writeStream.Write(ROM);
         writeStream.Write(Flash);
-        writeStream.WriteByte((byte)InstructionBank);
+        writeStream.WriteByte((byte)CurrentInstructionBankId);
         Memory.SaveState(writeStream);
 
         Span<byte> buffer = [0, 0, 0, 0, 0, 0, 0, 0];
@@ -250,6 +258,16 @@ public class Cpu
         }
         writeInt32(buffer, _interruptsCount);
         writeInt32(buffer, _flashWriteUnlockSequence);
+
+        writeInt32(buffer, StackData.Count);
+        foreach (var entry in StackData)
+        {
+            writeStream.WriteByte((byte)entry.Kind);
+            writeUInt16(buffer, entry.Source);
+            writeUInt16(buffer, entry.Value);
+            writeUInt16(buffer, entry.Offset);
+            writeStream.WriteByte((byte)entry.BankId);
+        }
 
         void writeUInt16(Span<byte> bytes, ushort value)
         {
@@ -276,11 +294,35 @@ public class Cpu
         // to remove instructions which are no longer present in the binary?
 
         readStream.ReadExactly(ROM);
-        readStream.ReadExactly(Flash);
+        
+        if (LazyDebugInfo is null)
+        {
+            readStream.ReadExactly(Flash);
+        }
+        else
+        {
+            // Drop any executable instructions that might have changed
+            var bankInfo = LazyDebugInfo.GetBankInfo(InstructionBank.FlashBank0);
+            var newFlash0 = new byte[FlashBankSize];
+            readStream.ReadExactly(newFlash0);
+            Debug.Assert(FlashBankSize - 1 == ushort.MaxValue);
+            for (ushort offset = 0; ; offset++)
+            {
+                if (newFlash0[offset] != FlashBank0[offset])
+                    bankInfo.ClearInstruction(offset);
+
+                if (offset == ushort.MaxValue)
+                    break;
+            }
+
+            newFlash0.CopyTo(FlashBank0);
+            readStream.ReadExactly(FlashBank1);
+        }
+
         if (VmuFileHandle is not null)
             RandomAccess.Write(VmuFileHandle, Flash, fileOffset: 0);
 
-        InstructionBank = (InstructionBank)readStream.ReadByte();
+        CurrentInstructionBankId = (InstructionBank)readStream.ReadByte();
         Memory.LoadState(readStream);
 
         Span<byte> buffer = [0, 0, 0, 0, 0, 0, 0, 0];
@@ -300,6 +342,19 @@ public class Cpu
         }
         _interruptsCount = readInt32(buffer);
         _flashWriteUnlockSequence = readInt32(buffer);
+
+        StackData.Clear();
+        var stackCount = readInt32(buffer);
+        for (var i = 0; i < stackCount; i++)
+        {
+            StackData.Add(new StackEntry(
+                Kind: (StackValueKind)readStream.ReadByte(),
+                Source: readUInt16(buffer),
+                Value: readUInt16(buffer),
+                Offset: readUInt16(buffer),
+                BankId: (InstructionBank)readStream.ReadByte()
+            ));
+        }
 
         ResyncMapleOutbound();
 
@@ -323,7 +378,7 @@ public class Cpu
     }
 
     /// <summary>
-    /// Updates <see cref="InstructionBank"/> to match <see cref="Ext.InstructionBank"/>.
+    /// Updates <see cref="CurrentInstructionBankId"/> to match <see cref="Ext.InstructionBank"/>.
     /// </summary>
     private void SyncInstructionBank()
     {
@@ -336,7 +391,7 @@ public class Cpu
             }
         }
 
-        InstructionBank = newBank;
+        CurrentInstructionBankId = newBank;
     }
 
     /// <summary>
@@ -346,7 +401,7 @@ public class Cpu
     public void SetInstructionBank(InstructionBank bank)
     {
         SFRs.Ext = SFRs.Ext with { InstructionBank = bank };
-        InstructionBank = bank;
+        CurrentInstructionBankId = bank;
     }
 
     public byte ReadRam(int address)
@@ -365,6 +420,11 @@ public class Cpu
 
     public long Run(long ticksToRun)
     {
+        if (LazyDebugInfo?.DebuggingState == DebuggingState.Break)
+        {
+            return ticksToRun;
+        }
+
         if (SFRs.P7.VmuConnected && _otherCpu is null)
         {
             // If this errors when there isn't a real connection scenario taking place, then, there might be a need to distinguish
@@ -391,7 +451,7 @@ public class Cpu
         ticksToRun -= TicksOverrun;
 
         long ticksSoFar = 0;
-        while (ticksSoFar < ticksToRun)
+        while (LazyDebugInfo?.DebuggingState != DebuggingState.Break && ticksSoFar < ticksToRun)
         {
             ticksSoFar += StepTicks();
         }
@@ -403,7 +463,9 @@ public class Cpu
         {
             var thisTicksToRun = inputTicksToRun - @this.TicksOverrun;
             var otherTicksToRun = inputTicksToRun - other.TicksOverrun;
-            while (thisTicksToRun > 0 || otherTicksToRun > 0)
+            while (@this.LazyDebugInfo?.DebuggingState != DebuggingState.Break
+                && other.LazyDebugInfo?.DebuggingState != DebuggingState.Break
+                && (thisTicksToRun > 0 || otherTicksToRun > 0))
             {
                 // Execute one instruction for whichever VMU is further behind in time.
                 if (thisTicksToRun > otherTicksToRun)
@@ -764,9 +826,14 @@ public class Cpu
             RequestedInterrupts &= ~interrupt;
             SFRs.Pcon = SFRs.Pcon with { HaltMode = false };
 
-            Memory.PushStack((byte)Pc);
-            Memory.PushStack((byte)(Pc >> 8));
+            var stackValue = Pc;
+            Memory.PushStack((byte)stackValue);
+            Memory.PushStack((byte)(stackValue >> 8));
             Pc = routineAddress;
+            // TODO: improve accuracy of 'source' value for 'set1 pcon,0' case
+            // TODO: adjusting Pc to service interrupt, needs to happen at "end" of StepInstruction()
+            // Adjusting at beginning, causes debugger to miss the first instr of the interrupt
+            StackData.Push(MakeStackEntry(StackValueKind.InterruptReturn, source: stackValue, value: stackValue));
         }
     }
 
@@ -864,6 +931,12 @@ public class Cpu
 
     internal Instruction StepInstruction()
     {
+        if (LazyDebugInfo?.DebuggingState == DebuggingState.Break)
+        {
+            // Do not tick any timers, etc.
+            return new Instruction(Pc, Operations.NOP);
+        }
+
         ServiceInterruptIfNeeded();
         AdvanceInterruptState();
 
@@ -877,12 +950,10 @@ public class Cpu
             return new Instruction(Pc, Operations.NOP);
         }
 
-        var inst = InstructionDecoder.Decode(CurrentROMBank, Pc);
-#if DEBUG
-        InstructionMap[InstructionBank, Pc] = inst;
-#endif
+        var inst = InstructionDecoder.Decode(CurrentInstructionBank, Pc);
+        LazyDebugInfo?.MarkExecutable(CurrentInstructionBankId, inst);
 
-        if (InstructionBank == InstructionBank.ROM
+        if (CurrentInstructionBankId == InstructionBank.ROM
             && Pc == 0x2515
             && inst.ToString() == "DEC 1")
         {
@@ -950,10 +1021,10 @@ public class Cpu
 
         tickCpuClockedTimers(inst.Cycles);
         requestLevelDrivenInterrupts();
+        handleBreakpoints();
         return inst;
 
         static void Throw(Instruction inst) => throw new InvalidOperationException($"Unknown operation '{inst}'");
-
 
         void tickCpuClockedTimers(byte cycles)
         {
@@ -1200,6 +1271,26 @@ public class Cpu
                 }
 
                 return false;
+            }
+        }
+
+        void handleBreakpoints()
+        {
+            if (LazyDebugInfo is null)
+                return;
+
+            if (LazyDebugInfo.DebuggingState == DebuggingState.StepIn)
+            {
+                LazyDebugInfo.FireDebugBreak();
+                return;
+            }
+
+            var breakpoints = LazyDebugInfo.GetBankInfo(CurrentInstructionBankId).Breakpoints;
+            for (int i = 0; i < breakpoints.Count; i++)
+            {
+                var breakpoint = breakpoints[i];
+                if (breakpoint.Enabled && breakpoint.Offset == Pc)
+                    LazyDebugInfo.FireDebugBreak();
             }
         }
     }
@@ -1584,7 +1675,7 @@ public class Cpu
         // For a program running in flash memory, bank 0 of flash memory is accessed.
         // TODO: Cannot access bank 1 of flash memory. System BIOS function must be used instead.
         var address = ((SFRs.Trh << 8) | SFRs.Trl) + SFRs.Acc;
-        SFRs.Acc = CurrentROMBank[address];
+        SFRs.Acc = CurrentInstructionBank[address];
         Logger.LogTrace($"{inst} Acc={SFRs.Acc:X} address={address:X}", LogCategories.Instructions);
         Pc += inst.Size;
     }
@@ -1594,6 +1685,11 @@ public class Cpu
         // (SP) <- (SP) + 1, ((SP)) <- (d9)
         var operand = FetchOperand(inst.Parameters[0], inst.Arg0);
         Memory.PushStack(operand);
+        StackData.Push(MakeStackEntry(
+            StackValueKind.Push,
+            source: inst.Arg0,
+            value: operand));
+
         Logger.LogTrace($"{inst} Sp({SFRs.Sp:X})={operand:X}", LogCategories.Instructions);
         Pc += inst.Size;
     }
@@ -1604,6 +1700,13 @@ public class Cpu
         var dAddress = GetOperandAddress(inst.Parameters[0], inst.Arg0);
         var value = Memory.PopStack();
         WriteRam(dAddress, value);
+
+        var stackValue = StackData.Pop();
+        // TODO: As-is, the StackData is corrupted at this point.
+        // If this stack entry is an address, we should probably edit the entry to hold the remaining value
+        if (stackValue.Kind != StackValueKind.Push)
+            Logger.LogDebug($"{inst} read an unexpected stack value of kind '{stackValue.Kind}'");
+
         Logger.LogTrace($"{inst} value={value:X}", LogCategories.Instructions);
 
         Pc += inst.Size;
@@ -1830,12 +1933,16 @@ public class Cpu
         ushort a12 = inst.Arg0;
 
         Logger.LogTrace($"{inst}", LogCategories.Instructions);
+        var stackSource = Pc;
         Pc += inst.Size;
-        Memory.PushStack((byte)Pc);
-        Memory.PushStack((byte)(Pc >> 8));
+        var stackValue = Pc;
+        Memory.PushStack((byte)stackValue);
+        Memory.PushStack((byte)(stackValue >> 8));
 
         Pc &= 0b1111_0000__0000_0000;
         Pc |= a12;
+
+        StackData.Push(MakeStackEntry(StackValueKind.CallReturn, source: stackSource, value: stackValue));
     }
 
     /// <summary>Far absolute subroutine call</summary>
@@ -1846,10 +1953,14 @@ public class Cpu
         // (SP) <- (SP) + 1, ((SP)) <- (PC15 to 8), (PC) <- a16
         var a16 = inst.Arg0;
         Logger.LogTrace($"{inst}", LogCategories.Instructions);
-        Pc += 3;
-        Memory.PushStack((byte)Pc);
-        Memory.PushStack((byte)(Pc >> 8));
+        var stackSource = Pc;
+        Pc += inst.Size;
+        var stackValue = Pc;
+        Memory.PushStack((byte)stackValue);
+        Memory.PushStack((byte)(stackValue >> 8));
         Pc = a16;
+
+        StackData.Push(MakeStackEntry(StackValueKind.CallReturn, source: stackSource, value: stackValue));
     }
 
     /// <summary>Far relative subroutine call</summary>
@@ -1859,10 +1970,13 @@ public class Cpu
         // (SP) <- (SP) + 1, ((SP)) <- (PC15 to 8), (PC) <- (PC) - 1 + r16
         var r16 = inst.Arg0;
         Logger.LogTrace($"{inst}", LogCategories.Instructions);
+        var stackSource = Pc;
         Pc += inst.Size;
-        Memory.PushStack((byte)Pc);
-        Memory.PushStack((byte)(Pc >> 8));
+        var stackValue = Pc;
+        Memory.PushStack((byte)stackValue);
+        Memory.PushStack((byte)(stackValue >> 8));
         Pc = (ushort)(Pc - 1 + r16);
+        StackData.Push(MakeStackEntry(StackValueKind.CallReturn, source: stackSource, value: stackValue));
     }
 
     /// <summary>Return from subroutine</summary>
@@ -1873,6 +1987,24 @@ public class Cpu
         var Pc15_8 = Memory.PopStack();
         var Pc7_0 = Memory.PopStack();
         Pc = (ushort)(Pc15_8 << 8 | Pc7_0);
+
+        var stackEntry = StackData.Pop();
+        if (stackEntry.Kind == StackValueKind.Push)
+        {
+            Logger.LogDebug($"Detected a PUSH+RET to {Pc:X4}H");
+            if (StackData.Pop() is { Kind: not StackValueKind.Push } badValue)
+                Logger.LogError($"Returned to a mix of a Push value and a {badValue.Kind} value. Stack debug data is corrupted. {badValue}");
+        }
+        else if (stackEntry.Kind != StackValueKind.CallReturn)
+        {
+            Logger.LogDebug($"{inst} used unexpected stack value {stackEntry}");
+        }
+
+        if (LazyDebugInfo is { DebuggingState: DebuggingState.StepOut, StepOutOffset: var offset } debugInfo
+            && stackEntry.Offset == offset)
+        {
+            debugInfo.FireDebugBreak();
+        }
     }
 
     /// <summary>Return from interrupt</summary>
@@ -1889,6 +2021,24 @@ public class Cpu
         var Pc15_8 = Memory.PopStack();
         var Pc7_0 = Memory.PopStack();
         Pc = (ushort)(Pc15_8 << 8 | Pc7_0);
+
+        var stackEntry = StackData.Pop();
+        if (stackEntry.Kind == StackValueKind.Push)
+        {
+            Logger.LogWarning("Detected a PUSH/RETI.");
+            if (StackData.Pop() is { Kind: not StackValueKind.Push } badValue)
+                Logger.LogError($"Returned to a mix of a Push value and a {badValue.Kind} value. Stack debug data is corrupted. {badValue}");
+        }
+        else if (stackEntry.Kind != StackValueKind.InterruptReturn)
+        {
+            Logger.LogDebug($"{inst} used unexpected stack value {stackEntry}");
+        }
+
+        if (LazyDebugInfo is { DebuggingState: DebuggingState.StepOut, StepOutOffset: var offset } debugInfo
+            && stackEntry.Offset == offset)
+        {
+            debugInfo.FireDebugBreak();
+        }
     }
 
     /// <summary>Clear direct bit</summary>
@@ -1944,10 +2094,10 @@ public class Cpu
     /// <summary>Store the accumulator to flash memory. Intended for use only by BIOS. Undocumented.</summary>
     private void Op_STF(Instruction inst)
     {
-        if (InstructionBank != InstructionBank.ROM)
+        if (CurrentInstructionBankId != InstructionBank.ROM)
             Logger.LogWarning("Executing STF outside of ROM!");
 
-        var a16 = SFRs.Trl | (SFRs.Trh << 8);
+        var a16 = (ushort)(SFRs.Trl | (SFRs.Trh << 8));
         var value = SFRs.Acc;
 
         // Sequence number when flash is first unlocked for writing
@@ -1985,9 +2135,7 @@ public class Cpu
         {
             var a17 = a16 | (SFRs.FPR.FlashAddressBank ? InstructionBankSize : 0);
             Flash[a17] = value;
-#if DEBUG
-            InstructionMap[InstructionBank, (ushort)a16] = default;
-#endif
+            LazyDebugInfo?.CurrentBankInfo.ClearInstruction(a16);
             if (VmuFileHandle is not null)
             {
                 var absoluteAddress = (SFRs.FPR.FlashAddressBank ? (1 << 16) : 0) | a16;
@@ -2018,4 +2166,12 @@ public class Cpu
         Logger.LogTrace($"{inst}", LogCategories.Instructions);
         Pc += inst.Size;
     }
+}
+
+public enum DebuggingState
+{
+    Run,
+    Break,
+    StepIn,
+    StepOut,
 }

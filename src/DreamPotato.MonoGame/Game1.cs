@@ -53,9 +53,12 @@ public class Game1 : Game
     /// </summary>
     internal bool UIPaused;
 
+    /// <summary>The screen region in which to render the primary VMU.</summary>
     internal Rectangle PrimaryMenuBarRectangle;
-    /// <summary>Note: comprises the whole screen region which secondary VMU menus can expand into.</summary>
+
+    /// <summary>The screen region in which to render the secondary VMU.</summary>
     internal Rectangle SecondaryMenuBarRectangle;
+
     /// <summary>Only meaningful when <see cref="UseSecondaryVmu"/> is true.</summary>
     internal bool IsHorizontalLayout;
 
@@ -441,12 +444,27 @@ public class Game1 : Game
         UpdateScaleMatrix();
     }
 
-    private void UpdateScaleMatrix()
+    private Rectangle AllVmuContentRectangle
+    {
+        get
+        {
+            // TODO: what we really want is to render each vmu in a draggable window.
+            // This will do to start with, though
+            var viewport = _graphics.GraphicsDevice.Viewport;
+            var contentRectangle = viewport.Bounds;
+            if (_userInterface.Debugger_Show)
+                contentRectangle.Width /= 3;
+
+            contentRectangle.Height -= MenuBarHeight;
+            contentRectangle.Y += MenuBarHeight;
+            return contentRectangle;
+        }
+    }
+
+    internal void UpdateScaleMatrix()
     {
         var viewport = _graphics.GraphicsDevice.Viewport;
-        var contentRectangle = viewport.Bounds;
-        contentRectangle.Height -= MenuBarHeight;
-        contentRectangle.Y += MenuBarHeight;
+        var contentRectangle = AllVmuContentRectangle;
 
         if (!UseSecondaryVmu)
         {
@@ -589,5 +607,14 @@ public class Game1 : Game
         _userInterface.Layout(gameTime);
 
         base.Draw(gameTime);
+    }
+
+    internal void InitializeDebugInfo()
+    {
+        if (PrimaryVmu.LazyDebugInfo is {})
+            return;
+
+        var debugInfo = PrimaryVmu.GetOrCreateDebugInfo();
+        debugInfo.DebugBreak += _userInterface.OnDebugBreak;
     }
 }

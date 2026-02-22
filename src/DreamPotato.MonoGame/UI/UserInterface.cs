@@ -13,6 +13,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 
 using DreamPotato.Core;
+using DreamPotato.Core.SFRs;
 
 using Humanizer;
 
@@ -166,6 +167,17 @@ partial class UserInterface
 
     private readonly string _displayVersion;
     private readonly string _commitId;
+
+    // Debugger UI state
+
+    private static readonly uint Debug_ColorPc = ImGui.GetColorU32(new Numerics.Vector4(99.0f/255, 92.0f/255, 31.0f/255, 1));
+    private static readonly uint Debug_ColorStack = ImGui.GetColorU32(new Numerics.Vector4(53.0f/255, 50.0f/255, 18.0f/255, 1));
+
+    internal bool Debugger_Show = false;
+
+    /// <summary>Set to scroll to an instruction in a particular bank on the next frame.</summary>
+    // TODO: breakpoints list is flickering the frame after setting this
+    private (int index, InstructionBank bankId)? Debugger_ScrollToInstruction = null;
 
     internal PendingCommand PendingCommand { get; private set; }
 
@@ -330,6 +342,7 @@ partial class UserInterface
         LayoutSecondaryMenuBar();
 
         LayoutSettings();
+        LayoutDebugger();
 
         LayoutKeyMapping();
         LayoutEditKey();
@@ -341,7 +354,8 @@ partial class UserInterface
 
         LayoutFastForwardOrPauseIndicators();
         LayoutToast();
-}
+    }
+
 
     private void LayoutFastForwardOrPauseIndicators()
     {
@@ -640,6 +654,15 @@ partial class UserInterface
             if (ImGui.MenuItem("Take Screenshot"))
                 presenter.TakeScreenshot();
 
+            if (ImGui.MenuItem(Debugger_Show ? "Close Debugger" : "Open Debugger"))
+            {
+                Debugger_Show = !Debugger_Show;
+                if (Debugger_Show)
+                    _game.InitializeDebugInfo();
+
+                _game.UpdateScaleMatrix();
+            }
+
             ImGui.EndMenu();
         }
     }
@@ -649,7 +672,7 @@ partial class UserInterface
         presenter.Vmu.SaveState(_game.Configuration.CurrentSaveStateSlot.ToString());
         var stateInfo = presenter == _game.PrimaryVmuPresenter ? _primarySaveStateInfo : _secondarySaveStateInfo;
         stateInfo.InvalidateThumbnail();
-        ShowScreenshotToast(presenter, $"Saved state to slot {_game.Configuration.CurrentSaveStateSlot+1}", durationFrames: 2 * 60);
+        ShowScreenshotToast(presenter, $"Saved state to slot {_game.Configuration.CurrentSaveStateSlot + 1}", durationFrames: 2 * 60);
     }
 
     private void UpdateThumbnail(Vmu vmu, SaveStateInfo stateInfo)
@@ -937,6 +960,354 @@ partial class UserInterface
         }
     }
 
+    private void LayoutDebugger()
+    {
+        var localDebuggerShow = Debugger_Show;
+        if (!localDebuggerShow)
+            return;
+
+        var debugInfo = _game.PrimaryVmu.LazyDebugInfo;
+        Debug.Assert(debugInfo is not null);
+
+        if (ImGui.Begin("Debugger", ref Debugger_Show, ImGuiWindowFlags.NoScrollbar))
+        {
+            if (ImGui.BeginTabBar("InstructionBanks"))
+            {
+                // Note: We need to drop down into unsafe code, to pass `p_open: null`, and also pass `flags`.
+                // See https://github.com/ImGuiNET/ImGui.NET/issues/135
+                unsafe
+                {
+                    fixed (byte* label = "ROM"u8)
+                    {
+                        var flags = Debugger_ScrollToInstruction is { bankId: InstructionBank.ROM } ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
+                        if (ImGuiNative.igBeginTabItem(label, p_open: null, flags) != 0)
+                        {
+                            layoutTab(InstructionBank.ROM);
+                            ImGui.EndTabItem();
+                        }
+                    }
+
+                    fixed (byte* label = "FlashBank0"u8)
+                    {
+                        var flags = Debugger_ScrollToInstruction is { bankId: InstructionBank.FlashBank0 } ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
+                        if (ImGuiNative.igBeginTabItem(label, p_open: null, flags) != 0)
+                        {
+                            layoutTab(InstructionBank.FlashBank0);
+                            ImGui.EndTabItem();
+                        }
+                    }
+                }
+
+                ImGui.EndTabBar();
+            }
+        }
+
+        if (localDebuggerShow != Debugger_Show)
+            _game.UpdateScaleMatrix();
+
+        // Note: End() is called even when Begin() returned false to handle collapsed state
+        ImGui.End();
+
+        void layoutTab(InstructionBank bankId)
+        {
+            if (ImGui.BeginTable(bankId.ToString(), columns: 2, ImGuiTableFlags.Resizable))
+            {
+                ImGui.TableSetupColumn("Disassembly", ImGuiTableColumnFlags.WidthStretch);
+                ImGui.TableSetupColumn("Tools");
+                ImGui.TableHeadersRow();
+
+                ImGui.TableNextColumn();
+                layoutDisasm(bankId);
+
+                ImGui.TableNextColumn();
+                layoutControls();
+                ImGui.Separator();
+                layoutWatch();
+                layoutBreakpoints(bankId);
+                layoutStack();
+
+                ImGui.EndTable();
+            }
+        }
+
+        void layoutDisasm(InstructionBank bankId)
+        {
+            if (ImGui.BeginTable("disasm", columns: 3, flags: ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.ScrollY))
+            {
+                ImGui.TableSetupColumn("breakpoints", ImGuiTableColumnFlags.WidthFixed);
+                ImGui.TableSetupColumn("addresses", ImGuiTableColumnFlags.WidthFixed);
+                ImGui.TableSetupColumn("instructions");
+
+                var cpu = _game.PrimaryVmu._cpu;
+                var executingInThisBank = bankId == cpu.CurrentInstructionBankId;
+                var bankInfo = debugInfo.GetBankInfo(bankId);
+                var disasm = bankInfo.Instructions;
+
+                // Render only the visible list items
+                var clipperData = new ImGuiListClipper();
+                ImGuiListClipperPtr clipper;
+                unsafe
+                {
+                    clipper = new ImGuiListClipperPtr(&clipperData);
+                }
+
+                clipper.Begin(disasm.Count);
+                var scrollToInstructionIndex = Debugger_ScrollToInstruction switch
+                {
+                    var (destIndex, destBankId) when destBankId == bankId => destIndex,
+                    _ => -1 
+                };
+                if (scrollToInstructionIndex != -1)
+                    clipper.IncludeItemByIndex(scrollToInstructionIndex);
+
+                while (clipper.Step())
+                {
+                    for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
+                    {
+                        ImGui.PushID(i);
+                        ImGui.TableNextColumn();
+                        var inst = disasm[i];
+
+                        // Set background color
+                        if (executingInThisBank && _game.PrimaryVmu._cpu.ProgramCounter == inst.Offset)
+                        {
+                            ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, Debug_ColorPc);
+                        }
+                        else
+                        {
+                            foreach (var entry in _game.PrimaryVmu._cpu.StackData)
+                            {
+                                if (entry.Kind == StackValueKind.Push)
+                                    continue;
+
+                                var callAddr = entry.Source;
+                                if (inst.Offset == callAddr && bankId == entry.BankId)
+                                {
+                                    ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, Debug_ColorStack);
+                                    break;
+                                }
+                            }
+                        }
+
+                        ImGui.PushID("breakpoint");
+
+                        var bpIndex = bankInfo.Breakpoints.FindIndex(bp => bp.Offset == inst.Offset);
+                        var breakpointExists = bpIndex != -1;
+                        if (ImGui.Checkbox("", ref breakpointExists))
+                        {
+                            if (breakpointExists) // Create new
+                            {
+                                bankInfo.Breakpoints.Add(new BreakpointInfo { Enabled = true, Offset = inst.Offset });
+                            }
+                            else if (bpIndex != -1) // Remove
+                            {
+                                bankInfo.Breakpoints.RemoveAt(bpIndex);
+                            }
+                        }
+
+                        ImGui.PopID();
+
+                        ImGui.TableNextColumn();
+                        ImGui.Text(inst.Offset.ToString("X4"));
+
+                        ImGui.TableNextColumn();
+                        ImGui.Text(inst.DisplayInstruction());
+                        ImGui.PopID();
+
+                        if (i == scrollToInstructionIndex)
+                        {
+                            ImGui.SetScrollHereY();
+                            scrollToInstructionIndex = -1;
+                            Debugger_ScrollToInstruction = default;
+                        }
+
+                        if (ImGui.IsItemHovered())
+                        {
+                            var argumentValues = inst.DisplayArgumentValues(_game.PrimaryVmu._cpu);
+                            if (argumentValues.Length != 0 && ImGui.BeginTooltip())
+                            {
+                                ImGui.Text(inst.DisplayArgumentValues(_game.PrimaryVmu._cpu));
+                                ImGui.EndTooltip();
+                            }
+                        }
+                    }
+                }
+
+                ImGui.EndTable();
+            }
+        }
+
+        void layoutControls()
+        {
+            var bankInfo = debugInfo.CurrentBankInfo;
+            var breakState = debugInfo.DebuggingState == DebuggingState.Break;
+            if (ImGui.Checkbox("Break", ref breakState))
+                debugInfo.ToggleDebugBreak();
+
+            if (ImGui.Button("Step In"))
+                debugInfo.StepIn();
+
+            if (ImGui.Button("Step Out"))
+                debugInfo.StepOut();
+        }
+
+        void layoutBreakpoints(InstructionBank bankId)
+        {
+            ImGui.Text("Breakpoints");
+            ImGui.Separator();
+            if (ImGui.BeginTable("Breakpoints", columns: 3, flags: ImGuiTableFlags.BordersInnerV))
+            {
+                ImGui.TableSetupColumn("breakpoints", ImGuiTableColumnFlags.WidthFixed);
+                ImGui.TableSetupColumn("addresses", ImGuiTableColumnFlags.WidthFixed);
+                ImGui.TableSetupColumn("symbols", ImGuiTableColumnFlags.WidthStretch);
+
+                var bankInfo = debugInfo.GetBankInfo(bankId);
+                var breakpoints = bankInfo.Breakpoints;
+                for (var i = 0; i < breakpoints.Count; i++)
+                {
+                    ImGui.PushID(i);
+                    ImGui.TableNextColumn();
+
+                    bool enabled = breakpoints[i].Enabled;
+                    if (ImGui.Checkbox("", ref enabled))
+                        breakpoints[i].Enabled = enabled;
+
+                    ImGui.TableNextColumn();
+
+                    // If you place a breakpoint at an offset,
+                    // it means you think the offset has executable code in it
+                    var inst = bankInfo.GetOrLoadInstruction(breakpoints[i].Offset);
+                    if (ImGui.Selectable(inst.Offset.ToString("X4")))
+                    {
+                        Debugger_ScrollToInstruction = (bankInfo.BinarySearchInstructions(inst.Offset), bankId);
+                    }
+
+                    ImGui.TableNextColumn();
+                    ImGui.Text(inst.DisplayInstruction());
+                    ImGui.PopID();
+                }
+
+                ImGui.EndTable();
+            }
+        }
+
+        void layoutStack()
+        {
+            ImGui.Text("Stack");
+            ImGui.Separator();
+            if (ImGui.BeginTable("stack", columns: 3, flags: ImGuiTableFlags.BordersInnerV))
+            {
+                ImGui.TableSetupColumn("breakpoints", ImGuiTableColumnFlags.WidthFixed);
+                ImGui.TableSetupColumn("addresses", ImGuiTableColumnFlags.WidthFixed);
+                ImGui.TableSetupColumn("instructions");
+
+                var cpu = _game.PrimaryVmu._cpu;
+                var stackData = cpu.StackData;
+                // always show a stack entry for "where we are right now"
+                layoutStackEntry(
+                    stackData.Count,
+                    new StackEntry(
+                        StackValueKind.CallReturn,
+                        Source: cpu.ProgramCounter,
+                        Value: 0,
+                        Offset: 0,
+                        cpu.CurrentInstructionBankId));
+                for (var i = stackData.Count - 1; i >= 0; i--)
+                    layoutStackEntry(i, stackData[i]);
+
+                ImGui.EndTable();
+            }
+            
+            void layoutStackEntry(int i, StackEntry entry)
+            {
+                if (entry.Kind == StackValueKind.Push)
+                    return; // TODO: display these
+
+                ImGui.PushID(i);
+                ImGui.TableNextColumn();
+
+                var bankInfo = debugInfo.GetBankInfo(entry.BankId);
+                var callAddr = entry.Source;
+                var bpIndex = bankInfo.Breakpoints.FindIndex(bp => bp.Offset == callAddr);
+                var breakpointExists = bpIndex != -1;
+
+                ImGui.PushID("breakpoint");
+                if (ImGui.Checkbox("", ref breakpointExists))
+                {
+                    if (breakpointExists) // Create new
+                    {
+                        bankInfo.Breakpoints.Add(new BreakpointInfo { Enabled = true, Offset = callAddr });
+                    }
+                    else if (bpIndex != -1) // Remove
+                    {
+                        bankInfo.Breakpoints.RemoveAt(bpIndex);
+                    }
+                }
+                ImGui.PopID();
+
+                ImGui.TableNextColumn();
+
+                var index = bankInfo.BinarySearchInstructions(callAddr);
+                if (index < 0)
+                {
+                    // If we got here, it means the code we were returning to,
+                    // was overwritten in flash, while we were still going to return to it.
+                    ImGui.Text("ERROR");
+                    ImGui.TableNextColumn();
+                    ImGui.Text("");
+                }
+                else
+                {
+                    var inst = bankInfo.Instructions[index];
+                    if (ImGui.Selectable(inst.Offset.ToString("X4")))
+                    {
+                        Debugger_ScrollToInstruction = (bankInfo.BinarySearchInstructions(inst.Offset), entry.BankId);
+                    }
+                    ImGui.TableNextColumn();
+                    ImGui.Text(inst.DisplayInstruction());
+                }
+
+                ImGui.PopID();
+            }
+        }
+
+        void layoutWatch()
+        {
+            ImGui.Text("Watch");
+            ImGui.Separator();
+            if (ImGui.BeginTable("watch", columns: 2, flags: ImGuiTableFlags.BordersInnerV))
+            {
+                ImGui.TableSetupColumn("expression");
+                ImGui.TableSetupColumn("value");
+
+                var cpu = _game.PrimaryVmu._cpu;
+                var watches = debugInfo.Watches;
+                for (int i = 0; i < watches.Count; i++)
+                {
+                    var watch = watches[i];
+                    ImGui.TableNextColumn();
+                    ImGui.Text(watch.ToString());
+
+                    ImGui.TableNextColumn();
+                    // TODO: User should be able to specify custom watches and bank they are watching
+                    // TODO: reads in this context must not have side effects (e.g. Vtrbf)
+                    ImGui.Text($"{cpu.ReadRam(watch.Offset):X2}H");
+                }
+
+                ImGui.EndTable();
+            }
+        }
+    }
+
+    internal void OnDebugBreak(InstructionDebugInfo info)
+    {
+        var debugInfo = _game.PrimaryVmu.LazyDebugInfo;
+        Debug.Assert(debugInfo is not null);
+        var bankInfo = debugInfo.CurrentBankInfo;
+        var index = bankInfo.BinarySearchInstructions(info.Offset);
+        Debugger_ScrollToInstruction = (index, bankInfo.BankId);
+    }
+
     private void LayoutKeyMapping()
     {
         if (_mappingEditState.KeyMappings is null)
@@ -1083,7 +1454,7 @@ partial class UserInterface
             var previewValue = _mappingEditState.GamePadIndex switch
             {
                 InputMappings.GamePadIndex_None => "None",
-                var index => $"{_mappingEditState.GamePadIndex+1}: {GamePad.GetCapabilities(index).DisplayName ?? "<not found>"}"
+                var index => $"{_mappingEditState.GamePadIndex + 1}: {GamePad.GetCapabilities(index).DisplayName ?? "<not found>"}"
             };
             if (ImGui.BeginCombo(label: "", previewValue))
             {
@@ -1098,7 +1469,7 @@ partial class UserInterface
                     if (!capabilities.IsConnected)
                         continue;
 
-                    if (ImGui.Selectable($"{i+1}: {capabilities.DisplayName}"))
+                    if (ImGui.Selectable($"{i + 1}: {capabilities.DisplayName}"))
                         _mappingEditState.GamePadIndex = i;
                 }
 

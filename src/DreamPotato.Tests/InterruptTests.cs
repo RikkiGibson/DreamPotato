@@ -198,14 +198,14 @@ public class InterruptTests
         ReadOnlySpan<byte> instructions = [
             OpcodeMask.JMPF, 0x02, 0x00, // JMPF 0x200,
         ];
-        instructions.CopyTo(cpu.CurrentROMBank);
+        instructions.CopyTo(cpu.CurrentInstructionBank);
 
         // setup p3 interrupt vector
         instructions = [
             OpcodeMask.NOP,
             OpcodeMask.RETI
         ];
-        instructions.CopyTo(cpu.CurrentROMBank[InterruptVectors.P3..]);
+        instructions.CopyTo(cpu.CurrentInstructionBank[InterruptVectors.P3..]);
 
         cpu.Reset();
         Assert.True(cpu.SFRs.Ie.MasterInterruptEnable);

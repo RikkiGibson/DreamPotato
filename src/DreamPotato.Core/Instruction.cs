@@ -18,7 +18,7 @@ readonly record struct Instruction(ushort Offset, Operation Operation, ushort Ar
     public byte Size => Operation.Size;
     public byte Cycles => Operation.Cycles;
 
-    private ushort GetArgument(int i)
+    public ushort GetArgument(int i)
     {
         Debug.Assert(i < Parameters.Length);
         return i switch
@@ -60,7 +60,7 @@ readonly record struct Instruction(ushort Offset, Operation Operation, ushort Ar
         return builder.ToString();
     }
 
-    private void DisplayArgument(StringBuilder builder, Parameter param, ushort arg)
+    public void DisplayArgument(StringBuilder builder, Parameter param, ushort arg)
     {
         if (param.Kind == ParameterKind.D9 && (arg & 0x100) != 0)
         {

@@ -18,7 +18,7 @@ public class WorkRamTests
             OpcodeMask.LD | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Vtrbf,
         ];
 
-        instructions.CopyTo(cpu.CurrentROMBank);
+        instructions.CopyTo(cpu.CurrentInstructionBank);
         cpu.Step();
         Assert.Equal(0x40, cpu.SFRs.Acc);
 
@@ -41,7 +41,7 @@ public class WorkRamTests
             OpcodeMask.LD | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Vtrbf,
         ];
 
-        instructions.CopyTo(cpu.CurrentROMBank);
+        instructions.CopyTo(cpu.CurrentInstructionBank);
         cpu.Step();
         Assert.Equal(0, cpu.SFRs.Acc);
 
@@ -65,7 +65,7 @@ public class WorkRamTests
             OpcodeMask.LD | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Vtrbf,
         ];
 
-        instructions.CopyTo(cpu.CurrentROMBank);
+        instructions.CopyTo(cpu.CurrentInstructionBank);
         cpu.Step();
         Assert.Equal(0x20, cpu.SFRs.Acc);
 
@@ -89,7 +89,7 @@ public class WorkRamTests
             OpcodeMask.LD | AddressModeMask.Direct1, SpecialFunctionRegisterIds.Vtrbf,
         ];
 
-        instructions.CopyTo(cpu.CurrentROMBank);
+        instructions.CopyTo(cpu.CurrentInstructionBank);
         cpu.Step();
         Assert.Equal(0x20, cpu.SFRs.Acc);
 

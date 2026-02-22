@@ -37,7 +37,7 @@ public class Vmu
 
     public void InitializeRTCDate(DateTimeOffset date)
     {
-        if (_cpu.Pc != 0 || _cpu.InstructionBank != InstructionBank.ROM)
+        if (_cpu.Pc != 0 || _cpu.CurrentInstructionBankId != InstructionBank.ROM)
             throw new InvalidOperationException("Date should only be initialized at startup");
 
         _cpu.Pc = BuiltInCodeSymbols.BIOSAfterDateIsSet;
@@ -113,6 +113,7 @@ public class Vmu
         _cpu.HasUnsavedChanges = false;
         _cpu.VmuFileWriteStream = null;
         _cpu.ResyncMapleOutbound();
+        _cpu.LazyDebugInfo?.ClearFlash();
     }
 
     public void LoadGameVms(string filePath, DateTimeOffset date, bool autoInitializeRTCDate)
@@ -135,6 +136,7 @@ public class Vmu
         LoadedFilePath = filePath;
         _cpu.HasUnsavedChanges = false;
         _cpu.VmuFileWriteStream = null;
+        _cpu.LazyDebugInfo?.ClearFlash();
 
         _cpu.ResyncMapleOutbound();
     }
@@ -155,6 +157,7 @@ public class Vmu
         Reset(rtcDate);
 
         fileStream.ReadExactly(_cpu.Flash);
+        _cpu.LazyDebugInfo?.ClearFlash();
         LoadedFilePath = filePath;
         _cpu.HasUnsavedChanges = false;
         _cpu.VmuFileWriteStream = fileStream;
@@ -228,10 +231,12 @@ public class Vmu
     public static string DataFolder => Path.Combine(AppContext.BaseDirectory, "Data");
 
     public DreamcastSlot DreamcastSlot { get => _cpu.DreamcastSlot; set => _cpu.DreamcastSlot = value; }
+    public DebugInfo GetOrCreateDebugInfo() => _cpu.GetOrCreateDebugInfo();
+    public DebugInfo? LazyDebugInfo => _cpu.LazyDebugInfo;
 
     public const string RomFileName = "american_v1.05.bin";
     public const string SaveStateHeaderMessage = $"DreamPotatoSaveStateV{SaveStateVersion}";
-    public const string SaveStateVersion = "4";
+    public const string SaveStateVersion = "5";
 
     public static string GetSaveStatePath(string loadedFilePath, string id)
     {

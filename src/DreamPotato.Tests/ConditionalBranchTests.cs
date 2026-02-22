@@ -413,7 +413,7 @@ public class ConditionalBranchTests
             OpcodeMask.INC | AddressModeMask.Direct1, 0x00, // acc
             OpcodeMask.INC | AddressModeMask.Direct1, 0x02, // b
         ];
-        instructions.CopyTo(cpu.CurrentROMBank);
+        instructions.CopyTo(cpu.CurrentInstructionBank);
 
         cpu.Step();
         cpu.Step();
