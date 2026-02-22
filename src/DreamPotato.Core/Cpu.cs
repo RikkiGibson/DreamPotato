@@ -780,7 +780,10 @@ public class Cpu
             Memory.PushStack((byte)stackValue);
             Memory.PushStack((byte)(stackValue >> 8));
             Pc = routineAddress;
-            StackData.Push(MakeStackEntry(StackValueKind.InterruptReturn, source: Pc, value: stackValue));
+            // TODO: improve accuracy of 'source' value for 'set1 pcon,0' case
+            // TODO: adjusting Pc to service interrupt, needs to happen at "end" of StepInstruction()
+            // Adjusting at beginning, causes debugger to miss the first instr of the interrupt
+            StackData.Push(MakeStackEntry(StackValueKind.InterruptReturn, source: stackValue, value: stackValue));
         }
     }
 
@@ -1878,6 +1881,7 @@ public class Cpu
         ushort a12 = inst.Arg0;
 
         Logger.LogTrace($"{inst}", LogCategories.Instructions);
+        var stackSource = Pc;
         Pc += inst.Size;
         var stackValue = Pc;
         Memory.PushStack((byte)stackValue);
@@ -1886,7 +1890,7 @@ public class Cpu
         Pc &= 0b1111_0000__0000_0000;
         Pc |= a12;
 
-        StackData.Push(MakeStackEntry(StackValueKind.CallReturn, source: Pc, value: stackValue));
+        StackData.Push(MakeStackEntry(StackValueKind.CallReturn, source: stackSource, value: stackValue));
     }
 
     /// <summary>Far absolute subroutine call</summary>
@@ -1897,13 +1901,14 @@ public class Cpu
         // (SP) <- (SP) + 1, ((SP)) <- (PC15 to 8), (PC) <- a16
         var a16 = inst.Arg0;
         Logger.LogTrace($"{inst}", LogCategories.Instructions);
-        Pc += 3;
+        var stackSource = Pc;
+        Pc += inst.Size;
         var stackValue = Pc;
         Memory.PushStack((byte)stackValue);
         Memory.PushStack((byte)(stackValue >> 8));
         Pc = a16;
 
-        StackData.Push(MakeStackEntry(StackValueKind.CallReturn, source: Pc, value: stackValue));
+        StackData.Push(MakeStackEntry(StackValueKind.CallReturn, source: stackSource, value: stackValue));
     }
 
     /// <summary>Far relative subroutine call</summary>
@@ -1913,12 +1918,13 @@ public class Cpu
         // (SP) <- (SP) + 1, ((SP)) <- (PC15 to 8), (PC) <- (PC) - 1 + r16
         var r16 = inst.Arg0;
         Logger.LogTrace($"{inst}", LogCategories.Instructions);
+        var stackSource = Pc;
         Pc += inst.Size;
         var stackValue = Pc;
         Memory.PushStack((byte)stackValue);
         Memory.PushStack((byte)(stackValue >> 8));
         Pc = (ushort)(Pc - 1 + r16);
-        StackData.Push(MakeStackEntry(StackValueKind.CallReturn, source: Pc, value: stackValue));
+        StackData.Push(MakeStackEntry(StackValueKind.CallReturn, source: stackSource, value: stackValue));
     }
 
     /// <summary>Return from subroutine</summary>

@@ -1074,8 +1074,8 @@ partial class UserInterface
                                 if (entry.Kind == StackValueKind.Push)
                                     continue;
 
-                                var returnAddr = entry.Value;
-                                if (inst.Offset == returnAddr)
+                                var callAddr = entry.Source;
+                                if (inst.Offset == callAddr)
                                 {
                                     ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, Debug_ColorStack);
                                     break;
@@ -1197,8 +1197,8 @@ partial class UserInterface
                     stackData.Count,
                     new StackEntry(
                         StackValueKind.CallReturn,
-                        Source: 0,
-                        Value: cpu.ProgramCounter,
+                        Source: cpu.ProgramCounter,
+                        Value: 0,
                         Offset: 0,
                         cpu.CurrentInstructionBankId));
                 for (var i = stackData.Count - 1; i >= 0; i--)
@@ -1216,8 +1216,8 @@ partial class UserInterface
                 ImGui.TableNextColumn();
 
                 var bankInfo = debugInfo.GetBankInfo(entry.BankId);
-                var returnAddr = entry.Value;
-                var bpIndex = bankInfo.Breakpoints.FindIndex(bp => bp.Offset == returnAddr);
+                var callAddr = entry.Source;
+                var bpIndex = bankInfo.Breakpoints.FindIndex(bp => bp.Offset == callAddr);
                 var breakpointExists = bpIndex != -1;
 
                 ImGui.PushID("breakpoint");
@@ -1225,7 +1225,7 @@ partial class UserInterface
                 {
                     if (breakpointExists) // Create new
                     {
-                        bankInfo.Breakpoints.Add(new BreakpointInfo { Enabled = true, Offset = returnAddr });
+                        bankInfo.Breakpoints.Add(new BreakpointInfo { Enabled = true, Offset = callAddr });
                     }
                     else if (bpIndex != -1) // Remove
                     {
@@ -1236,7 +1236,7 @@ partial class UserInterface
 
                 ImGui.TableNextColumn();
 
-                var index = bankInfo.BinarySearchInstructions(returnAddr);
+                var index = bankInfo.BinarySearchInstructions(callAddr);
                 if (index < 0)
                 {
                     // If we got here, it means the code we were returning to,
