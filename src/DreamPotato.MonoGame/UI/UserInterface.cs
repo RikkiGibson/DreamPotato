@@ -1008,7 +1008,6 @@ partial class UserInterface
         // Note: End() is called even when Begin() returned false to handle collapsed state
         ImGui.End();
 
-
         void layoutTab(InstructionBank bankId)
         {
             if (ImGui.BeginTable(bankId.ToString(), columns: 2, ImGuiTableFlags.Resizable))
