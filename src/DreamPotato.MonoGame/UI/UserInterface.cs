@@ -174,7 +174,10 @@ partial class UserInterface
     private static readonly uint Debug_ColorStack = ImGui.GetColorU32(new Numerics.Vector4(53.0f/255, 50.0f/255, 18.0f/255, 1));
 
     internal bool Debugger_Show = false;
-    private int _debugger_ScrollToInstructionIndex = -1;
+
+    /// <summary>Set to scroll to an instruction in a particular bank on the next frame.</summary>
+    // TODO: breakpoints list is flickering the frame after setting this
+    private (int index, InstructionBank bankId)? Debugger_ScrollToInstruction = null;
 
     internal PendingCommand PendingCommand { get; private set; }
 
@@ -976,7 +979,7 @@ partial class UserInterface
                 {
                     fixed (byte* label = "ROM"u8)
                     {
-                        var flags = _debugger_ScrollToInstructionIndex != -1 && _game.PrimaryVmu._cpu.CurrentInstructionBankId == InstructionBank.ROM ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
+                        var flags = Debugger_ScrollToInstruction is { bankId: InstructionBank.ROM } ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
                         if (ImGuiNative.igBeginTabItem(label, p_open: null, flags) != 0)
                         {
                             layoutTab(InstructionBank.ROM);
@@ -986,7 +989,7 @@ partial class UserInterface
 
                     fixed (byte* label = "FlashBank0"u8)
                     {
-                        var flags = _debugger_ScrollToInstructionIndex != -1 && _game.PrimaryVmu._cpu.CurrentInstructionBankId == InstructionBank.FlashBank0 ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
+                        var flags = Debugger_ScrollToInstruction is { bankId: InstructionBank.ROM } ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
                         if (ImGuiNative.igBeginTabItem(label, p_open: null, flags) != 0)
                         {
                             layoutTab(InstructionBank.FlashBank0);
@@ -1020,8 +1023,8 @@ partial class UserInterface
                 ImGui.TableNextColumn();
                 layoutControls();
                 ImGui.Separator();
-                layoutBreakpoints(bankId);
                 layoutWatch();
+                layoutBreakpoints(bankId);
                 layoutStack();
 
                 ImGui.EndTable();
@@ -1050,10 +1053,13 @@ partial class UserInterface
                 }
 
                 clipper.Begin(disasm.Count);
-
-                bool doScrollToInstruction = _debugger_ScrollToInstructionIndex != -1 && executingInThisBank;
-                if (doScrollToInstruction)
-                    clipper.IncludeItemByIndex(_debugger_ScrollToInstructionIndex);
+                var scrollToInstructionIndex = Debugger_ScrollToInstruction switch
+                {
+                    var (destIndex, destBankId) when destBankId == bankId => destIndex,
+                    _ => -1 
+                };
+                if (scrollToInstructionIndex != -1)
+                    clipper.IncludeItemByIndex(scrollToInstructionIndex);
 
                 while (clipper.Step())
                 {
@@ -1076,7 +1082,7 @@ partial class UserInterface
                                     continue;
 
                                 var callAddr = entry.Source;
-                                if (inst.Offset == callAddr)
+                                if (inst.Offset == callAddr && bankId == entry.BankId)
                                 {
                                     ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, Debug_ColorStack);
                                     break;
@@ -1109,10 +1115,11 @@ partial class UserInterface
                         ImGui.Text(inst.DisplayInstruction());
                         ImGui.PopID();
 
-                        if (doScrollToInstruction && i == _debugger_ScrollToInstructionIndex)
+                        if (i == scrollToInstructionIndex)
                         {
                             ImGui.SetScrollHereY();
-                            _debugger_ScrollToInstructionIndex = -1;
+                            scrollToInstructionIndex = -1;
+                            Debugger_ScrollToInstruction = default;
                         }
 
                         if (ImGui.IsItemHovered())
@@ -1173,8 +1180,7 @@ partial class UserInterface
                     var inst = bankInfo.GetOrLoadInstruction(breakpoints[i].Offset);
                     if (ImGui.Selectable(inst.Offset.ToString("X4")))
                     {
-                        // TODO2: needs to jump to appropriate bank
-                        _debugger_ScrollToInstructionIndex = bankInfo.BinarySearchInstructions(inst.Offset);
+                        Debugger_ScrollToInstruction = (bankInfo.BinarySearchInstructions(inst.Offset), bankId);
                     }
 
                     ImGui.TableNextColumn();
@@ -1216,7 +1222,7 @@ partial class UserInterface
             void layoutStackEntry(int i, StackEntry entry)
             {
                 if (entry.Kind == StackValueKind.Push)
-                    return; // TODO2: display these
+                    return; // TODO: display these
 
                 ImGui.PushID(i);
                 ImGui.TableNextColumn();
@@ -1256,8 +1262,7 @@ partial class UserInterface
                     var inst = bankInfo.Instructions[index];
                     if (ImGui.Selectable(inst.Offset.ToString("X4")))
                     {
-                        // TODO2: needs to jump to appropriate bank
-                        _debugger_ScrollToInstructionIndex = index;
+                        Debugger_ScrollToInstruction = (bankInfo.BinarySearchInstructions(inst.Offset), entry.BankId);
                     }
                     ImGui.TableNextColumn();
                     ImGui.Text(inst.DisplayInstruction());
@@ -1301,7 +1306,7 @@ partial class UserInterface
         Debug.Assert(debugInfo is not null);
         var bankInfo = debugInfo.CurrentBankInfo;
         var index = bankInfo.BinarySearchInstructions(info.Offset);
-        _debugger_ScrollToInstructionIndex = index;
+        Debugger_ScrollToInstruction = (index, bankInfo.BankId);
     }
 
     private void LayoutKeyMapping()

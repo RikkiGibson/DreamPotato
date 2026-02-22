@@ -236,7 +236,7 @@ public class Vmu
 
     public const string RomFileName = "american_v1.05.bin";
     public const string SaveStateHeaderMessage = $"DreamPotatoSaveStateV{SaveStateVersion}";
-    public const string SaveStateVersion = "4";
+    public const string SaveStateVersion = "5";
 
     public static string GetSaveStatePath(string loadedFilePath, string id)
     {

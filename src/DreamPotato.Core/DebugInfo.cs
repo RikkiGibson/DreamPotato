@@ -74,6 +74,8 @@ public class WatchInfo
 
 public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
 {
+    public InstructionBank BankId => bankId;
+
     /// <summary>NOTE: must be sorted by Offset.</summary>
     public IReadOnlyList<InstructionDebugInfo> Instructions => _instructions;
     private readonly List<InstructionDebugInfo> _instructions = [];
@@ -176,24 +178,6 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
 
             offset = inst.Offset;
         }
-    }
-
-    public InstructionDebugInfo GetStepOverDest(ushort offset)
-    {
-        // Step Over goal: skip calls, etc.
-        if (BinarySearchInstructions(offset) is >= 0 and var index)
-        {
-            var inst = Instructions[index];
-            // Stepping over a call means breaking on the RET after the call.
-            // TODO: Oops, this doesn't handle reentrancy. Need stack info first..
-            if (inst.Operation.Kind == OperationKind.CALL)
-            {
-                if (index + 1 < Instructions.Count)
-                    return Instructions[index + 1];
-            }
-        }
-
-        return default;
     }
 
     /// <summary>Search the default set of entry points for executable instructions.</summary>
@@ -358,9 +342,20 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
 
     internal void ClearInstruction(ushort offset)
     {
-        // TODO2: this should delete any instr which overlaps with 'offset'
         var index = BinarySearchInstructions(offset);
         if (index >= 0)
+        {
+            _instructions.RemoveAt(index);
+            return;
+        }
+
+        // Remove a preceding instr if it overlaps with 'offset'
+        index = ~index;
+        if (index == 0)
+            return;
+
+        index--;
+        if (_instructions[index].EndOffset > offset)
             _instructions.RemoveAt(index);
     }
 }
@@ -442,12 +437,10 @@ public class DebugInfo(Cpu cpu)
     internal void MarkExecutable(InstructionBank bankId, Instruction inst)
     {
         var bankInfo = GetBankInfo(bankId);
-        // TODO2: If this is a new code path, Load() it
-        // Also mark branches that can reach this inst via 'push/return'.
-        // persist such code paths in symbol files.
-        if (bankInfo.Instructions.Count == 0)
-            bankInfo.Load();
+        // Ensure code path is loaded
+        _ = bankInfo.GetOrLoadInstruction(inst.Offset);
 
+        // TODO: visualize which code has been executed or not
         bankInfo.SetInstruction(new InstructionDebugInfo(inst, executed: true));
     }
 }

@@ -162,9 +162,6 @@ public class Cpu
 
     internal int _flashWriteUnlockSequence;
 
-    /// <summary>The CPU of another VMU, connected for serial I/O.</summary>
-    private Cpu? _otherCpu;
-
     /// <summary>
     /// Note: this is used for debugging, but, not stored on DebugInfo,
     /// becuase it must always be calc'd/managed, and not created on demand.
@@ -174,6 +171,12 @@ public class Cpu
     public StackEntry MakeStackEntry(StackValueKind kind, ushort source, ushort value)
         => new StackEntry(kind, source, value, SFRs.Sp, CurrentInstructionBankId);
 
+    /// <summary>The CPU of another VMU, connected for serial I/O.</summary>
+    /// <remarks>Not tracked in save states.</remarks>
+    private Cpu? _otherCpu;
+
+    /// <summary>The associated Dreamcast controller expansion slot for this VMU.</summary>
+    /// <remarks>Not tracked in save states.</remarks>
     internal DreamcastSlot DreamcastSlot
     {
         get;
@@ -256,6 +259,16 @@ public class Cpu
         writeInt32(buffer, _interruptsCount);
         writeInt32(buffer, _flashWriteUnlockSequence);
 
+        writeInt32(buffer, StackData.Count);
+        foreach (var entry in StackData)
+        {
+            writeStream.WriteByte((byte)entry.Kind);
+            writeUInt16(buffer, entry.Source);
+            writeUInt16(buffer, entry.Value);
+            writeUInt16(buffer, entry.Offset);
+            writeStream.WriteByte((byte)entry.BankId);
+        }
+
         void writeUInt16(Span<byte> bytes, ushort value)
         {
             BinaryPrimitives.WriteUInt16LittleEndian(bytes, value);
@@ -281,7 +294,31 @@ public class Cpu
         // to remove instructions which are no longer present in the binary?
 
         readStream.ReadExactly(ROM);
-        readStream.ReadExactly(Flash);
+        
+        if (LazyDebugInfo is null)
+        {
+            readStream.ReadExactly(Flash);
+        }
+        else
+        {
+            // Drop any executable instructions that might have changed
+            var bankInfo = LazyDebugInfo.GetBankInfo(InstructionBank.FlashBank0);
+            var newFlash0 = new byte[FlashBankSize];
+            readStream.ReadExactly(newFlash0);
+            Debug.Assert(FlashBankSize - 1 == ushort.MaxValue);
+            for (ushort offset = 0; ; offset++)
+            {
+                if (newFlash0[offset] != FlashBank0[offset])
+                    bankInfo.ClearInstruction(offset);
+
+                if (offset == ushort.MaxValue)
+                    break;
+            }
+
+            newFlash0.CopyTo(FlashBank0);
+            readStream.ReadExactly(FlashBank1);
+        }
+
         if (VmuFileHandle is not null)
             RandomAccess.Write(VmuFileHandle, Flash, fileOffset: 0);
 
@@ -305,6 +342,19 @@ public class Cpu
         }
         _interruptsCount = readInt32(buffer);
         _flashWriteUnlockSequence = readInt32(buffer);
+
+        StackData.Clear();
+        var stackCount = readInt32(buffer);
+        for (var i = 0; i < stackCount; i++)
+        {
+            StackData.Add(new StackEntry(
+                Kind: (StackValueKind)readStream.ReadByte(),
+                Source: readUInt16(buffer),
+                Value: readUInt16(buffer),
+                Offset: readUInt16(buffer),
+                BankId: (InstructionBank)readStream.ReadByte()
+            ));
+        }
 
         ResyncMapleOutbound();
 
@@ -1939,7 +1989,7 @@ public class Cpu
         var stackEntry = StackData.Pop();
         if (stackEntry.Kind == StackValueKind.Push)
         {
-            Logger.LogDebug("Detected a PUSH+RET.");
+            Logger.LogDebug($"Detected a PUSH+RET to {Pc:X4}H");
             if (StackData.Pop() is { Kind: not StackValueKind.Push } badValue)
                 Logger.LogError($"Returned to a mix of a Push value and a {badValue.Kind} value. Stack debug data is corrupted. {badValue}");
         }
