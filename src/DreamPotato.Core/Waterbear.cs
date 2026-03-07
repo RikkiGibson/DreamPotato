@@ -33,12 +33,14 @@ public class DebugInfo
     [JsonPropertyName("sources")]
     public required ImmutableArray<Source> Sources { get; init; }
 
+    /// <summary>Sorted by <see cref="Label.Span" />, not by <see cref="Label.Offset" />.</summary>
     [JsonPropertyName("labels")]
     public required ImmutableArray<Label> Labels { get; init; }
 
     [JsonPropertyName("constants")]
     public required ImmutableArray<Constant> Constants { get; init; }
 
+    /// <summary>Sorted by <see cref="Instruction.Span" />, not by <see cref="Instruction.Offset"/>.</summary>
     [JsonPropertyName("instructions")]
     public required ImmutableArray<Instruction> Instructions { get; init; }
 }

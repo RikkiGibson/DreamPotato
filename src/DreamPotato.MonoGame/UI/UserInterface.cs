@@ -1043,7 +1043,7 @@ partial class UserInterface
                 var bankInfo = debugInfo.GetBankInfo(bankId);
 
                 var waterbearInfo = bankInfo.WaterbearInfo;
-                var disasm = bankInfo.Instructions;
+                var disasm = bankInfo.DisasmEntries;
 
                 // Render only the visible list items
                 var clipperData = new ImGuiListClipper();
@@ -1054,10 +1054,13 @@ partial class UserInterface
                 }
 
                 clipper.Begin(disasm.Count);
+
+                // TODO2: Everything that sets 'Debugger_ScrollToInstruction' needs to be using a 'DisasmEntries' index now.
+                // Use a dedicated helper
                 var scrollToInstructionIndex = Debugger_ScrollToInstruction switch
                 {
                     var (destIndex, destBankId) when destBankId == bankId => destIndex,
-                    _ => -1 
+                    _ => -1
                 };
                 if (scrollToInstructionIndex != -1)
                     clipper.IncludeItemByIndex(scrollToInstructionIndex);
@@ -1067,10 +1070,20 @@ partial class UserInterface
                     for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
                     {
                         ImGui.PushID(i);
-                        ImGui.TableNextColumn();
-                        var inst = disasm[i];
+                        var disasmEntry = disasm[i];
+                        if (disasmEntry.Label is { } label)
+                        {
+                            ImGui.TableNextColumn();
+                            ImGui.Text($"{label.Name}:");
+                            ImGui.TableNextColumn();
+                            ImGui.TableNextColumn();
+                            ImGui.PopID();
+                            continue;
+                        }
 
                         // Set background color
+                        var inst = disasmEntry.Instruction;
+                        ImGui.TableNextColumn();
                         if (executingInThisBank && _game.PrimaryVmu._cpu.ProgramCounter == inst.Offset)
                         {
                             ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, Debug_ColorPc);

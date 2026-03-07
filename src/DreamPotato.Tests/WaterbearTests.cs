@@ -16,9 +16,5 @@ public class WaterbearTests
         var result = JsonSerializer.Deserialize(fileStream, WaterbearJsonSerializerContext.Default.DebugInfo);
         Assert.NotNull(result);
         Assert.Equal("asm", result.Language);
-
-        // Verify that instructions are already sorted
-        ImmutableArray<Instruction> instructions2 = [.. result.Instructions.OrderBy(inst => inst)];
-        Assert.Equal<Instruction>(instructions2, result.Instructions);
     }
 }

@@ -6,6 +6,32 @@ using DreamPotato.Core.SFRs;
 
 namespace DreamPotato.Core;
 
+public readonly struct DisasmEntry : IComparable<DisasmEntry>
+{
+    public DisasmEntry(InstructionDebugInfo instruction) => Instruction = instruction;
+    public DisasmEntry(WB.Label label) => Label = label;
+
+    public InstructionDebugInfo Instruction { get; }
+    public WB.Label? Label { get; }
+
+    public int CompareTo(DisasmEntry other)
+    {
+        // Later offsets sort later
+        // Equal offsets sort labels before non-labels
+
+        var offsetCompare = (Label?.Offset ?? Instruction.Offset).CompareTo(other.Label?.Offset ?? other.Instruction.Offset);
+        if (offsetCompare != 0)
+            return offsetCompare;
+
+        if (Label is { } && other.Label is null)
+            return -1;
+        else if (Label is null && other.Label is { })
+            return 1;
+
+        return 0;
+    }
+}
+
 public readonly struct InstructionDebugInfo : IComparable<InstructionDebugInfo>
 {
     internal InstructionDebugInfo(Instruction instruction, bool executed)
@@ -81,11 +107,14 @@ public class WatchInfo
 public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
 {
     public InstructionBank BankId => bankId;
-    public WB.DebugInfo? WaterbearInfo { get; internal set; }
+    public WB.DebugInfo? WaterbearInfo { get; internal set { field = value; UpdateDisasmDisplay(); } }
 
     /// <summary>NOTE: must be sorted by Offset.</summary>
     public IReadOnlyList<InstructionDebugInfo> Instructions => _instructions;
     private readonly List<InstructionDebugInfo> _instructions = [];
+
+    public IReadOnlyList<DisasmEntry> DisasmEntries => _disasmEntries;
+    private readonly List<DisasmEntry> _disasmEntries = [];
 
     /// <summary>Not necessarily sorted.</summary>
     public readonly List<BreakpointInfo> Breakpoints = [];
@@ -235,7 +264,7 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
 
         // Walk all reachable executable code paths and populate the instruction map
         var pendingBranches = new Stack<ushort>(entryPoints);
-
+        var changed = false;
         while (pendingBranches.Count != 0)
         {
             ushort offset = pendingBranches.Pop();
@@ -248,6 +277,7 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
 
             var inst = InstructionDecoder.Decode(content, offset);
             this.SetInstruction(new(inst, executed: false));
+            changed = true;
 
             var branchInfo = GetBranchInfo(inst);
             if (branchInfo.nextReachable)
@@ -256,6 +286,27 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
             if (branchInfo.branchAddress is ushort branchAddress)
                 pendingBranches.Push(branchAddress);
         }
+
+        if (changed)
+            UpdateDisasmDisplay();
+    }
+
+    void UpdateDisasmDisplay()
+    {
+        // TODO2: we should be able to do this incrementally
+        // i.e. inserting in all the correct positions when WB info is attached
+        // and deleting from all the same positions when the info is detached
+        _disasmEntries.Clear();
+        foreach (var inst in Instructions)
+            _disasmEntries.Add(new DisasmEntry(inst));
+
+        if (WaterbearInfo is { })
+        {
+            foreach (var label in WaterbearInfo.Labels)
+                _disasmEntries.Add(new DisasmEntry(label));
+        }
+
+        _disasmEntries.Sort();
     }
 
     internal static (ushort? branchAddress, bool nextReachable) GetBranchInfo(Instruction inst)
