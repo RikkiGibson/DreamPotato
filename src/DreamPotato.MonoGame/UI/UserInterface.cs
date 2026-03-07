@@ -1023,6 +1023,7 @@ partial class UserInterface
                 layoutControls();
                 ImGui.Separator();
                 layoutWatch();
+                layoutLabels(bankId);
                 layoutBreakpoints(bankId);
                 layoutStack();
 
@@ -1070,7 +1071,7 @@ partial class UserInterface
                         if (disasmEntry.Label is { } label)
                         {
                             ImGui.TableNextColumn();
-                            ImGui.Text($"{label.Name}:");
+                            ImGui.Text($"{label.DisplayName}:");
                             ImGui.PopID();
                             continue;
                         }
@@ -1171,6 +1172,44 @@ partial class UserInterface
 
             if (ImGui.Button("Step Out"))
                 debugInfo.StepOut();
+        }
+
+        void layoutLabels(InstructionBank bankId)
+        {
+            var bankInfo = debugInfo.GetBankInfo(bankId);
+            if (bankInfo.WaterbearInfo is not { } waterbearInfo)
+                return;
+
+            // TODO2: seems like there can be a large number of these.
+            // Perhaps need an ability to keep only a subset visible and hide the rest.
+            // May also want a clipper.
+            ImGui.Text("Labels");
+            ImGui.Separator();
+            if (ImGui.BeginTable("Labels", columns: 1, flags: ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.ScrollY))
+            {
+                var labels = waterbearInfo.Labels;
+                for (var i = 0; i < labels.Length; i++)
+                {
+                    var label = labels[i];
+                    ImGui.PushID(i);
+                    ImGui.TableNextColumn();
+
+                    var inst = bankInfo.GetInstruction(label.Offset);
+                    if (inst.HasInstruction)
+                    {
+                        if (ImGui.Selectable(label.DisplayName))
+                            Debugger_ScrollToDisasm = (bankInfo.BinarySearchDisasm(inst.Offset), bankId);
+                    }
+                    else
+                    {
+                        ImGui.Text($"{label.DisplayName} (data)");
+                    }
+
+                    ImGui.PopID();
+                }
+
+                ImGui.EndTable();
+            }
         }
 
         void layoutBreakpoints(InstructionBank bankId)

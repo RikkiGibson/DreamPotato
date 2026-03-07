@@ -66,6 +66,9 @@ public class Label
     [JsonPropertyName("name")]
     public required string Name { get; init; }
 
+    [JsonIgnore]
+    public string DisplayName => field ??= Parent is null ? Name : $"  {Name}";
+
     /// <summary>Text span of the label in the original source file</summary>
     [JsonPropertyName("span")]
     public required Span Span { get; init; }
