@@ -177,7 +177,7 @@ partial class UserInterface
 
     /// <summary>Set to scroll to an instruction in a particular bank on the next frame.</summary>
     // TODO: breakpoints list is flickering the frame after setting this
-    private (int index, InstructionBank bankId)? Debugger_ScrollToInstruction = null;
+    private (int index, InstructionBank bankId)? Debugger_ScrollToDisasm = null;
 
     internal PendingCommand PendingCommand { get; private set; }
 
@@ -979,7 +979,7 @@ partial class UserInterface
                 {
                     fixed (byte* label = "ROM"u8)
                     {
-                        var flags = Debugger_ScrollToInstruction is { bankId: InstructionBank.ROM } ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
+                        var flags = Debugger_ScrollToDisasm is { bankId: InstructionBank.ROM } ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
                         if (ImGuiNative.igBeginTabItem(label, p_open: null, flags) != 0)
                         {
                             layoutTab(InstructionBank.ROM);
@@ -989,7 +989,7 @@ partial class UserInterface
 
                     fixed (byte* label = "FlashBank0"u8)
                     {
-                        var flags = Debugger_ScrollToInstruction is { bankId: InstructionBank.FlashBank0 } ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
+                        var flags = Debugger_ScrollToDisasm is { bankId: InstructionBank.FlashBank0 } ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
                         if (ImGuiNative.igBeginTabItem(label, p_open: null, flags) != 0)
                         {
                             layoutTab(InstructionBank.FlashBank0);
@@ -1032,12 +1032,8 @@ partial class UserInterface
 
         void layoutDisasm(InstructionBank bankId)
         {
-            if (ImGui.BeginTable("disasm", columns: 3, flags: ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.ScrollY))
+            if (ImGui.BeginTable("disasm", columns: 1, flags: ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.ScrollY))
             {
-                ImGui.TableSetupColumn("breakpoints", ImGuiTableColumnFlags.WidthFixed);
-                ImGui.TableSetupColumn("addresses", ImGuiTableColumnFlags.WidthFixed);
-                ImGui.TableSetupColumn("instructions");
-
                 var cpu = _game.PrimaryVmu._cpu;
                 var executingInThisBank = bankId == cpu.CurrentInstructionBankId;
                 var bankInfo = debugInfo.GetBankInfo(bankId);
@@ -1057,13 +1053,13 @@ partial class UserInterface
 
                 // TODO2: Everything that sets 'Debugger_ScrollToInstruction' needs to be using a 'DisasmEntries' index now.
                 // Use a dedicated helper
-                var scrollToInstructionIndex = Debugger_ScrollToInstruction switch
+                var scrollToDisasmIndex = Debugger_ScrollToDisasm switch
                 {
                     var (destIndex, destBankId) when destBankId == bankId => destIndex,
                     _ => -1
                 };
-                if (scrollToInstructionIndex != -1)
-                    clipper.IncludeItemByIndex(scrollToInstructionIndex);
+                if (scrollToDisasmIndex != -1)
+                    clipper.IncludeItemByIndex(scrollToDisasmIndex);
 
                 while (clipper.Step())
                 {
@@ -1075,8 +1071,6 @@ partial class UserInterface
                         {
                             ImGui.TableNextColumn();
                             ImGui.Text($"{label.Name}:");
-                            ImGui.TableNextColumn();
-                            ImGui.TableNextColumn();
                             ImGui.PopID();
                             continue;
                         }
@@ -1122,17 +1116,17 @@ partial class UserInterface
 
                         ImGui.PopID();
 
-                        ImGui.TableNextColumn();
+                        ImGui.SameLine();
                         ImGui.Text(inst.Offset.ToString("X4"));
 
-                        ImGui.TableNextColumn();
+                        ImGui.SameLine();
 
                         if (inst.GetBranchAddress() is ushort destAddress)
                         {
                             if (ImGui.Selectable(inst.DisplayInstruction(waterbearInfo)))
                             {
-                                scrollToInstructionIndex = bankInfo.BinarySearchInstructions(destAddress);
-                                Debugger_ScrollToInstruction = (scrollToInstructionIndex, bankId);
+                                scrollToDisasmIndex = bankInfo.BinarySearchDisasm(destAddress);
+                                Debugger_ScrollToDisasm = (scrollToDisasmIndex, bankId);
                             }
                         }
                         else
@@ -1142,11 +1136,11 @@ partial class UserInterface
 
                         ImGui.PopID();
 
-                        if (i == scrollToInstructionIndex)
+                        if (i == scrollToDisasmIndex)
                         {
                             ImGui.SetScrollHereY();
-                            scrollToInstructionIndex = -1;
-                            Debugger_ScrollToInstruction = default;
+                            scrollToDisasmIndex = -1;
+                            Debugger_ScrollToDisasm = default;
                         }
 
                         if (ImGui.IsItemHovered())
@@ -1207,7 +1201,7 @@ partial class UserInterface
                     var inst = bankInfo.GetOrLoadInstruction(breakpoints[i].Offset);
                     if (ImGui.Selectable(inst.Offset.ToString("X4")))
                     {
-                        Debugger_ScrollToInstruction = (bankInfo.BinarySearchInstructions(inst.Offset), bankId);
+                        Debugger_ScrollToDisasm = (bankInfo.BinarySearchDisasm(inst.Offset), bankId);
                     }
 
                     ImGui.TableNextColumn();
@@ -1289,7 +1283,7 @@ partial class UserInterface
                     var inst = bankInfo.Instructions[index];
                     if (ImGui.Selectable(inst.Offset.ToString("X4")))
                     {
-                        Debugger_ScrollToInstruction = (bankInfo.BinarySearchInstructions(inst.Offset), entry.BankId);
+                        Debugger_ScrollToDisasm = (bankInfo.BinarySearchDisasm(inst.Offset), entry.BankId);
                     }
                     ImGui.TableNextColumn();
                     ImGui.Text(inst.DisplayInstruction(bankInfo.WaterbearInfo));
@@ -1332,8 +1326,8 @@ partial class UserInterface
         var debugInfo = _game.PrimaryVmu.LazyDebugInfo;
         Debug.Assert(debugInfo is not null);
         var bankInfo = debugInfo.CurrentBankInfo;
-        var index = bankInfo.BinarySearchInstructions(info.Offset);
-        Debugger_ScrollToInstruction = (index, bankInfo.BankId);
+        var index = bankInfo.BinarySearchDisasm(info.Offset);
+        Debugger_ScrollToDisasm = (index, bankInfo.BankId);
     }
 
     private void LayoutKeyMapping()

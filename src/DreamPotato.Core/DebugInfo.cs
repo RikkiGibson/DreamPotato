@@ -14,12 +14,14 @@ public readonly struct DisasmEntry : IComparable<DisasmEntry>
     public InstructionDebugInfo Instruction { get; }
     public WB.Label? Label { get; }
 
+    public ushort Offset => Label?.Offset ?? Instruction.Offset;
+
     public int CompareTo(DisasmEntry other)
     {
         // Later offsets sort later
         // Equal offsets sort labels before non-labels
 
-        var offsetCompare = (Label?.Offset ?? Instruction.Offset).CompareTo(other.Label?.Offset ?? other.Instruction.Offset);
+        var offsetCompare = Offset.CompareTo(other.Offset);
         if (offsetCompare != 0)
             return offsetCompare;
 
@@ -118,6 +120,14 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
 
     /// <summary>Not necessarily sorted.</summary>
     public readonly List<BreakpointInfo> Breakpoints = [];
+
+    public int BinarySearchDisasm(ushort offset)
+    {
+        // TODO2: seems heavy for such a simple purpose.
+        // Perhaps InstructionDebugInfo should be reference type and DisasmEntry should have an offset field.
+        var item = new DisasmEntry(new InstructionDebugInfo(new Instruction() { Offset = offset }, executed: false));
+        return _disasmEntries.BinarySearch(item);
+    }
 
     public int BinarySearchInstructions(ushort offset)
     {
