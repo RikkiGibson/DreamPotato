@@ -24,7 +24,7 @@ public readonly struct InstructionDebugInfo : IComparable<InstructionDebugInfo>
 
     public ushort EndOffset => (ushort)(Offset + Size);
 
-    public string DisplayInstruction() => Instruction.ToString();
+    public string DisplayInstruction(WB.DebugInfo? waterbearInfo) => Instruction.Display(waterbearInfo);
 
     public string DisplayArgumentValues(Cpu cpu)
     {
@@ -46,7 +46,7 @@ public readonly struct InstructionDebugInfo : IComparable<InstructionDebugInfo>
 
     public ushort? GetBranchAddress()
     {
-        return BankDebugInfo.GetBranchInfo(Instruction)?.destAddress;
+        return BankDebugInfo.GetBranchInfo(Instruction).branchAddress;
     }
 
     public int CompareTo(InstructionDebugInfo other)
@@ -81,6 +81,7 @@ public class WatchInfo
 public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
 {
     public InstructionBank BankId => bankId;
+    public WB.DebugInfo? WaterbearInfo { get; internal set; }
 
     /// <summary>NOTE: must be sorted by Offset.</summary>
     public IReadOnlyList<InstructionDebugInfo> Instructions => _instructions;
@@ -234,42 +235,33 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
             this.SetInstruction(new(inst, executed: false));
 
             var branchInfo = GetBranchInfo(inst);
-            switch (branchInfo)
-            {
-                // Only the branch destination is reachable
-                case (var dest, conditional: false):
-                    pendingBranches.Push(dest);
-                    break;
+            if (branchInfo.nextReachable)
+                pendingBranches.Push((ushort)(offset + inst.Size));
 
-                // Either the next instruction or the branch destination is reachable
-                case (var dest, conditional: true):
-                    pendingBranches.Push((ushort)(offset + inst.Size));
-                    pendingBranches.Push(dest);
-                    break;
-
-                // Only the next instruction is reachable
-                default:
-                    pendingBranches.Push((ushort)(offset + inst.Size));
-                    break;
-            }
+            if (branchInfo.branchAddress is ushort branchAddress)
+                pendingBranches.Push(branchAddress);
         }
     }
 
-    internal static (ushort destAddress, bool conditional)? GetBranchInfo(Instruction inst)
+    internal static (ushort? branchAddress, bool nextReachable) GetBranchInfo(Instruction inst)
     {
         var offset = inst.Offset;
 
         switch (inst.Kind)
         {
-            // Conditional branches
+            // Unconditional branches
             //
+            case OperationKind.RET or OperationKind.RETI:
+                // End of the branch
+                return (branchAddress: null, nextReachable: false);
+
             case OperationKind.JMP:
             {
                 var dest = offset;
                 dest += 2;
                 dest &= 0b1111_0000__0000_0000;
                 dest |= inst.Arg0;
-                return (dest, conditional: true);
+                return (dest, nextReachable: false);
             }
 
             case OperationKind.JMPF:
@@ -277,39 +269,39 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
                 // Note: this could jump between ROM/flash depending on cpu state.
                 // Hopefully, the ordinary visit pass within a bank, makes the destination reachable anyway.
                 var dest = inst.Arg0;
-                return (dest, conditional: true);
+                return (dest, nextReachable: false);
             }
 
             case OperationKind.BR:
             {
                 var dest = (ushort)(offset + inst.Size + (sbyte)inst.Arg0);
-                return (dest, conditional: true);
+                return (dest, nextReachable: false);
             }
 
             case OperationKind.BRF:
             {
                 var dest = (ushort)(offset + inst.Size - 1 + inst.Arg0);
-                return (dest, conditional: true);
+                return (dest, nextReachable: false);
             }
 
-            // Unconditional branches
+            // conditional branches
             //
             case OperationKind.BZ or OperationKind.BNZ:
             {
                 var dest = (ushort)(offset + inst.Size + (sbyte)inst.Arg0);
-                return (dest, conditional: false);
+                return (dest, nextReachable: true);
             }
 
             case OperationKind.BP or OperationKind.BPC or OperationKind.BN:
             {
                 var dest = (ushort)(offset + inst.Size + (sbyte)inst.Arg2);
-                return (dest, conditional: false);
+                return (dest, nextReachable: true);
             }
 
             case OperationKind.DBNZ:
             {
                 var dest = (ushort)(offset + inst.Size + (sbyte)inst.Arg1);
-                return (dest, conditional: false);
+                return (dest, nextReachable: true);
             }
 
             case OperationKind.BE or OperationKind.BNE:
@@ -318,7 +310,7 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
                 var indirectMode = param0.Kind == ParameterKind.Ri;
                 var r8 = indirectMode ? (sbyte)inst.Arg2 : (sbyte)inst.Arg1;
                 var dest = (ushort)(offset + inst.Size + r8);
-                return (dest, conditional: false);
+                return (dest, nextReachable: true);
             }
 
             case OperationKind.CALL:
@@ -328,25 +320,24 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
                 dest += 2;
                 dest &= 0b1111_0000__0000_0000;
                 dest |= inst.Arg0;
-                return (dest, conditional: false);
+                return (dest, nextReachable: true);
             }
 
             case OperationKind.CALLF:
             {
                 // Similar to JMPF except the next instruction is reachable
                 var dest = inst.Arg0;
-                return (dest, conditional: false);
+                return (dest, nextReachable: true);
             }
 
             case OperationKind.CALLR:
             {
                 var dest = (ushort)(offset + inst.Size - 1 + inst.Arg0);
-                return (dest, conditional: false);
+                return (dest, nextReachable: true);
             }
 
-            // No branch (next instruction is reachable)
             default:
-                return null;
+                return (branchAddress: null, nextReachable: true);
         }
     }
 
@@ -354,10 +345,13 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
     {
         _instructions.Clear();
         Breakpoints.Clear();
+        WaterbearInfo = null;
     }
 
     internal void ClearInstruction(ushort offset)
     {
+        // TODO2: if we changed the instruction at this location, we may need to invalidate waterbear data.. how?
+        // And is that an all-or-nothing step?
         var index = BinarySearchInstructions(offset);
         if (index >= 0)
         {

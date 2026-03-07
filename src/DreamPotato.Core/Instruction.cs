@@ -32,20 +32,23 @@ readonly record struct Instruction(ushort Offset, Operation Operation, ushort Ar
     }
 
     public override string ToString()
+        => Display(waterbearInfo: null);
+
+    public string Display(WB.DebugInfo? waterbearInfo)
     {
         if (!HasValue)
             return "";
 
+        if (waterbearInfo is { Instructions: var waterbearInstructions }
+            && waterbearInstructions.BinarySearch(WB.Instruction.SearchFor(Offset)) is >= 0 and var instIndex)
+        {
+            var waterbearInst = waterbearInstructions[instIndex];
+            return waterbearInst.Text;
+        }
+
         if (Parameters.IsEmpty)
             return Operation.Kind.ToString();
 
-        // TODO: the most interesting/useful display is going to include some(?) cpu state.
-        // e.g. if bank 0, can show built-in symbols for that bank. Same for bank 1.
-        // Including cpu state really reflects a moment in time interpretation of the instruction though.
-        // Same instruction could be run with different cpu states and mean different things.
-        // Both forms of display are possibly useful.
-        // We can include not only symbols, but, we can also include the values which are being modified, as well as whether branches are taken.
-        // In other words logging the execution of the program in quite useful detail.
         var builder = new StringBuilder();
         builder.Append($"{Operation.Kind} ");
 
@@ -58,6 +61,19 @@ readonly record struct Instruction(ushort Offset, Operation Operation, ushort Ar
                 builder.Append(", ");
         }
         return builder.ToString();
+    }
+
+    // TODO2: needed?
+    public ushort? TryGetDestAddress(Parameter param, ushort arg)
+    {
+        return param.Kind switch
+        {
+            ParameterKind.R8 => (ushort)(Offset + Operation.Size + (sbyte)arg),
+            ParameterKind.R16 => (ushort)(Offset + arg),
+            ParameterKind.A8 => (ushort)((Offset & 0xff00) | arg),
+            ParameterKind.A12 => (ushort)((Offset & 0xf000) | arg),
+            _ => null
+        };
     }
 
     public void DisplayArgument(StringBuilder builder, Parameter param, ushort arg)

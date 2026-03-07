@@ -1,3 +1,5 @@
+global using WB = DreamPotato.Core.Waterbear;
+
 using System.Collections.Immutable;
 using System.Text.Json.Serialization;
 
@@ -73,6 +75,11 @@ public class Label
     /// <summary>If this is a local label, it refers to the parent global label</summary>
     [JsonPropertyName("parent")]
     public string? Parent { get; init; }
+
+    public int CompareTo(Label? other)
+    {
+        return other is null ? 1 : Offset.CompareTo(other.Offset);
+    }
 }
 
 public class Constant
@@ -90,8 +97,16 @@ public class Constant
     public required int Value { get; init; }
 }
 
-public class Instruction
+public class Instruction : IComparable<Instruction>
 {
+    /// <summary>Make an argument to BinarySearch</summary>
+    public static Instruction SearchFor(ushort offset) => new Instruction()
+    {
+        Text = null!,
+        Span = null!,
+        Offset = offset,
+    };
+
     /// <summary>A textual representation of the instruction from the source file</summary>
     [JsonPropertyName("text")]
     public required string Text { get; init; }
@@ -103,6 +118,11 @@ public class Instruction
     /// <summary>The byte offset of the instruction in the VMS file</summary>
     [JsonPropertyName("offset")]
     public required ushort Offset { get; init; }
+
+    public int CompareTo(Instruction? other)
+    {
+        return other is null ? 1 : Offset.CompareTo(other.Offset);
+    }
 }
 
 public class Span

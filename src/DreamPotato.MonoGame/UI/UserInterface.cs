@@ -1041,6 +1041,8 @@ partial class UserInterface
                 var cpu = _game.PrimaryVmu._cpu;
                 var executingInThisBank = bankId == cpu.CurrentInstructionBankId;
                 var bankInfo = debugInfo.GetBankInfo(bankId);
+
+                var waterbearInfo = bankInfo.WaterbearInfo;
                 var disasm = bankInfo.Instructions;
 
                 // Render only the visible list items
@@ -1114,7 +1116,7 @@ partial class UserInterface
 
                         if (inst.GetBranchAddress() is ushort destAddress)
                         {
-                            if (ImGui.Selectable(inst.DisplayInstruction()))
+                            if (ImGui.Selectable(inst.DisplayInstruction(waterbearInfo)))
                             {
                                 scrollToInstructionIndex = bankInfo.BinarySearchInstructions(destAddress);
                                 Debugger_ScrollToInstruction = (scrollToInstructionIndex, bankId);
@@ -1122,7 +1124,7 @@ partial class UserInterface
                         }
                         else
                         {
-                            ImGui.Text(inst.DisplayInstruction());
+                            ImGui.Text(inst.DisplayInstruction(waterbearInfo));
                         }
 
                         ImGui.PopID();
@@ -1139,7 +1141,7 @@ partial class UserInterface
                             var argumentValues = inst.DisplayArgumentValues(_game.PrimaryVmu._cpu);
                             if (argumentValues.Length != 0 && ImGui.BeginTooltip())
                             {
-                                ImGui.Text(inst.DisplayArgumentValues(_game.PrimaryVmu._cpu));
+                                ImGui.Text(argumentValues);
                                 ImGui.EndTooltip();
                             }
                         }
@@ -1196,7 +1198,7 @@ partial class UserInterface
                     }
 
                     ImGui.TableNextColumn();
-                    ImGui.Text(inst.DisplayInstruction());
+                    ImGui.Text(inst.DisplayInstruction(bankInfo.WaterbearInfo));
                     ImGui.PopID();
                 }
 
@@ -1230,7 +1232,7 @@ partial class UserInterface
 
                 ImGui.EndTable();
             }
-            
+
             void layoutStackEntry(int i, StackEntry entry)
             {
                 if (entry.Kind == StackValueKind.Push)
@@ -1277,7 +1279,7 @@ partial class UserInterface
                         Debugger_ScrollToInstruction = (bankInfo.BinarySearchInstructions(inst.Offset), entry.BankId);
                     }
                     ImGui.TableNextColumn();
-                    ImGui.Text(inst.DisplayInstruction());
+                    ImGui.Text(inst.DisplayInstruction(bankInfo.WaterbearInfo));
                 }
 
                 ImGui.PopID();

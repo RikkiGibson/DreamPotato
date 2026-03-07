@@ -40,7 +40,14 @@ public class Cpu
     internal Span<byte> FlashBank1 => Flash.AsSpan(FlashBankSize, FlashBankSize);
 
     internal DebugInfo? LazyDebugInfo { get; private set; }
-    internal DebugInfo GetOrCreateDebugInfo() => LazyDebugInfo ??= new(this);
+    internal DebugInfo InitializeDebugInfo()
+    {
+        if (LazyDebugInfo is { })
+            throw new InvalidOperationException();
+
+        LazyDebugInfo = new(this);
+        return LazyDebugInfo;
+    }
 
     internal event Action? UnsavedChangesDetected;
     internal bool HasUnsavedChanges
