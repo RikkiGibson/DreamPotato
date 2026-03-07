@@ -1111,7 +1111,20 @@ partial class UserInterface
                         ImGui.Text(inst.Offset.ToString("X4"));
 
                         ImGui.TableNextColumn();
-                        ImGui.Text(inst.DisplayInstruction());
+
+                        if (inst.GetBranchAddress() is ushort destAddress)
+                        {
+                            if (ImGui.Selectable(inst.DisplayInstruction()))
+                            {
+                                scrollToInstructionIndex = bankInfo.BinarySearchInstructions(destAddress);
+                                Debugger_ScrollToInstruction = (scrollToInstructionIndex, bankId);
+                            }
+                        }
+                        else
+                        {
+                            ImGui.Text(inst.DisplayInstruction());
+                        }
+
                         ImGui.PopID();
 
                         if (i == scrollToInstructionIndex)

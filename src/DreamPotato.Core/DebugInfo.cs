@@ -44,6 +44,11 @@ public readonly struct InstructionDebugInfo : IComparable<InstructionDebugInfo>
         return builder.ToString();
     }
 
+    public ushort? GetBranchAddress()
+    {
+        return BankDebugInfo.GetBranchInfo(Instruction)?.destAddress;
+    }
+
     public int CompareTo(InstructionDebugInfo other)
     {
         return Offset.CompareTo(other.Offset);
@@ -228,110 +233,120 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
             var inst = InstructionDecoder.Decode(content, offset);
             this.SetInstruction(new(inst, executed: false));
 
-            // Process unconditional branches
-            switch (inst.Kind)
+            var branchInfo = GetBranchInfo(inst);
+            switch (branchInfo)
             {
-                case OperationKind.RET or OperationKind.RETI:
-                    // End of the branch
-                    continue;
-
-                case OperationKind.JMP:
-                {
-                    var dest = offset;
-                    dest += 2;
-                    dest &= 0b1111_0000__0000_0000;
-                    dest |= inst.Arg0;
+                // Only the branch destination is reachable
+                case (var dest, conditional: false):
                     pendingBranches.Push(dest);
-                    continue;
-                }
+                    break;
 
-                case OperationKind.JMPF:
-                {
-                    // Note: this could jump between ROM/flash depending on cpu state.
-                    // Hopefully, the ordinary visit pass within a bank, makes the destination reachable anyway.
-                    var dest = inst.Arg0;
+                // Either the next instruction or the branch destination is reachable
+                case (var dest, conditional: true):
+                    pendingBranches.Push((ushort)(offset + inst.Size));
                     pendingBranches.Push(dest);
-                    continue;
-                }
+                    break;
 
-                case OperationKind.BR:
-                {
-                    var dest = (ushort)(offset + inst.Size + (sbyte)inst.Arg0);
-                    pendingBranches.Push(dest);
-                    continue;
-                }
+                // Only the next instruction is reachable
+                default:
+                    pendingBranches.Push((ushort)(offset + inst.Size));
+                    break;
+            }
+        }
+    }
 
-                case OperationKind.BRF:
-                {
-                    var dest = (ushort)(offset + inst.Size - 1 + inst.Arg0);
-                    pendingBranches.Push(dest);
-                    continue;
-                }
+    internal static (ushort destAddress, bool conditional)? GetBranchInfo(Instruction inst)
+    {
+        var offset = inst.Offset;
+
+        switch (inst.Kind)
+        {
+            // Conditional branches
+            //
+            case OperationKind.JMP:
+            {
+                var dest = offset;
+                dest += 2;
+                dest &= 0b1111_0000__0000_0000;
+                dest |= inst.Arg0;
+                return (dest, conditional: true);
             }
 
-            // Next instruction is reachable
-            pendingBranches.Push((ushort)(offset + inst.Size));
-
-            // Process conditional branches
-            switch (inst.Kind)
+            case OperationKind.JMPF:
             {
-                case OperationKind.BZ or OperationKind.BNZ:
-                {
-                    var dest = (ushort)(offset + inst.Size + (sbyte)inst.Arg0);
-                    pendingBranches.Push(dest);
-                    break;
-                }
-
-                case OperationKind.BP or OperationKind.BPC or OperationKind.BN:
-                {
-                    var dest = (ushort)(offset + inst.Size + (sbyte)inst.Arg2);
-                    pendingBranches.Push(dest);
-                    break;
-                }
-
-                case OperationKind.DBNZ:
-                {
-                    var dest = (ushort)(offset + inst.Size + (sbyte)inst.Arg1);
-                    pendingBranches.Push(dest);
-                    break;
-                }
-
-                case OperationKind.BE or OperationKind.BNE:
-                {
-                    var param0 = inst.Parameters[0];
-                    var indirectMode = param0.Kind == ParameterKind.Ri;
-                    var r8 = indirectMode ? (sbyte)inst.Arg2 : (sbyte)inst.Arg1;
-                    var dest = (ushort)(offset + inst.Size + r8);
-                    pendingBranches.Push(dest);
-                    break;
-                }
-
-                case OperationKind.CALL:
-                {
-                    // Similar to JMP except the next instruction is reachable
-                    var dest = offset;
-                    dest += 2;
-                    dest &= 0b1111_0000__0000_0000;
-                    dest |= inst.Arg0;
-                    pendingBranches.Push(dest);
-                    break;
-                }
-
-                case OperationKind.CALLF:
-                {
-                    // Similar to JMPF except the next instruction is reachable
-                    var dest = inst.Arg0;
-                    pendingBranches.Push(dest);
-                    break;
-                }
-
-                case OperationKind.CALLR:
-                {
-                    var dest = (ushort)(offset + inst.Size - 1 + inst.Arg0);
-                    pendingBranches.Push(dest);
-                    break;
-                }
+                // Note: this could jump between ROM/flash depending on cpu state.
+                // Hopefully, the ordinary visit pass within a bank, makes the destination reachable anyway.
+                var dest = inst.Arg0;
+                return (dest, conditional: true);
             }
+
+            case OperationKind.BR:
+            {
+                var dest = (ushort)(offset + inst.Size + (sbyte)inst.Arg0);
+                return (dest, conditional: true);
+            }
+
+            case OperationKind.BRF:
+            {
+                var dest = (ushort)(offset + inst.Size - 1 + inst.Arg0);
+                return (dest, conditional: true);
+            }
+
+            // Unconditional branches
+            //
+            case OperationKind.BZ or OperationKind.BNZ:
+            {
+                var dest = (ushort)(offset + inst.Size + (sbyte)inst.Arg0);
+                return (dest, conditional: false);
+            }
+
+            case OperationKind.BP or OperationKind.BPC or OperationKind.BN:
+            {
+                var dest = (ushort)(offset + inst.Size + (sbyte)inst.Arg2);
+                return (dest, conditional: false);
+            }
+
+            case OperationKind.DBNZ:
+            {
+                var dest = (ushort)(offset + inst.Size + (sbyte)inst.Arg1);
+                return (dest, conditional: false);
+            }
+
+            case OperationKind.BE or OperationKind.BNE:
+            {
+                var param0 = inst.Parameters[0];
+                var indirectMode = param0.Kind == ParameterKind.Ri;
+                var r8 = indirectMode ? (sbyte)inst.Arg2 : (sbyte)inst.Arg1;
+                var dest = (ushort)(offset + inst.Size + r8);
+                return (dest, conditional: false);
+            }
+
+            case OperationKind.CALL:
+            {
+                // Similar to JMP except the next instruction is reachable
+                var dest = offset;
+                dest += 2;
+                dest &= 0b1111_0000__0000_0000;
+                dest |= inst.Arg0;
+                return (dest, conditional: false);
+            }
+
+            case OperationKind.CALLF:
+            {
+                // Similar to JMPF except the next instruction is reachable
+                var dest = inst.Arg0;
+                return (dest, conditional: false);
+            }
+
+            case OperationKind.CALLR:
+            {
+                var dest = (ushort)(offset + inst.Size - 1 + inst.Arg0);
+                return (dest, conditional: false);
+            }
+
+            // No branch (next instruction is reachable)
+            default:
+                return null;
         }
     }
 
