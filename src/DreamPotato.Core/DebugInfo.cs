@@ -218,6 +218,21 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
     public void Load(ushort[] entryPoints)
     {
         var content = cpu.GetRomBank(bankId);
+
+        // Do not load a blank program
+        var anyContent = false;
+        foreach (byte b in content)
+        {
+            if (b != 0)
+            {
+                anyContent = true;
+                break;
+            }
+        }
+
+        if (!anyContent)
+            return;
+
         // Walk all reachable executable code paths and populate the instruction map
         var pendingBranches = new Stack<ushort>(entryPoints);
 
