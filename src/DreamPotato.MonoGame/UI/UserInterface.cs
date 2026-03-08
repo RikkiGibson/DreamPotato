@@ -1038,7 +1038,6 @@ partial class UserInterface
                 var cpu = _game.PrimaryVmu._cpu;
                 var executingInThisBank = bankId == cpu.CurrentInstructionBankId;
                 var bankInfo = debugInfo.GetBankInfo(bankId);
-
                 var waterbearInfo = bankInfo.WaterbearInfo;
                 var disasm = bankInfo.DisasmEntries;
 
@@ -1051,9 +1050,6 @@ partial class UserInterface
                 }
 
                 clipper.Begin(disasm.Count);
-
-                // TODO2: Everything that sets 'Debugger_ScrollToInstruction' needs to be using a 'DisasmEntries' index now.
-                // Use a dedicated helper
                 var scrollToDisasmIndex = Debugger_ScrollToDisasm switch
                 {
                     var (destIndex, destBankId) when destBankId == bankId => destIndex,
@@ -1067,6 +1063,7 @@ partial class UserInterface
                     for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
                     {
                         ImGui.PushID(i);
+                        // We either have a label or an instruction
                         var disasmEntry = disasm[i];
                         if (disasmEntry.Label is { } label)
                         {
@@ -1076,9 +1073,11 @@ partial class UserInterface
                             continue;
                         }
 
-                        // Set background color
                         var inst = disasmEntry.Instruction;
+                        Debug.Assert(inst.HasInstruction);
                         ImGui.TableNextColumn();
+
+                        // Set background color
                         if (executingInThisBank && _game.PrimaryVmu._cpu.ProgramCounter == inst.Offset)
                         {
                             ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, Debug_ColorPc);

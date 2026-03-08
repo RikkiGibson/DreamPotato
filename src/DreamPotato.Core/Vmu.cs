@@ -249,6 +249,8 @@ public class Vmu
 
     private static WB.DebugInfo? GetWaterbearInfo(string? filePath)
     {
+        // TODO2: check Version of the resulting document
+        // Assume that future versions might have incompatible schema, handle it gracefully
         if (filePath is { }
             && $"{filePath}{".debug.json"}" is var debugInfoPath
             && File.Exists(debugInfoPath))
