@@ -172,12 +172,22 @@ partial class UserInterface
 
     private static readonly uint Debug_ColorPc = ImGui.GetColorU32(new Numerics.Vector4(99.0f/255, 92.0f/255, 31.0f/255, 1));
     private static readonly uint Debug_ColorStack = ImGui.GetColorU32(new Numerics.Vector4(53.0f/255, 50.0f/255, 18.0f/255, 1));
+    private static readonly Numerics.Vector4 Debug_ColorScrollHighlight = new Numerics.Vector4(58.0f/255, 103.0f/255, 160.0f/255, 1);
 
     internal bool Debugger_Show = false;
 
     /// <summary>Set to scroll to an instruction in a particular bank on the next frame.</summary>
     // TODO: breakpoints list is flickering the frame after setting this
-    private (int index, InstructionBank bankId)? Debugger_ScrollToDisasm = null;
+    private (bool scroll, int fadeoutFrames, int index, InstructionBank bankId) _debugger_ScrollToDisasm;
+    private const int Debugger_HighlightDurationFrames = 30;
+    private void Debugger_ScrollToDisasm(int index, InstructionBank bankId)
+    {
+        // Index needed for two reasons
+        // 1: scroll to it
+        // 2: highlight/fade-out
+        _debugger_ScrollToDisasm = (scroll: true, fadeoutFrames: Debugger_HighlightDurationFrames, index, bankId);
+    }
+
 
     internal PendingCommand PendingCommand { get; private set; }
 
@@ -979,7 +989,7 @@ partial class UserInterface
                 {
                     fixed (byte* label = "ROM"u8)
                     {
-                        var flags = Debugger_ScrollToDisasm is { bankId: InstructionBank.ROM } ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
+                        var flags = _debugger_ScrollToDisasm is { scroll: true, bankId: InstructionBank.ROM } ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
                         if (ImGuiNative.igBeginTabItem(label, p_open: null, flags) != 0)
                         {
                             layoutTab(InstructionBank.ROM);
@@ -989,7 +999,7 @@ partial class UserInterface
 
                     fixed (byte* label = "FlashBank0"u8)
                     {
-                        var flags = Debugger_ScrollToDisasm is { bankId: InstructionBank.FlashBank0 } ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
+                        var flags = _debugger_ScrollToDisasm is { scroll: true, bankId: InstructionBank.FlashBank0 } ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
                         if (ImGuiNative.igBeginTabItem(label, p_open: null, flags) != 0)
                         {
                             layoutTab(InstructionBank.FlashBank0);
@@ -1050,13 +1060,8 @@ partial class UserInterface
                 }
 
                 clipper.Begin(disasm.Count);
-                var scrollToDisasmIndex = Debugger_ScrollToDisasm switch
-                {
-                    var (destIndex, destBankId) when destBankId == bankId => destIndex,
-                    _ => -1
-                };
-                if (scrollToDisasmIndex != -1)
-                    clipper.IncludeItemByIndex(scrollToDisasmIndex);
+                if (_debugger_ScrollToDisasm.scroll)
+                    clipper.IncludeItemByIndex(_debugger_ScrollToDisasm.index);
 
                 while (clipper.Step())
                 {
@@ -1082,7 +1087,21 @@ partial class UserInterface
                         {
                             ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, Debug_ColorPc);
                         }
-                        else
+                        else if (shouldHighlightStackEntry())
+                        {
+                            ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, Debug_ColorStack);
+                        }
+                        else if (i == _debugger_ScrollToDisasm.index)
+                        {
+                            var opacity = (float)_debugger_ScrollToDisasm.fadeoutFrames / Debugger_HighlightDurationFrames;
+                            var color = ImGui.GetColorU32(Debug_ColorScrollHighlight with { W = opacity });
+                            ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, color);
+                            _debugger_ScrollToDisasm.fadeoutFrames--;
+                            if (_debugger_ScrollToDisasm.fadeoutFrames == 0)
+                                _debugger_ScrollToDisasm = default;
+                        }
+
+                        bool shouldHighlightStackEntry()
                         {
                             foreach (var entry in _game.PrimaryVmu._cpu.StackData)
                             {
@@ -1092,10 +1111,11 @@ partial class UserInterface
                                 var callAddr = entry.Source;
                                 if (inst.Offset == callAddr && bankId == entry.BankId)
                                 {
-                                    ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, Debug_ColorStack);
-                                    break;
+                                    return true;
                                 }
                             }
+
+                            return false;
                         }
 
                         ImGui.PushID("breakpoint");
@@ -1125,8 +1145,8 @@ partial class UserInterface
                         {
                             if (ImGui.Selectable(inst.DisplayInstruction(waterbearInfo)))
                             {
-                                scrollToDisasmIndex = bankInfo.BinarySearchDisasm(destAddress);
-                                Debugger_ScrollToDisasm = (scrollToDisasmIndex, bankId);
+                                var disasmIndex = bankInfo.BinarySearchDisasm(destAddress);
+                                Debugger_ScrollToDisasm(disasmIndex, bankId);
                             }
                         }
                         else
@@ -1136,11 +1156,10 @@ partial class UserInterface
 
                         ImGui.PopID();
 
-                        if (i == scrollToDisasmIndex)
+                        if (_debugger_ScrollToDisasm.scroll && i == _debugger_ScrollToDisasm.index)
                         {
                             ImGui.SetScrollHereY();
-                            scrollToDisasmIndex = -1;
-                            Debugger_ScrollToDisasm = default;
+                            _debugger_ScrollToDisasm.scroll = false;
                         }
 
                         if (ImGui.IsItemHovered())
@@ -1179,12 +1198,11 @@ partial class UserInterface
             if (bankInfo.WaterbearInfo is not { } waterbearInfo)
                 return;
 
-            // TODO2: seems like there can be a large number of these.
-            // Perhaps need an ability to keep only a subset visible and hide the rest.
-            // May also want a clipper.
+            // TODO2: use a table clipper
             ImGui.Text("Labels");
             ImGui.Separator();
-            if (ImGui.BeginTable("Labels", columns: 1, flags: ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.ScrollY))
+            ImGui.BeginChild("Labels", size: new Numerics.Vector2(x: 0, y: 200), ImGuiChildFlags.ResizeY);
+            if (ImGui.BeginTable("Labels", columns: 1, flags: ImGuiTableFlags.BordersInnerV))
             {
                 var labels = waterbearInfo.Labels;
                 for (var i = 0; i < labels.Length; i++)
@@ -1197,7 +1215,7 @@ partial class UserInterface
                     if (inst.HasInstruction)
                     {
                         if (ImGui.Selectable(label.DisplayName))
-                            Debugger_ScrollToDisasm = (bankInfo.BinarySearchDisasm(inst.Offset), bankId);
+                            Debugger_ScrollToDisasm(bankInfo.BinarySearchDisasm(inst.Offset), bankId);
                     }
                     else
                     {
@@ -1209,6 +1227,7 @@ partial class UserInterface
 
                 ImGui.EndTable();
             }
+            ImGui.EndChild();
         }
 
         void layoutBreakpoints(InstructionBank bankId)
@@ -1239,7 +1258,7 @@ partial class UserInterface
                     var inst = bankInfo.GetOrLoadInstruction(breakpoints[i].Offset);
                     if (ImGui.Selectable(inst.Offset.ToString("X4")))
                     {
-                        Debugger_ScrollToDisasm = (bankInfo.BinarySearchDisasm(inst.Offset), bankId);
+                        Debugger_ScrollToDisasm(bankInfo.BinarySearchDisasm(inst.Offset), bankId);
                     }
 
                     ImGui.TableNextColumn();
@@ -1321,7 +1340,7 @@ partial class UserInterface
                     var inst = bankInfo.Instructions[index];
                     if (ImGui.Selectable(inst.Offset.ToString("X4")))
                     {
-                        Debugger_ScrollToDisasm = (bankInfo.BinarySearchDisasm(inst.Offset), entry.BankId);
+                        Debugger_ScrollToDisasm(bankInfo.BinarySearchDisasm(inst.Offset), entry.BankId);
                     }
                     ImGui.TableNextColumn();
                     ImGui.Text(inst.DisplayInstruction(bankInfo.WaterbearInfo));
@@ -1365,7 +1384,7 @@ partial class UserInterface
         Debug.Assert(debugInfo is not null);
         var bankInfo = debugInfo.CurrentBankInfo;
         var index = bankInfo.BinarySearchDisasm(info.Offset);
-        Debugger_ScrollToDisasm = (index, bankInfo.BankId);
+        Debugger_ScrollToDisasm(index, bankInfo.BankId);
     }
 
     private void LayoutKeyMapping()
