@@ -108,7 +108,7 @@ public class Memory
         readStream.ReadExactly(_workRam);
     }
 
-    public byte Read(ushort address)
+    public byte Read(ushort address, bool doSideEffects = true)
     {
         Debug.Assert(address < 0x200);
         switch (address)
@@ -116,7 +116,7 @@ public class Memory
             case >= 0 and < 0x100:
                 return ReadMainMemory(address);
             case >= 0x100 and < 0x180:
-                return SFRs.Read((byte)(address - 0x100));
+                return SFRs.Read((byte)(address - 0x100), doSideEffects);
             case >= 0x180 and < 0x200:
                 return ReadXram((byte)(address - 0x180));
             default:
@@ -276,9 +276,9 @@ public class Memory
                 return 0xff;
             }
 
-            if ((address & 0xf) is >= 0xc and <= 0xf)
+            if (address >= XramBank2Size)
             {
-                _logger.LogDebug($"Reading skipped XRAM 0x{address:X}!");
+                _logger.LogDebug($"Reading skipped XRAM 2 0x{address:X}!");
                 return 0xff;
             }
 

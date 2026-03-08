@@ -1032,7 +1032,7 @@ partial class UserInterface
                 ImGui.TableNextColumn();
                 layoutControls();
                 ImGui.Separator();
-                layoutWatch();
+                layoutWatch(bankId);
                 layoutLabels(bankId);
                 layoutBreakpoints(bankId);
                 layoutStack();
@@ -1198,9 +1198,9 @@ partial class UserInterface
             if (bankInfo.WaterbearInfo is not { } waterbearInfo)
                 return;
 
-            // TODO2: use a table clipper
-            ImGui.Text("Labels");
-            ImGui.Separator();
+            if (!ImGui.CollapsingHeader("Labels", ImGuiTreeNodeFlags.DefaultOpen))
+                return;
+
             ImGui.BeginChild("Labels", size: new Numerics.Vector2(x: 0, y: 200), ImGuiChildFlags.ResizeY);
             if (ImGui.BeginTable("Labels", columns: 1, flags: ImGuiTableFlags.BordersInnerV))
             {
@@ -1232,8 +1232,9 @@ partial class UserInterface
 
         void layoutBreakpoints(InstructionBank bankId)
         {
-            ImGui.Text("Breakpoints");
-            ImGui.Separator();
+            if (!ImGui.CollapsingHeader("Breakpoints", ImGuiTreeNodeFlags.DefaultOpen))
+                return;
+
             if (ImGui.BeginTable("Breakpoints", columns: 3, flags: ImGuiTableFlags.BordersInnerV))
             {
                 ImGui.TableSetupColumn("breakpoints", ImGuiTableColumnFlags.WidthFixed);
@@ -1272,8 +1273,9 @@ partial class UserInterface
 
         void layoutStack()
         {
-            ImGui.Text("Stack");
-            ImGui.Separator();
+            if (!ImGui.CollapsingHeader("Stack", ImGuiTreeNodeFlags.DefaultOpen))
+                return;
+
             if (ImGui.BeginTable("stack", columns: 3, flags: ImGuiTableFlags.BordersInnerV))
             {
                 ImGui.TableSetupColumn("breakpoints", ImGuiTableColumnFlags.WidthFixed);
@@ -1350,31 +1352,52 @@ partial class UserInterface
             }
         }
 
-        void layoutWatch()
+        void layoutWatch(InstructionBank bankId)
         {
-            ImGui.Text("Watch");
-            ImGui.Separator();
+            if (!ImGui.CollapsingHeader("Watch", ImGuiTreeNodeFlags.DefaultOpen))
+                return;
+
+            ImGui.BeginChild("Watch", size: new Numerics.Vector2(x: 0, y: 80), ImGuiChildFlags.ResizeY);
             if (ImGui.BeginTable("watch", columns: 2, flags: ImGuiTableFlags.BordersInnerV))
             {
                 ImGui.TableSetupColumn("expression");
                 ImGui.TableSetupColumn("value");
 
-                var cpu = _game.PrimaryVmu._cpu;
-                var watches = debugInfo.Watches;
-                for (int i = 0; i < watches.Count; i++)
+                var memory = _game.PrimaryVmu._cpu.Memory;
+                var waterbearInfo = debugInfo.GetBankInfo(bankId).WaterbearInfo;
+                if (waterbearInfo is { })
                 {
-                    var watch = watches[i];
-                    ImGui.TableNextColumn();
-                    ImGui.Text(watch.ToString());
+                    for (int i = 0; i < waterbearInfo.Constants.Length; i++)
+                    {
+                        var constant = waterbearInfo.Constants[i];
+                        if (constant.Value >= 0x200)
+                            continue;
 
-                    ImGui.TableNextColumn();
-                    // TODO: User should be able to specify custom watches and bank they are watching
-                    // TODO: reads in this context must not have side effects (e.g. Vtrbf)
-                    ImGui.Text($"{cpu.ReadRam(watch.Offset):X2}H");
+                        ImGui.TableNextColumn();
+                        ImGui.Text(constant.Name);
+
+                        ImGui.TableNextColumn();
+                        ImGui.Text($"{memory.Read((ushort)constant.Value, doSideEffects: false):X2}H");
+                    }
+                }
+                else
+                {
+                    var watches = debugInfo.Watches;
+                    for (int i = 0; i < watches.Count; i++)
+                    {
+                        var watch = watches[i];
+                        ImGui.TableNextColumn();
+                        ImGui.Text(watch.ToString());
+
+                        ImGui.TableNextColumn();
+                        ImGui.Text($"{memory.Read(watch.Offset, doSideEffects: false):X2}H");
+                    }
                 }
 
                 ImGui.EndTable();
             }
+
+            ImGui.EndChild();
         }
     }
 
