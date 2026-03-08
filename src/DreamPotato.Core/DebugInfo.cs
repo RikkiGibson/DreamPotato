@@ -306,6 +306,12 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
         // TODO2: we should be able to do this incrementally
         // i.e. inserting in all the correct positions when WB info is attached
         // and deleting from all the same positions when the info is detached
+        // However, it's unclear if that approach is actually better
+        //
+        // TODO2: insert spacers (think blank labels) when there is a gap in the executable code.
+        // TODO2: compute labels automatically when no debugging info.
+        // e.g. record every branch dest and make each one a label.
+        // Perhaps we can show a list of usages of a label on click when we do this
         _disasmEntries.Clear();
         foreach (var inst in Instructions)
             _disasmEntries.Add(new DisasmEntry(inst));

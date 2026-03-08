@@ -179,7 +179,8 @@ partial class UserInterface
     /// <summary>Set to scroll to an instruction in a particular bank on the next frame.</summary>
     // TODO: breakpoints list is flickering the frame after setting this
     private (bool scroll, int fadeoutFrames, int index, InstructionBank bankId) _debugger_ScrollToDisasm;
-    private const int Debugger_HighlightDurationFrames = 30;
+    private const int Debugger_HighlightDurationFrames = 60;
+    private const int Debugger_HighlightBeginFadeoutFrames = 30;
     private void Debugger_ScrollToDisasm(int index, InstructionBank bankId)
     {
         // Index needed for two reasons
@@ -1091,9 +1092,13 @@ partial class UserInterface
                         {
                             ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, Debug_ColorStack);
                         }
-                        else if (i == _debugger_ScrollToDisasm.index)
+                        else if (i == _debugger_ScrollToDisasm.index
+                            && _debugger_ScrollToDisasm.fadeoutFrames > 0)
                         {
-                            var opacity = (float)_debugger_ScrollToDisasm.fadeoutFrames / Debugger_HighlightDurationFrames;
+                            var opacity = _debugger_ScrollToDisasm.fadeoutFrames < Debugger_HighlightBeginFadeoutFrames
+                                ? (float)_debugger_ScrollToDisasm.fadeoutFrames / Debugger_HighlightBeginFadeoutFrames
+                                : 1f;
+                            // TODO2: use the imgui color for hovered Selectable instead of our own
                             var color = ImGui.GetColorU32(Debug_ColorScrollHighlight with { W = opacity });
                             ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, color);
                             _debugger_ScrollToDisasm.fadeoutFrames--;
