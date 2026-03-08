@@ -247,19 +247,29 @@ public class Vmu
         return debugInfo;
     }
 
-    private static WB.DebugInfo? GetWaterbearInfo(string? filePath)
+    private WB.DebugInfo? GetWaterbearInfo(string? filePath)
     {
-        // TODO2: check Version of the resulting document
-        // Assume that future versions might have incompatible schema, handle it gracefully
-        if (filePath is { }
-            && $"{filePath}{".debug.json"}" is var debugInfoPath
-            && File.Exists(debugInfoPath))
+        if (filePath is null)
+            return null;
+
+        var debugInfoPath = $"{filePath}.debug.json";
+        if (!File.Exists(debugInfoPath))
+            return null;
+
+        try
         {
             using var fileStream = File.OpenRead(debugInfoPath);
-            return JsonSerializer.Deserialize(fileStream, WaterbearJsonSerializerContext.Default.DebugInfo);
-        }
+            var waterbearInfo = JsonSerializer.Deserialize(fileStream, WaterbearJsonSerializerContext.Default.DebugInfo);
+            if (waterbearInfo?.Version != "1")
+                return null;
 
-        return null;
+            return waterbearInfo;
+        }
+        catch (Exception ex)
+        {
+            _cpu.Logger.LogError(ex.Message);
+            return null;
+        }
     }
 
     public DebugInfo? LazyDebugInfo => _cpu.LazyDebugInfo;
