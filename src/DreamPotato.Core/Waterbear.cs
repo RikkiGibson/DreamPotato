@@ -1,6 +1,7 @@
 global using WB = DreamPotato.Core.Waterbear;
 
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Text.Json.Serialization;
 
 namespace DreamPotato.Core.Waterbear;
@@ -38,7 +39,29 @@ public class DebugInfo
     public required ImmutableArray<Label> Labels { get; init; }
 
     [JsonPropertyName("constants")]
-    public required ImmutableArray<Constant> Constants { get; init; }
+    public required ImmutableArray<Constant> Constants
+    {
+        get;
+        init
+        {
+            field = value;
+            ConstantsBySource = [.. value
+                .GroupBy(constant => constant.Span.Start.Source)
+                .OrderBy(grouping => grouping.Key)
+                .Select(grouping => grouping.ToImmutableArray())];
+        }
+    }
+
+    [JsonIgnore]
+    public ImmutableArray<ImmutableArray<Constant>> ConstantsBySource
+    {
+        get
+        {
+            Debug.Assert(!field.IsDefault);
+            return field;
+        }
+        private init;
+    }
 
     /// <summary>Sorted by <see cref="Instruction.Span" />, not by <see cref="Instruction.Offset"/>.</summary>
     [JsonPropertyName("instructions")]

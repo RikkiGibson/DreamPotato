@@ -26,6 +26,7 @@ using Microsoft.Xna.Framework.Input;
 using NativeFileDialogSharp;
 
 using Numerics = System.Numerics;
+using WB = DreamPotato.Core.Waterbear;
 
 namespace DreamPotato.MonoGame.UI;
 
@@ -1362,31 +1363,37 @@ partial class UserInterface
             if (!ImGui.CollapsingHeader("Watch", ImGuiTreeNodeFlags.DefaultOpen))
                 return;
 
-            ImGui.BeginChild("Watch", size: new Numerics.Vector2(x: 0, y: 80), ImGuiChildFlags.ResizeY);
-            if (ImGui.BeginTable("watch", columns: 2, flags: ImGuiTableFlags.BordersInnerV))
+            if (!ImGui.BeginChild("Watch", size: new Numerics.Vector2(x: 0, y: 80), ImGuiChildFlags.ResizeY))
+                return;
+
+            var memory = _game.PrimaryVmu._cpu.Memory;
+            if (debugInfo.GetBankInfo(bankId).WaterbearInfo is { } waterbearInfo)
             {
-                ImGui.TableSetupColumn("expression");
-                ImGui.TableSetupColumn("value");
-
-                var memory = _game.PrimaryVmu._cpu.Memory;
-                var waterbearInfo = debugInfo.GetBankInfo(bankId).WaterbearInfo;
-                if (waterbearInfo is { })
+                if (waterbearInfo.ConstantsBySource.Length == 1)
                 {
-                    for (int i = 0; i < waterbearInfo.Constants.Length; i++)
-                    {
-                        var constant = waterbearInfo.Constants[i];
-                        if (constant.Value >= 0x200)
-                            continue;
-
-                        ImGui.TableNextColumn();
-                        ImGui.Text(constant.Name);
-
-                        ImGui.TableNextColumn();
-                        ImGui.Text($"{memory.Read((ushort)constant.Value, doSideEffects: false):X2}H");
-                    }
+                    layoutOneWaterbearSourceWatch(waterbearInfo.ConstantsBySource[0], memory);
                 }
                 else
                 {
+                    for (int i = 0; i < waterbearInfo.ConstantsBySource.Length; i++)
+                    {
+                        var sourceName = Path.GetFileName(waterbearInfo.Sources[i].Path.AsSpan());
+                        if (ImGui.TreeNode(sourceName))
+                        {
+                            layoutOneWaterbearSourceWatch(waterbearInfo.ConstantsBySource[i], memory);
+                            ImGui.TreePop();
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // TODO2: it seems like it would be better to use one representation of the watch value and share the UI code
+                if (ImGui.BeginTable("watch", columns: 2, flags: ImGuiTableFlags.BordersInnerV))
+                {
+                    ImGui.TableSetupColumn("expression");
+                    ImGui.TableSetupColumn("value");
+
                     var watches = debugInfo.Watches;
                     for (int i = 0; i < watches.Count; i++)
                     {
@@ -1397,12 +1404,35 @@ partial class UserInterface
                         ImGui.TableNextColumn();
                         ImGui.Text($"{memory.Read(watch.Offset, doSideEffects: false):X2}H");
                     }
+
+                    ImGui.EndTable();
+                }
+            }
+
+            ImGui.EndChild();
+
+            void layoutOneWaterbearSourceWatch(ImmutableArray<WB.Constant> constants, Memory memory)
+            {
+                if (!ImGui.BeginTable("watch", columns: 2, flags: ImGuiTableFlags.BordersInnerV))
+                    return;
+
+                ImGui.TableSetupColumn("expression");
+                ImGui.TableSetupColumn("value");
+                for (int j = 0; j < constants.Length; j++)
+                {
+                    var constant = constants[j];
+                    if (constant.Value >= 0x200)
+                        continue;
+
+                    ImGui.TableNextColumn();
+                    ImGui.Text(constant.Name);
+
+                    ImGui.TableNextColumn();
+                    ImGui.Text($"{memory.Read((ushort)constant.Value, doSideEffects: false):X2}H");
                 }
 
                 ImGui.EndTable();
             }
-
-            ImGui.EndChild();
         }
     }
 
