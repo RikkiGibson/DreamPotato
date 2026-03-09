@@ -272,6 +272,8 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
         if (!anyContent)
             return;
 
+        // TODO2: debug why we reach 0xB80D in the ROM. Looks like FF-padding
+
         // Walk all reachable executable code paths and populate the instruction map
         var pendingBranches = new Stack<ushort>(entryPoints);
         var changed = false;
