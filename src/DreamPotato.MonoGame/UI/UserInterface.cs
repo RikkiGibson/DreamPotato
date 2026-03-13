@@ -1146,7 +1146,7 @@ partial class UserInterface
 
                         ImGui.SameLine();
 
-                        if (inst.GetBranchAddress() is ushort destAddress)
+                        if (inst.GetBranchAddress(bankInfo) is ushort destAddress)
                         {
                             if (ImGui.Selectable(inst.DisplayInstruction(waterbearInfo)))
                             {

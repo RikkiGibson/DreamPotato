@@ -72,9 +72,9 @@ public readonly struct InstructionDebugInfo : IComparable<InstructionDebugInfo>
         return builder.ToString();
     }
 
-    public ushort? GetBranchAddress()
+    public ushort? GetBranchAddress(BankDebugInfo bankDebugInfo)
     {
-        return BankDebugInfo.GetBranchInfo(Instruction).branchAddress;
+        return bankDebugInfo.GetBranchInfo(Instruction).branchAddress;
     }
 
     public int CompareTo(InstructionDebugInfo other)
@@ -270,8 +270,6 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
         if (!anyContent)
             return;
 
-        // TODO2: debug why we reach 0xB80D in the ROM. Looks like FF-padding
-
         // Walk all reachable executable code paths and populate the instruction map
         var pendingBranches = new Stack<ushort>(entryPoints);
         var changed = false;
@@ -280,10 +278,6 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
             ushort offset = pendingBranches.Pop();
             if (offset >= content.Length)
                 continue;
-
-            if (offset == 0xb80d)
-            { // breakpoint holder    
-            }
 
             // Already visited
             if (this.GetInstruction(offset).HasInstruction)
@@ -324,7 +318,7 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
         _disasmEntries.Sort();
     }
 
-    internal static (ushort? branchAddress, bool nextReachable) GetBranchInfo(Instruction inst)
+    internal (ushort? branchAddress, bool nextReachable) GetBranchInfo(Instruction inst)
     {
         var offset = inst.Offset;
 
@@ -347,8 +341,20 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
 
             case OperationKind.JMPF:
             {
-                // Note: this could jump between ROM/flash depending on cpu state.
-                // Hopefully, the ordinary visit pass within a bank, makes the destination reachable anyway.
+                // Special case: 'NOT1 EXT, 0; JMPF' is conventionally used to jump to another bank.
+                // For now, our reachability analysis is isolated to a single bank at a time.
+                // Therefore, we will consider the destination of this JMPF to be unreachable.
+                if (this.GetInstruction((ushort)(inst.Offset - Operations.NOT1_d9_b3.Size)) is
+                    {
+                        HasInstruction: true,
+                        Operation.Kind: OperationKind.NOT1,
+                        Instruction.Arg0: 0x100 | SpecialFunctionRegisterIds.Ext,
+                        Instruction.Arg1: 0
+                    })
+                {
+                    return (branchAddress: null, nextReachable: false);
+                }
+
                 var dest = inst.Arg0;
                 return (dest, nextReachable: false);
             }
