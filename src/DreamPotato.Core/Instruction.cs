@@ -63,19 +63,6 @@ readonly record struct Instruction(ushort Offset, Operation Operation, ushort Ar
         return builder.ToString();
     }
 
-    // TODO2: needed?
-    public ushort? TryGetDestAddress(Parameter param, ushort arg)
-    {
-        return param.Kind switch
-        {
-            ParameterKind.R8 => (ushort)(Offset + Operation.Size + (sbyte)arg),
-            ParameterKind.R16 => (ushort)(Offset + arg),
-            ParameterKind.A8 => (ushort)((Offset & 0xff00) | arg),
-            ParameterKind.A12 => (ushort)((Offset & 0xf000) | arg),
-            _ => null
-        };
-    }
-
     public void DisplayArgument(StringBuilder builder, Parameter param, ushort arg)
     {
         if (param.Kind == ParameterKind.D9 && (arg & 0x100) != 0)
