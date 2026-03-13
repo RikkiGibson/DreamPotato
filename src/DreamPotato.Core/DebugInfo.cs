@@ -123,8 +123,6 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
 
     public int BinarySearchDisasm(ushort offset)
     {
-        // TODO2: seems heavy for such a simple purpose.
-        // Perhaps InstructionDebugInfo should be reference type and DisasmEntry should have an offset field.
         var item = new DisasmEntry(new InstructionDebugInfo(new Instruction() { Offset = offset }, executed: false));
         return _disasmEntries.BinarySearch(item);
     }
@@ -283,6 +281,10 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
             if (offset >= content.Length)
                 continue;
 
+            if (offset == 0xb80d)
+            { // breakpoint holder    
+            }
+
             // Already visited
             if (this.GetInstruction(offset).HasInstruction)
                 continue;
@@ -305,11 +307,6 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
 
     void UpdateDisasmDisplay()
     {
-        // TODO2: we should be able to do this incrementally
-        // i.e. inserting in all the correct positions when WB info is attached
-        // and deleting from all the same positions when the info is detached
-        // However, it's unclear if that approach is actually better
-        //
         // TODO2: insert spacers (think blank labels) when there is a gap in the executable code.
         // TODO2: compute labels automatically when no debugging info.
         // e.g. record every branch dest and make each one a label.

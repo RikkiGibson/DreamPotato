@@ -1099,7 +1099,6 @@ partial class UserInterface
                             var opacity = _debugger_ScrollToDisasm.fadeoutFrames < Debugger_HighlightBeginFadeoutFrames
                                 ? (float)_debugger_ScrollToDisasm.fadeoutFrames / Debugger_HighlightBeginFadeoutFrames
                                 : 1f;
-                            // TODO2: use the imgui color for hovered Selectable instead of our own
                             var color = ImGui.GetColorU32(Debug_ColorScrollHighlight with { W = opacity });
                             ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, color);
                             _debugger_ScrollToDisasm.fadeoutFrames--;
