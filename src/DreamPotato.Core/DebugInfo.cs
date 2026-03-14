@@ -9,10 +9,10 @@ namespace DreamPotato.Core;
 public readonly struct DisasmEntry : IComparable<DisasmEntry>
 {
     public DisasmEntry(InstructionDebugInfo instruction) => Instruction = instruction;
-    public DisasmEntry(WB.Label label) => Label = label;
+    public DisasmEntry(LabelInfo label) => Label = label;
 
     public InstructionDebugInfo Instruction { get; }
-    public WB.Label? Label { get; }
+    public LabelInfo? Label { get; }
 
     public ushort Offset => Label?.Offset ?? Instruction.Offset;
 
@@ -86,6 +86,20 @@ public readonly struct InstructionDebugInfo : IComparable<InstructionDebugInfo>
         => $"({Instruction}, Executed={Executed})";
 }
 
+public class LabelInfo : IComparable<LabelInfo>
+{
+    public required ushort Offset { get; init; }
+    public string? Name { get; init; }
+    public List<ushort> ReachableFrom { get; } = [];
+
+    public int CompareTo(LabelInfo? other) => other is null ? 1 : Offset.CompareTo(other.Offset);
+
+    public override string ToString()
+    {
+        return Name ?? $"Label_{Offset:X4}";
+    }
+}
+
 public class BreakpointInfo
 {
     public required bool Enabled;
@@ -109,11 +123,22 @@ public class WatchInfo
 public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
 {
     public InstructionBank BankId => bankId;
-    public WB.DebugInfo? WaterbearInfo { get; internal set { field = value; UpdateDisasmDisplay(); } }
+    public WB.DebugInfo? WaterbearInfo
+    {
+        get;
+        internal set
+        {
+            field = value;
+            UpdateDisasmDisplay();
+        }
+    }
 
     /// <summary>NOTE: must be sorted by Offset.</summary>
     public IReadOnlyList<InstructionDebugInfo> Instructions => _instructions;
     private readonly List<InstructionDebugInfo> _instructions = [];
+
+    public IReadOnlyList<LabelInfo> Labels => _labels;
+    private readonly List<LabelInfo> _labels = [];
 
     public IReadOnlyList<DisasmEntry> DisasmEntries => _disasmEntries;
     private readonly List<DisasmEntry> _disasmEntries = [];
@@ -292,27 +317,52 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
                 pendingBranches.Push((ushort)(offset + inst.Size));
 
             if (branchInfo.branchAddress is ushort branchAddress)
+            {
                 pendingBranches.Push(branchAddress);
+                addOrUpdateLabel(inst, branchAddress);
+            }
         }
 
         if (changed)
             UpdateDisasmDisplay();
+
+        void addOrUpdateLabel(Instruction inst, ushort branchAddress)
+        {
+            // Indicate that the label at 'branchAddress' is reachable from 'inst'
+            LabelInfo label;
+            var index = _labels.BinarySearch(new LabelInfo() { Offset = branchAddress });
+            if (index >= 0)
+            {
+                label = _labels[index];
+            }
+            else
+            {
+                label = new LabelInfo() { Offset = branchAddress };
+                _labels.Insert(~index, label);
+            }
+
+            label.ReachableFrom.Add(inst.Offset);
+        }
     }
 
     void UpdateDisasmDisplay()
     {
         // TODO2: insert spacers (think blank labels) when there is a gap in the executable code.
-        // TODO2: compute labels automatically when no debugging info.
-        // e.g. record every branch dest and make each one a label.
-        // Perhaps we can show a list of usages of a label on click when we do this
         _disasmEntries.Clear();
         foreach (var inst in Instructions)
             _disasmEntries.Add(new DisasmEntry(inst));
 
-        if (WaterbearInfo is { })
+        foreach (var label in Labels)
         {
-            foreach (var label in WaterbearInfo.Labels)
+            if (WaterbearInfo?.Labels.FirstOrDefault(wbLabel => wbLabel.Offset == label.Offset) is not { } wbLabel)
+            {
                 _disasmEntries.Add(new DisasmEntry(label));
+                continue;
+            }
+
+            var mergedLabel = new LabelInfo { Offset = label.Offset, Name = wbLabel.DisplayName };
+            mergedLabel.ReachableFrom.AddRange(label.ReachableFrom);
+            _disasmEntries.Add(new DisasmEntry(mergedLabel));
         }
 
         _disasmEntries.Sort();
@@ -431,6 +481,8 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
     internal void Clear()
     {
         _instructions.Clear();
+        _labels.Clear();
+        _disasmEntries.Clear();
         Breakpoints.Clear();
         WaterbearInfo = null;
     }

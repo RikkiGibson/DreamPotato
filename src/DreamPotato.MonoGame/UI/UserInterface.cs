@@ -1075,7 +1075,26 @@ partial class UserInterface
                         if (disasmEntry.Label is { } label)
                         {
                             ImGui.TableNextColumn();
-                            ImGui.Text($"{label.DisplayName}:");
+                            if (ImGui.Selectable($"{label.Name}:"))
+                                ImGui.OpenPopup("label_ReachableFrom");
+
+                            if (ImGui.BeginPopup("label_ReachableFrom"))
+                            {
+                                ImGui.Text("Reachable from:");
+                                ImGui.Separator();
+                                foreach (var reachableFrom in label.ReachableFrom)
+                                {
+                                    var reachableFromInst = bankInfo.GetInstruction(reachableFrom);
+                                    var instDisplay = reachableFromInst.DisplayInstruction(waterbearInfo);
+                                    if (ImGui.Selectable($"{reachableFrom:X4} {instDisplay}"))
+                                    {
+                                        var disasmIndex = bankInfo.BinarySearchDisasm(reachableFrom);
+                                        Debugger_ScrollToDisasm(disasmIndex, bankId);
+                                    }
+                                }
+                                ImGui.EndPopup();
+                            }
+
                             ImGui.PopID();
                             continue;
                         }
