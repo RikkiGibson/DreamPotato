@@ -353,7 +353,6 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
 
     void UpdateDisasmDisplay()
     {
-        // TODO2: insert spacers (think blank labels) when there is a gap in the executable code.
         _disasmEntries.Clear();
         foreach (var inst in Instructions)
             _disasmEntries.Add(new DisasmEntry(inst));
