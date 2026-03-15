@@ -926,22 +926,12 @@ public class Cpu
 
     internal Instruction StepInstruction()
     {
-<<<<<<< HEAD
-||||||| 1663ca1
-        ServiceInterruptIfNeeded();
-        AdvanceInterruptState();
-
-=======
         if (LazyDebugInfo?.DebuggingState == DebuggingState.Break)
         {
             // Do not tick any timers, etc.
             return new Instruction(Pc, Operations.NOP);
         }
 
-        ServiceInterruptIfNeeded();
-        AdvanceInterruptState();
-
->>>>>>> origin/main
         // TODO: hold mode doesn't even tick timers. only external interrupts wake the VMU.
         if (SFRs.Pcon.HaltMode)
         {
@@ -1023,13 +1013,7 @@ public class Cpu
 
         handleInterrupts();
         tickCpuClockedTimers(inst.Cycles);
-<<<<<<< HEAD
-||||||| 1663ca1
-        requestLevelDrivenInterrupts();
-=======
-        requestLevelDrivenInterrupts();
         handleBreakpoints();
->>>>>>> origin/main
         return inst;
 
         static void Throw(Instruction inst) => throw new InvalidOperationException($"Unknown operation '{inst}'");
@@ -1234,10 +1218,6 @@ public class Cpu
                 }
             }
         }
-<<<<<<< HEAD
-
-||||||| 1663ca1
-=======
 
         void handleBreakpoints()
         {
@@ -1258,7 +1238,6 @@ public class Cpu
                     LazyDebugInfo.FireDebugBreak();
             }
         }
->>>>>>> origin/main
     }
 
     private void ReceiveSerialTransferBit(bool bit, bool isEnd)
