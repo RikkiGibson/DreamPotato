@@ -1994,7 +1994,9 @@ public class Cpu
         {
             Logger.LogDebug($"Detected a PUSH+RET to {Pc:X4}H");
             if (StackData.Pop() is { Kind: not StackValueKind.Push } badValue)
-                Logger.LogError($"Returned to a mix of a Push value and a {badValue.Kind} value. Stack debug data is corrupted. {badValue}");            
+                Logger.LogError($"Returned to a mix of a Push value and a {badValue.Kind} value. Stack debug data is corrupted. {badValue}");
+
+            // TODO2: record the dynamically discovered branch                
         }
         else if (stackEntry.Kind != StackValueKind.CallReturn)
         {
