@@ -1403,7 +1403,7 @@ partial class UserInterface
             }
             else
             {
-                // TODO2: it seems like it would be better to use one representation of the watch value and share the UI code
+                // TODO: it seems like it would be better to use one representation of the watch value and share the UI code
                 if (ImGui.BeginTable("watch", columns: 2, flags: ImGuiTableFlags.BordersInnerV))
                 {
                     ImGui.TableSetupColumn("expression");
