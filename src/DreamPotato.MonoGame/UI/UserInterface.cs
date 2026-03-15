@@ -1075,7 +1075,7 @@ partial class UserInterface
                         if (disasmEntry.Label is { } label)
                         {
                             ImGui.TableNextColumn();
-                            if (ImGui.Selectable($"{label.Name}:"))
+                            if (ImGui.Selectable($"{label.DisplayLabel(bankInfo.WaterbearInfo)}:"))
                                 ImGui.OpenPopup("label_ReachableFrom");
 
                             if (ImGui.BeginPopup("label_ReachableFrom"))
@@ -1219,17 +1219,14 @@ partial class UserInterface
         void layoutLabels(InstructionBank bankId)
         {
             var bankInfo = debugInfo.GetBankInfo(bankId);
-            if (bankInfo.WaterbearInfo is not { } waterbearInfo)
-                return;
-
             if (!ImGui.CollapsingHeader("Labels", ImGuiTreeNodeFlags.DefaultOpen))
                 return;
 
             ImGui.BeginChild("Labels", size: new Numerics.Vector2(x: 0, y: 200), ImGuiChildFlags.ResizeY);
             if (ImGui.BeginTable("Labels", columns: 1, flags: ImGuiTableFlags.BordersInnerV))
             {
-                var labels = waterbearInfo.Labels;
-                for (var i = 0; i < labels.Length; i++)
+                var labels = bankInfo.Labels;
+                for (var i = 0; i < labels.Count; i++)
                 {
                     var label = labels[i];
                     ImGui.PushID(i);
@@ -1238,12 +1235,12 @@ partial class UserInterface
                     var inst = bankInfo.GetInstruction(label.Offset);
                     if (inst.HasInstruction)
                     {
-                        if (ImGui.Selectable(label.DisplayName))
+                        if (ImGui.Selectable(label.DisplayLabel(bankInfo.WaterbearInfo)))
                             Debugger_ScrollToDisasm(bankInfo.BinarySearchDisasm(inst.Offset), bankId);
                     }
                     else
                     {
-                        ImGui.Text($"{label.DisplayName} (data)");
+                        ImGui.Text($"{label.DisplayLabel(bankInfo.WaterbearInfo)} (data)");
                     }
 
                     ImGui.PopID();

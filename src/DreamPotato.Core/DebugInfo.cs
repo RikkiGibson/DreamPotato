@@ -89,14 +89,20 @@ public readonly struct InstructionDebugInfo : IComparable<InstructionDebugInfo>
 public class LabelInfo : IComparable<LabelInfo>
 {
     public required ushort Offset { get; init; }
-    public string? Name { get; init; }
     public List<ushort> ReachableFrom { get; } = [];
 
     public int CompareTo(LabelInfo? other) => other is null ? 1 : Offset.CompareTo(other.Offset);
 
-    public override string ToString()
+    public string DisplayLabel(WB.DebugInfo? waterbearInfo)
     {
-        return Name ?? $"Label_{Offset:X4}";
+        if (waterbearInfo is null)
+            return $"Label_{Offset:X4}";
+
+        var labelIndex = waterbearInfo.LabelsByOffset.BinarySearch(WB.Label.SearchFor(Offset));
+        if (labelIndex < 0)
+            return $"Label_{Offset:X4}";
+
+        return waterbearInfo.LabelsByOffset[labelIndex].DisplayName;
     }
 }
 
@@ -353,17 +359,7 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
             _disasmEntries.Add(new DisasmEntry(inst));
 
         foreach (var label in Labels)
-        {
-            if (WaterbearInfo?.Labels.FirstOrDefault(wbLabel => wbLabel.Offset == label.Offset) is not { } wbLabel)
-            {
-                _disasmEntries.Add(new DisasmEntry(label));
-                continue;
-            }
-
-            var mergedLabel = new LabelInfo { Offset = label.Offset, Name = wbLabel.DisplayName };
-            mergedLabel.ReachableFrom.AddRange(label.ReachableFrom);
-            _disasmEntries.Add(new DisasmEntry(mergedLabel));
-        }
+            _disasmEntries.Add(new DisasmEntry(label));
 
         _disasmEntries.Sort();
     }

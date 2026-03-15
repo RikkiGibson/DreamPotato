@@ -38,6 +38,18 @@ public class DebugInfo
     [JsonPropertyName("labels")]
     public required ImmutableArray<Label> Labels { get; init; }
 
+    [JsonIgnore]
+    public ImmutableArray<Label> LabelsByOffset
+    {
+        get
+        {
+            if (field.IsDefault)
+                field = [.. Labels.OrderBy(label => label.Offset)];
+
+            return field;
+        }
+    }
+
     [JsonPropertyName("constants")]
     public required ImmutableArray<Constant> Constants
     {
@@ -83,7 +95,7 @@ public class Source
     public required string Hash { get; init; }
 }
 
-public class Label
+public class Label : IComparable<Label>
 {
     /// <summary>Name of the label</summary>
     [JsonPropertyName("name")]
@@ -103,6 +115,11 @@ public class Label
     /// <summary>If this is a local label, it refers to the parent global label</summary>
     [JsonPropertyName("parent")]
     public string? Parent { get; init; }
+
+    internal static Label SearchFor(ushort offset)
+    {
+        return new Label { Name = null!, Span = null!, Offset = offset };
+    }
 
     public int CompareTo(Label? other)
     {
