@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics;
 
+using DreamPotato.Core.SFRs;
+
 namespace DreamPotato.Core;
 
 /// <summary>
@@ -106,7 +108,7 @@ public class Memory
         readStream.ReadExactly(_workRam);
     }
 
-    public byte Read(ushort address)
+    public byte Read(ushort address, bool doSideEffects = true)
     {
         Debug.Assert(address < 0x200);
         switch (address)
@@ -114,7 +116,7 @@ public class Memory
             case >= 0 and < 0x100:
                 return ReadMainMemory(address);
             case >= 0x100 and < 0x180:
-                return SFRs.Read((byte)(address - 0x100));
+                return SFRs.Read((byte)(address - 0x100), doSideEffects);
             case >= 0x180 and < 0x200:
                 return ReadXram((byte)(address - 0x180));
             default:
@@ -274,9 +276,9 @@ public class Memory
                 return 0xff;
             }
 
-            if ((address & 0xf) is >= 0xc and <= 0xf)
+            if (address >= XramBank2Size)
             {
-                _logger.LogDebug($"Reading skipped XRAM 0x{address:X}!");
+                _logger.LogDebug($"Reading skipped XRAM 2 0x{address:X}!");
                 return 0xff;
             }
 
@@ -335,3 +337,41 @@ public class Memory
         }
     }
 }
+
+public enum StackValueKind : byte
+{
+    /// <summary>
+    /// TODO: Unsure what to do with this.
+    /// Probably reserved for when user manually messes with SP, directly writes values, etc.
+    /// </summary>
+    Unknown,
+
+    /// <summary>A value added using the PUSH instruction.</summary>
+    Push,
+
+    /// <summary>Return address of a CALL or similar instruction.</summary>
+    CallReturn,
+
+    /// <summary>Return address of an interrupt service routine call.</summary>
+    InterruptReturn,
+
+}
+
+/// <param name="Source">
+/// Meaning depends on the Kind.
+/// - Push: the operand of the 'PUSH d9' instruction.
+/// - CallReturn: the address of the associated CALL instruction
+/// - InterruptReturn: address of the instruction being executed when we were interrupted. Sometimes the same as 'Value'.
+/// </param>
+/// <param name="Value">
+/// The actual value stored on the VMU stack.
+/// For 'Push' this is 1 byte. For Returns, it is 2 bytes.
+/// </param>
+/// <param name="Offset">
+/// Address where the value is stored in the VMU stack.
+/// </param>
+/// <param name="BankId">
+/// The instruction bank we were in when the value was pushed.
+/// This is needed to resolve a memory address for a Return case
+/// </param>
+public record struct StackEntry(StackValueKind Kind, ushort Source, ushort Value, ushort Offset, InstructionBank BankId);

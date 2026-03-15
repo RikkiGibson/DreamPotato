@@ -1,0 +1,155 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "https://xunit.net/schema/current/xunit.runner.schema.json",
+  "title": "xUnit.net Runner Configuration",
+  "description": "Configuration file for unit test projects using xUnit.net",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "description": "The document schema",
+      "default": "https://xunit.net/schema/current/xunit.runner.schema.json",
+      "type": "string"
+    },
+    "appDomain": {
+      "description": "Determines whether the runner will use an app domain to discover and run tests. If you choose 'required', app domains will be required (only desktop tests can be run); if you choose 'denied', then tests will not use app domains; if you choose 'ifAvailable', then app domains use is left to the discretion of the runner. Defaults to 'ifAvailable'. Note that not all runners support app domains, so the 'required' value may not always be valid.",
+      "default": "ifAvailable",
+      "enum": [
+        "required",
+        "ifAvailable",
+        "denied"
+      ]
+    },
+    "assertEquivalentMaxDepth": {
+      "description": "Determines the maximum recursive depth for object comparisons when using Assert.Equivalent.",
+      "default": 50,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2147483647
+    },
+    "culture": {
+      "description": "Sets the culture used when running tests. It should be one of: a BCP 47-compatible culture name (https://www.rfc-editor.org/info/bcp47); 'invariant' for the system invariant culture; or 'default' for the current system culture.",
+      "default": "default",
+      "type": "string"
+    },
+    "diagnosticMessages": {
+      "description": "Enables or disables diagnostic information during test discovery and execution.",
+      "default": false,
+      "type": "boolean"
+    },
+    "failSkips": {
+      "description": "Enables or disables converting skipped tests into failed tests.",
+      "default": false,
+      "type": "boolean"
+    },
+    "failWarns": {
+      "description": "Enables or disables warned tests being treated as errors. Supported for v3+ test assemblies only.",
+      "default": false,
+      "type": "boolean"
+    },
+    "internalDiagnosticMessages": {
+      "description": "Enables or disables internal diagnostic information during test discovery and execution.",
+      "default": false,
+      "type": "boolean"
+    },
+    "longRunningTestSeconds": {
+      "description": "Enables reporting of tests which take longer than the configured time to complete (set to 0 to disable).",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2147483647
+    },
+    "maxParallelThreads": {
+      "description": "Configures the maximum number of threads to be used when parallelizing tests within this assembly. Use a value of 'default' or 0 to indicate that you would like the default behavior; use a value of 'unlimited' or -1 to indicate that you do not wish to limit the number of threads used for parallelization. Positive integer values indicate an exact number of threads; a string value formatted as a positive integer or decimal followed by 'x' indicates a thread count which is a multiple of the CPU threads available (example: '1x' would give 4 threads on a 4 thread CPU, or '1.5x' would give 6 threads on a 4 thread CPU).",
+      "type": [
+        "integer",
+        "string"
+      ],
+      "default": "default",
+      "pattern": "^(\\d+(\\.\\d+)?(x|X)|default|unlimited)$",
+      "minimum": -1,
+      "maximum": 2147483647
+    },
+    "methodDisplay": {
+      "description": "Configures the default display name for test cases. If you choose 'method', the display name will be just the method (without the class name); if you choose 'classAndMethod', the default display name will be the fully qualified class name and method name.",
+      "default": "classAndMethod",
+      "enum": [
+        "method",
+        "classAndMethod"
+      ]
+    },
+    "methodDisplayOptions": {
+      "description": "Configures one or more automatic transformations of test names. Flag names should be combined with a comma (i.e., flag1,flag2). Valid flags are: 'replaceUnderscoreWithSpace', 'useOperatorMonikers', 'useEscapeSequences', 'replacePeriodWithComma'. There are special flags named 'all' and 'none'.",
+      "default": "none",
+      "type": "string"
+    },
+    "parallelAlgorithm": {
+      "description": "Configures the algorithm used when parallelizing test collections (and a limited number of threads). Valid values are 'conservative' (default) or 'aggressive'. For more information: https://xunit.net/docs/running-tests-in-parallel#algorithms",
+      "default": "conservative",
+      "enum": [
+        "conservative",
+        "aggressive"
+      ]
+    },
+    "parallelizeAssembly": {
+      "description": "Instructs the test runner that this assembly is willing to run in parallel with other assemblies.",
+      "default": false,
+      "type": "boolean"
+    },
+    "parallelizeTestCollections": {
+      "description": "Enables or disables tests inside this assembly from running in parallel against each other. Tests in the same test collection will be run sequentially against each other, but tests in different test collections will be run in parallel against each other.",
+      "default": true,
+      "type": "boolean"
+    },
+    "preEnumerateTheories": {
+      "description": "Enables or disables pre-enumerate of theories so that there is an individual test case for each theory data row. Set this to 'false' to return a single test case for each theory without pre-enumerating the data ahead of time; set this to 'true' to attempt to pre-enumerate each theory row when possible.",
+      "type": "boolean"
+    },
+    "printMaxEnumerableLength": {
+      "description": "Sets the maximum number of items to print when printing a collection, after which an ellipsis will be shown. Defaults to 5. If set to 0, there is no maximum length when printing collections collection.",
+      "default": 5,
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2147483646
+    },
+    "printMaxObjectDepth": {
+      "description": "Sets the maximum number of embedded objects to print, after which an ellipsis will be shown. Defaults to 3. If set to 1, only prints top-level objects; if set to 0, there is no maximum depth for embedded objects.",
+      "default": 3,
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2147483646
+    },
+    "printMaxObjectMemberCount": {
+      "description": "Sets the maximum number of members to print when printing an object, after which an ellipsis will be shown. Defaults to 5. If set to 0, all object members will be printed.",
+      "default": 5,
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2147483646
+    },
+    "printMaxStringLength": {
+      "description": "Sets the maximum length when printing a string value, after which an ellipsis will be shown. Defaults to 50. If set to 0, strings will not be truncated when printed.",
+      "default": 50,
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2147483646
+    },
+    "seed": {
+      "description": "Set this to set the seed used for randomization. For the most part, this value is unused, as test case randomness is now determined in a more stable way that does not involve pseudo-randomness; however, the seed may be used in some fallback cases (notably with custom test cases via 3rd party extensibility, which throw when queried for their unique ID). This value is otherwise currently unused.",
+      "type": "integer"
+    },
+    "shadowCopy": {
+      "description": "Enables or disables use of shadow copying when using app domains. Has no effect if app domains are not used.",
+      "default": true,
+      "type": "boolean"
+    },
+    "showLiveOutput": {
+       "description": "Enables or disables showing output from ITestOutputHelper live during the test run (in addition to showing them after the test has completed).",
+       "default": false,
+       "type": "boolean"
+    },
+    "stopOnFail": {
+      "description": "Enable or disable stopping running further tests once a failed test has been recorded.",
+      "default": false,
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false
+}

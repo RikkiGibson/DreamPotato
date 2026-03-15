@@ -24,10 +24,16 @@
 
   <ItemGroup>
     <None Update="TestSource/*.vms" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="TestSource/*.debug.json" CopyToOutputDirectory="PreserveNewest" />
 
     <Content Include="Data/*.bin">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="Data/*.debug.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

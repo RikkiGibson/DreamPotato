@@ -2,8 +2,10 @@ using System.Buffers.Binary;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Text;
+using System.Text.Json;
 
 using DreamPotato.Core.SFRs;
+using DreamPotato.Core.Waterbear;
 
 namespace DreamPotato.Core;
 
@@ -37,7 +39,7 @@ public class Vmu
 
     public void InitializeRTCDate(DateTimeOffset date)
     {
-        if (_cpu.Pc != 0 || _cpu.InstructionBank != InstructionBank.ROM)
+        if (_cpu.Pc != 0 || _cpu.CurrentInstructionBankId != InstructionBank.ROM)
             throw new InvalidOperationException("Date should only be initialized at startup");
 
         _cpu.Pc = BuiltInCodeSymbols.BIOSAfterDateIsSet;
@@ -91,7 +93,7 @@ public class Vmu
     {
         try
         {
-            var filePath = Path.Combine(DataFolder, RomFileName);
+            var filePath = RomFilePath;
             var bios = File.ReadAllBytes(filePath);
             if (bios.Length != Cpu.InstructionBankSize)
                 throw new ArgumentException($"VMU ROM '{filePath}' needs to be exactly 64KB in size.", nameof(filePath));
@@ -113,6 +115,7 @@ public class Vmu
         _cpu.HasUnsavedChanges = false;
         _cpu.VmuFileWriteStream = null;
         _cpu.ResyncMapleOutbound();
+        _cpu.LazyDebugInfo?.ClearFlash();
     }
 
     public void LoadGameVms(string filePath, DateTimeOffset date, bool autoInitializeRTCDate)
@@ -135,6 +138,8 @@ public class Vmu
         LoadedFilePath = filePath;
         _cpu.HasUnsavedChanges = false;
         _cpu.VmuFileWriteStream = null;
+        _cpu.LazyDebugInfo?.ClearFlash();
+        _cpu.LazyDebugInfo?.GetBankInfo(InstructionBank.FlashBank0).WaterbearInfo = GetWaterbearInfo(LoadedFilePath);
 
         _cpu.ResyncMapleOutbound();
     }
@@ -155,6 +160,7 @@ public class Vmu
         Reset(rtcDate);
 
         fileStream.ReadExactly(_cpu.Flash);
+        _cpu.LazyDebugInfo?.ClearFlash();
         LoadedFilePath = filePath;
         _cpu.HasUnsavedChanges = false;
         _cpu.VmuFileWriteStream = fileStream;
@@ -228,10 +234,50 @@ public class Vmu
     public static string DataFolder => Path.Combine(AppContext.BaseDirectory, "Data");
 
     public DreamcastSlot DreamcastSlot { get => _cpu.DreamcastSlot; set => _cpu.DreamcastSlot = value; }
+    public DebugInfo GetOrCreateDebugInfo()
+    {
+        if (_cpu.LazyDebugInfo is { } existingDebugInfo)
+        {
+            return existingDebugInfo;
+        }
+
+        var debugInfo = _cpu.InitializeDebugInfo();
+        debugInfo.GetBankInfo(InstructionBank.ROM).WaterbearInfo = GetWaterbearInfo(RomFilePath);
+        debugInfo.GetBankInfo(InstructionBank.FlashBank0).WaterbearInfo = GetWaterbearInfo(LoadedFilePath);
+        return debugInfo;
+    }
+
+    private WB.DebugInfo? GetWaterbearInfo(string? filePath)
+    {
+        if (filePath is null)
+            return null;
+
+        var debugInfoPath = $"{filePath}.debug.json";
+        if (!File.Exists(debugInfoPath))
+            return null;
+
+        try
+        {
+            using var fileStream = File.OpenRead(debugInfoPath);
+            var waterbearInfo = JsonSerializer.Deserialize(fileStream, WaterbearJsonSerializerContext.Default.DebugInfo);
+            if (waterbearInfo?.Version != "1")
+                return null;
+
+            return waterbearInfo;
+        }
+        catch (Exception ex)
+        {
+            _cpu.Logger.LogError(ex.Message);
+            return null;
+        }
+    }
+
+    public DebugInfo? LazyDebugInfo => _cpu.LazyDebugInfo;
 
     public const string RomFileName = "american_v1.05.bin";
     public const string SaveStateHeaderMessage = $"DreamPotatoSaveStateV{SaveStateVersion}";
-    public const string SaveStateVersion = "4";
+    public const string SaveStateVersion = "5";
+    public string RomFilePath => Path.Combine(DataFolder, RomFileName);
 
     public static string GetSaveStatePath(string loadedFilePath, string id)
     {
