@@ -96,13 +96,36 @@ public class LabelInfo : IComparable<LabelInfo>
     public string DisplayLabel(WB.DebugInfo? waterbearInfo)
     {
         if (waterbearInfo is null)
-            return $"Label_{Offset:X4}";
+            return defaultDisplay();
 
         var labelIndex = waterbearInfo.LabelsByOffset.BinarySearch(WB.Label.SearchFor(Offset));
         if (labelIndex < 0)
-            return $"Label_{Offset:X4}";
+            return defaultDisplay();
 
         return waterbearInfo.LabelsByOffset[labelIndex].DisplayName;
+
+        string defaultDisplay()
+        {
+            return Offset switch
+            {
+                InterruptVectors.INT0 => "Interrupt_INT0",
+                InterruptVectors.INT1 => "Interrupt_INT1",
+                InterruptVectors.INT2_T0L => "Interrupt_INT2_T0L",
+                InterruptVectors.INT3_BT => "Interrupt_INT3_BT",
+                InterruptVectors.T0H => "Interrupt_T0H",
+                InterruptVectors.T1 => "Interrupt_T1",
+                InterruptVectors.SIO0 => "Interrupt_SIO0",
+                InterruptVectors.SIO1 => "Interrupt_SIO1",
+                InterruptVectors.Maple => "Interrupt_Maple",
+                InterruptVectors.P3 => "Interrupt_P3",
+                BuiltInCodeSymbols.BIOSWriteFlash => "BIOS_WriteFlash",
+                BuiltInCodeSymbols.BIOSVerifyFlash => "BIOS_VerifyFlash",
+                BuiltInCodeSymbols.BIOSExit => "BIOS_Exit",
+                BuiltInCodeSymbols.BIOSReadFlash => "BIOS_ReadFlash",
+                BuiltInCodeSymbols.BIOSClockTick =>"BIOS_ClockTick",
+                _ => $"Label_{Offset:X4}"
+            };
+        }
     }
 }
 
@@ -144,13 +167,37 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
     private readonly List<InstructionDebugInfo> _instructions = [];
 
     public IReadOnlyList<LabelInfo> Labels => _labels;
-    private readonly List<LabelInfo> _labels = [];
+    private readonly List<LabelInfo> _labels = MakeLabels(bankId);
 
     public IReadOnlyList<DisasmEntry> DisasmEntries => _disasmEntries;
     private readonly List<DisasmEntry> _disasmEntries = [];
 
     /// <summary>Not necessarily sorted.</summary>
     public readonly List<BreakpointInfo> Breakpoints = [];
+
+    private static List<LabelInfo> MakeLabels(InstructionBank bankId)
+    {
+        return [
+            new() { Offset = InterruptVectors.INT0 },
+            new() { Offset = InterruptVectors.INT1 },
+            new() { Offset = InterruptVectors.INT2_T0L },
+            new() { Offset = InterruptVectors.INT3_BT },
+            new() { Offset = InterruptVectors.T0H },
+            new() { Offset = InterruptVectors.T1 },
+            new() { Offset = InterruptVectors.SIO0 },
+            new() { Offset = InterruptVectors.SIO1 },
+            new() { Offset = InterruptVectors.Maple },
+            new() { Offset = InterruptVectors.P3 },
+            // ROM external programs
+            .. bankId == InstructionBank.ROM ? (ReadOnlySpan<LabelInfo>)[
+                new() { Offset = BuiltInCodeSymbols.BIOSWriteFlash },
+                new() { Offset = BuiltInCodeSymbols.BIOSVerifyFlash },
+                new() { Offset = BuiltInCodeSymbols.BIOSExit },
+                new() { Offset = BuiltInCodeSymbols.BIOSReadFlash },
+                new() { Offset = BuiltInCodeSymbols.BIOSClockTick }
+            ] : []
+        ];
+    }
 
     public int BinarySearchDisasm(ushort offset)
     {
