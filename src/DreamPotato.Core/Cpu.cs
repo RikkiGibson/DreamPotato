@@ -1103,7 +1103,9 @@ public class Cpu
                             t1l = SFRs.T1Lr;
                             Audio.OnT1LReloaded(t1cnt, t1l, SFRs.T1Lc);
 
-                            // TODO: basically need to test internal triggering behavior with every interrupt and decide if a check like this is needed
+                            // TODO2: This should not be needed.
+                            // Instead find an implementation which accurately reflects
+                            // processing of various interrupts on original hardware.
                             if (!t1cnt.T1lOvf)
                                 MarkInterruptsNotReady();
 
