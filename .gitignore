@@ -5,6 +5,7 @@
 
 # Data
 **/Data/*.bin
+**/Data/*.debug.json
 **/Data/*.s
 
 # dotenv files

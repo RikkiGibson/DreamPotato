@@ -6,6 +6,34 @@ using DreamPotato.Core.SFRs;
 
 namespace DreamPotato.Core;
 
+public readonly struct DisasmEntry : IComparable<DisasmEntry>
+{
+    public DisasmEntry(InstructionDebugInfo instruction) => Instruction = instruction;
+    public DisasmEntry(LabelInfo label) => Label = label;
+
+    public InstructionDebugInfo Instruction { get; }
+    public LabelInfo? Label { get; }
+
+    public ushort Offset => Label?.Offset ?? Instruction.Offset;
+
+    public int CompareTo(DisasmEntry other)
+    {
+        // Later offsets sort later
+        // Equal offsets sort labels before non-labels
+
+        var offsetCompare = Offset.CompareTo(other.Offset);
+        if (offsetCompare != 0)
+            return offsetCompare;
+
+        if (Label is { } && other.Label is null)
+            return -1;
+        else if (Label is null && other.Label is { })
+            return 1;
+
+        return 0;
+    }
+}
+
 public readonly struct InstructionDebugInfo : IComparable<InstructionDebugInfo>
 {
     internal InstructionDebugInfo(Instruction instruction, bool executed)
@@ -24,7 +52,7 @@ public readonly struct InstructionDebugInfo : IComparable<InstructionDebugInfo>
 
     public ushort EndOffset => (ushort)(Offset + Size);
 
-    public string DisplayInstruction() => Instruction.ToString();
+    public string DisplayInstruction(WB.DebugInfo? waterbearInfo) => Instruction.Display(waterbearInfo);
 
     public string DisplayArgumentValues(Cpu cpu)
     {
@@ -44,6 +72,11 @@ public readonly struct InstructionDebugInfo : IComparable<InstructionDebugInfo>
         return builder.ToString();
     }
 
+    public ushort? GetBranchAddress(BankDebugInfo bankDebugInfo)
+    {
+        return bankDebugInfo.GetBranchInfo(Instruction).branchAddress;
+    }
+
     public int CompareTo(InstructionDebugInfo other)
     {
         return Offset.CompareTo(other.Offset);
@@ -51,6 +84,49 @@ public readonly struct InstructionDebugInfo : IComparable<InstructionDebugInfo>
 
     public override string ToString()
         => $"({Instruction}, Executed={Executed})";
+}
+
+public class LabelInfo : IComparable<LabelInfo>
+{
+    public required ushort Offset { get; init; }
+    public List<ushort> ReachableFrom { get; } = [];
+
+    public int CompareTo(LabelInfo? other) => other is null ? 1 : Offset.CompareTo(other.Offset);
+
+    public string DisplayLabel(WB.DebugInfo? waterbearInfo)
+    {
+        if (waterbearInfo is null)
+            return defaultDisplay();
+
+        var labelIndex = waterbearInfo.LabelsByOffset.BinarySearch(WB.Label.SearchFor(Offset));
+        if (labelIndex < 0)
+            return defaultDisplay();
+
+        return waterbearInfo.LabelsByOffset[labelIndex].DisplayName;
+
+        string defaultDisplay()
+        {
+            return Offset switch
+            {
+                InterruptVectors.INT0 => "Interrupt_INT0",
+                InterruptVectors.INT1 => "Interrupt_INT1",
+                InterruptVectors.INT2_T0L => "Interrupt_INT2_T0L",
+                InterruptVectors.INT3_BT => "Interrupt_INT3_BT",
+                InterruptVectors.T0H => "Interrupt_T0H",
+                InterruptVectors.T1 => "Interrupt_T1",
+                InterruptVectors.SIO0 => "Interrupt_SIO0",
+                InterruptVectors.SIO1 => "Interrupt_SIO1",
+                InterruptVectors.Maple => "Interrupt_Maple",
+                InterruptVectors.P3 => "Interrupt_P3",
+                BuiltInCodeSymbols.BIOSWriteFlash => "BIOS_WriteFlash",
+                BuiltInCodeSymbols.BIOSVerifyFlash => "BIOS_VerifyFlash",
+                BuiltInCodeSymbols.BIOSExit => "BIOS_Exit",
+                BuiltInCodeSymbols.BIOSReadFlash => "BIOS_ReadFlash",
+                BuiltInCodeSymbols.BIOSClockTick =>"BIOS_ClockTick",
+                _ => $"Label_{Offset:X4}"
+            };
+        }
+    }
 }
 
 public class BreakpointInfo
@@ -76,13 +152,58 @@ public class WatchInfo
 public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
 {
     public InstructionBank BankId => bankId;
+    public WB.DebugInfo? WaterbearInfo
+    {
+        get;
+        internal set
+        {
+            field = value;
+            UpdateDisasmDisplay();
+        }
+    }
 
     /// <summary>NOTE: must be sorted by Offset.</summary>
     public IReadOnlyList<InstructionDebugInfo> Instructions => _instructions;
     private readonly List<InstructionDebugInfo> _instructions = [];
 
+    public IReadOnlyList<LabelInfo> Labels => _labels;
+    private readonly List<LabelInfo> _labels = MakeLabels(bankId);
+
+    public IReadOnlyList<DisasmEntry> DisasmEntries => _disasmEntries;
+    private readonly List<DisasmEntry> _disasmEntries = [];
+
     /// <summary>Not necessarily sorted.</summary>
     public readonly List<BreakpointInfo> Breakpoints = [];
+
+    private static List<LabelInfo> MakeLabels(InstructionBank bankId)
+    {
+        return [
+            new() { Offset = InterruptVectors.INT0 },
+            new() { Offset = InterruptVectors.INT1 },
+            new() { Offset = InterruptVectors.INT2_T0L },
+            new() { Offset = InterruptVectors.INT3_BT },
+            new() { Offset = InterruptVectors.T0H },
+            new() { Offset = InterruptVectors.T1 },
+            new() { Offset = InterruptVectors.SIO0 },
+            new() { Offset = InterruptVectors.SIO1 },
+            new() { Offset = InterruptVectors.Maple },
+            new() { Offset = InterruptVectors.P3 },
+            // ROM external programs
+            .. bankId == InstructionBank.ROM ? (ReadOnlySpan<LabelInfo>)[
+                new() { Offset = BuiltInCodeSymbols.BIOSWriteFlash },
+                new() { Offset = BuiltInCodeSymbols.BIOSVerifyFlash },
+                new() { Offset = BuiltInCodeSymbols.BIOSExit },
+                new() { Offset = BuiltInCodeSymbols.BIOSReadFlash },
+                new() { Offset = BuiltInCodeSymbols.BIOSClockTick }
+            ] : []
+        ];
+    }
+
+    public int BinarySearchDisasm(ushort offset)
+    {
+        var item = new DisasmEntry(new InstructionDebugInfo(new Instruction() { Offset = offset }, executed: false));
+        return _disasmEntries.BinarySearch(item);
+    }
 
     public int BinarySearchInstructions(ushort offset)
     {
@@ -212,9 +333,24 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
     public void Load(ushort[] entryPoints)
     {
         var content = cpu.GetRomBank(bankId);
+
+        // Do not load a blank program
+        var anyContent = false;
+        foreach (byte b in content)
+        {
+            if (b != 0)
+            {
+                anyContent = true;
+                break;
+            }
+        }
+
+        if (!anyContent)
+            return;
+
         // Walk all reachable executable code paths and populate the instruction map
         var pendingBranches = new Stack<ushort>(entryPoints);
-
+        var changed = false;
         while (pendingBranches.Count != 0)
         {
             ushort offset = pendingBranches.Pop();
@@ -227,122 +363,196 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
 
             var inst = InstructionDecoder.Decode(content, offset);
             this.SetInstruction(new(inst, executed: false));
+            changed = true;
 
-            // Process unconditional branches
-            switch (inst.Kind)
+            var branchInfo = GetBranchInfo(inst);
+            if (branchInfo.nextReachable)
+                pendingBranches.Push((ushort)(offset + inst.Size));
+
+            if (branchInfo.branchAddress is ushort branchAddress)
             {
-                case OperationKind.RET or OperationKind.RETI:
-                    // End of the branch
-                    continue;
+                pendingBranches.Push(branchAddress);
+                recordBranch(inst, branchAddress);
+            }
+        }
 
-                case OperationKind.JMP:
-                {
-                    var dest = offset;
-                    dest += 2;
-                    dest &= 0b1111_0000__0000_0000;
-                    dest |= inst.Arg0;
-                    pendingBranches.Push(dest);
-                    continue;
-                }
+        if (changed)
+            UpdateDisasmDisplay();
 
-                case OperationKind.JMPF:
-                {
-                    // Note: this could jump between ROM/flash depending on cpu state.
-                    // Hopefully, the ordinary visit pass within a bank, makes the destination reachable anyway.
-                    var dest = inst.Arg0;
-                    pendingBranches.Push(dest);
-                    continue;
-                }
+        void recordBranch(Instruction inst, ushort branchAddress)
+        {
+            // Indicate that the label at 'branchAddress' is reachable from 'inst'
+            var label = GetOrCreateLabel(branchAddress);
+            label.ReachableFrom.Add(inst.Offset);
+        }
+    }
 
-                case OperationKind.BR:
-                {
-                    var dest = (ushort)(offset + inst.Size + (sbyte)inst.Arg0);
-                    pendingBranches.Push(dest);
-                    continue;
-                }
+    /// <returns>true if the branch was added, false if it already exists.</returns>
+    internal bool AddDynamicBranch(Instruction source, ushort branchAddress)
+    {
+        var label = GetOrCreateLabel(branchAddress);
+        if (label.ReachableFrom.Contains(source.Offset))
+            return false;
 
-                case OperationKind.BRF:
-                {
-                    var dest = (ushort)(offset + inst.Size - 1 + inst.Arg0);
-                    pendingBranches.Push(dest);
-                    continue;
-                }
+        label.ReachableFrom.Add(source.Offset);
+        return true;
+    }
+
+    private LabelInfo GetOrCreateLabel(ushort branchAddress)
+    {
+        LabelInfo label;
+        var index = _labels.BinarySearch(new LabelInfo() { Offset = branchAddress });
+        if (index >= 0)
+        {
+            label = _labels[index];
+        }
+        else
+        {
+            label = new LabelInfo() { Offset = branchAddress };
+            _labels.Insert(~index, label);
+        }
+
+        return label;
+    }
+
+    void UpdateDisasmDisplay()
+    {
+        _disasmEntries.Clear();
+        foreach (var inst in Instructions)
+            _disasmEntries.Add(new DisasmEntry(inst));
+
+        foreach (var label in Labels)
+            _disasmEntries.Add(new DisasmEntry(label));
+
+        _disasmEntries.Sort();
+    }
+
+    internal (ushort? branchAddress, bool nextReachable) GetBranchInfo(Instruction inst)
+    {
+        var offset = inst.Offset;
+
+        switch (inst.Kind)
+        {
+            // Unconditional branches
+            //
+            case OperationKind.RET or OperationKind.RETI:
+                // End of the branch
+                return (branchAddress: null, nextReachable: false);
+
+            case OperationKind.JMP:
+            {
+                var dest = offset;
+                dest += 2;
+                dest &= 0b1111_0000__0000_0000;
+                dest |= inst.Arg0;
+                return (dest, nextReachable: false);
             }
 
-            // Next instruction is reachable
-            pendingBranches.Push((ushort)(offset + inst.Size));
-
-            // Process conditional branches
-            switch (inst.Kind)
+            case OperationKind.JMPF:
             {
-                case OperationKind.BZ or OperationKind.BNZ:
+                // Special case: 'NOT1 EXT, 0; JMPF' is conventionally used to jump to another bank.
+                // For now, our reachability analysis is isolated to a single bank at a time.
+                // Therefore, we will consider the destination of this JMPF to be unreachable.
+                if (this.GetInstruction((ushort)(inst.Offset - Operations.NOT1_d9_b3.Size)) is
+                    {
+                        HasInstruction: true,
+                        Operation.Kind: OperationKind.NOT1,
+                        Instruction.Arg0: 0x100 | SpecialFunctionRegisterIds.Ext,
+                        Instruction.Arg1: 0
+                    })
                 {
-                    var dest = (ushort)(offset + inst.Size + (sbyte)inst.Arg0);
-                    pendingBranches.Push(dest);
-                    break;
+                    return (branchAddress: null, nextReachable: false);
                 }
 
-                case OperationKind.BP or OperationKind.BPC or OperationKind.BN:
-                {
-                    var dest = (ushort)(offset + inst.Size + (sbyte)inst.Arg2);
-                    pendingBranches.Push(dest);
-                    break;
-                }
-
-                case OperationKind.DBNZ:
-                {
-                    var dest = (ushort)(offset + inst.Size + (sbyte)inst.Arg1);
-                    pendingBranches.Push(dest);
-                    break;
-                }
-
-                case OperationKind.BE or OperationKind.BNE:
-                {
-                    var param0 = inst.Parameters[0];
-                    var indirectMode = param0.Kind == ParameterKind.Ri;
-                    var r8 = indirectMode ? (sbyte)inst.Arg2 : (sbyte)inst.Arg1;
-                    var dest = (ushort)(offset + inst.Size + r8);
-                    pendingBranches.Push(dest);
-                    break;
-                }
-
-                case OperationKind.CALL:
-                {
-                    // Similar to JMP except the next instruction is reachable
-                    var dest = offset;
-                    dest += 2;
-                    dest &= 0b1111_0000__0000_0000;
-                    dest |= inst.Arg0;
-                    pendingBranches.Push(dest);
-                    break;
-                }
-
-                case OperationKind.CALLF:
-                {
-                    // Similar to JMPF except the next instruction is reachable
-                    var dest = inst.Arg0;
-                    pendingBranches.Push(dest);
-                    break;
-                }
-
-                case OperationKind.CALLR:
-                {
-                    var dest = (ushort)(offset + inst.Size - 1 + inst.Arg0);
-                    pendingBranches.Push(dest);
-                    break;
-                }
+                var dest = inst.Arg0;
+                return (dest, nextReachable: false);
             }
+
+            case OperationKind.BR:
+            {
+                var dest = (ushort)(offset + inst.Size + (sbyte)inst.Arg0);
+                return (dest, nextReachable: false);
+            }
+
+            case OperationKind.BRF:
+            {
+                var dest = (ushort)(offset + inst.Size - 1 + inst.Arg0);
+                return (dest, nextReachable: false);
+            }
+
+            // conditional branches
+            //
+            case OperationKind.BZ or OperationKind.BNZ:
+            {
+                var dest = (ushort)(offset + inst.Size + (sbyte)inst.Arg0);
+                return (dest, nextReachable: true);
+            }
+
+            case OperationKind.BP or OperationKind.BPC or OperationKind.BN:
+            {
+                var dest = (ushort)(offset + inst.Size + (sbyte)inst.Arg2);
+                return (dest, nextReachable: true);
+            }
+
+            case OperationKind.DBNZ:
+            {
+                var dest = (ushort)(offset + inst.Size + (sbyte)inst.Arg1);
+                return (dest, nextReachable: true);
+            }
+
+            case OperationKind.BE or OperationKind.BNE:
+            {
+                var param0 = inst.Parameters[0];
+                var indirectMode = param0.Kind == ParameterKind.Ri;
+                var r8 = indirectMode ? (sbyte)inst.Arg2 : (sbyte)inst.Arg1;
+                var dest = (ushort)(offset + inst.Size + r8);
+                return (dest, nextReachable: true);
+            }
+
+            case OperationKind.CALL:
+            {
+                // Similar to JMP except the next instruction is reachable
+                var dest = offset;
+                dest += 2;
+                dest &= 0b1111_0000__0000_0000;
+                dest |= inst.Arg0;
+                return (dest, nextReachable: true);
+            }
+
+            case OperationKind.CALLF:
+            {
+                // Similar to JMPF except the next instruction is reachable
+                var dest = inst.Arg0;
+                return (dest, nextReachable: true);
+            }
+
+            case OperationKind.CALLR:
+            {
+                var dest = (ushort)(offset + inst.Size - 1 + inst.Arg0);
+                return (dest, nextReachable: true);
+            }
+
+            default:
+                return (branchAddress: null, nextReachable: true);
         }
     }
 
     internal void Clear()
     {
         _instructions.Clear();
+        _labels.Clear();
+        _disasmEntries.Clear();
         Breakpoints.Clear();
+        WaterbearInfo = null;
     }
 
     internal void ClearInstruction(ushort offset)
     {
+        // TODO: If waterbear data is present, we should somehow warn
+        // that the debug info is not accurate anymore.
+        // That scenario should practically only be possible if
+        // loading a new game file from DC or other VMU though
+
         var index = BinarySearchInstructions(offset);
         if (index >= 0)
         {
