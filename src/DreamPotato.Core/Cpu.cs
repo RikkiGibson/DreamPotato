@@ -171,7 +171,7 @@ public class Cpu
 
     /// <summary>
     /// Note: this is used for debugging, but, not stored on DebugInfo,
-    /// becuase it must always be calc'd/managed, and not created on demand.
+    /// because it must always be calc'd/managed, and not created on demand.
     /// </summary>
     public List<StackEntry> StackData { get; private set; } = [];
 
@@ -1703,16 +1703,16 @@ public class Cpu
 
     private void Op_POP(Instruction inst)
     {
-        // (d9) <- ((SP)), (SP) <- (SP) - 1
-        var dAddress = GetOperandAddress(inst.Parameters[0], inst.Arg0);
-        var value = Memory.PopStack();
-        WriteRam(dAddress, value);
-
         var stackValue = StackData.Pop();
         // TODO: As-is, the StackData is corrupted at this point.
         // If this stack entry is an address, we should probably edit the entry to hold the remaining value
         if (stackValue.Kind != StackValueKind.Push)
-            Logger.LogDebug($"{inst} read an unexpected stack value of kind '{stackValue.Kind}'");
+            Logger.LogError($"{inst} read an unexpected stack value of kind '{stackValue.Kind}'");
+
+        // (d9) <- ((SP)), (SP) <- (SP) - 1
+        var dAddress = GetOperandAddress(inst.Parameters[0], inst.Arg0);
+        var value = Memory.PopStack();
+        WriteRam(dAddress, value);
 
         Logger.LogTrace($"{inst} value={value:X}", LogCategories.Instructions);
 
@@ -1989,23 +1989,24 @@ public class Cpu
     /// <summary>Return from subroutine</summary>
     private void Op_RET(Instruction inst)
     {
+        var stackEntry = StackData.Pop();
+        if (stackEntry.Kind == StackValueKind.Push)
+        {
+            Logger.LogDebug($"Detected a PUSH+RET to {Pc:X4}H");
+            if (StackData.Pop() is { Kind: not StackValueKind.Push } badValue)
+                Logger.LogError($"Returned to a mix of a Push value and a {badValue.Kind} value. Stack debug data is corrupted. {badValue}");            
+        }
+        else if (stackEntry.Kind != StackValueKind.CallReturn)
+        {
+            Logger.LogDebug($"{inst} used unexpected stack value {stackEntry}");
+        }
+
         // (PC15 to 8) <- ((SP)), (SP) <- (SP) - 1, (PC7 to 0) <- ((SP)), (SP) <- (SP) -1
         Logger.LogTrace($"{inst}", LogCategories.Instructions);
         var Pc15_8 = Memory.PopStack();
         var Pc7_0 = Memory.PopStack();
         Pc = (ushort)(Pc15_8 << 8 | Pc7_0);
 
-        var stackEntry = StackData.Pop();
-        if (stackEntry.Kind == StackValueKind.Push)
-        {
-            Logger.LogDebug($"Detected a PUSH+RET to {Pc:X4}H");
-            if (StackData.Pop() is { Kind: not StackValueKind.Push } badValue)
-                Logger.LogError($"Returned to a mix of a Push value and a {badValue.Kind} value. Stack debug data is corrupted. {badValue}");
-        }
-        else if (stackEntry.Kind != StackValueKind.CallReturn)
-        {
-            Logger.LogDebug($"{inst} used unexpected stack value {stackEntry}");
-        }
 
         if (LazyDebugInfo is { DebuggingState: DebuggingState.StepOut, StepOutOffset: var offset } debugInfo
             && stackEntry.Offset == offset)
@@ -2017,17 +2018,6 @@ public class Cpu
     /// <summary>Return from interrupt</summary>
     private void Op_RETI(Instruction inst)
     {
-        // (PC15 to 8) <- ((SP)), (SP) <- (SP) - 1, (PC7 to 0) <- ((SP)), (SP) <- (SP) -1
-        _interruptServicingState = InterruptServicingState.ReturnedFromInterrupt;
-        if (_interruptsCount > 0)
-            _interruptsCount--;
-        else
-            Logger.LogError($"Returning from interrupt, but no interrupt was being serviced!", LogCategories.Interrupts);
-
-        Logger.LogTrace($"{inst}", LogCategories.Instructions);
-        var Pc15_8 = Memory.PopStack();
-        var Pc7_0 = Memory.PopStack();
-        Pc = (ushort)(Pc15_8 << 8 | Pc7_0);
 
         var stackEntry = StackData.Pop();
         if (stackEntry.Kind == StackValueKind.Push)
@@ -2040,6 +2030,18 @@ public class Cpu
         {
             Logger.LogDebug($"{inst} used unexpected stack value {stackEntry}");
         }
+
+        // (PC15 to 8) <- ((SP)), (SP) <- (SP) - 1, (PC7 to 0) <- ((SP)), (SP) <- (SP) -1
+        _interruptServicingState = InterruptServicingState.ReturnedFromInterrupt;
+        if (_interruptsCount > 0)
+            _interruptsCount--;
+        else
+            Logger.LogError($"Returning from interrupt, but no interrupt was being serviced!", LogCategories.Interrupts);
+
+        Logger.LogTrace($"{inst}", LogCategories.Instructions);
+        var Pc15_8 = Memory.PopStack();
+        var Pc7_0 = Memory.PopStack();
+        Pc = (ushort)(Pc15_8 << 8 | Pc7_0);
 
         if (LazyDebugInfo is { DebuggingState: DebuggingState.StepOut, StepOutOffset: var offset } debugInfo
             && stackEntry.Offset == offset)

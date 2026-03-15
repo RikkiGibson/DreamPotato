@@ -216,7 +216,11 @@ public class SpecialFunctionRegisters
                 goto default;
 
             case Ids.Sp:
-                { // breakpoint holder
+                {
+                    // Remove dropped stack entries
+                    var removed = _cpu.StackData.RemoveAll(entry => entry.Offset > value);
+                    if (removed != 0)
+                        _logger.LogDebug($"Setting Sp={value:X2} removed {removed} stack entries");
                 }
                 goto default;
 
