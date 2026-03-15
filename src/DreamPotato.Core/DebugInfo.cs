@@ -501,8 +501,11 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
 
     internal void ClearInstruction(ushort offset)
     {
-        // TODO2: if we changed the instruction at this location, we may need to invalidate waterbear data.. how?
-        // And is that an all-or-nothing step?
+        // TODO: If waterbear data is present, we should somehow warn
+        // that the debug info is not accurate anymore.
+        // That scenario should practically only be possible if
+        // loading a new game file from DC or other VMU though
+
         var index = BinarySearchInstructions(offset);
         if (index >= 0)
         {
