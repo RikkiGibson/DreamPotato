@@ -325,30 +325,47 @@ public class BankDebugInfo(Cpu cpu, InstructionBank bankId)
             if (branchInfo.branchAddress is ushort branchAddress)
             {
                 pendingBranches.Push(branchAddress);
-                addOrUpdateLabel(inst, branchAddress);
+                recordBranch(inst, branchAddress);
             }
         }
 
         if (changed)
             UpdateDisasmDisplay();
 
-        void addOrUpdateLabel(Instruction inst, ushort branchAddress)
+        void recordBranch(Instruction inst, ushort branchAddress)
         {
             // Indicate that the label at 'branchAddress' is reachable from 'inst'
-            LabelInfo label;
-            var index = _labels.BinarySearch(new LabelInfo() { Offset = branchAddress });
-            if (index >= 0)
-            {
-                label = _labels[index];
-            }
-            else
-            {
-                label = new LabelInfo() { Offset = branchAddress };
-                _labels.Insert(~index, label);
-            }
-
+            var label = GetOrCreateLabel(branchAddress);
             label.ReachableFrom.Add(inst.Offset);
         }
+    }
+
+    /// <returns>true if the branch was added, false if it already exists.</returns>
+    internal bool AddDynamicBranch(Instruction source, ushort branchAddress)
+    {
+        var label = GetOrCreateLabel(branchAddress);
+        if (label.ReachableFrom.Contains(source.Offset))
+            return false;
+
+        label.ReachableFrom.Add(source.Offset);
+        return true;
+    }
+
+    private LabelInfo GetOrCreateLabel(ushort branchAddress)
+    {
+        LabelInfo label;
+        var index = _labels.BinarySearch(new LabelInfo() { Offset = branchAddress });
+        if (index >= 0)
+        {
+            label = _labels[index];
+        }
+        else
+        {
+            label = new LabelInfo() { Offset = branchAddress };
+            _labels.Insert(~index, label);
+        }
+
+        return label;
     }
 
     void UpdateDisasmDisplay()

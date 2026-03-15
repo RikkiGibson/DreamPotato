@@ -1992,11 +1992,16 @@ public class Cpu
         var stackEntry = StackData.Pop();
         if (stackEntry.Kind == StackValueKind.Push)
         {
-            Logger.LogDebug($"Detected a PUSH+RET to {Pc:X4}H");
-            if (StackData.Pop() is { Kind: not StackValueKind.Push } badValue)
-                Logger.LogError($"Returned to a mix of a Push value and a {badValue.Kind} value. Stack debug data is corrupted. {badValue}");
+            var littleStackEntry = StackData.Pop();
+            if (littleStackEntry.Kind != StackValueKind.Push)
+                Logger.LogError($"Returned to a mix of a Push value and a {littleStackEntry.Kind} value. Stack debug data is corrupted. {littleStackEntry}");
 
-            // TODO2: record the dynamically discovered branch                
+            var address = (ushort)(stackEntry.Value << 8 | (littleStackEntry.Value & 0xff));
+            if (LazyDebugInfo?.CurrentBankInfo is { } currentBankInfo
+                && currentBankInfo.AddDynamicBranch(inst, address))
+            {
+                Logger.LogDebug($"Detected a PUSH+RET to {address:X4}H");
+            }
         }
         else if (stackEntry.Kind != StackValueKind.CallReturn)
         {
