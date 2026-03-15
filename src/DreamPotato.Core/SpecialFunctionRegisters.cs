@@ -73,7 +73,7 @@ public class SpecialFunctionRegisters
         readStream.ReadExactly(_rawMemory);
     }
 
-    public byte Read(byte address)
+    public byte Read(byte address, bool doSideEffects = true)
     {
         Debug.Assert(address < Size);
 
@@ -109,7 +109,7 @@ public class SpecialFunctionRegisters
         {
             var address = (BitHelpers.ReadBit(Vrmad2, bit: 0) ? 0x100 : 0) | Vrmad1;
             var memory = _workRam[address];
-            if (Vsel.Ince)
+            if (doSideEffects && Vsel.Ince)
             {
                 address++;
                 Vrmad1 = (byte)address;
