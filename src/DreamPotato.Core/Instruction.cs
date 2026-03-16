@@ -43,7 +43,7 @@ readonly record struct Instruction(ushort Offset, Operation Operation, ushort Ar
             && waterbearInstructions.BinarySearch(WB.Instruction.SearchFor(Offset)) is >= 0 and var instIndex)
         {
             var waterbearInst = waterbearInstructions[instIndex];
-            return waterbearInst.Text;
+            return waterbearInst.Text.Replace("%", "%%"); // Don't treat a single '%' as a C++ format specifier
         }
 
         if (Parameters.IsEmpty)

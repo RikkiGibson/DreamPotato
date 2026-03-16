@@ -13,7 +13,7 @@ InterruptVectors:
     .org $13 ; External int. (INT2) and Timer 0 low
   jmp .int_13
     .org $1B ; External int. (INT3) and base timer
-  jmp .int_1b
+  jmp int_1b
     .org $23 ; Timer 0 high
   jmp .int_23
     .org $2B ; Timer 1 Low and High
@@ -237,6 +237,7 @@ nop
 
 ; Done working. Wait for mode button (to exit)
 next4: ; ** [M] (mode) Button Check **
+  set1 pcon, 0
   ld P3
   bn acc,6,finish ; If the [M] button is pressed, the application ends
 

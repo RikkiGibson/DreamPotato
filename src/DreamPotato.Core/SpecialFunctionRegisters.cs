@@ -200,6 +200,9 @@ public class SpecialFunctionRegisters
                 if (!oldPcon.HaltMode != newPcon.HaltMode)
                     _logger.LogTrace($"Halt mode changed from {oldPcon.HaltMode} to {newPcon.HaltMode}", LogCategories.Halt);
 
+                if (newPcon.HoldMode)
+                    _logger.LogError($"Hold mode is not supported. (Pcon=0x{value:X2})");
+
                 goto default;
 
             case Ids.P1:

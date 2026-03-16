@@ -710,7 +710,7 @@ public class Cpu
     }
     #endregion
 
-    private void ServiceInterruptIfNeeded()
+    private void ServiceInterruptRequestIfNeeded()
     {
         if (_interruptServicingState != InterruptServicingState.Ready)
             return;
@@ -932,7 +932,6 @@ public class Cpu
             return new Instruction(Pc, Operations.NOP);
         }
 
-        // TODO: hold mode doesn't even tick timers. only external interrupts wake the VMU.
         if (SFRs.Pcon.HaltMode)
         {
             handleInterrupts();
@@ -1102,13 +1101,6 @@ public class Cpu
                         {
                             t1l = SFRs.T1Lr;
                             Audio.OnT1LReloaded(t1cnt, t1l, SFRs.T1Lc);
-
-                            // TODO2: This should not be needed.
-                            // Instead find an implementation which accurately reflects
-                            // processing of various interrupts on original hardware.
-                            if (!t1cnt.T1lOvf)
-                                MarkInterruptsNotReady();
-
                             t1cnt.T1lOvf = true;
                         }
 
@@ -1188,7 +1180,7 @@ public class Cpu
         void handleInterrupts()
         {
             requestLevelDrivenInterrupts();
-            ServiceInterruptIfNeeded();
+            ServiceInterruptRequestIfNeeded();
             MarkInterruptsReady();
         }
 

@@ -260,7 +260,7 @@ public class InterruptTests
     [Fact]
     public void InterruptDelays()
     {
-        // Execute the assembled version of 'helloworld.s'
+        // Execute the assembled version of 'IntDelays.s'
         // TODO: we wouldn't need a BIOS if we just cut that part out of the tick handler.
         if (!File.Exists("Data/american_v1.05.bin"))
             Assert.Skip("Test requires a BIOS");
@@ -292,6 +292,43 @@ public class InterruptTests
             |   ██   ██   ██
             |   ██   ██  ▄██
             |  ▀▀▀▀   ▀▀▀▀▀
+            """,
+            cpu.Display.ToTestDisplayString());
+
+        static void pressButtonAndWait(Cpu cpu, P3 pressedState)
+        {
+            const long halfSecond = TimeSpan.TicksPerSecond / 2;
+            cpu.SFRs.P3 = pressedState;
+            cpu.Run(halfSecond);
+            cpu.SFRs.P3 = new P3(0xff);
+            cpu.Run(TimeSpan.TicksPerSecond * 2);
+        }
+    }
+
+    [Fact]
+    public void TimerIntSeq1()
+    {
+        // Execute the assembled version of 'TimerIntSeq1.s'
+        // TODO: we wouldn't need a BIOS if we just cut that part out of the tick handler.
+        if (!File.Exists("Data/american_v1.05.bin"))
+            Assert.Skip("Test requires a BIOS");
+
+        var vmu = new Vmu();
+        var cpu = vmu._cpu;
+        cpu.DreamcastSlot = DreamcastSlot.Slot1;
+        vmu.LoadRom();
+        vmu.LoadGameVms("TestSource/TimerIntSeq1.vms", date: DateTimeOffset.Parse("09/09/1999"), autoInitializeRTCDate: true);
+
+        cpu.Run(TimeSpan.TicksPerSecond);
+        pressButtonAndWait(cpu, new P3(0xff) { ButtonMode = false });
+        pressButtonAndWait(cpu, new P3(0xff) { ButtonA = false });
+
+        // TODO2: Real hardware displays: 238855
+        Assert.Equal<object>("""
+            |▄█▀▀▀█▄ ▄█▀▀▀█▄ ▄█▀▀▀█▄ ▄█▀▀▀█▄ ██▀▀▀▀▀ ██▀▀▀▀▀
+            |▀▀  ▄█▀ ▀▀  ▄█▀ ▀█▄▄▄██ ▀█▄▄▄██ ▀▀▀▀▀█▄ ▀▀▀▀▀█▄
+            | ▄█▀▀    ▄█▀▀       ▄█▀     ▄█▀ ▄▄   ██ ▄▄   ██
+            |▀▀▀▀▀▀▀ ▀▀▀▀▀▀▀  ▀▀▀▀    ▀▀▀▀    ▀▀▀▀▀   ▀▀▀▀▀
             """,
             cpu.Display.ToTestDisplayString());
 
