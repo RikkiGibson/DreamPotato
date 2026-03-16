@@ -14,9 +14,9 @@ jobs:
   Test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v5
     - name: Download resources
       run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.Tests/Data/american_v1.05.bin
     - name: Restore dependencies
@@ -25,7 +25,7 @@ jobs:
       run: dotnet build --no-restore -bl
     - name: Upload Binlog
       if: failure()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: msbuild.binlog
         path: msbuild.binlog
@@ -44,9 +44,9 @@ jobs:
   PublishLinux:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v5
     - name: Download resources
       run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.MonoGame/Data/american_v1.05.bin
     - name: Restore dependencies
@@ -55,7 +55,7 @@ jobs:
     - name: dotnet publish linux-x64
       run: dotnet publish src/DreamPotato.MonoGame -r linux-x64 -p:DebugSymbols=False
     - name: Upload Linux x64
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: DreamPotato-Linux-x64-dev
         path: artifacts/publish/DreamPotato.MonoGame/release_linux-x64/
@@ -63,9 +63,9 @@ jobs:
   PublishWindows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
       - name: Download resources
         run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.MonoGame/Data/american_v1.05.bin
       - name: Restore dependencies
@@ -91,7 +91,7 @@ jobs:
           timestamp-digest: SHA256
 
       - name: Upload win-x64
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: DreamPotato-Windows-x64-dev
           path: artifacts/publish/DreamPotato.MonoGame/release_win-x64/
@@ -99,15 +99,15 @@ jobs:
   PublishMac:
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v5
     - name: Download resources
       run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.MonoGame/Data/american_v1.05.bin
     - name: Run pack-arm64.sh
       run: ./src/DreamPotato.MonoGame/Mac/pack-arm64.sh
     - name: Upload Mac arm64
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: DreamPotato-Mac-arm64-dev
         path: artifacts/DreamPotato-mac-arm64.zip
