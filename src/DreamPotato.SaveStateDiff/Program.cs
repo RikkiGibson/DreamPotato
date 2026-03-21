@@ -54,10 +54,6 @@ if (cpu1.BaseTimer != cpu2.BaseTimer)
 if (cpu1.BaseTimerTicksRemaining != cpu2.BaseTimerTicksRemaining)
     Console.WriteLine($"BaseTimerTicksRemaining difference: 0x{cpu1.BaseTimerTicksRemaining:X} <-> 0x{cpu2.BaseTimerTicksRemaining:X}");
 
-// RequestedInterrupts
-if (cpu1.RequestedInterrupts != cpu2.RequestedInterrupts)
-    Console.WriteLine($"RequestedInterrupts difference: 0x{cpu1.RequestedInterrupts:X} <-> 0x{cpu2.RequestedInterrupts:X}");
-
 // _interruptServicingState
 var servicingState1 = typeof(DreamPotato.Core.Cpu).GetField("_interruptServicingState", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(cpu1);
 var servicingState2 = typeof(DreamPotato.Core.Cpu).GetField("_interruptServicingState", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(cpu2);
