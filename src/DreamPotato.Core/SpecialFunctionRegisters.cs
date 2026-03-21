@@ -133,11 +133,17 @@ public class SpecialFunctionRegisters
             case Ids.T1L:
                 // A write to T1L from user code sets the reload value
                 _t1lr = value;
+                if (!T1Cnt.T1lRun)
+                    T1L = value;
+
                 return;
 
             case Ids.T1H:
                 // A write to T1H from user code sets the reload value
                 _t1hr = value;
+                if (!T1Cnt.T1hRun)
+                    T1H = value;
+
                 return;
 
             case Ids.Vccr:
@@ -299,6 +305,9 @@ public class SpecialFunctionRegisters
                     T1L = t1lr;
                     _cpu.Audio.OnT1LRunChanged(t1lRun, t1lr, T1Lc);
                 }
+
+                if (oldT1cnt.T1hRun != t1cnt.T1hRun)
+                    T1H = T1Hr;
 
                 _rawMemory[address] = value;
                 return;
