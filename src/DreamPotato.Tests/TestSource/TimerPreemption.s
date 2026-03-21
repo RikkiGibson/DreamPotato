@@ -36,21 +36,27 @@ int3_bt:
   reti ; User interrupt processing end
 
 int_t0h:
+  push acc
+  clr1 T0CNT, 3 ; T0hOvf
   mov #1, IsHandlingT0H
   ld IsHandlingT1
   bz .exit
   mov #1, T0PreemptedT1
 .exit:
   mov #0, IsHandlingT0H
+  pop acc
   reti
 
 int_t1:
+  push acc
+  clr1 T1CNT, 1 ; T1lOvf
   mov #1, IsHandlingT1
   ld IsHandlingT0H
   bz .exit
   mov #1, T1PreemptedT0
 .exit:
   mov #0, IsHandlingT1
+  pop acc
   reti
 
 int_p3:
@@ -120,49 +126,88 @@ main:
   call cls ; Clears the LCD display
 start:
 
-xor acc ; zero out acc
-st flag ; init variables
-st xpos
-st ypos
-st BTCR
-st T1LC
-st IsHandlingT0H
-st IsHandlingT1
-st T1PreemptedT0
-st T0PreemptedT1
+  xor acc ; zero out acc
+  st flag ; init variables
+  st xpos
+  st ypos
+  st BTCR
+  st T1LC
+  st IsHandlingT0H
+  st IsHandlingT1
+  st T1PreemptedT0
+  st T0PreemptedT1
 
-clr1 IE, 7 ; master interrupt disable
+  clr1 IE, 7 ; master interrupt disable
 
-mov #$ff, T1L
-mov #%01000001, T1CNT ; T1LRUN | T1LIE
+  ; Row 0
+  ; T1: lower priority, higher frequency
+  mov #$ff, T1L
+  mov #%01000001, T1CNT ; T1LRUN | T1LIE
 
-mov #$ff, T0H
-mov #$ff, T0Hr
-mov #$ff, T0Prr
-mov #%10000100, T0CNT ; T0HRUN | T0HIE
+  ; T0: higher priority, lower frequency
+  mov #$af, T0H
+  mov #$af, T0Hr
+  mov #$ff, T0Prr
+  mov #%10000100, T0CNT ; T0HRUN | T0HIE
 
-set1 IE, 7
-nop
-nop
-nop
-nop
-nop
+  set1 IE, 7
 
-clr1 IE, 7
-mov #0, T1CNT
-mov #0, T0CNT
-set1 IE, 7
+  mov #$a0, acc
+.loop1:
+  dbnz acc, .loop1
 
-; 0,0: did T1 preempt (run during) T0?
-ld T1PreemptedT0
-st flag
-call putch_xy
+  clr1 IE, 7
+  mov #0, T1CNT
+  mov #0, T0CNT
+  set1 IE, 7
 
-; 0,0: did T0 preempt (run during) T1?
-inc xpos
-ld T0PreemptedT1
-st flag
-call putch_xy
+  ; 0,0: did T1 preempt (run during) T0?
+  ld T1PreemptedT0
+  st flag
+  call putch_xy
+
+  ; 0,0: did T0 preempt (run during) T1?
+  inc xpos
+  ld T0PreemptedT1
+  st flag
+  call putch_xy
+
+
+  ; Row 1
+  inc ypos
+  mov #0, xpos
+
+  ; T1: lower priority, lower frequency
+  mov #$af, T1L
+  mov #%01000001, T1CNT ; T1LRUN | T1LIE
+
+  ; T0: higher priority, higher frequency
+  mov #$ff, T0H
+  mov #$ff, T0Hr
+  mov #$ff, T0Prr
+  mov #%10000100, T0CNT ; T0HRUN | T0HIE
+
+  set1 IE, 7
+
+  mov #$a0, acc
+.loop2:
+  dbnz acc, .loop2
+
+  clr1 IE, 7
+  mov #0, T1CNT
+  mov #0, T0CNT
+  set1 IE, 7
+
+  ; 0,0: did T1 preempt (run during) T0?
+  ld T1PreemptedT0
+  st flag
+  call putch_xy
+
+  ; 0,0: did T0 preempt (run during) T1?
+  inc xpos
+  ld T0PreemptedT1
+  st flag
+  call putch_xy
 
 ; Done working. Wait for mode button (to exit)
 next4: ; ** [M] (mode) Button Check **
