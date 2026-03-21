@@ -145,7 +145,7 @@ st ypos
 st BTCR
 st T1LC
 
-; 1st: how long from enabling the timer, till interrupt occurring?
+; 0,0: how long from enabling the timer, till interrupt occurring?
 ; REAL HW: 2
 clr1 IE,7 ; master interrupt disable
 mov #0, T1CNT
@@ -157,7 +157,7 @@ inc flag
 inc flag
 inc flag
 
-; 2nd: try seeing what is in T1L when it gets an extra cycle to run before expiring.
+; 0,1: try seeing what is in T1L when it gets an extra cycle to run before expiring.
 ; REAL HW: 3
 inc xpos
 clr1 IE,7 ; master interrupt disable
@@ -172,7 +172,7 @@ inc flag
 inc flag
 inc flag
 
-; 3rd: what do we read from T1L, the cycle after enabling it?
+; 0,2: what do we read from T1L, the cycle after enabling it?
 ; REAL HW: FE (display 8)
 inc xpos
 clr1 IE,7 ; master interrupt disable
@@ -188,7 +188,7 @@ nop
 nop
 nop
 
-; 4th: what do we read from T1L, if we set reload value first before enabling it?
+; 0,3: what do we read from T1L, if we set reload value first before enabling it?
 ; REAL HW: FE (display 8)
 inc xpos
 clr1 IE,7 ; master interrupt disable
@@ -204,7 +204,7 @@ nop
 nop
 nop
 
-; 5th: what do we read from T1LOVF the cycle after enabling it
+; 0,4: what do we read from T1LOVF the cycle after enabling it
 ; REAL HW: 5 (instantly set)
 inc xpos
 clr1 IE,7 ; master interrupt disable
@@ -219,7 +219,7 @@ nop
 nop
 nop
 
-; 6th: what do we read from T1LOVF the 2nd cycle after enabling it
+; 0,5: what do we read from T1LOVF the 2nd cycle after enabling it
 ; REAL HW: 5 (instantly set)
 inc xpos
 clr1 IE,7 ; master interrupt disable
@@ -234,6 +234,122 @@ ld T1CNT
 nop
 nop
 nop
+
+; Next row
+mov #0, xpos
+inc ypos
+
+; 1,0: stop T1L, write to it, then read from it
+; REAL HW: 2
+mov #2, T1L ; Set T1L reload value
+ld T1L ; Read T1L timer value
+st flag
+call putch_xy
+
+; 1,1: start T1L, write to it, then stop it
+; REAL HW: 3
+inc xpos
+mov #%01000000, T1CNT ; T1LRUN (run T1L)
+mov #3, T1L ; Set T1L reload value
+nop ; wait a bit
+nop
+mov #0, T1CNT ; stop T1L
+ld T1L ; Read T1L timer value
+st flag
+call putch_xy
+
+; 1,2: write to T1L, start it, then stop it
+; REAL HW: 4
+inc xpos
+mov #4, T1L ; Set T1L reload value
+mov #%01000000, T1CNT ; T1LRUN (run T1L)
+nop ; wait a bit
+nop
+mov #0, T1CNT ; stop T1L
+ld T1L ; Read T1L timer value
+st flag
+call putch_xy
+
+; 1,3: write to T1L, start it, then read it, then stop it
+; REAL HW: 8
+inc xpos
+mov #5, T1L ; Set T1L reload value
+mov #%01000000, T1CNT ; T1LRUN (run T1L)
+nop ; wait a bit
+nop
+ld T1L
+mov #0, T1CNT ; stop T1L
+st flag
+call putch_xy
+
+; 1,4: write to T1L, start it, then read it, then stop it
+; REAL HW: 7
+inc xpos
+mov #6, T1L ; Set T1L reload value
+mov #%01000000, T1CNT ; T1LRUN (run T1L)
+ld T1L
+mov #0, T1CNT ; stop T1L
+st flag
+call putch_xy
+
+
+; Next row
+mov #0, xpos
+inc ypos
+
+; Same stuff except with T1H
+; 2,0: stop T1H, write to it, then read from it
+; REAL HW: 2
+mov #2, T1H ; Set T1H reload value
+ld T1H ; Read T1H timer value
+st flag
+call putch_xy
+
+; 2,1: start T1H, write to it, then stop it
+; REAL HW: 3
+inc xpos
+mov #%10000000, T1CNT ; T1HRUN (run T1H)
+mov #3, T1H ; Set T1H reload value
+nop ; wait a bit
+nop
+mov #0, T1CNT ; stop T1H
+ld T1H ; Read T1H timer value
+st flag
+call putch_xy
+
+; 2,2: write to T1H, start it, then stop it
+; REAL HW: 4
+inc xpos
+mov #4, T1H ; Set T1H reload value
+mov #%10000000, T1CNT ; T1HRUN (run T1H)
+nop ; wait a bit
+nop
+mov #0, T1CNT ; stop T1H
+ld T1H ; Read T1H timer value
+st flag
+call putch_xy
+
+; 2,3: write to T1H, start it, then read it, then stop it
+; REAL HW: 8
+inc xpos
+mov #5, T1H ; Set T1H reload value
+mov #%10000000, T1CNT ; T1HRUN (run T1H)
+nop ; wait a bit
+nop
+ld T1H
+mov #0, T1CNT ; stop T1H
+st flag
+call putch_xy
+
+; 2,4: write to T1H, start it, then read it, then stop it
+; REAL HW: 7
+inc xpos
+mov #6, T1H ; Set T1H reload value
+mov #%10000000, T1CNT ; T1HRUN (run T1H)
+ld T1H
+mov #0, T1CNT ; stop T1H
+st flag
+call putch_xy
 
 ; Done working. Wait for mode button (to exit)
 next4: ; ** [M] (mode) Button Check **
@@ -283,6 +399,17 @@ loop3:
   dbnz b,loop3 ; Repeats until b is "0"
 
   ret ; cls_s end
+
+; Call putch, transferring values from stable to non-stable variables
+;
+putch_xy:
+  ld xpos
+  st c
+  ld ypos
+  st b
+  ld flag ; Draw the flag value to screen
+  call putch
+  ret
 
 ; *-------------------------------------------------------------------------*
 ; * Displaying One Character in a Specified Position*
