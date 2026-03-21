@@ -1222,7 +1222,9 @@ partial class UserInterface
             if (!ImGui.CollapsingHeader("Labels", ImGuiTreeNodeFlags.DefaultOpen))
                 return;
 
-            ImGui.BeginChild("Labels", size: new Numerics.Vector2(x: 0, y: 200), ImGuiChildFlags.ResizeY);
+            if (!ImGui.BeginChild("Labels", size: new Numerics.Vector2(x: 0, y: 200), ImGuiChildFlags.ResizeY))
+                return;
+
             if (ImGui.BeginTable("Labels", columns: 1, flags: ImGuiTableFlags.BordersInnerV))
             {
                 var labels = bankInfo.Labels;
