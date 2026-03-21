@@ -113,6 +113,7 @@ game_end:
 osc_rc = $4d ; Specifies internal RC oscillation for the system clock
 osc_xt = $ef ; Specifies crystal oscillation for the system clock
 r2 = $2      ; Indirect address register 2
+r3 = $3      ; Indirect address register 3
 
 ; variables
 
@@ -292,6 +293,17 @@ mov #0, T1CNT ; stop T1L
 st flag
 call putch_xy
 
+; 1,5: write IE, start T1L, read T1L
+; REAL HW: ?
+inc xpos
+mov #6, T1L ; Set T1L reload value
+set1 IE, 7
+mov #%01000000, T1CNT ; T1LRUN (run T1L)
+ld T1L
+mov #0, T1CNT ; stop T1L
+st flag
+call putch_xy
+
 
 ; Next row
 mov #0, xpos
@@ -350,6 +362,116 @@ ld T1H
 mov #0, T1CNT ; stop T1H
 st flag
 call putch_xy
+
+; 2,5: write IE, start T1H, read T1H
+; REAL HW: 7
+inc xpos
+mov #6, T1H ; Set T1H reload value
+set1 IE, 7
+mov #%10000000, T1CNT ; T1HRUN (run T1H)
+ld T1H
+mov #0, T1CNT ; stop T1H
+st flag
+call putch_xy
+
+
+
+; row 3: same as 0 but using indirect mov (1 cycle)
+inc ypos
+mov #0, xpos
+mov #(T1CNT & 0xFF), R3
+mov #0, flag
+
+; 3,0: how long from enabling the timer, till interrupt occurring?
+; REAL HW: 2
+clr1 IE,7 ; master interrupt disable
+mov #0, T1CNT
+mov #$ff, T1L ; Set T1L reload value
+set1 IE,7 ; master interrupt enable
+mov #%01000001, @R3 ; T1LRUN (run T1L) | T1LIE (enable T1L interrupt)
+inc flag ; question: what is the value of 'flag' when T1 interrupt actually runs?
+inc flag
+inc flag
+inc flag
+
+; 3,1: try seeing what is in T1L when it gets an extra cycle to run before expiring.
+; REAL HW: 3
+inc xpos
+clr1 IE,7 ; master interrupt disable
+mov #0, flag
+mov #0, T1CNT
+mov #$fe, T1L ; Set T1L reload value
+mov #0, T1LC ; Set compare value (disable audio)
+set1 IE,7 ; master interrupt enable
+mov #%01000001, @R3 ; T1LRUN (run T1L) | T1LIE (enable T1L interrupt)
+inc flag ; question: what is the value of 'flag' when T1 interrupt actually runs?
+inc flag
+inc flag
+inc flag
+
+; 3,2: what do we read from T1L, the cycle after enabling it?
+; REAL HW: FE (display 8)
+inc xpos
+clr1 IE,7 ; master interrupt disable
+mov #0, flag
+mov #0, T1CNT
+mov #$fd, T1L ; Set T1L reload value
+mov #0, T1LC ; Set compare value (disable audio)
+set1 IE,7 ; master interrupt enable
+mov #%01000001, @R3 ; T1LRUN (run T1L) | T1LIE (enable T1L interrupt)
+ld T1L
+nop
+nop
+nop
+nop
+
+; 3,3: what do we read from T1L, if we set reload value first before enabling it?
+; REAL HW: FE (display 8)
+inc xpos
+clr1 IE,7 ; master interrupt disable
+mov #0, flag
+mov #$fd, T1L ; Set T1L reload value
+mov #0, T1CNT
+mov #0, T1LC ; Set compare value (disable audio)
+set1 IE,7 ; master interrupt enable
+mov #%01000001, @R3 ; T1LRUN (run T1L) | T1LIE (enable T1L interrupt)
+ld T1L
+nop
+nop
+nop
+nop
+
+; 3,4: what do we read from T1LOVF the cycle after enabling it
+; REAL HW: 5 (instantly set)
+inc xpos
+clr1 IE,7 ; master interrupt disable
+xor acc
+mov #0, flag
+mov #$ff, T1L ; Set T1L reload value
+mov #0, T1CNT
+set1 IE,7 ; master interrupt enable
+mov #%01000001, @R3 ; T1LRUN (run T1L) | T1LIE (enable T1L interrupt)
+ld T1CNT
+nop
+nop
+nop
+
+; 3,5: what do we read from T1LOVF the 2nd cycle after enabling it
+; REAL HW: 5 (instantly set)
+inc xpos
+clr1 IE,7 ; master interrupt disable
+xor acc
+mov #0, flag
+mov #$ff, T1L ; Set T1L reload value
+mov #0, T1CNT
+set1 IE,7 ; master interrupt enable
+mov #%01000001, @R3 ; T1LRUN (run T1L) | T1LIE (enable T1L interrupt)
+nop
+ld T1CNT
+nop
+nop
+nop
+
 
 ; Done working. Wait for mode button (to exit)
 next4: ; ** [M] (mode) Button Check **
