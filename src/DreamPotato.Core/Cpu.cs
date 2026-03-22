@@ -746,11 +746,12 @@ public class Cpu
 
         // High Priority
         var interruptPriority = SFRs.Ip;
-        if (tryServiceOneInterrupt(highPriorityOnly: true))
-            return;
-
         // Low priority
-        tryServiceOneInterrupt(highPriorityOnly: false);
+        if (tryServiceOneInterrupt(highPriorityOnly: true)
+            ||tryServiceOneInterrupt(highPriorityOnly: false))
+        {
+            HandleBreakpoints();
+        }
 
         bool tryServiceOneInterrupt(bool highPriorityOnly)
         {
@@ -1013,7 +1014,7 @@ public class Cpu
         }
 
         handleInterrupts();
-        handleBreakpoints();
+        HandleBreakpoints();
         return inst;
 
         static void Throw(Instruction inst) => throw new InvalidOperationException($"Unknown operation '{inst}'");
@@ -1225,25 +1226,25 @@ public class Cpu
                 }
             }
         }
+    }
 
-        void handleBreakpoints()
+    private void HandleBreakpoints()
+    {
+        if (LazyDebugInfo is null)
+            return;
+
+        if (LazyDebugInfo.DebuggingState == DebuggingState.StepIn)
         {
-            if (LazyDebugInfo is null)
-                return;
+            LazyDebugInfo.FireDebugBreak();
+            return;
+        }
 
-            if (LazyDebugInfo.DebuggingState == DebuggingState.StepIn)
-            {
+        var breakpoints = LazyDebugInfo.GetBankInfo(CurrentInstructionBankId).Breakpoints;
+        for (int i = 0; i < breakpoints.Count; i++)
+        {
+            var breakpoint = breakpoints[i];
+            if (breakpoint.Enabled && breakpoint.Offset == Pc)
                 LazyDebugInfo.FireDebugBreak();
-                return;
-            }
-
-            var breakpoints = LazyDebugInfo.GetBankInfo(CurrentInstructionBankId).Breakpoints;
-            for (int i = 0; i < breakpoints.Count; i++)
-            {
-                var breakpoint = breakpoints[i];
-                if (breakpoint.Enabled && breakpoint.Offset == Pc)
-                    LazyDebugInfo.FireDebugBreak();
-            }
         }
     }
 
