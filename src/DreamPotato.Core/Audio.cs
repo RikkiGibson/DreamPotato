@@ -68,7 +68,7 @@ public class Audio
             var ended = field && !value;
             field = value;
             if (ended)
-                EndAudio();
+                SubmitAudioBuffer();
         }
     }
 
@@ -229,7 +229,7 @@ public class Audio
         return pulseValue;
     }
 
-    private void EndAudio()
+    internal void SubmitAudioBuffer()
     {
         if (_pcmBufferIndex == 0)
             return;

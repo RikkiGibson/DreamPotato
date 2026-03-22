@@ -39,6 +39,9 @@ int_t0h:
   push acc
   clr1 T0CNT, 3 ; T0hOvf
   mov #1, IsHandlingT0H
+  ld T0CNT
+  and #$8 ; mask T0hOvf
+  st T0OvfSet
   ld IsHandlingT1
   bz .exit
   mov #1, T0PreemptedT1
@@ -51,6 +54,9 @@ int_t1:
   push acc
   clr1 T1CNT, 1 ; T1lOvf
   mov #1, IsHandlingT1
+  ld T1CNT
+  and #$2 ; mask T1lOvf
+  st T1OvfSet
   ld IsHandlingT0H
   bz .exit
   mov #1, T1PreemptedT0
@@ -113,7 +119,8 @@ IsHandlingT0H = $14
 IsHandlingT1 = $15
 T1PreemptedT0 = $16
 T0PreemptedT1 = $17
-
+T0OvfSet = $18
+T1OvfSet = $19
 
 ;
 ; *-------------------------------------------------------------------------*
@@ -126,6 +133,7 @@ main:
   call cls ; Clears the LCD display
 start:
 
+ClearVariables:
   xor acc ; zero out acc
   st flag ; init variables
   st xpos
@@ -136,7 +144,10 @@ start:
   st IsHandlingT1
   st T1PreemptedT0
   st T0PreemptedT1
+  st T0OvfSet
+  st T1OvfSet
 
+TimerSetup1:
   clr1 IE, 7 ; master interrupt disable
 
   ; Row 0
@@ -152,6 +163,7 @@ start:
 
   set1 IE, 7
 
+WaitForTimers1:
   mov #$a0, acc
 .loop1:
   dbnz acc, .loop1
@@ -166,17 +178,15 @@ start:
   st flag
   call putch_xy
 
-  ; 0,0: did T0 preempt (run during) T1?
+  ; 0,1: did T0 preempt (run during) T1?
   inc xpos
   ld T0PreemptedT1
   st flag
   call putch_xy
 
+  clr1 IE, 7 ; master interrupt disable
 
-  ; Row 1
-  inc ypos
-  mov #0, xpos
-
+TimerSetup2:
   ; T1: lower priority, lower frequency
   mov #$af, T1L
   mov #%01000001, T1CNT ; T1LRUN | T1LIE
@@ -189,6 +199,7 @@ start:
 
   set1 IE, 7
 
+WaitForTimers2:
   mov #$a0, acc
 .loop2:
   dbnz acc, .loop2
@@ -198,16 +209,52 @@ start:
   mov #0, T0CNT
   set1 IE, 7
 
-  ; 0,0: did T1 preempt (run during) T0?
+  ; 0,2: did T1 preempt (run during) T0?
+  inc xpos
   ld T1PreemptedT0
   st flag
   call putch_xy
 
-  ; 0,0: did T0 preempt (run during) T1?
+  ; 0,3: did T0 preempt (run during) T1?
   inc xpos
   ld T0PreemptedT1
   st flag
   call putch_xy
+
+TimerSetup3:
+  ; T1: lower priority, high frequency
+  mov #$ff, T1L
+  mov #%01000001, T1CNT ; T1LRUN | T1LIE
+
+  ; T0: higher priority, high frequency
+  mov #$ff, T0H
+  mov #$ff, T0Hr
+  mov #$ff, T0Prr
+  mov #%10000100, T0CNT ; T0HRUN | T0HIE
+
+  set1 IE, 7
+
+WaitForTimers3:
+  mov #$a0, acc
+.loop3:
+  dbnz acc, .loop3
+  clr1 IE, 7
+  mov #0, T1CNT
+  mov #0, T0CNT
+  set1 IE, 7
+
+  ; 0,4: was overflow flag set during interrupt handler?
+  inc xpos
+  ld T1OvfSet
+  st flag
+  call putch_xy
+
+  ; 0,5: was overflow flag set during interrupt handler?
+  inc xpos
+  ld T0OvfSet
+  st flag
+  call putch_xy
+
 
 ; Done working. Wait for mode button (to exit)
 next4: ; ** [M] (mode) Button Check **
