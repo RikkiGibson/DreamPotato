@@ -175,8 +175,8 @@ public class Cpu
     /// </summary>
     public List<StackEntry> StackData { get; private set; } = [];
 
-    public StackEntry MakeStackEntry(StackValueKind kind, ushort source, ushort value)
-        => new StackEntry(kind, source, value, SFRs.Sp, CurrentInstructionBankId);
+    public StackEntry MakeStackEntry(StackValueKind kind, ushort source, ushort value, Interrupts interrupt = 0)
+        => new StackEntry(kind, interrupt, source, value, SFRs.Sp, CurrentInstructionBankId);
 
     /// <summary>The CPU of another VMU, connected for serial I/O.</summary>
     /// <remarks>Not tracked in save states.</remarks>
@@ -341,7 +341,7 @@ public class Cpu
         T0Scale = (byte)readStream.ReadByte();
         SerialBitCount = (byte)readStream.ReadByte();
         SerialTransferTimer = (byte)readStream.ReadByte();
-        _ = (Interrupts)readUInt16(buffer); // TODO: update savestate format
+        _ = (Interrupts)readUInt16(buffer); // TODO2: update savestate format
         _interruptServicingState = (InterruptServicingState)readStream.ReadByte();
         for (int i = 0; i < _servicingInterrupts.Length; i++)
         {
@@ -356,6 +356,7 @@ public class Cpu
         {
             StackData.Add(new StackEntry(
                 Kind: (StackValueKind)readStream.ReadByte(),
+                Interrupt: 0, // TODO2: update save state format
                 Source: readUInt16(buffer),
                 Value: readUInt16(buffer),
                 Offset: readUInt16(buffer),
@@ -836,7 +837,7 @@ public class Cpu
             // TODO: improve accuracy of 'source' value for 'set1 pcon,0' case
             // TODO: adjusting Pc to service interrupt, needs to happen at "end" of StepInstruction()
             // Adjusting at beginning, causes debugger to miss the first instr of the interrupt
-            StackData.Push(MakeStackEntry(StackValueKind.InterruptReturn, source: stackValue, value: stackValue));
+            StackData.Push(MakeStackEntry(StackValueKind.InterruptReturn, source: stackValue, value: stackValue, interrupt));
         }
     }
 

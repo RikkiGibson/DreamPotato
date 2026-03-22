@@ -15,7 +15,7 @@ enum InterruptServicingState : byte
 /// Note that higher-priority interrupts have smaller values in this scheme.
 /// </summary>
 // TODO: DebuggerDisplay
-enum Interrupts : ushort
+public enum Interrupts : ushort
 {
     None = 0,
 
