@@ -934,8 +934,8 @@ public class Cpu
 
         if (SFRs.Pcon.HaltMode)
         {
-            handleInterrupts();
             tickCpuClockedTimers(1);
+            handleInterrupts();
             // TODO: we didn't really execute this (PC not incremented), but, we did consume 1 cycle.
             // We probably want a different type here or a HALT "pseudo-instruction".
             return new Instruction(Pc, Operations.NOP);
@@ -955,11 +955,12 @@ public class Cpu
             // https://github.com/gyrovorbis/vmu-bios-disassembly/blob/923d28f99d43a03fad81342bf5650cf94e287d03/american_v1.05.s#L4219
             // https://github.com/RikkiGibson/DreamPotato/pull/14#discussion_r2628643313
             Pc += inst.Size;
-            handleInterrupts();
             tickCpuClockedTimers(inst.Cycles);
+            handleInterrupts();
             return inst;
         }
 
+        tickCpuClockedTimers(inst.Cycles);
         switch (inst.Kind)
         {
             case OperationKind.ADD: Op_ADD(inst); break;
@@ -1011,7 +1012,6 @@ public class Cpu
         }
 
         handleInterrupts();
-        tickCpuClockedTimers(inst.Cycles);
         handleBreakpoints();
         return inst;
 
@@ -1055,6 +1055,9 @@ public class Cpu
                             t0l = SFRs.T0Lr;
                             if (!t0cnt.T0Long) // interrupt for overflow only in 8-bit mode
                             {
+                                if (!t0cnt.T0lOvf)
+                                    MarkInterruptsNotReady();
+
                                 t0cnt.T0lOvf = true;
                             }
                         }
@@ -1070,6 +1073,9 @@ public class Cpu
                         if (t0h == 0)
                         {
                             t0h = SFRs.T0Hr;
+                            if (!t0cnt.T0hOvf)
+                                MarkInterruptsNotReady();
+
                             t0cnt.T0hOvf = true;
                         }
                     }
@@ -1101,6 +1107,9 @@ public class Cpu
                         {
                             t1l = SFRs.T1Lr;
                             Audio.OnT1LReloaded(t1cnt, t1l, SFRs.T1Lc);
+                            if (!t1cnt.T1lOvf)
+                                MarkInterruptsNotReady();
+
                             t1cnt.T1lOvf = true;
                         }
 
@@ -1116,6 +1125,9 @@ public class Cpu
                             if (t1h == 0)
                             {
                                 t1h = SFRs.T1Hr;
+                                if (!t1cnt.T1hOvf)
+                                    MarkInterruptsNotReady();
+
                                 t1cnt.T1hOvf = true;
                             }
 

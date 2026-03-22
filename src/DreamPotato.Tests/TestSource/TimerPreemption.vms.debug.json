@@ -1,0 +1,5592 @@
+{
+  "version": "1",
+  "language": "asm",
+  "binary": "\\\\?\\C:\\Users\\rikki\\src\\DreamPotato\\src\\DreamPotato.Tests\\TestSource\\TimerPreemption.vms",
+  "producer": "waterbear 0.25.0; git SHA=66ed413b4490a0758cef71b0d19841c87bb9af5d",
+  "hash-algorithm": "SHA-256",
+  "sources": [
+    {
+      "path": "\\\\?\\C:\\Users\\rikki\\src\\DreamPotato\\src\\DreamPotato.Tests\\TestSource\\TimerPreemption.s",
+      "id": 0,
+      "hash": "4110bacd77c78ab997c2a75d0edc77be62f773329debbdb6d87030612db25a7f"
+    },
+    {
+      "path": "\\\\?\\C:\\Users\\rikki\\src\\DreamPotato\\src\\DreamPotato.Tests\\TestSource\\sfr.i",
+      "id": 1,
+      "hash": "31186074fd90b874aee086dc715ab62eb0e04a313f241df565c0f252b5cc5a5c"
+    }
+  ],
+  "labels": [
+    {
+      "name": "int3_bt",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 980,
+          "line": 33,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 988,
+          "line": 33,
+          "column": 8
+        }
+      },
+      "offset": 77
+    },
+    {
+      "name": "int_t0h",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1144,
+          "line": 38,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1152,
+          "line": 38,
+          "column": 8
+        }
+      },
+      "offset": 82
+    },
+    {
+      "name": ".exit",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1325,
+          "line": 48,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1331,
+          "line": 48,
+          "column": 6
+        }
+      },
+      "offset": 102,
+      "parent": "int_t0h"
+    },
+    {
+      "name": "int_t1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1379,
+          "line": 53,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1386,
+          "line": 53,
+          "column": 7
+        }
+      },
+      "offset": 108
+    },
+    {
+      "name": ".exit",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1559,
+          "line": 63,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1565,
+          "line": 63,
+          "column": 6
+        }
+      },
+      "offset": 128,
+      "parent": "int_t1"
+    },
+    {
+      "name": "int_p3",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1612,
+          "line": 68,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1619,
+          "line": 68,
+          "column": 7
+        }
+      },
+      "offset": 134
+    },
+    {
+      "name": "game_end",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1882,
+          "line": 76,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1891,
+          "line": 76,
+          "column": 9
+        }
+      },
+      "offset": 496
+    },
+    {
+      "name": "main",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 3781,
+          "line": 132,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 3786,
+          "line": 132,
+          "column": 5
+        }
+      },
+      "offset": 640
+    },
+    {
+      "name": "start",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 3825,
+          "line": 134,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 3831,
+          "line": 134,
+          "column": 6
+        }
+      },
+      "offset": 642
+    },
+    {
+      "name": "clearvariables",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 3835,
+          "line": 136,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 3850,
+          "line": 136,
+          "column": 15
+        }
+      },
+      "offset": 642
+    },
+    {
+      "name": "timersetup1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4061,
+          "line": 150,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4073,
+          "line": 150,
+          "column": 12
+        }
+      },
+      "offset": 666
+    },
+    {
+      "name": "waitfortimers1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4388,
+          "line": 166,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4403,
+          "line": 166,
+          "column": 15
+        }
+      },
+      "offset": 688
+    },
+    {
+      "name": ".loop1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4422,
+          "line": 168,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4429,
+          "line": 168,
+          "column": 7
+        }
+      },
+      "offset": 691,
+      "parent": "waitfortimers1"
+    },
+    {
+      "name": "timersetup2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4756,
+          "line": 189,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4768,
+          "line": 189,
+          "column": 12
+        }
+      },
+      "offset": 720
+    },
+    {
+      "name": "waitfortimers2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5029,
+          "line": 202,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5044,
+          "line": 202,
+          "column": 15
+        }
+      },
+      "offset": 740
+    },
+    {
+      "name": ".loop2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5063,
+          "line": 204,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5070,
+          "line": 204,
+          "column": 7
+        }
+      },
+      "offset": 743,
+      "parent": "waitfortimers2"
+    },
+    {
+      "name": "timersetup3",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5366,
+          "line": 224,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5378,
+          "line": 224,
+          "column": 12
+        }
+      },
+      "offset": 772
+    },
+    {
+      "name": "waitfortimers3",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5636,
+          "line": 237,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5651,
+          "line": 237,
+          "column": 15
+        }
+      },
+      "offset": 792
+    },
+    {
+      "name": ".loop3",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5670,
+          "line": 239,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5677,
+          "line": 239,
+          "column": 7
+        }
+      },
+      "offset": 795,
+      "parent": "waitfortimers3"
+    },
+    {
+      "name": "next4",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 6043,
+          "line": 260,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 6049,
+          "line": 260,
+          "column": 6
+        }
+      },
+      "offset": 824
+    },
+    {
+      "name": "finish",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 6206,
+          "line": 267,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 6213,
+          "line": 267,
+          "column": 7
+        }
+      },
+      "offset": 833
+    },
+    {
+      "name": "cls",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 6685,
+          "line": 284,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 6689,
+          "line": 284,
+          "column": 4
+        }
+      },
+      "offset": 835
+    },
+    {
+      "name": "cls_s",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 7081,
+          "line": 297,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 7087,
+          "line": 297,
+          "column": 6
+        }
+      },
+      "offset": 853
+    },
+    {
+      "name": "loop3",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 7276,
+          "line": 300,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 7282,
+          "line": 300,
+          "column": 6
+        }
+      },
+      "offset": 859
+    },
+    {
+      "name": "putch_xy",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 7492,
+          "line": 309,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 7501,
+          "line": 309,
+          "column": 9
+        }
+      },
+      "offset": 867
+    },
+    {
+      "name": "putch",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 7937,
+          "line": 324,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 7943,
+          "line": 324,
+          "column": 6
+        }
+      },
+      "offset": 880
+    },
+    {
+      "name": "locate",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8132,
+          "line": 334,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8139,
+          "line": 334,
+          "column": 7
+        }
+      },
+      "offset": 893
+    },
+    {
+      "name": "next1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8575,
+          "line": 345,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8581,
+          "line": 345,
+          "column": 6
+        }
+      },
+      "offset": 905
+    },
+    {
+      "name": "next2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8657,
+          "line": 348,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8663,
+          "line": 348,
+          "column": 6
+        }
+      },
+      "offset": 910
+    },
+    {
+      "name": "put_chara",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8919,
+          "line": 364,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8929,
+          "line": 364,
+          "column": 10
+        }
+      },
+      "offset": 925
+    },
+    {
+      "name": "loop1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9403,
+          "line": 383,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9409,
+          "line": 383,
+          "column": 6
+        }
+      },
+      "offset": 954
+    },
+    {
+      "name": "fontdata",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 10294,
+          "line": 412,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 10303,
+          "line": 412,
+          "column": 9
+        }
+      },
+      "offset": 989
+    }
+  ],
+  "constants": [
+    {
+      "name": "acc",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 49,
+          "line": 6,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 61,
+          "line": 6,
+          "column": 12
+        }
+      },
+      "value": 256
+    },
+    {
+      "name": "psw",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 63,
+          "line": 7,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 75,
+          "line": 7,
+          "column": 12
+        }
+      },
+      "value": 257
+    },
+    {
+      "name": "b",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 77,
+          "line": 8,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 87,
+          "line": 8,
+          "column": 10
+        }
+      },
+      "value": 258
+    },
+    {
+      "name": "c",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 89,
+          "line": 9,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 99,
+          "line": 9,
+          "column": 10
+        }
+      },
+      "value": 259
+    },
+    {
+      "name": "trl",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 101,
+          "line": 10,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 113,
+          "line": 10,
+          "column": 12
+        }
+      },
+      "value": 260
+    },
+    {
+      "name": "trh",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 115,
+          "line": 11,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 127,
+          "line": 11,
+          "column": 12
+        }
+      },
+      "value": 261
+    },
+    {
+      "name": "sp",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 129,
+          "line": 12,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 140,
+          "line": 12,
+          "column": 11
+        }
+      },
+      "value": 262
+    },
+    {
+      "name": "pcon",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 142,
+          "line": 13,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 155,
+          "line": 13,
+          "column": 13
+        }
+      },
+      "value": 263
+    },
+    {
+      "name": "ie",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 157,
+          "line": 14,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 168,
+          "line": 14,
+          "column": 11
+        }
+      },
+      "value": 264
+    },
+    {
+      "name": "ip",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 170,
+          "line": 15,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 181,
+          "line": 15,
+          "column": 11
+        }
+      },
+      "value": 265
+    },
+    {
+      "name": "ext",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 183,
+          "line": 16,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 195,
+          "line": 16,
+          "column": 12
+        }
+      },
+      "value": 269
+    },
+    {
+      "name": "ocr",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 197,
+          "line": 17,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 209,
+          "line": 17,
+          "column": 12
+        }
+      },
+      "value": 270
+    },
+    {
+      "name": "t0cnt",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 211,
+          "line": 18,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 225,
+          "line": 18,
+          "column": 14
+        }
+      },
+      "value": 272
+    },
+    {
+      "name": "t0prr",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 227,
+          "line": 19,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 241,
+          "line": 19,
+          "column": 14
+        }
+      },
+      "value": 273
+    },
+    {
+      "name": "t0l",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 243,
+          "line": 20,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 255,
+          "line": 20,
+          "column": 12
+        }
+      },
+      "value": 274
+    },
+    {
+      "name": "t0lr",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 257,
+          "line": 21,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 270,
+          "line": 21,
+          "column": 13
+        }
+      },
+      "value": 275
+    },
+    {
+      "name": "t0h",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 272,
+          "line": 22,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 284,
+          "line": 22,
+          "column": 12
+        }
+      },
+      "value": 276
+    },
+    {
+      "name": "t0hr",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 286,
+          "line": 23,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 299,
+          "line": 23,
+          "column": 13
+        }
+      },
+      "value": 277
+    },
+    {
+      "name": "t1cnt",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 301,
+          "line": 24,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 315,
+          "line": 24,
+          "column": 14
+        }
+      },
+      "value": 280
+    },
+    {
+      "name": "t1lc",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 317,
+          "line": 25,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 330,
+          "line": 25,
+          "column": 13
+        }
+      },
+      "value": 282
+    },
+    {
+      "name": "t1l",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 332,
+          "line": 26,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 344,
+          "line": 26,
+          "column": 12
+        }
+      },
+      "value": 283
+    },
+    {
+      "name": "t1lr",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 346,
+          "line": 27,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 359,
+          "line": 27,
+          "column": 13
+        }
+      },
+      "value": 283
+    },
+    {
+      "name": "t1hc",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 361,
+          "line": 28,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 374,
+          "line": 28,
+          "column": 13
+        }
+      },
+      "value": 284
+    },
+    {
+      "name": "t1h",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 376,
+          "line": 29,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 388,
+          "line": 29,
+          "column": 12
+        }
+      },
+      "value": 285
+    },
+    {
+      "name": "t1hr",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 390,
+          "line": 30,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 403,
+          "line": 30,
+          "column": 13
+        }
+      },
+      "value": 285
+    },
+    {
+      "name": "mcr",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 405,
+          "line": 31,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 417,
+          "line": 31,
+          "column": 12
+        }
+      },
+      "value": 288
+    },
+    {
+      "name": "stad",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 419,
+          "line": 32,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 432,
+          "line": 32,
+          "column": 13
+        }
+      },
+      "value": 290
+    },
+    {
+      "name": "cnr",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 434,
+          "line": 33,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 446,
+          "line": 33,
+          "column": 12
+        }
+      },
+      "value": 291
+    },
+    {
+      "name": "tdr",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 448,
+          "line": 34,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 460,
+          "line": 34,
+          "column": 12
+        }
+      },
+      "value": 292
+    },
+    {
+      "name": "xbnk",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 462,
+          "line": 35,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 475,
+          "line": 35,
+          "column": 13
+        }
+      },
+      "value": 293
+    },
+    {
+      "name": "vccr",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 477,
+          "line": 36,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 490,
+          "line": 36,
+          "column": 13
+        }
+      },
+      "value": 295
+    },
+    {
+      "name": "scon0",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 492,
+          "line": 37,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 506,
+          "line": 37,
+          "column": 14
+        }
+      },
+      "value": 304
+    },
+    {
+      "name": "sbuf0",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 508,
+          "line": 38,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 522,
+          "line": 38,
+          "column": 14
+        }
+      },
+      "value": 305
+    },
+    {
+      "name": "sbr",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 524,
+          "line": 39,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 536,
+          "line": 39,
+          "column": 12
+        }
+      },
+      "value": 306
+    },
+    {
+      "name": "scon1",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 538,
+          "line": 40,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 552,
+          "line": 40,
+          "column": 14
+        }
+      },
+      "value": 308
+    },
+    {
+      "name": "sbuf1",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 554,
+          "line": 41,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 568,
+          "line": 41,
+          "column": 14
+        }
+      },
+      "value": 309
+    },
+    {
+      "name": "p1",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 570,
+          "line": 42,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 581,
+          "line": 42,
+          "column": 11
+        }
+      },
+      "value": 324
+    },
+    {
+      "name": "p1ddr",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 583,
+          "line": 43,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 597,
+          "line": 43,
+          "column": 14
+        }
+      },
+      "value": 325
+    },
+    {
+      "name": "p1fcr",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 599,
+          "line": 44,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 613,
+          "line": 44,
+          "column": 14
+        }
+      },
+      "value": 326
+    },
+    {
+      "name": "p3",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 615,
+          "line": 45,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 626,
+          "line": 45,
+          "column": 11
+        }
+      },
+      "value": 332
+    },
+    {
+      "name": "p3ddr",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 628,
+          "line": 46,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 642,
+          "line": 46,
+          "column": 14
+        }
+      },
+      "value": 333
+    },
+    {
+      "name": "p3int",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 644,
+          "line": 47,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 658,
+          "line": 47,
+          "column": 14
+        }
+      },
+      "value": 334
+    },
+    {
+      "name": "p7",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 660,
+          "line": 48,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 671,
+          "line": 48,
+          "column": 11
+        }
+      },
+      "value": 348
+    },
+    {
+      "name": "i01cr",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 673,
+          "line": 49,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 687,
+          "line": 49,
+          "column": 14
+        }
+      },
+      "value": 349
+    },
+    {
+      "name": "i23cr",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 689,
+          "line": 50,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 703,
+          "line": 50,
+          "column": 14
+        }
+      },
+      "value": 350
+    },
+    {
+      "name": "isl",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 705,
+          "line": 51,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 717,
+          "line": 51,
+          "column": 12
+        }
+      },
+      "value": 351
+    },
+    {
+      "name": "vsel",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 719,
+          "line": 52,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 732,
+          "line": 52,
+          "column": 13
+        }
+      },
+      "value": 355
+    },
+    {
+      "name": "vrmad1",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 734,
+          "line": 53,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 749,
+          "line": 53,
+          "column": 15
+        }
+      },
+      "value": 356
+    },
+    {
+      "name": "vrmad2",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 751,
+          "line": 54,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 766,
+          "line": 54,
+          "column": 15
+        }
+      },
+      "value": 357
+    },
+    {
+      "name": "vtrbf",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 768,
+          "line": 55,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 782,
+          "line": 55,
+          "column": 14
+        }
+      },
+      "value": 358
+    },
+    {
+      "name": "vlreg",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 784,
+          "line": 56,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 798,
+          "line": 56,
+          "column": 14
+        }
+      },
+      "value": 359
+    },
+    {
+      "name": "btcr",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 800,
+          "line": 57,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 813,
+          "line": 57,
+          "column": 13
+        }
+      },
+      "value": 383
+    },
+    {
+      "name": "xram",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 815,
+          "line": 58,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 828,
+          "line": 58,
+          "column": 13
+        }
+      },
+      "value": 384
+    },
+    {
+      "name": "cy",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 852,
+          "line": 64,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 860,
+          "line": 64,
+          "column": 8
+        }
+      },
+      "value": 7
+    },
+    {
+      "name": "ac",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 862,
+          "line": 65,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 870,
+          "line": 65,
+          "column": 8
+        }
+      },
+      "value": 6
+    },
+    {
+      "name": "irbk1",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 872,
+          "line": 66,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 883,
+          "line": 66,
+          "column": 11
+        }
+      },
+      "value": 4
+    },
+    {
+      "name": "irbk0",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 885,
+          "line": 67,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 896,
+          "line": 67,
+          "column": 11
+        }
+      },
+      "value": 3
+    },
+    {
+      "name": "ov",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 898,
+          "line": 68,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 906,
+          "line": 68,
+          "column": 8
+        }
+      },
+      "value": 2
+    },
+    {
+      "name": "rambk0",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 908,
+          "line": 69,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 925,
+          "line": 69,
+          "column": 17
+        }
+      },
+      "value": 1
+    },
+    {
+      "name": "p",
+      "span": {
+        "start": {
+          "source": 1,
+          "byte-offset": 927,
+          "line": 70,
+          "column": 0
+        },
+        "end": {
+          "source": 1,
+          "byte-offset": 944,
+          "line": 70,
+          "column": 17
+        }
+      },
+      "value": 0
+    },
+    {
+      "name": "osc_rc",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 3130,
+          "line": 107,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 3142,
+          "line": 107,
+          "column": 12
+        }
+      },
+      "value": 77
+    },
+    {
+      "name": "osc_xt",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 3201,
+          "line": 108,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 3213,
+          "line": 108,
+          "column": 12
+        }
+      },
+      "value": 239
+    },
+    {
+      "name": "r2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 3270,
+          "line": 110,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 3277,
+          "line": 110,
+          "column": 7
+        }
+      },
+      "value": 2
+    },
+    {
+      "name": "r3",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 3314,
+          "line": 111,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 3321,
+          "line": 111,
+          "column": 7
+        }
+      },
+      "value": 3
+    },
+    {
+      "name": "flag",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 3376,
+          "line": 115,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 3386,
+          "line": 115,
+          "column": 10
+        }
+      },
+      "value": 17
+    },
+    {
+      "name": "xpos",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 3388,
+          "line": 116,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 3398,
+          "line": 116,
+          "column": 10
+        }
+      },
+      "value": 18
+    },
+    {
+      "name": "ypos",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 3431,
+          "line": 117,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 3441,
+          "line": 117,
+          "column": 10
+        }
+      },
+      "value": 19
+    },
+    {
+      "name": "ishandlingt0h",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 3474,
+          "line": 118,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 3493,
+          "line": 118,
+          "column": 19
+        }
+      },
+      "value": 20
+    },
+    {
+      "name": "ishandlingt1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 3495,
+          "line": 119,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 3513,
+          "line": 119,
+          "column": 18
+        }
+      },
+      "value": 21
+    },
+    {
+      "name": "t1preemptedt0",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 3515,
+          "line": 120,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 3534,
+          "line": 120,
+          "column": 19
+        }
+      },
+      "value": 22
+    },
+    {
+      "name": "t0preemptedt1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 3536,
+          "line": 121,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 3555,
+          "line": 121,
+          "column": 19
+        }
+      },
+      "value": 23
+    },
+    {
+      "name": "t0ovfset",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 3557,
+          "line": 122,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 3571,
+          "line": 122,
+          "column": 14
+        }
+      },
+      "value": 24
+    },
+    {
+      "name": "t1ovfset",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 3573,
+          "line": 123,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 3587,
+          "line": 123,
+          "column": 14
+        }
+      },
+      "value": 25
+    }
+  ],
+  "instructions": [
+    {
+      "text": "jmpf  main",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 331,
+          "line": 7,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 340,
+          "line": 7,
+          "column": 11
+        }
+      },
+      "offset": 0
+    },
+    {
+      "text": "reti",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 379,
+          "line": 10,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 383,
+          "line": 10,
+          "column": 6
+        }
+      },
+      "offset": 3
+    },
+    {
+      "text": "reti",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 420,
+          "line": 12,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 424,
+          "line": 12,
+          "column": 6
+        }
+      },
+      "offset": 11
+    },
+    {
+      "text": "reti",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 477,
+          "line": 14,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 481,
+          "line": 14,
+          "column": 6
+        }
+      },
+      "offset": 19
+    },
+    {
+      "text": "jmp   int3_bt",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 533,
+          "line": 16,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 544,
+          "line": 16,
+          "column": 13
+        }
+      },
+      "offset": 27
+    },
+    {
+      "text": "jmp   int_t0h",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 573,
+          "line": 18,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 584,
+          "line": 18,
+          "column": 13
+        }
+      },
+      "offset": 35
+    },
+    {
+      "text": "jmp   int_t1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 621,
+          "line": 20,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 631,
+          "line": 20,
+          "column": 12
+        }
+      },
+      "offset": 43
+    },
+    {
+      "text": "reti",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 659,
+          "line": 22,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 663,
+          "line": 22,
+          "column": 6
+        }
+      },
+      "offset": 51
+    },
+    {
+      "text": "reti",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 691,
+          "line": 24,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 695,
+          "line": 24,
+          "column": 6
+        }
+      },
+      "offset": 59
+    },
+    {
+      "text": "reti",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 728,
+          "line": 26,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 732,
+          "line": 26,
+          "column": 6
+        }
+      },
+      "offset": 67
+    },
+    {
+      "text": "jmp   int_p3",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 765,
+          "line": 28,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 775,
+          "line": 28,
+          "column": 12
+        }
+      },
+      "offset": 75
+    },
+    {
+      "text": "clr1  btcr, 1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 992,
+          "line": 34,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1003,
+          "line": 34,
+          "column": 13
+        }
+      },
+      "offset": 77
+    },
+    {
+      "text": "clr1  btcr, 3",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1048,
+          "line": 35,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1059,
+          "line": 35,
+          "column": 13
+        }
+      },
+      "offset": 79
+    },
+    {
+      "text": "reti",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1104,
+          "line": 36,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1108,
+          "line": 36,
+          "column": 6
+        }
+      },
+      "offset": 81
+    },
+    {
+      "text": "push  acc",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1156,
+          "line": 39,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1164,
+          "line": 39,
+          "column": 10
+        }
+      },
+      "offset": 82
+    },
+    {
+      "text": "clr1  t0cnt, 3",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1168,
+          "line": 40,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1181,
+          "line": 40,
+          "column": 15
+        }
+      },
+      "offset": 84
+    },
+    {
+      "text": "mov   #1, ishandlingt0h",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1194,
+          "line": 41,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1215,
+          "line": 41,
+          "column": 23
+        }
+      },
+      "offset": 86
+    },
+    {
+      "text": "ld    t0cnt",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1219,
+          "line": 42,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1227,
+          "line": 42,
+          "column": 10
+        }
+      },
+      "offset": 89
+    },
+    {
+      "text": "and   #$08",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1231,
+          "line": 43,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1238,
+          "line": 43,
+          "column": 9
+        }
+      },
+      "offset": 91
+    },
+    {
+      "text": "st    t0ovfset",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1256,
+          "line": 44,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1267,
+          "line": 44,
+          "column": 13
+        }
+      },
+      "offset": 93
+    },
+    {
+      "text": "ld    ishandlingt1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1271,
+          "line": 45,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1286,
+          "line": 45,
+          "column": 17
+        }
+      },
+      "offset": 95
+    },
+    {
+      "text": "bz    .exit",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1290,
+          "line": 46,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1298,
+          "line": 46,
+          "column": 10
+        }
+      },
+      "offset": 97
+    },
+    {
+      "text": "mov   #1, t0preemptedt1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1302,
+          "line": 47,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1323,
+          "line": 47,
+          "column": 23
+        }
+      },
+      "offset": 99
+    },
+    {
+      "text": "mov   #0, ishandlingt0h",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1335,
+          "line": 49,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1356,
+          "line": 49,
+          "column": 23
+        }
+      },
+      "offset": 102
+    },
+    {
+      "text": "pop   acc",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1360,
+          "line": 50,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1367,
+          "line": 50,
+          "column": 9
+        }
+      },
+      "offset": 105
+    },
+    {
+      "text": "reti",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1371,
+          "line": 51,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1375,
+          "line": 51,
+          "column": 6
+        }
+      },
+      "offset": 107
+    },
+    {
+      "text": "push  acc",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1390,
+          "line": 54,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1398,
+          "line": 54,
+          "column": 10
+        }
+      },
+      "offset": 108
+    },
+    {
+      "text": "clr1  t1cnt, 1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1402,
+          "line": 55,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1415,
+          "line": 55,
+          "column": 15
+        }
+      },
+      "offset": 110
+    },
+    {
+      "text": "mov   #1, ishandlingt1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1428,
+          "line": 56,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1448,
+          "line": 56,
+          "column": 22
+        }
+      },
+      "offset": 112
+    },
+    {
+      "text": "ld    t1cnt",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1452,
+          "line": 57,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1460,
+          "line": 57,
+          "column": 10
+        }
+      },
+      "offset": 115
+    },
+    {
+      "text": "and   #$02",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1464,
+          "line": 58,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1471,
+          "line": 58,
+          "column": 9
+        }
+      },
+      "offset": 117
+    },
+    {
+      "text": "st    t1ovfset",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1489,
+          "line": 59,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1500,
+          "line": 59,
+          "column": 13
+        }
+      },
+      "offset": 119
+    },
+    {
+      "text": "ld    ishandlingt0h",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1504,
+          "line": 60,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1520,
+          "line": 60,
+          "column": 18
+        }
+      },
+      "offset": 121
+    },
+    {
+      "text": "bz    .exit",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1524,
+          "line": 61,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1532,
+          "line": 61,
+          "column": 10
+        }
+      },
+      "offset": 123
+    },
+    {
+      "text": "mov   #1, t1preemptedt0",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1536,
+          "line": 62,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1557,
+          "line": 62,
+          "column": 23
+        }
+      },
+      "offset": 125
+    },
+    {
+      "text": "mov   #0, ishandlingt1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1569,
+          "line": 64,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1589,
+          "line": 64,
+          "column": 22
+        }
+      },
+      "offset": 128
+    },
+    {
+      "text": "pop   acc",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1593,
+          "line": 65,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1600,
+          "line": 65,
+          "column": 9
+        }
+      },
+      "offset": 131
+    },
+    {
+      "text": "reti",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1604,
+          "line": 66,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1608,
+          "line": 66,
+          "column": 6
+        }
+      },
+      "offset": 133
+    },
+    {
+      "text": "clr1  p3int, 1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1623,
+          "line": 69,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1635,
+          "line": 69,
+          "column": 14
+        }
+      },
+      "offset": 134
+    },
+    {
+      "text": "reti",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1662,
+          "line": 70,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1666,
+          "line": 70,
+          "column": 6
+        }
+      },
+      "offset": 136
+    },
+    {
+      "text": "not1  ext, 0",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1897,
+          "line": 77,
+          "column": 4
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1908,
+          "line": 77,
+          "column": 15
+        }
+      },
+      "offset": 496
+    },
+    {
+      "text": "jmpf  game_end",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1916,
+          "line": 78,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1929,
+          "line": 78,
+          "column": 15
+        }
+      },
+      "offset": 498
+    },
+    {
+      "text": "call  cls",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 3790,
+          "line": 133,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 3798,
+          "line": 133,
+          "column": 10
+        }
+      },
+      "offset": 640
+    },
+    {
+      "text": "xor   acc",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 3854,
+          "line": 137,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 3861,
+          "line": 137,
+          "column": 9
+        }
+      },
+      "offset": 642
+    },
+    {
+      "text": "st    flag",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 3880,
+          "line": 138,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 3887,
+          "line": 138,
+          "column": 9
+        }
+      },
+      "offset": 644
+    },
+    {
+      "text": "st    xpos",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 3908,
+          "line": 139,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 3915,
+          "line": 139,
+          "column": 9
+        }
+      },
+      "offset": 646
+    },
+    {
+      "text": "st    ypos",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 3919,
+          "line": 140,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 3926,
+          "line": 140,
+          "column": 9
+        }
+      },
+      "offset": 648
+    },
+    {
+      "text": "st    btcr",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 3930,
+          "line": 141,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 3937,
+          "line": 141,
+          "column": 9
+        }
+      },
+      "offset": 650
+    },
+    {
+      "text": "st    t1lc",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 3941,
+          "line": 142,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 3948,
+          "line": 142,
+          "column": 9
+        }
+      },
+      "offset": 652
+    },
+    {
+      "text": "st    ishandlingt0h",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 3952,
+          "line": 143,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 3968,
+          "line": 143,
+          "column": 18
+        }
+      },
+      "offset": 654
+    },
+    {
+      "text": "st    ishandlingt1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 3972,
+          "line": 144,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 3987,
+          "line": 144,
+          "column": 17
+        }
+      },
+      "offset": 656
+    },
+    {
+      "text": "st    t1preemptedt0",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 3991,
+          "line": 145,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4007,
+          "line": 145,
+          "column": 18
+        }
+      },
+      "offset": 658
+    },
+    {
+      "text": "st    t0preemptedt1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4011,
+          "line": 146,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4027,
+          "line": 146,
+          "column": 18
+        }
+      },
+      "offset": 660
+    },
+    {
+      "text": "st    t0ovfset",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4031,
+          "line": 147,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4042,
+          "line": 147,
+          "column": 13
+        }
+      },
+      "offset": 662
+    },
+    {
+      "text": "st    t1ovfset",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4046,
+          "line": 148,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4057,
+          "line": 148,
+          "column": 13
+        }
+      },
+      "offset": 664
+    },
+    {
+      "text": "clr1  ie, 7",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4077,
+          "line": 151,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4087,
+          "line": 151,
+          "column": 12
+        }
+      },
+      "offset": 666
+    },
+    {
+      "text": "mov   #$FF, t1l",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4173,
+          "line": 155,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4186,
+          "line": 155,
+          "column": 15
+        }
+      },
+      "offset": 668
+    },
+    {
+      "text": "mov   #%01000001, t1cnt",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4190,
+          "line": 156,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4211,
+          "line": 156,
+          "column": 23
+        }
+      },
+      "offset": 671
+    },
+    {
+      "text": "mov   #$AF, t0h",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4276,
+          "line": 159,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4289,
+          "line": 159,
+          "column": 15
+        }
+      },
+      "offset": 674
+    },
+    {
+      "text": "mov   #$AF, t0hr",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4293,
+          "line": 160,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4307,
+          "line": 160,
+          "column": 16
+        }
+      },
+      "offset": 677
+    },
+    {
+      "text": "mov   #$FF, t0prr",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4311,
+          "line": 161,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4326,
+          "line": 161,
+          "column": 17
+        }
+      },
+      "offset": 680
+    },
+    {
+      "text": "mov   #%10000100, t0cnt",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4330,
+          "line": 162,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4351,
+          "line": 162,
+          "column": 23
+        }
+      },
+      "offset": 683
+    },
+    {
+      "text": "set1  ie, 7",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4374,
+          "line": 164,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4384,
+          "line": 164,
+          "column": 12
+        }
+      },
+      "offset": 686
+    },
+    {
+      "text": "mov   #$A0, acc",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4407,
+          "line": 167,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4420,
+          "line": 167,
+          "column": 15
+        }
+      },
+      "offset": 688
+    },
+    {
+      "text": "dbnz  acc, .loop1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4433,
+          "line": 169,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4449,
+          "line": 169,
+          "column": 18
+        }
+      },
+      "offset": 691
+    },
+    {
+      "text": "clr1  ie, 7",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4455,
+          "line": 171,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4465,
+          "line": 171,
+          "column": 12
+        }
+      },
+      "offset": 694
+    },
+    {
+      "text": "mov   #0, t1cnt",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4469,
+          "line": 172,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4482,
+          "line": 172,
+          "column": 15
+        }
+      },
+      "offset": 696
+    },
+    {
+      "text": "mov   #0, t0cnt",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4486,
+          "line": 173,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4499,
+          "line": 173,
+          "column": 15
+        }
+      },
+      "offset": 699
+    },
+    {
+      "text": "set1  ie, 7",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4503,
+          "line": 174,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4513,
+          "line": 174,
+          "column": 12
+        }
+      },
+      "offset": 702
+    },
+    {
+      "text": "ld    t1preemptedt0",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4561,
+          "line": 177,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4577,
+          "line": 177,
+          "column": 18
+        }
+      },
+      "offset": 704
+    },
+    {
+      "text": "st    flag",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4581,
+          "line": 178,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4588,
+          "line": 178,
+          "column": 9
+        }
+      },
+      "offset": 706
+    },
+    {
+      "text": "call  putch_xy",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4592,
+          "line": 179,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4605,
+          "line": 179,
+          "column": 15
+        }
+      },
+      "offset": 708
+    },
+    {
+      "text": "inc   xpos",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4653,
+          "line": 182,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4661,
+          "line": 182,
+          "column": 10
+        }
+      },
+      "offset": 710
+    },
+    {
+      "text": "ld    t0preemptedt1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4665,
+          "line": 183,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4681,
+          "line": 183,
+          "column": 18
+        }
+      },
+      "offset": 712
+    },
+    {
+      "text": "st    flag",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4685,
+          "line": 184,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4692,
+          "line": 184,
+          "column": 9
+        }
+      },
+      "offset": 714
+    },
+    {
+      "text": "call  putch_xy",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4696,
+          "line": 185,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4709,
+          "line": 185,
+          "column": 15
+        }
+      },
+      "offset": 716
+    },
+    {
+      "text": "clr1  ie, 7",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4715,
+          "line": 187,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4725,
+          "line": 187,
+          "column": 12
+        }
+      },
+      "offset": 718
+    },
+    {
+      "text": "mov   #$AF, t1l",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4813,
+          "line": 191,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4826,
+          "line": 191,
+          "column": 15
+        }
+      },
+      "offset": 720
+    },
+    {
+      "text": "mov   #%01000001, t1cnt",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4830,
+          "line": 192,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4851,
+          "line": 192,
+          "column": 23
+        }
+      },
+      "offset": 723
+    },
+    {
+      "text": "mov   #$FF, t0h",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4917,
+          "line": 195,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4930,
+          "line": 195,
+          "column": 15
+        }
+      },
+      "offset": 726
+    },
+    {
+      "text": "mov   #$FF, t0hr",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4934,
+          "line": 196,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4948,
+          "line": 196,
+          "column": 16
+        }
+      },
+      "offset": 729
+    },
+    {
+      "text": "mov   #$FF, t0prr",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4952,
+          "line": 197,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4967,
+          "line": 197,
+          "column": 17
+        }
+      },
+      "offset": 732
+    },
+    {
+      "text": "mov   #%10000100, t0cnt",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 4971,
+          "line": 198,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 4992,
+          "line": 198,
+          "column": 23
+        }
+      },
+      "offset": 735
+    },
+    {
+      "text": "set1  ie, 7",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5015,
+          "line": 200,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5025,
+          "line": 200,
+          "column": 12
+        }
+      },
+      "offset": 738
+    },
+    {
+      "text": "mov   #$A0, acc",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5048,
+          "line": 203,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5061,
+          "line": 203,
+          "column": 15
+        }
+      },
+      "offset": 740
+    },
+    {
+      "text": "dbnz  acc, .loop2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5074,
+          "line": 205,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5090,
+          "line": 205,
+          "column": 18
+        }
+      },
+      "offset": 743
+    },
+    {
+      "text": "clr1  ie, 7",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5096,
+          "line": 207,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5106,
+          "line": 207,
+          "column": 12
+        }
+      },
+      "offset": 746
+    },
+    {
+      "text": "mov   #0, t1cnt",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5110,
+          "line": 208,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5123,
+          "line": 208,
+          "column": 15
+        }
+      },
+      "offset": 748
+    },
+    {
+      "text": "mov   #0, t0cnt",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5127,
+          "line": 209,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5140,
+          "line": 209,
+          "column": 15
+        }
+      },
+      "offset": 751
+    },
+    {
+      "text": "set1  ie, 7",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5144,
+          "line": 210,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5154,
+          "line": 210,
+          "column": 12
+        }
+      },
+      "offset": 754
+    },
+    {
+      "text": "inc   xpos",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5202,
+          "line": 213,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5210,
+          "line": 213,
+          "column": 10
+        }
+      },
+      "offset": 756
+    },
+    {
+      "text": "ld    t1preemptedt0",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5214,
+          "line": 214,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5230,
+          "line": 214,
+          "column": 18
+        }
+      },
+      "offset": 758
+    },
+    {
+      "text": "st    flag",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5234,
+          "line": 215,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5241,
+          "line": 215,
+          "column": 9
+        }
+      },
+      "offset": 760
+    },
+    {
+      "text": "call  putch_xy",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5245,
+          "line": 216,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5258,
+          "line": 216,
+          "column": 15
+        }
+      },
+      "offset": 762
+    },
+    {
+      "text": "inc   xpos",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5306,
+          "line": 219,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5314,
+          "line": 219,
+          "column": 10
+        }
+      },
+      "offset": 764
+    },
+    {
+      "text": "ld    t0preemptedt1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5318,
+          "line": 220,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5334,
+          "line": 220,
+          "column": 18
+        }
+      },
+      "offset": 766
+    },
+    {
+      "text": "st    flag",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5338,
+          "line": 221,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5345,
+          "line": 221,
+          "column": 9
+        }
+      },
+      "offset": 768
+    },
+    {
+      "text": "call  putch_xy",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5349,
+          "line": 222,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5362,
+          "line": 222,
+          "column": 15
+        }
+      },
+      "offset": 770
+    },
+    {
+      "text": "mov   #$FF, t1l",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5422,
+          "line": 226,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5435,
+          "line": 226,
+          "column": 15
+        }
+      },
+      "offset": 772
+    },
+    {
+      "text": "mov   #%01000001, t1cnt",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5439,
+          "line": 227,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5460,
+          "line": 227,
+          "column": 23
+        }
+      },
+      "offset": 775
+    },
+    {
+      "text": "mov   #$FF, t0h",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5524,
+          "line": 230,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5537,
+          "line": 230,
+          "column": 15
+        }
+      },
+      "offset": 778
+    },
+    {
+      "text": "mov   #$FF, t0hr",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5541,
+          "line": 231,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5555,
+          "line": 231,
+          "column": 16
+        }
+      },
+      "offset": 781
+    },
+    {
+      "text": "mov   #$FF, t0prr",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5559,
+          "line": 232,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5574,
+          "line": 232,
+          "column": 17
+        }
+      },
+      "offset": 784
+    },
+    {
+      "text": "mov   #%10000100, t0cnt",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5578,
+          "line": 233,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5599,
+          "line": 233,
+          "column": 23
+        }
+      },
+      "offset": 787
+    },
+    {
+      "text": "set1  ie, 7",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5622,
+          "line": 235,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5632,
+          "line": 235,
+          "column": 12
+        }
+      },
+      "offset": 790
+    },
+    {
+      "text": "mov   #$A0, acc",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5655,
+          "line": 238,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5668,
+          "line": 238,
+          "column": 15
+        }
+      },
+      "offset": 792
+    },
+    {
+      "text": "dbnz  acc, .loop3",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5681,
+          "line": 240,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5697,
+          "line": 240,
+          "column": 18
+        }
+      },
+      "offset": 795
+    },
+    {
+      "text": "clr1  ie, 7",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5701,
+          "line": 241,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5711,
+          "line": 241,
+          "column": 12
+        }
+      },
+      "offset": 798
+    },
+    {
+      "text": "mov   #0, t1cnt",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5715,
+          "line": 242,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5728,
+          "line": 242,
+          "column": 15
+        }
+      },
+      "offset": 800
+    },
+    {
+      "text": "mov   #0, t0cnt",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5732,
+          "line": 243,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5745,
+          "line": 243,
+          "column": 15
+        }
+      },
+      "offset": 803
+    },
+    {
+      "text": "set1  ie, 7",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5749,
+          "line": 244,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5759,
+          "line": 244,
+          "column": 12
+        }
+      },
+      "offset": 806
+    },
+    {
+      "text": "inc   xpos",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5823,
+          "line": 247,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5831,
+          "line": 247,
+          "column": 10
+        }
+      },
+      "offset": 808
+    },
+    {
+      "text": "ld    t1ovfset",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5835,
+          "line": 248,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5846,
+          "line": 248,
+          "column": 13
+        }
+      },
+      "offset": 810
+    },
+    {
+      "text": "st    flag",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5850,
+          "line": 249,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5857,
+          "line": 249,
+          "column": 9
+        }
+      },
+      "offset": 812
+    },
+    {
+      "text": "call  putch_xy",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5861,
+          "line": 250,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5874,
+          "line": 250,
+          "column": 15
+        }
+      },
+      "offset": 814
+    },
+    {
+      "text": "inc   xpos",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5938,
+          "line": 253,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5946,
+          "line": 253,
+          "column": 10
+        }
+      },
+      "offset": 816
+    },
+    {
+      "text": "ld    t0ovfset",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5950,
+          "line": 254,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5961,
+          "line": 254,
+          "column": 13
+        }
+      },
+      "offset": 818
+    },
+    {
+      "text": "st    flag",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5965,
+          "line": 255,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5972,
+          "line": 255,
+          "column": 9
+        }
+      },
+      "offset": 820
+    },
+    {
+      "text": "call  putch_xy",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5976,
+          "line": 256,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5989,
+          "line": 256,
+          "column": 15
+        }
+      },
+      "offset": 822
+    },
+    {
+      "text": "set1  pcon, 0",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 6085,
+          "line": 261,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 6097,
+          "line": 261,
+          "column": 14
+        }
+      },
+      "offset": 824
+    },
+    {
+      "text": "ld    p3",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 6101,
+          "line": 262,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 6106,
+          "line": 262,
+          "column": 7
+        }
+      },
+      "offset": 826
+    },
+    {
+      "text": "bn    acc, 6, finish",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 6110,
+          "line": 263,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 6125,
+          "line": 263,
+          "column": 17
+        }
+      },
+      "offset": 828
+    },
+    {
+      "text": "jmp   next4",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 6184,
+          "line": 265,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 6193,
+          "line": 265,
+          "column": 11
+        }
+      },
+      "offset": 831
+    },
+    {
+      "text": "jmp   game_end",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 6252,
+          "line": 268,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 6264,
+          "line": 268,
+          "column": 14
+        }
+      },
+      "offset": 833
+    },
+    {
+      "text": "push  ocr",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 6693,
+          "line": 285,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 6701,
+          "line": 285,
+          "column": 10
+        }
+      },
+      "offset": 835
+    },
+    {
+      "text": "mov   #osc_rc, ocr",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 6743,
+          "line": 286,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 6758,
+          "line": 286,
+          "column": 17
+        }
+      },
+      "offset": 837
+    },
+    {
+      "text": "mov   #0, xbnk",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 6793,
+          "line": 288,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 6804,
+          "line": 288,
+          "column": 13
+        }
+      },
+      "offset": 840
+    },
+    {
+      "text": "call  cls_s",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 6857,
+          "line": 289,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 6867,
+          "line": 289,
+          "column": 12
+        }
+      },
+      "offset": 843
+    },
+    {
+      "text": "mov   #1, xbnk",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 6904,
+          "line": 291,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 6915,
+          "line": 291,
+          "column": 13
+        }
+      },
+      "offset": 845
+    },
+    {
+      "text": "call  cls_s",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 6968,
+          "line": 292,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 6978,
+          "line": 292,
+          "column": 12
+        }
+      },
+      "offset": 848
+    },
+    {
+      "text": "pop   ocr",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 7013,
+          "line": 293,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 7020,
+          "line": 293,
+          "column": 9
+        }
+      },
+      "offset": 850
+    },
+    {
+      "text": "ret",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 7064,
+          "line": 295,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 7067,
+          "line": 295,
+          "column": 5
+        }
+      },
+      "offset": 852
+    },
+    {
+      "text": "mov   #$80, r2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 7134,
+          "line": 298,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 7145,
+          "line": 298,
+          "column": 13
+        }
+      },
+      "offset": 853
+    },
+    {
+      "text": "mov   #$80, b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 7219,
+          "line": 299,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 7229,
+          "line": 299,
+          "column": 12
+        }
+      },
+      "offset": 856
+    },
+    {
+      "text": "mov   #0, @R2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 7286,
+          "line": 301,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 7296,
+          "line": 301,
+          "column": 12
+        }
+      },
+      "offset": 859
+    },
+    {
+      "text": "inc   r2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 7344,
+          "line": 302,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 7350,
+          "line": 302,
+          "column": 8
+        }
+      },
+      "offset": 861
+    },
+    {
+      "text": "dbnz  b, loop3",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 7356,
+          "line": 303,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 7368,
+          "line": 303,
+          "column": 14
+        }
+      },
+      "offset": 863
+    },
+    {
+      "text": "ret",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 7399,
+          "line": 305,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 7402,
+          "line": 305,
+          "column": 5
+        }
+      },
+      "offset": 866
+    },
+    {
+      "text": "ld    xpos",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 7505,
+          "line": 310,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 7512,
+          "line": 310,
+          "column": 9
+        }
+      },
+      "offset": 867
+    },
+    {
+      "text": "st    c",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 7516,
+          "line": 311,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 7520,
+          "line": 311,
+          "column": 6
+        }
+      },
+      "offset": 869
+    },
+    {
+      "text": "ld    ypos",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 7524,
+          "line": 312,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 7531,
+          "line": 312,
+          "column": 9
+        }
+      },
+      "offset": 871
+    },
+    {
+      "text": "st    b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 7535,
+          "line": 313,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 7539,
+          "line": 313,
+          "column": 6
+        }
+      },
+      "offset": 873
+    },
+    {
+      "text": "ld    flag",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 7543,
+          "line": 314,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 7550,
+          "line": 314,
+          "column": 9
+        }
+      },
+      "offset": 875
+    },
+    {
+      "text": "call  putch",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 7586,
+          "line": 315,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 7596,
+          "line": 315,
+          "column": 12
+        }
+      },
+      "offset": 877
+    },
+    {
+      "text": "ret",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 7600,
+          "line": 316,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 7603,
+          "line": 316,
+          "column": 5
+        }
+      },
+      "offset": 879
+    },
+    {
+      "text": "push  xbnk",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 7947,
+          "line": 325,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 7956,
+          "line": 325,
+          "column": 11
+        }
+      },
+      "offset": 880
+    },
+    {
+      "text": "push  acc",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 7960,
+          "line": 326,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 7968,
+          "line": 326,
+          "column": 10
+        }
+      },
+      "offset": 882
+    },
+    {
+      "text": "call  locate",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 7972,
+          "line": 327,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 7983,
+          "line": 327,
+          "column": 13
+        }
+      },
+      "offset": 884
+    },
+    {
+      "text": "pop   acc",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8045,
+          "line": 328,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8052,
+          "line": 328,
+          "column": 9
+        }
+      },
+      "offset": 886
+    },
+    {
+      "text": "call  put_chara",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8056,
+          "line": 329,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8070,
+          "line": 329,
+          "column": 16
+        }
+      },
+      "offset": 888
+    },
+    {
+      "text": "pop   xbnk",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8099,
+          "line": 330,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8107,
+          "line": 330,
+          "column": 10
+        }
+      },
+      "offset": 890
+    },
+    {
+      "text": "ret",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8113,
+          "line": 332,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8116,
+          "line": 332,
+          "column": 5
+        }
+      },
+      "offset": 892
+    },
+    {
+      "text": "ld    b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8429,
+          "line": 339,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8433,
+          "line": 339,
+          "column": 6
+        }
+      },
+      "offset": 893
+    },
+    {
+      "text": "sub   #2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8465,
+          "line": 340,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8471,
+          "line": 340,
+          "column": 8
+        }
+      },
+      "offset": 895
+    },
+    {
+      "text": "bn    psw, 7, next1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8477,
+          "line": 341,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8491,
+          "line": 341,
+          "column": 16
+        }
+      },
+      "offset": 897
+    },
+    {
+      "text": "mov   #$00, xbnk",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8499,
+          "line": 343,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8512,
+          "line": 343,
+          "column": 15
+        }
+      },
+      "offset": 900
+    },
+    {
+      "text": "br    next2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8565,
+          "line": 344,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8573,
+          "line": 344,
+          "column": 10
+        }
+      },
+      "offset": 903
+    },
+    {
+      "text": "st    b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8585,
+          "line": 346,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8589,
+          "line": 346,
+          "column": 6
+        }
+      },
+      "offset": 905
+    },
+    {
+      "text": "mov   #$01, xbnk",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8593,
+          "line": 347,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8606,
+          "line": 347,
+          "column": 15
+        }
+      },
+      "offset": 907
+    },
+    {
+      "text": "ld    b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8750,
+          "line": 351,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8754,
+          "line": 351,
+          "column": 6
+        }
+      },
+      "offset": 910
+    },
+    {
+      "text": "rol",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8778,
+          "line": 352,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8781,
+          "line": 352,
+          "column": 5
+        }
+      },
+      "offset": 912
+    },
+    {
+      "text": "rol",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8787,
+          "line": 353,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8790,
+          "line": 353,
+          "column": 5
+        }
+      },
+      "offset": 913
+    },
+    {
+      "text": "rol",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8796,
+          "line": 354,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8799,
+          "line": 354,
+          "column": 5
+        }
+      },
+      "offset": 914
+    },
+    {
+      "text": "rol",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8805,
+          "line": 355,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8808,
+          "line": 355,
+          "column": 5
+        }
+      },
+      "offset": 915
+    },
+    {
+      "text": "rol",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8814,
+          "line": 356,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8817,
+          "line": 356,
+          "column": 5
+        }
+      },
+      "offset": 916
+    },
+    {
+      "text": "rol",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8823,
+          "line": 357,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8826,
+          "line": 357,
+          "column": 5
+        }
+      },
+      "offset": 917
+    },
+    {
+      "text": "add   c",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8832,
+          "line": 358,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8837,
+          "line": 358,
+          "column": 7
+        }
+      },
+      "offset": 918
+    },
+    {
+      "text": "add   #$80",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8843,
+          "line": 359,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8851,
+          "line": 359,
+          "column": 10
+        }
+      },
+      "offset": 920
+    },
+    {
+      "text": "st    r2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8857,
+          "line": 360,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8862,
+          "line": 360,
+          "column": 7
+        }
+      },
+      "offset": 922
+    },
+    {
+      "text": "ret",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8899,
+          "line": 362,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8902,
+          "line": 362,
+          "column": 5
+        }
+      },
+      "offset": 924
+    },
+    {
+      "text": "push  psw",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8933,
+          "line": 365,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8941,
+          "line": 365,
+          "column": 10
+        }
+      },
+      "offset": 925
+    },
+    {
+      "text": "set1  psw, 1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8983,
+          "line": 366,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8993,
+          "line": 366,
+          "column": 12
+        }
+      },
+      "offset": 927
+    },
+    {
+      "text": "rol",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9077,
+          "line": 369,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9080,
+          "line": 369,
+          "column": 5
+        }
+      },
+      "offset": 929
+    },
+    {
+      "text": "rol",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9115,
+          "line": 370,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9118,
+          "line": 370,
+          "column": 5
+        }
+      },
+      "offset": 930
+    },
+    {
+      "text": "rol",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9124,
+          "line": 371,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9127,
+          "line": 371,
+          "column": 5
+        }
+      },
+      "offset": 931
+    },
+    {
+      "text": "add   #<fontdata",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9133,
+          "line": 372,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9139,
+          "line": 372,
+          "column": 8
+        }
+      },
+      "offset": 932
+    },
+    {
+      "text": "st    trl",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9155,
+          "line": 373,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9161,
+          "line": 373,
+          "column": 8
+        }
+      },
+      "offset": 934
+    },
+    {
+      "text": "mov   #0, acc",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9167,
+          "line": 374,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9177,
+          "line": 374,
+          "column": 12
+        }
+      },
+      "offset": 936
+    },
+    {
+      "text": "addc  #>fontdata",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9183,
+          "line": 375,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9190,
+          "line": 375,
+          "column": 9
+        }
+      },
+      "offset": 939
+    },
+    {
+      "text": "st    trh",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9206,
+          "line": 376,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9212,
+          "line": 376,
+          "column": 8
+        }
+      },
+      "offset": 941
+    },
+    {
+      "text": "push  ocr",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9220,
+          "line": 378,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9228,
+          "line": 378,
+          "column": 10
+        }
+      },
+      "offset": 943
+    },
+    {
+      "text": "mov   #osc_rc, ocr",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9270,
+          "line": 379,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9285,
+          "line": 379,
+          "column": 17
+        }
+      },
+      "offset": 945
+    },
+    {
+      "text": "mov   #0, b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9320,
+          "line": 381,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9328,
+          "line": 381,
+          "column": 10
+        }
+      },
+      "offset": 948
+    },
+    {
+      "text": "mov   #4, c",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9378,
+          "line": 382,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9386,
+          "line": 382,
+          "column": 10
+        }
+      },
+      "offset": 951
+    },
+    {
+      "text": "ld    b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9413,
+          "line": 384,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9417,
+          "line": 384,
+          "column": 6
+        }
+      },
+      "offset": 954
+    },
+    {
+      "text": "ldc",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9465,
+          "line": 385,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9468,
+          "line": 385,
+          "column": 5
+        }
+      },
+      "offset": 956
+    },
+    {
+      "text": "inc   b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9474,
+          "line": 386,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9479,
+          "line": 386,
+          "column": 7
+        }
+      },
+      "offset": 957
+    },
+    {
+      "text": "st    @R2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9522,
+          "line": 387,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9528,
+          "line": 387,
+          "column": 8
+        }
+      },
+      "offset": 959
+    },
+    {
+      "text": "ld    r2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9576,
+          "line": 388,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9581,
+          "line": 388,
+          "column": 7
+        }
+      },
+      "offset": 960
+    },
+    {
+      "text": "add   #6",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9621,
+          "line": 389,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9627,
+          "line": 389,
+          "column": 8
+        }
+      },
+      "offset": 962
+    },
+    {
+      "text": "st    r2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9633,
+          "line": 390,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9638,
+          "line": 390,
+          "column": 7
+        }
+      },
+      "offset": 964
+    },
+    {
+      "text": "ld    b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9646,
+          "line": 392,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9650,
+          "line": 392,
+          "column": 6
+        }
+      },
+      "offset": 966
+    },
+    {
+      "text": "ldc",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9699,
+          "line": 393,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9702,
+          "line": 393,
+          "column": 5
+        }
+      },
+      "offset": 968
+    },
+    {
+      "text": "inc   b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9708,
+          "line": 394,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9713,
+          "line": 394,
+          "column": 7
+        }
+      },
+      "offset": 969
+    },
+    {
+      "text": "st    @R2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9756,
+          "line": 395,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9762,
+          "line": 395,
+          "column": 8
+        }
+      },
+      "offset": 971
+    },
+    {
+      "text": "ld    r2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9810,
+          "line": 396,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9815,
+          "line": 396,
+          "column": 7
+        }
+      },
+      "offset": 972
+    },
+    {
+      "text": "add   #10",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9856,
+          "line": 397,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9863,
+          "line": 397,
+          "column": 9
+        }
+      },
+      "offset": 974
+    },
+    {
+      "text": "st    r2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9869,
+          "line": 398,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9874,
+          "line": 398,
+          "column": 7
+        }
+      },
+      "offset": 976
+    },
+    {
+      "text": "dec   c",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9882,
+          "line": 400,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9887,
+          "line": 400,
+          "column": 7
+        }
+      },
+      "offset": 978
+    },
+    {
+      "text": "ld    c",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9921,
+          "line": 401,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9925,
+          "line": 401,
+          "column": 6
+        }
+      },
+      "offset": 980
+    },
+    {
+      "text": "bnz   loop1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9931,
+          "line": 402,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9940,
+          "line": 402,
+          "column": 11
+        }
+      },
+      "offset": 982
+    },
+    {
+      "text": "pop   ocr",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9981,
+          "line": 404,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9988,
+          "line": 404,
+          "column": 9
+        }
+      },
+      "offset": 984
+    },
+    {
+      "text": "pop   psw",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 10030,
+          "line": 405,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 10037,
+          "line": 405,
+          "column": 9
+        }
+      },
+      "offset": 986
+    },
+    {
+      "text": "ret",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 10081,
+          "line": 407,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 10084,
+          "line": 407,
+          "column": 5
+        }
+      },
+      "offset": 988
+    }
+  ]
+}
