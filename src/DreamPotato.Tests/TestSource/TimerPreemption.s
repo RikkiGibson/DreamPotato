@@ -38,6 +38,7 @@ int3_bt:
 int_t0h:
   push acc
   clr1 T0CNT, 3 ; T0hOvf
+  inc T0IntCount
   mov #1, IsHandlingT0H
   ld T0CNT
   and #$8 ; mask T0hOvf
@@ -53,6 +54,7 @@ int_t0h:
 int_t1:
   push acc
   clr1 T1CNT, 1 ; T1lOvf
+  inc T1IntCount
   mov #1, IsHandlingT1
   ld T1CNT
   and #$2 ; mask T1lOvf
@@ -121,6 +123,8 @@ T1PreemptedT0 = $16
 T0PreemptedT1 = $17
 T0OvfSet = $18
 T1OvfSet = $19
+T0IntCount = $1a
+T1IntCount = $1b
 
 ;
 ; *-------------------------------------------------------------------------*
@@ -146,6 +150,9 @@ ClearVariables:
   st T0PreemptedT1
   st T0OvfSet
   st T1OvfSet
+  st T0IntCount
+  st T1IntCount
+
 
 TimerSetup1:
   clr1 IE, 7 ; master interrupt disable
@@ -255,6 +262,91 @@ WaitForTimers3:
   st flag
   call putch_xy
 
+Row1:
+  inc ypos
+  xor acc
+  st xpos
+  st T0IntCount
+  st T1IntCount
+
+TimerSetup4:
+  ; T1: lower priority, high frequency
+  mov #$ff, T1L
+  mov #%01000001, T1CNT ; T1LRUN | T1LIE
+
+  ; T0: higher priority, high frequency
+  mov #$ff, T0H
+  mov #$ff, T0Hr
+  mov #$ff, T0Prr
+  mov #%10000100, T0CNT ; T0HRUN | T0HIE
+
+  set1 IE, 7
+
+WaitForTimers4:
+  mov #$50, acc
+.loop4:
+  dbnz acc, .loop4
+  clr1 IE, 7
+  mov #0, T1CNT
+  mov #0, T0CNT
+  set1 IE, 7
+
+  ; T0IntCount on REAL HW displays: 081
+  ; 1,0: T0IntCount hundreds digit
+  ld T0IntCount
+  st c        ; divisor(7-0)
+  xor acc     ; divisor(15-8)
+  mov #100, b ; dividend
+  div
+  ld c        ; result(7-0)
+  st flag
+  push b ; Save remainder (dec 0-99) for next step
+  call putch_xy
+
+  ; 1,1: T0IntCount tens digit
+  inc xpos
+  pop c       ; use remainder as new divisor(7-0)
+  xor acc     ; divisor(15-8)
+  mov #10, b  ; dividend
+  div
+  ld c        ; result(7-0)
+  st flag
+  push b      ; Save remainder (dec 0-9) for next step
+  call putch_xy
+
+  ; 1,2: T0IntCount ones digit
+  inc xpos
+  pop flag
+  call putch_xy
+
+  ; T1IntCount on REAL HW displays: 004
+  ; 1,3: T1IntCount hundreds digit
+  inc xpos
+  ld T1IntCount
+  st c        ; divisor(7-0)
+  xor acc     ; divisor(15-8)
+  mov #100, b ; dividend
+  div
+  ld c        ; result(7-0)
+  st flag
+  push b ; Save remainder (dec 0-99) for next step
+  call putch_xy
+
+  ; 1,4: T1IntCount tens digit
+  inc xpos
+  pop c       ; use remainder as new divisor(7-0)
+  xor acc     ; divisor(15-8)
+  mov #10, b  ; dividend
+  div
+  ld c        ; result(7-0)
+  st flag
+  push b      ; Save remainder (dec 0-9) for next step
+  call putch_xy
+
+  ; 1,5: T1IntCount ones digit
+  inc xpos
+  pop flag
+  call putch_xy
 
 ; Done working. Wait for mode button (to exit)
 next4: ; ** [M] (mode) Button Check **
