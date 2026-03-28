@@ -194,6 +194,9 @@ WaitForTimers1:
   clr1 IE, 7 ; master interrupt disable
 
 TimerSetup2:
+  ; Try again but raise T0H priority to high
+  mov #4, IP ; T0H high priority
+
   ; T1: lower priority, lower frequency
   mov #$af, T1L
   mov #%01000001, T1CNT ; T1LRUN | T1LIE

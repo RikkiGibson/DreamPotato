@@ -8,7 +8,7 @@
     {
       "path": "\\\\?\\C:\\Users\\rikki\\src\\DreamPotato\\src\\DreamPotato.Tests\\TestSource\\TimerPreemption.s",
       "id": 0,
-      "hash": "e31a59f310e0b2d11a97b9b21c24222ce064ac7f42c2e826b2ca08309f8bca12"
+      "hash": "5588c6b375fe58fbcd19958c2747d70f4b1b8fbf6f428d10dedff68b3d23d2b5"
     },
     {
       "path": "\\\\?\\C:\\Users\\rikki\\src\\DreamPotato\\src\\DreamPotato.Tests\\TestSource\\sfr.i",
@@ -277,36 +277,36 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5137,
-          "line": 209,
+          "byte-offset": 5219,
+          "line": 212,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 5152,
-          "line": 209,
+          "byte-offset": 5234,
+          "line": 212,
           "column": 15
         }
       },
-      "offset": 744
+      "offset": 747
     },
     {
       "name": ".loop2",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5171,
-          "line": 211,
+          "byte-offset": 5253,
+          "line": 214,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 5178,
-          "line": 211,
+          "byte-offset": 5260,
+          "line": 214,
           "column": 7
         }
       },
-      "offset": 747,
+      "offset": 750,
       "parent": "waitfortimers2"
     },
     {
@@ -314,54 +314,54 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5474,
-          "line": 231,
+          "byte-offset": 5556,
+          "line": 234,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 5486,
-          "line": 231,
+          "byte-offset": 5568,
+          "line": 234,
           "column": 12
         }
       },
-      "offset": 776
+      "offset": 779
     },
     {
       "name": "waitfortimers3",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5744,
-          "line": 244,
+          "byte-offset": 5826,
+          "line": 247,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 5759,
-          "line": 244,
+          "byte-offset": 5841,
+          "line": 247,
           "column": 15
         }
       },
-      "offset": 796
+      "offset": 799
     },
     {
       "name": ".loop3",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5778,
-          "line": 246,
+          "byte-offset": 5860,
+          "line": 249,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 5785,
-          "line": 246,
+          "byte-offset": 5867,
+          "line": 249,
           "column": 7
         }
       },
-      "offset": 799,
+      "offset": 802,
       "parent": "waitfortimers3"
     },
     {
@@ -369,72 +369,72 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6101,
-          "line": 265,
+          "byte-offset": 6183,
+          "line": 268,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 6106,
-          "line": 265,
+          "byte-offset": 6188,
+          "line": 268,
           "column": 5
         }
       },
-      "offset": 828
+      "offset": 831
     },
     {
       "name": "timersetup4",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6178,
-          "line": 272,
+          "byte-offset": 6260,
+          "line": 275,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 6190,
-          "line": 272,
+          "byte-offset": 6272,
+          "line": 275,
           "column": 12
         }
       },
-      "offset": 838
+      "offset": 841
     },
     {
       "name": "waitfortimers4",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6448,
-          "line": 285,
+          "byte-offset": 6530,
+          "line": 288,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 6463,
-          "line": 285,
+          "byte-offset": 6545,
+          "line": 288,
           "column": 15
         }
       },
-      "offset": 858
+      "offset": 861
     },
     {
       "name": ".loop4",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6482,
-          "line": 287,
+          "byte-offset": 6564,
+          "line": 290,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 6489,
-          "line": 287,
+          "byte-offset": 6571,
+          "line": 290,
           "column": 7
         }
       },
-      "offset": 861,
+      "offset": 864,
       "parent": "waitfortimers4"
     },
     {
@@ -442,165 +442,147 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7931,
-          "line": 352,
+          "byte-offset": 8013,
+          "line": 355,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 7937,
-          "line": 352,
+          "byte-offset": 8019,
+          "line": 355,
           "column": 6
         }
       },
-      "offset": 960
+      "offset": 963
     },
     {
       "name": "finish",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 8094,
-          "line": 359,
+          "byte-offset": 8176,
+          "line": 362,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 8101,
-          "line": 359,
+          "byte-offset": 8183,
+          "line": 362,
           "column": 7
         }
       },
-      "offset": 969
+      "offset": 972
     },
     {
       "name": "cls",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 8573,
-          "line": 376,
+          "byte-offset": 8655,
+          "line": 379,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 8577,
-          "line": 376,
+          "byte-offset": 8659,
+          "line": 379,
           "column": 4
         }
       },
-      "offset": 971
+      "offset": 974
     },
     {
       "name": "cls_s",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 8969,
-          "line": 389,
+          "byte-offset": 9051,
+          "line": 392,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 8975,
-          "line": 389,
+          "byte-offset": 9057,
+          "line": 392,
           "column": 6
         }
       },
-      "offset": 989
+      "offset": 992
     },
     {
       "name": "loop3",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9164,
-          "line": 392,
+          "byte-offset": 9246,
+          "line": 395,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 9170,
-          "line": 392,
+          "byte-offset": 9252,
+          "line": 395,
           "column": 6
         }
       },
-      "offset": 995
+      "offset": 998
     },
     {
       "name": "putch_xy",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9380,
-          "line": 401,
+          "byte-offset": 9462,
+          "line": 404,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 9389,
-          "line": 401,
+          "byte-offset": 9471,
+          "line": 404,
           "column": 9
         }
       },
-      "offset": 1003
+      "offset": 1006
     },
     {
       "name": "putch",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9825,
-          "line": 416,
+          "byte-offset": 9907,
+          "line": 419,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 9831,
-          "line": 416,
+          "byte-offset": 9913,
+          "line": 419,
           "column": 6
         }
       },
-      "offset": 1016
+      "offset": 1019
     },
     {
       "name": "locate",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 10020,
-          "line": 426,
+          "byte-offset": 10102,
+          "line": 429,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 10027,
-          "line": 426,
+          "byte-offset": 10109,
+          "line": 429,
           "column": 7
         }
       },
-      "offset": 1029
+      "offset": 1032
     },
     {
       "name": "next1",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10463,
-          "line": 437,
-          "column": 0
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10469,
-          "line": 437,
-          "column": 6
-        }
-      },
-      "offset": 1041
-    },
-    {
-      "name": "next2",
       "span": {
         "start": {
           "source": 0,
@@ -615,61 +597,79 @@
           "column": 6
         }
       },
-      "offset": 1046
+      "offset": 1044
+    },
+    {
+      "name": "next2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 10627,
+          "line": 443,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 10633,
+          "line": 443,
+          "column": 6
+        }
+      },
+      "offset": 1049
     },
     {
       "name": "put_chara",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 10807,
-          "line": 456,
+          "byte-offset": 10889,
+          "line": 459,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 10817,
-          "line": 456,
+          "byte-offset": 10899,
+          "line": 459,
           "column": 10
         }
       },
-      "offset": 1061
+      "offset": 1064
     },
     {
       "name": "loop1",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 11291,
-          "line": 475,
+          "byte-offset": 11373,
+          "line": 478,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 11297,
-          "line": 475,
+          "byte-offset": 11379,
+          "line": 478,
           "column": 6
         }
       },
-      "offset": 1090
+      "offset": 1093
     },
     {
       "name": "fontdata",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 12182,
-          "line": 504,
+          "byte-offset": 12264,
+          "line": 507,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 12191,
-          "line": 504,
+          "byte-offset": 12273,
+          "line": 507,
           "column": 9
         }
       },
-      "offset": 1125
+      "offset": 1128
     }
   ],
   "constants": [
@@ -3484,2531 +3484,2513 @@
       "offset": 722
     },
     {
-      "text": "mov   #$AF, t1l",
+      "text": "mov   #4, ip",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4921,
+          "byte-offset": 4926,
           "line": 198,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4934,
+          "byte-offset": 4936,
           "line": 198,
-          "column": 15
+          "column": 12
         }
       },
       "offset": 724
+    },
+    {
+      "text": "mov   #$AF, t1l",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5003,
+          "line": 201,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5016,
+          "line": 201,
+          "column": 15
+        }
+      },
+      "offset": 727
     },
     {
       "text": "mov   #%01000001, t1cnt",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4938,
-          "line": 199,
+          "byte-offset": 5020,
+          "line": 202,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4959,
-          "line": 199,
+          "byte-offset": 5041,
+          "line": 202,
           "column": 23
         }
       },
-      "offset": 727
+      "offset": 730
     },
     {
       "text": "mov   #$FF, t0h",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5025,
-          "line": 202,
+          "byte-offset": 5107,
+          "line": 205,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5038,
-          "line": 202,
+          "byte-offset": 5120,
+          "line": 205,
           "column": 15
         }
       },
-      "offset": 730
+      "offset": 733
     },
     {
       "text": "mov   #$FF, t0hr",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5042,
-          "line": 203,
+          "byte-offset": 5124,
+          "line": 206,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5056,
-          "line": 203,
+          "byte-offset": 5138,
+          "line": 206,
           "column": 16
         }
       },
-      "offset": 733
+      "offset": 736
     },
     {
       "text": "mov   #$FF, t0prr",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5060,
-          "line": 204,
+          "byte-offset": 5142,
+          "line": 207,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5075,
-          "line": 204,
+          "byte-offset": 5157,
+          "line": 207,
           "column": 17
         }
       },
-      "offset": 736
+      "offset": 739
     },
     {
       "text": "mov   #%10000100, t0cnt",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5079,
-          "line": 205,
+          "byte-offset": 5161,
+          "line": 208,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5100,
-          "line": 205,
+          "byte-offset": 5182,
+          "line": 208,
           "column": 23
         }
       },
-      "offset": 739
+      "offset": 742
     },
     {
       "text": "set1  ie, 7",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5123,
-          "line": 207,
+          "byte-offset": 5205,
+          "line": 210,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5133,
-          "line": 207,
+          "byte-offset": 5215,
+          "line": 210,
           "column": 12
         }
       },
-      "offset": 742
+      "offset": 745
     },
     {
       "text": "mov   #$A0, acc",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5156,
-          "line": 210,
+          "byte-offset": 5238,
+          "line": 213,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5169,
-          "line": 210,
+          "byte-offset": 5251,
+          "line": 213,
           "column": 15
         }
       },
-      "offset": 744
+      "offset": 747
     },
     {
       "text": "dbnz  acc, .loop2",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5182,
-          "line": 212,
+          "byte-offset": 5264,
+          "line": 215,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5198,
-          "line": 212,
+          "byte-offset": 5280,
+          "line": 215,
           "column": 18
         }
       },
-      "offset": 747
+      "offset": 750
     },
     {
       "text": "clr1  ie, 7",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5204,
-          "line": 214,
+          "byte-offset": 5286,
+          "line": 217,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5214,
-          "line": 214,
+          "byte-offset": 5296,
+          "line": 217,
           "column": 12
         }
       },
-      "offset": 750
+      "offset": 753
     },
     {
       "text": "mov   #0, t1cnt",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5218,
-          "line": 215,
+          "byte-offset": 5300,
+          "line": 218,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5231,
-          "line": 215,
-          "column": 15
-        }
-      },
-      "offset": 752
-    },
-    {
-      "text": "mov   #0, t0cnt",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 5235,
-          "line": 216,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 5248,
-          "line": 216,
+          "byte-offset": 5313,
+          "line": 218,
           "column": 15
         }
       },
       "offset": 755
     },
     {
-      "text": "set1  ie, 7",
+      "text": "mov   #0, t0cnt",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5252,
-          "line": 217,
+          "byte-offset": 5317,
+          "line": 219,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5262,
-          "line": 217,
-          "column": 12
+          "byte-offset": 5330,
+          "line": 219,
+          "column": 15
         }
       },
       "offset": 758
+    },
+    {
+      "text": "set1  ie, 7",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5334,
+          "line": 220,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5344,
+          "line": 220,
+          "column": 12
+        }
+      },
+      "offset": 761
     },
     {
       "text": "inc   xpos",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5310,
-          "line": 220,
+          "byte-offset": 5392,
+          "line": 223,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5318,
-          "line": 220,
+          "byte-offset": 5400,
+          "line": 223,
           "column": 10
         }
       },
-      "offset": 760
+      "offset": 763
     },
     {
       "text": "ld    t1preemptedt0",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5322,
-          "line": 221,
+          "byte-offset": 5404,
+          "line": 224,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5338,
-          "line": 221,
+          "byte-offset": 5420,
+          "line": 224,
           "column": 18
         }
       },
-      "offset": 762
+      "offset": 765
     },
     {
       "text": "st    flag",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5342,
-          "line": 222,
+          "byte-offset": 5424,
+          "line": 225,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5349,
-          "line": 222,
+          "byte-offset": 5431,
+          "line": 225,
           "column": 9
         }
       },
-      "offset": 764
+      "offset": 767
     },
     {
       "text": "call  putch_xy",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5353,
-          "line": 223,
+          "byte-offset": 5435,
+          "line": 226,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5366,
-          "line": 223,
+          "byte-offset": 5448,
+          "line": 226,
           "column": 15
         }
       },
-      "offset": 766
+      "offset": 769
     },
     {
       "text": "inc   xpos",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5414,
-          "line": 226,
+          "byte-offset": 5496,
+          "line": 229,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5422,
-          "line": 226,
+          "byte-offset": 5504,
+          "line": 229,
           "column": 10
         }
       },
-      "offset": 768
+      "offset": 771
     },
     {
       "text": "ld    t0preemptedt1",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5426,
-          "line": 227,
+          "byte-offset": 5508,
+          "line": 230,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5442,
-          "line": 227,
+          "byte-offset": 5524,
+          "line": 230,
           "column": 18
         }
       },
-      "offset": 770
+      "offset": 773
     },
     {
       "text": "st    flag",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5446,
-          "line": 228,
+          "byte-offset": 5528,
+          "line": 231,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5453,
-          "line": 228,
+          "byte-offset": 5535,
+          "line": 231,
           "column": 9
         }
       },
-      "offset": 772
+      "offset": 775
     },
     {
       "text": "call  putch_xy",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5457,
-          "line": 229,
+          "byte-offset": 5539,
+          "line": 232,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5470,
-          "line": 229,
+          "byte-offset": 5552,
+          "line": 232,
           "column": 15
         }
       },
-      "offset": 774
+      "offset": 777
     },
     {
       "text": "mov   #$FF, t1l",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5530,
-          "line": 233,
+          "byte-offset": 5612,
+          "line": 236,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5543,
-          "line": 233,
+          "byte-offset": 5625,
+          "line": 236,
           "column": 15
         }
       },
-      "offset": 776
+      "offset": 779
     },
     {
       "text": "mov   #%01000001, t1cnt",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5547,
-          "line": 234,
+          "byte-offset": 5629,
+          "line": 237,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5568,
-          "line": 234,
+          "byte-offset": 5650,
+          "line": 237,
           "column": 23
         }
       },
-      "offset": 779
+      "offset": 782
     },
     {
       "text": "mov   #$FF, t0h",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5632,
-          "line": 237,
+          "byte-offset": 5714,
+          "line": 240,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5645,
-          "line": 237,
+          "byte-offset": 5727,
+          "line": 240,
           "column": 15
         }
       },
-      "offset": 782
+      "offset": 785
     },
     {
       "text": "mov   #$FF, t0hr",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5649,
-          "line": 238,
+          "byte-offset": 5731,
+          "line": 241,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5663,
-          "line": 238,
+          "byte-offset": 5745,
+          "line": 241,
           "column": 16
         }
       },
-      "offset": 785
+      "offset": 788
     },
     {
       "text": "mov   #$FF, t0prr",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5667,
-          "line": 239,
+          "byte-offset": 5749,
+          "line": 242,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5682,
-          "line": 239,
+          "byte-offset": 5764,
+          "line": 242,
           "column": 17
         }
       },
-      "offset": 788
+      "offset": 791
     },
     {
       "text": "mov   #%10000100, t0cnt",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5686,
-          "line": 240,
+          "byte-offset": 5768,
+          "line": 243,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5707,
-          "line": 240,
+          "byte-offset": 5789,
+          "line": 243,
           "column": 23
         }
       },
-      "offset": 791
+      "offset": 794
     },
     {
       "text": "set1  ie, 7",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5730,
-          "line": 242,
+          "byte-offset": 5812,
+          "line": 245,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5740,
-          "line": 242,
+          "byte-offset": 5822,
+          "line": 245,
           "column": 12
         }
       },
-      "offset": 794
+      "offset": 797
     },
     {
       "text": "mov   #$A0, acc",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5763,
-          "line": 245,
+          "byte-offset": 5845,
+          "line": 248,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5776,
-          "line": 245,
+          "byte-offset": 5858,
+          "line": 248,
           "column": 15
         }
       },
-      "offset": 796
+      "offset": 799
     },
     {
       "text": "dbnz  acc, .loop3",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5789,
-          "line": 247,
+          "byte-offset": 5871,
+          "line": 250,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5805,
-          "line": 247,
+          "byte-offset": 5887,
+          "line": 250,
           "column": 18
         }
       },
-      "offset": 799
+      "offset": 802
     },
     {
       "text": "clr1  ie, 7",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5809,
-          "line": 248,
+          "byte-offset": 5891,
+          "line": 251,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5819,
-          "line": 248,
+          "byte-offset": 5901,
+          "line": 251,
           "column": 12
         }
       },
-      "offset": 802
+      "offset": 805
     },
     {
       "text": "mov   #0, t1cnt",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5823,
-          "line": 249,
+          "byte-offset": 5905,
+          "line": 252,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5836,
-          "line": 249,
-          "column": 15
-        }
-      },
-      "offset": 804
-    },
-    {
-      "text": "mov   #0, t0cnt",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 5840,
-          "line": 250,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 5853,
-          "line": 250,
+          "byte-offset": 5918,
+          "line": 252,
           "column": 15
         }
       },
       "offset": 807
     },
     {
-      "text": "set1  ie, 7",
+      "text": "mov   #0, t0cnt",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5857,
-          "line": 251,
+          "byte-offset": 5922,
+          "line": 253,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5867,
-          "line": 251,
-          "column": 12
+          "byte-offset": 5935,
+          "line": 253,
+          "column": 15
         }
       },
       "offset": 810
+    },
+    {
+      "text": "set1  ie, 7",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 5939,
+          "line": 254,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 5949,
+          "line": 254,
+          "column": 12
+        }
+      },
+      "offset": 813
     },
     {
       "text": "inc   xpos",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5931,
-          "line": 254,
+          "byte-offset": 6013,
+          "line": 257,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5939,
-          "line": 254,
+          "byte-offset": 6021,
+          "line": 257,
           "column": 10
         }
       },
-      "offset": 812
+      "offset": 815
     },
     {
       "text": "ld    t1ovfset",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5943,
-          "line": 255,
+          "byte-offset": 6025,
+          "line": 258,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5954,
-          "line": 255,
+          "byte-offset": 6036,
+          "line": 258,
           "column": 13
         }
       },
-      "offset": 814
+      "offset": 817
     },
     {
       "text": "st    flag",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5958,
-          "line": 256,
+          "byte-offset": 6040,
+          "line": 259,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5965,
-          "line": 256,
+          "byte-offset": 6047,
+          "line": 259,
           "column": 9
         }
       },
-      "offset": 816
+      "offset": 819
     },
     {
       "text": "call  putch_xy",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5969,
-          "line": 257,
+          "byte-offset": 6051,
+          "line": 260,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5982,
-          "line": 257,
+          "byte-offset": 6064,
+          "line": 260,
           "column": 15
         }
       },
-      "offset": 818
+      "offset": 821
     },
     {
       "text": "inc   xpos",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6046,
-          "line": 260,
+          "byte-offset": 6128,
+          "line": 263,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6054,
-          "line": 260,
+          "byte-offset": 6136,
+          "line": 263,
           "column": 10
         }
       },
-      "offset": 820
+      "offset": 823
     },
     {
       "text": "ld    t0ovfset",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6058,
-          "line": 261,
+          "byte-offset": 6140,
+          "line": 264,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6069,
-          "line": 261,
+          "byte-offset": 6151,
+          "line": 264,
           "column": 13
         }
       },
-      "offset": 822
+      "offset": 825
     },
     {
       "text": "st    flag",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6073,
-          "line": 262,
+          "byte-offset": 6155,
+          "line": 265,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6080,
-          "line": 262,
+          "byte-offset": 6162,
+          "line": 265,
           "column": 9
         }
       },
-      "offset": 824
+      "offset": 827
     },
     {
       "text": "call  putch_xy",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6084,
-          "line": 263,
+          "byte-offset": 6166,
+          "line": 266,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6097,
-          "line": 263,
+          "byte-offset": 6179,
+          "line": 266,
           "column": 15
         }
       },
-      "offset": 826
+      "offset": 829
     },
     {
       "text": "inc   ypos",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6110,
-          "line": 266,
+          "byte-offset": 6192,
+          "line": 269,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6118,
-          "line": 266,
+          "byte-offset": 6200,
+          "line": 269,
           "column": 10
         }
       },
-      "offset": 828
+      "offset": 831
     },
     {
       "text": "xor   acc",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6122,
-          "line": 267,
+          "byte-offset": 6204,
+          "line": 270,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6129,
-          "line": 267,
+          "byte-offset": 6211,
+          "line": 270,
           "column": 9
         }
       },
-      "offset": 830
+      "offset": 833
     },
     {
       "text": "st    xpos",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6133,
-          "line": 268,
+          "byte-offset": 6215,
+          "line": 271,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6140,
-          "line": 268,
+          "byte-offset": 6222,
+          "line": 271,
           "column": 9
         }
       },
-      "offset": 832
+      "offset": 835
     },
     {
       "text": "st    t0intcount",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6144,
-          "line": 269,
+          "byte-offset": 6226,
+          "line": 272,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6157,
-          "line": 269,
+          "byte-offset": 6239,
+          "line": 272,
           "column": 15
         }
       },
-      "offset": 834
+      "offset": 837
     },
     {
       "text": "st    t1intcount",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6161,
-          "line": 270,
+          "byte-offset": 6243,
+          "line": 273,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6174,
-          "line": 270,
+          "byte-offset": 6256,
+          "line": 273,
           "column": 15
         }
       },
-      "offset": 836
+      "offset": 839
     },
     {
       "text": "mov   #$FF, t1l",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6234,
-          "line": 274,
+          "byte-offset": 6316,
+          "line": 277,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6247,
-          "line": 274,
+          "byte-offset": 6329,
+          "line": 277,
           "column": 15
         }
       },
-      "offset": 838
+      "offset": 841
     },
     {
       "text": "mov   #%01000001, t1cnt",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6251,
-          "line": 275,
+          "byte-offset": 6333,
+          "line": 278,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6272,
-          "line": 275,
+          "byte-offset": 6354,
+          "line": 278,
           "column": 23
         }
       },
-      "offset": 841
+      "offset": 844
     },
     {
       "text": "mov   #$FF, t0h",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6336,
-          "line": 278,
+          "byte-offset": 6418,
+          "line": 281,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6349,
-          "line": 278,
+          "byte-offset": 6431,
+          "line": 281,
           "column": 15
         }
       },
-      "offset": 844
+      "offset": 847
     },
     {
       "text": "mov   #$FF, t0hr",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6353,
-          "line": 279,
+          "byte-offset": 6435,
+          "line": 282,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6367,
-          "line": 279,
+          "byte-offset": 6449,
+          "line": 282,
           "column": 16
         }
       },
-      "offset": 847
+      "offset": 850
     },
     {
       "text": "mov   #$FF, t0prr",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6371,
-          "line": 280,
+          "byte-offset": 6453,
+          "line": 283,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6386,
-          "line": 280,
+          "byte-offset": 6468,
+          "line": 283,
           "column": 17
         }
       },
-      "offset": 850
+      "offset": 853
     },
     {
       "text": "mov   #%10000100, t0cnt",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6390,
-          "line": 281,
+          "byte-offset": 6472,
+          "line": 284,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6411,
-          "line": 281,
+          "byte-offset": 6493,
+          "line": 284,
           "column": 23
         }
       },
-      "offset": 853
+      "offset": 856
     },
     {
       "text": "set1  ie, 7",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6434,
-          "line": 283,
+          "byte-offset": 6516,
+          "line": 286,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6444,
-          "line": 283,
+          "byte-offset": 6526,
+          "line": 286,
           "column": 12
         }
       },
-      "offset": 856
+      "offset": 859
     },
     {
       "text": "mov   #$50, acc",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6467,
-          "line": 286,
+          "byte-offset": 6549,
+          "line": 289,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6480,
-          "line": 286,
+          "byte-offset": 6562,
+          "line": 289,
           "column": 15
         }
       },
-      "offset": 858
+      "offset": 861
     },
     {
       "text": "dbnz  acc, .loop4",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6493,
-          "line": 288,
+          "byte-offset": 6575,
+          "line": 291,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6509,
-          "line": 288,
+          "byte-offset": 6591,
+          "line": 291,
           "column": 18
         }
       },
-      "offset": 861
+      "offset": 864
     },
     {
       "text": "clr1  ie, 7",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6513,
-          "line": 289,
+          "byte-offset": 6595,
+          "line": 292,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6523,
-          "line": 289,
+          "byte-offset": 6605,
+          "line": 292,
           "column": 12
         }
       },
-      "offset": 864
+      "offset": 867
     },
     {
       "text": "mov   #0, t1cnt",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6527,
-          "line": 290,
+          "byte-offset": 6609,
+          "line": 293,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6540,
-          "line": 290,
-          "column": 15
-        }
-      },
-      "offset": 866
-    },
-    {
-      "text": "mov   #0, t0cnt",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 6544,
-          "line": 291,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 6557,
-          "line": 291,
+          "byte-offset": 6622,
+          "line": 293,
           "column": 15
         }
       },
       "offset": 869
     },
     {
-      "text": "set1  ie, 7",
+      "text": "mov   #0, t0cnt",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6561,
-          "line": 292,
+          "byte-offset": 6626,
+          "line": 294,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6571,
-          "line": 292,
-          "column": 12
+          "byte-offset": 6639,
+          "line": 294,
+          "column": 15
         }
       },
       "offset": 872
+    },
+    {
+      "text": "set1  ie, 7",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 6643,
+          "line": 295,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 6653,
+          "line": 295,
+          "column": 12
+        }
+      },
+      "offset": 875
     },
     {
       "text": "ld    t0intcount",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6654,
-          "line": 296,
+          "byte-offset": 6736,
+          "line": 299,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6667,
-          "line": 296,
+          "byte-offset": 6749,
+          "line": 299,
           "column": 15
         }
       },
-      "offset": 874
+      "offset": 877
     },
     {
       "text": "st    c",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6671,
-          "line": 297,
+          "byte-offset": 6753,
+          "line": 300,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6675,
-          "line": 297,
+          "byte-offset": 6757,
+          "line": 300,
           "column": 6
         }
       },
-      "offset": 876
+      "offset": 879
     },
     {
       "text": "xor   acc",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6701,
-          "line": 298,
+          "byte-offset": 6783,
+          "line": 301,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6708,
-          "line": 298,
+          "byte-offset": 6790,
+          "line": 301,
           "column": 9
         }
       },
-      "offset": 878
+      "offset": 881
     },
     {
       "text": "mov   #100, b",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6732,
-          "line": 299,
+          "byte-offset": 6814,
+          "line": 302,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6743,
-          "line": 299,
+          "byte-offset": 6825,
+          "line": 302,
           "column": 13
         }
       },
-      "offset": 880
+      "offset": 883
     },
     {
       "text": "div",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6758,
-          "line": 300,
+          "byte-offset": 6840,
+          "line": 303,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6761,
-          "line": 300,
+          "byte-offset": 6843,
+          "line": 303,
           "column": 5
         }
       },
-      "offset": 883
+      "offset": 886
     },
     {
       "text": "ld    c",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6765,
-          "line": 301,
+          "byte-offset": 6847,
+          "line": 304,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6769,
-          "line": 301,
+          "byte-offset": 6851,
+          "line": 304,
           "column": 6
         }
       },
-      "offset": 884
+      "offset": 887
     },
     {
       "text": "st    flag",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6794,
-          "line": 302,
+          "byte-offset": 6876,
+          "line": 305,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6801,
-          "line": 302,
+          "byte-offset": 6883,
+          "line": 305,
           "column": 9
         }
       },
-      "offset": 886
+      "offset": 889
     },
     {
       "text": "push  b",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6805,
-          "line": 303,
+          "byte-offset": 6887,
+          "line": 306,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6811,
-          "line": 303,
+          "byte-offset": 6893,
+          "line": 306,
           "column": 8
         }
       },
-      "offset": 888
+      "offset": 891
     },
     {
       "text": "call  putch_xy",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6857,
-          "line": 304,
+          "byte-offset": 6939,
+          "line": 307,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6870,
-          "line": 304,
+          "byte-offset": 6952,
+          "line": 307,
           "column": 15
         }
       },
-      "offset": 890
+      "offset": 893
     },
     {
       "text": "inc   xpos",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6908,
-          "line": 307,
+          "byte-offset": 6990,
+          "line": 310,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6916,
-          "line": 307,
+          "byte-offset": 6998,
+          "line": 310,
           "column": 10
         }
       },
-      "offset": 892
+      "offset": 895
     },
     {
       "text": "pop   c",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6920,
-          "line": 308,
+          "byte-offset": 7002,
+          "line": 311,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6925,
-          "line": 308,
+          "byte-offset": 7007,
+          "line": 311,
           "column": 7
         }
       },
-      "offset": 894
+      "offset": 897
     },
     {
       "text": "xor   acc",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6971,
-          "line": 309,
+          "byte-offset": 7053,
+          "line": 312,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6978,
-          "line": 309,
+          "byte-offset": 7060,
+          "line": 312,
           "column": 9
         }
       },
-      "offset": 896
+      "offset": 899
     },
     {
       "text": "mov   #10, b",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7002,
-          "line": 310,
+          "byte-offset": 7084,
+          "line": 313,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7012,
-          "line": 310,
+          "byte-offset": 7094,
+          "line": 313,
           "column": 12
         }
       },
-      "offset": 898
+      "offset": 901
     },
     {
       "text": "div",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7028,
-          "line": 311,
+          "byte-offset": 7110,
+          "line": 314,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7031,
-          "line": 311,
+          "byte-offset": 7113,
+          "line": 314,
           "column": 5
         }
       },
-      "offset": 901
+      "offset": 904
     },
     {
       "text": "ld    c",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7035,
-          "line": 312,
+          "byte-offset": 7117,
+          "line": 315,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7039,
-          "line": 312,
+          "byte-offset": 7121,
+          "line": 315,
           "column": 6
         }
       },
-      "offset": 902
+      "offset": 905
     },
     {
       "text": "st    flag",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7064,
-          "line": 313,
+          "byte-offset": 7146,
+          "line": 316,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7071,
-          "line": 313,
+          "byte-offset": 7153,
+          "line": 316,
           "column": 9
         }
       },
-      "offset": 904
+      "offset": 907
     },
     {
       "text": "push  b",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7075,
-          "line": 314,
+          "byte-offset": 7157,
+          "line": 317,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7081,
-          "line": 314,
+          "byte-offset": 7163,
+          "line": 317,
           "column": 8
         }
       },
-      "offset": 906
+      "offset": 909
     },
     {
       "text": "call  putch_xy",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7131,
-          "line": 315,
+          "byte-offset": 7213,
+          "line": 318,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7144,
-          "line": 315,
+          "byte-offset": 7226,
+          "line": 318,
           "column": 15
         }
       },
-      "offset": 908
+      "offset": 911
     },
     {
       "text": "inc   xpos",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7182,
-          "line": 318,
+          "byte-offset": 7264,
+          "line": 321,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7190,
-          "line": 318,
+          "byte-offset": 7272,
+          "line": 321,
           "column": 10
         }
       },
-      "offset": 910
+      "offset": 913
     },
     {
       "text": "pop   flag",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7194,
-          "line": 319,
+          "byte-offset": 7276,
+          "line": 322,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7202,
-          "line": 319,
+          "byte-offset": 7284,
+          "line": 322,
           "column": 10
         }
       },
-      "offset": 912
+      "offset": 915
     },
     {
       "text": "call  putch_xy",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7206,
-          "line": 320,
+          "byte-offset": 7288,
+          "line": 323,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7219,
-          "line": 320,
+          "byte-offset": 7301,
+          "line": 323,
           "column": 15
         }
       },
-      "offset": 914
+      "offset": 917
     },
     {
       "text": "inc   xpos",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7302,
-          "line": 324,
+          "byte-offset": 7384,
+          "line": 327,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7310,
-          "line": 324,
+          "byte-offset": 7392,
+          "line": 327,
           "column": 10
         }
       },
-      "offset": 916
+      "offset": 919
     },
     {
       "text": "ld    t1intcount",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7314,
-          "line": 325,
+          "byte-offset": 7396,
+          "line": 328,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7327,
-          "line": 325,
+          "byte-offset": 7409,
+          "line": 328,
           "column": 15
         }
       },
-      "offset": 918
+      "offset": 921
     },
     {
       "text": "st    c",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7331,
-          "line": 326,
+          "byte-offset": 7413,
+          "line": 329,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7335,
-          "line": 326,
+          "byte-offset": 7417,
+          "line": 329,
           "column": 6
         }
       },
-      "offset": 920
+      "offset": 923
     },
     {
       "text": "xor   acc",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7361,
-          "line": 327,
+          "byte-offset": 7443,
+          "line": 330,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7368,
-          "line": 327,
+          "byte-offset": 7450,
+          "line": 330,
           "column": 9
         }
       },
-      "offset": 922
+      "offset": 925
     },
     {
       "text": "mov   #100, b",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7392,
-          "line": 328,
+          "byte-offset": 7474,
+          "line": 331,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7403,
-          "line": 328,
+          "byte-offset": 7485,
+          "line": 331,
           "column": 13
         }
       },
-      "offset": 924
+      "offset": 927
     },
     {
       "text": "div",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7418,
-          "line": 329,
+          "byte-offset": 7500,
+          "line": 332,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7421,
-          "line": 329,
+          "byte-offset": 7503,
+          "line": 332,
           "column": 5
         }
       },
-      "offset": 927
+      "offset": 930
     },
     {
       "text": "ld    c",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7425,
-          "line": 330,
+          "byte-offset": 7507,
+          "line": 333,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7429,
-          "line": 330,
+          "byte-offset": 7511,
+          "line": 333,
           "column": 6
         }
       },
-      "offset": 928
+      "offset": 931
     },
     {
       "text": "st    flag",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7454,
-          "line": 331,
+          "byte-offset": 7536,
+          "line": 334,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7461,
-          "line": 331,
+          "byte-offset": 7543,
+          "line": 334,
           "column": 9
         }
       },
-      "offset": 930
+      "offset": 933
     },
     {
       "text": "push  b",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7465,
-          "line": 332,
+          "byte-offset": 7547,
+          "line": 335,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7471,
-          "line": 332,
+          "byte-offset": 7553,
+          "line": 335,
           "column": 8
         }
       },
-      "offset": 932
+      "offset": 935
     },
     {
       "text": "call  putch_xy",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7517,
-          "line": 333,
+          "byte-offset": 7599,
+          "line": 336,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7530,
-          "line": 333,
+          "byte-offset": 7612,
+          "line": 336,
           "column": 15
         }
       },
-      "offset": 934
+      "offset": 937
     },
     {
       "text": "inc   xpos",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7568,
-          "line": 336,
+          "byte-offset": 7650,
+          "line": 339,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7576,
-          "line": 336,
+          "byte-offset": 7658,
+          "line": 339,
           "column": 10
         }
       },
-      "offset": 936
+      "offset": 939
     },
     {
       "text": "pop   c",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7580,
-          "line": 337,
+          "byte-offset": 7662,
+          "line": 340,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7585,
-          "line": 337,
+          "byte-offset": 7667,
+          "line": 340,
           "column": 7
         }
       },
-      "offset": 938
+      "offset": 941
     },
     {
       "text": "xor   acc",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7631,
-          "line": 338,
+          "byte-offset": 7713,
+          "line": 341,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7638,
-          "line": 338,
+          "byte-offset": 7720,
+          "line": 341,
           "column": 9
         }
       },
-      "offset": 940
+      "offset": 943
     },
     {
       "text": "mov   #10, b",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7662,
-          "line": 339,
+          "byte-offset": 7744,
+          "line": 342,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7672,
-          "line": 339,
+          "byte-offset": 7754,
+          "line": 342,
           "column": 12
         }
       },
-      "offset": 942
+      "offset": 945
     },
     {
       "text": "div",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7688,
-          "line": 340,
+          "byte-offset": 7770,
+          "line": 343,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7691,
-          "line": 340,
+          "byte-offset": 7773,
+          "line": 343,
           "column": 5
         }
       },
-      "offset": 945
+      "offset": 948
     },
     {
       "text": "ld    c",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7695,
-          "line": 341,
+          "byte-offset": 7777,
+          "line": 344,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7699,
-          "line": 341,
+          "byte-offset": 7781,
+          "line": 344,
           "column": 6
         }
       },
-      "offset": 946
+      "offset": 949
     },
     {
       "text": "st    flag",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7724,
-          "line": 342,
+          "byte-offset": 7806,
+          "line": 345,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7731,
-          "line": 342,
+          "byte-offset": 7813,
+          "line": 345,
           "column": 9
         }
       },
-      "offset": 948
+      "offset": 951
     },
     {
       "text": "push  b",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7735,
-          "line": 343,
+          "byte-offset": 7817,
+          "line": 346,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7741,
-          "line": 343,
+          "byte-offset": 7823,
+          "line": 346,
           "column": 8
         }
       },
-      "offset": 950
+      "offset": 953
     },
     {
       "text": "call  putch_xy",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7791,
-          "line": 344,
+          "byte-offset": 7873,
+          "line": 347,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7804,
-          "line": 344,
+          "byte-offset": 7886,
+          "line": 347,
           "column": 15
         }
       },
-      "offset": 952
+      "offset": 955
     },
     {
       "text": "inc   xpos",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7842,
-          "line": 347,
+          "byte-offset": 7924,
+          "line": 350,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7850,
-          "line": 347,
+          "byte-offset": 7932,
+          "line": 350,
           "column": 10
         }
       },
-      "offset": 954
+      "offset": 957
     },
     {
       "text": "pop   flag",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7854,
-          "line": 348,
+          "byte-offset": 7936,
+          "line": 351,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7862,
-          "line": 348,
+          "byte-offset": 7944,
+          "line": 351,
           "column": 10
         }
       },
-      "offset": 956
+      "offset": 959
     },
     {
       "text": "call  putch_xy",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7866,
-          "line": 349,
+          "byte-offset": 7948,
+          "line": 352,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7879,
-          "line": 349,
+          "byte-offset": 7961,
+          "line": 352,
           "column": 15
         }
       },
-      "offset": 958
+      "offset": 961
     },
     {
       "text": "set1  pcon, 0",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7973,
-          "line": 353,
+          "byte-offset": 8055,
+          "line": 356,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7985,
-          "line": 353,
+          "byte-offset": 8067,
+          "line": 356,
           "column": 14
         }
       },
-      "offset": 960
+      "offset": 963
     },
     {
       "text": "ld    p3",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7989,
-          "line": 354,
+          "byte-offset": 8071,
+          "line": 357,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7994,
-          "line": 354,
+          "byte-offset": 8076,
+          "line": 357,
           "column": 7
         }
       },
-      "offset": 962
+      "offset": 965
     },
     {
       "text": "bn    acc, 6, finish",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7998,
-          "line": 355,
+          "byte-offset": 8080,
+          "line": 358,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 8013,
-          "line": 355,
+          "byte-offset": 8095,
+          "line": 358,
           "column": 17
         }
       },
-      "offset": 964
+      "offset": 967
     },
     {
       "text": "jmp   next4",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 8072,
-          "line": 357,
+          "byte-offset": 8154,
+          "line": 360,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 8081,
-          "line": 357,
+          "byte-offset": 8163,
+          "line": 360,
           "column": 11
         }
       },
-      "offset": 967
+      "offset": 970
     },
     {
       "text": "jmp   game_end",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 8140,
-          "line": 360,
+          "byte-offset": 8222,
+          "line": 363,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 8152,
-          "line": 360,
+          "byte-offset": 8234,
+          "line": 363,
           "column": 14
         }
       },
-      "offset": 969
+      "offset": 972
     },
     {
       "text": "push  ocr",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 8581,
-          "line": 377,
+          "byte-offset": 8663,
+          "line": 380,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 8589,
-          "line": 377,
+          "byte-offset": 8671,
+          "line": 380,
           "column": 10
         }
       },
-      "offset": 971
+      "offset": 974
     },
     {
       "text": "mov   #osc_rc, ocr",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 8631,
-          "line": 378,
+          "byte-offset": 8713,
+          "line": 381,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 8646,
-          "line": 378,
+          "byte-offset": 8728,
+          "line": 381,
           "column": 17
         }
       },
-      "offset": 973
+      "offset": 976
     },
     {
       "text": "mov   #0, xbnk",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 8681,
-          "line": 380,
+          "byte-offset": 8763,
+          "line": 383,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 8692,
-          "line": 380,
+          "byte-offset": 8774,
+          "line": 383,
           "column": 13
         }
       },
-      "offset": 976
+      "offset": 979
     },
     {
       "text": "call  cls_s",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 8745,
-          "line": 381,
+          "byte-offset": 8827,
+          "line": 384,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 8755,
-          "line": 381,
+          "byte-offset": 8837,
+          "line": 384,
           "column": 12
         }
       },
-      "offset": 979
+      "offset": 982
     },
     {
       "text": "mov   #1, xbnk",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 8792,
-          "line": 383,
+          "byte-offset": 8874,
+          "line": 386,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 8803,
-          "line": 383,
+          "byte-offset": 8885,
+          "line": 386,
           "column": 13
         }
       },
-      "offset": 981
+      "offset": 984
     },
     {
       "text": "call  cls_s",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 8856,
-          "line": 384,
+          "byte-offset": 8938,
+          "line": 387,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 8866,
-          "line": 384,
+          "byte-offset": 8948,
+          "line": 387,
           "column": 12
         }
       },
-      "offset": 984
+      "offset": 987
     },
     {
       "text": "pop   ocr",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 8901,
-          "line": 385,
+          "byte-offset": 8983,
+          "line": 388,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 8908,
-          "line": 385,
+          "byte-offset": 8990,
+          "line": 388,
           "column": 9
         }
       },
-      "offset": 986
+      "offset": 989
     },
     {
       "text": "ret",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 8952,
-          "line": 387,
+          "byte-offset": 9034,
+          "line": 390,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 8955,
-          "line": 387,
+          "byte-offset": 9037,
+          "line": 390,
           "column": 5
         }
       },
-      "offset": 988
+      "offset": 991
     },
     {
       "text": "mov   #$80, r2",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9022,
-          "line": 390,
+          "byte-offset": 9104,
+          "line": 393,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 9033,
-          "line": 390,
+          "byte-offset": 9115,
+          "line": 393,
           "column": 13
         }
       },
-      "offset": 989
+      "offset": 992
     },
     {
       "text": "mov   #$80, b",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9107,
-          "line": 391,
+          "byte-offset": 9189,
+          "line": 394,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 9117,
-          "line": 391,
-          "column": 12
-        }
-      },
-      "offset": 992
-    },
-    {
-      "text": "mov   #0, @R2",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 9174,
-          "line": 393,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 9184,
-          "line": 393,
+          "byte-offset": 9199,
+          "line": 394,
           "column": 12
         }
       },
       "offset": 995
     },
     {
-      "text": "inc   r2",
+      "text": "mov   #0, @R2",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9232,
-          "line": 394,
+          "byte-offset": 9256,
+          "line": 396,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 9238,
-          "line": 394,
+          "byte-offset": 9266,
+          "line": 396,
+          "column": 12
+        }
+      },
+      "offset": 998
+    },
+    {
+      "text": "inc   r2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9314,
+          "line": 397,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9320,
+          "line": 397,
           "column": 8
         }
       },
-      "offset": 997
+      "offset": 1000
     },
     {
       "text": "dbnz  b, loop3",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9244,
-          "line": 395,
+          "byte-offset": 9326,
+          "line": 398,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 9256,
-          "line": 395,
+          "byte-offset": 9338,
+          "line": 398,
           "column": 14
         }
       },
-      "offset": 999
+      "offset": 1002
     },
     {
       "text": "ret",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9287,
-          "line": 397,
+          "byte-offset": 9369,
+          "line": 400,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 9290,
-          "line": 397,
+          "byte-offset": 9372,
+          "line": 400,
           "column": 5
         }
       },
-      "offset": 1002
+      "offset": 1005
     },
     {
       "text": "ld    xpos",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9393,
-          "line": 402,
+          "byte-offset": 9475,
+          "line": 405,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 9400,
-          "line": 402,
+          "byte-offset": 9482,
+          "line": 405,
           "column": 9
         }
       },
-      "offset": 1003
+      "offset": 1006
     },
     {
       "text": "st    c",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9404,
-          "line": 403,
+          "byte-offset": 9486,
+          "line": 406,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 9408,
-          "line": 403,
+          "byte-offset": 9490,
+          "line": 406,
           "column": 6
         }
       },
-      "offset": 1005
+      "offset": 1008
     },
     {
       "text": "ld    ypos",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9412,
-          "line": 404,
+          "byte-offset": 9494,
+          "line": 407,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 9419,
-          "line": 404,
+          "byte-offset": 9501,
+          "line": 407,
           "column": 9
         }
       },
-      "offset": 1007
+      "offset": 1010
     },
     {
       "text": "st    b",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9423,
-          "line": 405,
+          "byte-offset": 9505,
+          "line": 408,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 9427,
-          "line": 405,
+          "byte-offset": 9509,
+          "line": 408,
           "column": 6
         }
       },
-      "offset": 1009
+      "offset": 1012
     },
     {
       "text": "ld    flag",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9431,
-          "line": 406,
+          "byte-offset": 9513,
+          "line": 409,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 9438,
-          "line": 406,
+          "byte-offset": 9520,
+          "line": 409,
           "column": 9
         }
       },
-      "offset": 1011
+      "offset": 1014
     },
     {
       "text": "call  putch",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9474,
-          "line": 407,
+          "byte-offset": 9556,
+          "line": 410,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 9484,
-          "line": 407,
+          "byte-offset": 9566,
+          "line": 410,
           "column": 12
         }
       },
-      "offset": 1013
+      "offset": 1016
     },
     {
       "text": "ret",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9488,
-          "line": 408,
+          "byte-offset": 9570,
+          "line": 411,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 9491,
-          "line": 408,
+          "byte-offset": 9573,
+          "line": 411,
           "column": 5
         }
       },
-      "offset": 1015
+      "offset": 1018
     },
     {
       "text": "push  xbnk",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9835,
-          "line": 417,
+          "byte-offset": 9917,
+          "line": 420,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 9844,
-          "line": 417,
+          "byte-offset": 9926,
+          "line": 420,
           "column": 11
         }
       },
-      "offset": 1016
+      "offset": 1019
     },
     {
       "text": "push  acc",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9848,
-          "line": 418,
+          "byte-offset": 9930,
+          "line": 421,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 9856,
-          "line": 418,
+          "byte-offset": 9938,
+          "line": 421,
           "column": 10
         }
       },
-      "offset": 1018
+      "offset": 1021
     },
     {
       "text": "call  locate",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9860,
-          "line": 419,
+          "byte-offset": 9942,
+          "line": 422,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 9871,
-          "line": 419,
+          "byte-offset": 9953,
+          "line": 422,
           "column": 13
         }
       },
-      "offset": 1020
+      "offset": 1023
     },
     {
       "text": "pop   acc",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9933,
-          "line": 420,
+          "byte-offset": 10015,
+          "line": 423,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 9940,
-          "line": 420,
+          "byte-offset": 10022,
+          "line": 423,
           "column": 9
         }
       },
-      "offset": 1022
+      "offset": 1025
     },
     {
       "text": "call  put_chara",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9944,
-          "line": 421,
+          "byte-offset": 10026,
+          "line": 424,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 9958,
-          "line": 421,
+          "byte-offset": 10040,
+          "line": 424,
           "column": 16
         }
       },
-      "offset": 1024
+      "offset": 1027
     },
     {
       "text": "pop   xbnk",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9987,
-          "line": 422,
+          "byte-offset": 10069,
+          "line": 425,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 9995,
-          "line": 422,
+          "byte-offset": 10077,
+          "line": 425,
           "column": 10
         }
       },
-      "offset": 1026
+      "offset": 1029
     },
     {
       "text": "ret",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 10001,
-          "line": 424,
+          "byte-offset": 10083,
+          "line": 427,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 10004,
-          "line": 424,
+          "byte-offset": 10086,
+          "line": 427,
           "column": 5
         }
       },
-      "offset": 1028
+      "offset": 1031
     },
     {
       "text": "ld    b",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 10317,
-          "line": 431,
+          "byte-offset": 10399,
+          "line": 434,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 10321,
-          "line": 431,
+          "byte-offset": 10403,
+          "line": 434,
           "column": 6
         }
       },
-      "offset": 1029
+      "offset": 1032
     },
     {
       "text": "sub   #2",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 10353,
-          "line": 432,
+          "byte-offset": 10435,
+          "line": 435,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 10359,
-          "line": 432,
+          "byte-offset": 10441,
+          "line": 435,
           "column": 8
         }
       },
-      "offset": 1031
+      "offset": 1034
     },
     {
       "text": "bn    psw, 7, next1",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 10365,
-          "line": 433,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10379,
-          "line": 433,
-          "column": 16
-        }
-      },
-      "offset": 1033
-    },
-    {
-      "text": "mov   #$00, xbnk",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10387,
-          "line": 435,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10400,
-          "line": 435,
-          "column": 15
-        }
-      },
-      "offset": 1036
-    },
-    {
-      "text": "br    next2",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10453,
+          "byte-offset": 10447,
           "line": 436,
           "column": 2
         },
@@ -6016,97 +5998,97 @@
           "source": 0,
           "byte-offset": 10461,
           "line": 436,
-          "column": 10
+          "column": 16
+        }
+      },
+      "offset": 1036
+    },
+    {
+      "text": "mov   #$00, xbnk",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 10469,
+          "line": 438,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 10482,
+          "line": 438,
+          "column": 15
         }
       },
       "offset": 1039
+    },
+    {
+      "text": "br    next2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 10535,
+          "line": 439,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 10543,
+          "line": 439,
+          "column": 10
+        }
+      },
+      "offset": 1042
     },
     {
       "text": "st    b",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 10473,
-          "line": 438,
+          "byte-offset": 10555,
+          "line": 441,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 10477,
-          "line": 438,
+          "byte-offset": 10559,
+          "line": 441,
           "column": 6
         }
       },
-      "offset": 1041
+      "offset": 1044
     },
     {
       "text": "mov   #$01, xbnk",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 10481,
-          "line": 439,
+          "byte-offset": 10563,
+          "line": 442,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 10494,
-          "line": 439,
+          "byte-offset": 10576,
+          "line": 442,
           "column": 15
         }
       },
-      "offset": 1043
+      "offset": 1046
     },
     {
       "text": "ld    b",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 10638,
-          "line": 443,
+          "byte-offset": 10720,
+          "line": 446,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 10642,
-          "line": 443,
+          "byte-offset": 10724,
+          "line": 446,
           "column": 6
-        }
-      },
-      "offset": 1046
-    },
-    {
-      "text": "rol",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10666,
-          "line": 444,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10669,
-          "line": 444,
-          "column": 5
-        }
-      },
-      "offset": 1048
-    },
-    {
-      "text": "rol",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10675,
-          "line": 445,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10678,
-          "line": 445,
-          "column": 5
         }
       },
       "offset": 1049
@@ -6116,31 +6098,13 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 10684,
-          "line": 446,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10687,
-          "line": 446,
-          "column": 5
-        }
-      },
-      "offset": 1050
-    },
-    {
-      "text": "rol",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10693,
+          "byte-offset": 10748,
           "line": 447,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 10696,
+          "byte-offset": 10751,
           "line": 447,
           "column": 5
         }
@@ -6152,13 +6116,13 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 10702,
+          "byte-offset": 10757,
           "line": 448,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 10705,
+          "byte-offset": 10760,
           "line": 448,
           "column": 5
         }
@@ -6170,13 +6134,13 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 10711,
+          "byte-offset": 10766,
           "line": 449,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 10714,
+          "byte-offset": 10769,
           "line": 449,
           "column": 5
         }
@@ -6184,145 +6148,163 @@
       "offset": 1053
     },
     {
-      "text": "add   c",
+      "text": "rol",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 10720,
+          "byte-offset": 10775,
           "line": 450,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 10725,
+          "byte-offset": 10778,
           "line": 450,
-          "column": 7
+          "column": 5
         }
       },
       "offset": 1054
+    },
+    {
+      "text": "rol",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 10784,
+          "line": 451,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 10787,
+          "line": 451,
+          "column": 5
+        }
+      },
+      "offset": 1055
+    },
+    {
+      "text": "rol",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 10793,
+          "line": 452,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 10796,
+          "line": 452,
+          "column": 5
+        }
+      },
+      "offset": 1056
+    },
+    {
+      "text": "add   c",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 10802,
+          "line": 453,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 10807,
+          "line": 453,
+          "column": 7
+        }
+      },
+      "offset": 1057
     },
     {
       "text": "add   #$80",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 10731,
-          "line": 451,
+          "byte-offset": 10813,
+          "line": 454,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 10739,
-          "line": 451,
+          "byte-offset": 10821,
+          "line": 454,
           "column": 10
         }
       },
-      "offset": 1056
+      "offset": 1059
     },
     {
       "text": "st    r2",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 10745,
-          "line": 452,
+          "byte-offset": 10827,
+          "line": 455,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 10750,
-          "line": 452,
+          "byte-offset": 10832,
+          "line": 455,
           "column": 7
         }
       },
-      "offset": 1058
+      "offset": 1061
     },
     {
       "text": "ret",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 10787,
-          "line": 454,
+          "byte-offset": 10869,
+          "line": 457,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 10790,
-          "line": 454,
+          "byte-offset": 10872,
+          "line": 457,
           "column": 5
         }
       },
-      "offset": 1060
+      "offset": 1063
     },
     {
       "text": "push  psw",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 10821,
-          "line": 457,
+          "byte-offset": 10903,
+          "line": 460,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 10829,
-          "line": 457,
+          "byte-offset": 10911,
+          "line": 460,
           "column": 10
         }
       },
-      "offset": 1061
+      "offset": 1064
     },
     {
       "text": "set1  psw, 1",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 10871,
-          "line": 458,
+          "byte-offset": 10953,
+          "line": 461,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 10881,
-          "line": 458,
+          "byte-offset": 10963,
+          "line": 461,
           "column": 12
-        }
-      },
-      "offset": 1063
-    },
-    {
-      "text": "rol",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10965,
-          "line": 461,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10968,
-          "line": 461,
-          "column": 5
-        }
-      },
-      "offset": 1065
-    },
-    {
-      "text": "rol",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11003,
-          "line": 462,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11006,
-          "line": 462,
-          "column": 5
         }
       },
       "offset": 1066
@@ -6332,205 +6314,205 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 11012,
-          "line": 463,
+          "byte-offset": 11047,
+          "line": 464,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 11015,
-          "line": 463,
+          "byte-offset": 11050,
+          "line": 464,
           "column": 5
         }
       },
-      "offset": 1067
+      "offset": 1068
+    },
+    {
+      "text": "rol",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 11085,
+          "line": 465,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 11088,
+          "line": 465,
+          "column": 5
+        }
+      },
+      "offset": 1069
+    },
+    {
+      "text": "rol",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 11094,
+          "line": 466,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 11097,
+          "line": 466,
+          "column": 5
+        }
+      },
+      "offset": 1070
     },
     {
       "text": "add   #<fontdata",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 11021,
-          "line": 464,
+          "byte-offset": 11103,
+          "line": 467,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 11027,
-          "line": 464,
+          "byte-offset": 11109,
+          "line": 467,
           "column": 8
         }
       },
-      "offset": 1068
+      "offset": 1071
     },
     {
       "text": "st    trl",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 11043,
-          "line": 465,
+          "byte-offset": 11125,
+          "line": 468,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 11049,
-          "line": 465,
+          "byte-offset": 11131,
+          "line": 468,
           "column": 8
         }
       },
-      "offset": 1070
+      "offset": 1073
     },
     {
       "text": "mov   #0, acc",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 11055,
-          "line": 466,
+          "byte-offset": 11137,
+          "line": 469,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 11065,
-          "line": 466,
+          "byte-offset": 11147,
+          "line": 469,
           "column": 12
         }
       },
-      "offset": 1072
+      "offset": 1075
     },
     {
       "text": "addc  #>fontdata",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 11071,
-          "line": 467,
+          "byte-offset": 11153,
+          "line": 470,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 11078,
-          "line": 467,
+          "byte-offset": 11160,
+          "line": 470,
           "column": 9
         }
       },
-      "offset": 1075
+      "offset": 1078
     },
     {
       "text": "st    trh",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 11094,
-          "line": 468,
+          "byte-offset": 11176,
+          "line": 471,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 11100,
-          "line": 468,
+          "byte-offset": 11182,
+          "line": 471,
           "column": 8
         }
       },
-      "offset": 1077
+      "offset": 1080
     },
     {
       "text": "push  ocr",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 11108,
-          "line": 470,
+          "byte-offset": 11190,
+          "line": 473,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 11116,
-          "line": 470,
+          "byte-offset": 11198,
+          "line": 473,
           "column": 10
         }
       },
-      "offset": 1079
+      "offset": 1082
     },
     {
       "text": "mov   #osc_rc, ocr",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 11158,
-          "line": 471,
+          "byte-offset": 11240,
+          "line": 474,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 11173,
-          "line": 471,
+          "byte-offset": 11255,
+          "line": 474,
           "column": 17
         }
       },
-      "offset": 1081
+      "offset": 1084
     },
     {
       "text": "mov   #0, b",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 11208,
-          "line": 473,
+          "byte-offset": 11290,
+          "line": 476,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 11216,
-          "line": 473,
-          "column": 10
-        }
-      },
-      "offset": 1084
-    },
-    {
-      "text": "mov   #4, c",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11266,
-          "line": 474,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11274,
-          "line": 474,
+          "byte-offset": 11298,
+          "line": 476,
           "column": 10
         }
       },
       "offset": 1087
     },
     {
-      "text": "ld    b",
+      "text": "mov   #4, c",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 11301,
-          "line": 476,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11305,
-          "line": 476,
-          "column": 6
-        }
-      },
-      "offset": 1090
-    },
-    {
-      "text": "ldc",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11353,
+          "byte-offset": 11348,
           "line": 477,
           "column": 2
         },
@@ -6538,334 +6520,370 @@
           "source": 0,
           "byte-offset": 11356,
           "line": 477,
-          "column": 5
+          "column": 10
         }
       },
-      "offset": 1092
-    },
-    {
-      "text": "inc   b",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11362,
-          "line": 478,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11367,
-          "line": 478,
-          "column": 7
-        }
-      },
-      "offset": 1093
-    },
-    {
-      "text": "st    @R2",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11410,
-          "line": 479,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11416,
-          "line": 479,
-          "column": 8
-        }
-      },
-      "offset": 1095
-    },
-    {
-      "text": "ld    r2",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11464,
-          "line": 480,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11469,
-          "line": 480,
-          "column": 7
-        }
-      },
-      "offset": 1096
-    },
-    {
-      "text": "add   #6",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11509,
-          "line": 481,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11515,
-          "line": 481,
-          "column": 8
-        }
-      },
-      "offset": 1098
-    },
-    {
-      "text": "st    r2",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11521,
-          "line": 482,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11526,
-          "line": 482,
-          "column": 7
-        }
-      },
-      "offset": 1100
+      "offset": 1090
     },
     {
       "text": "ld    b",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 11534,
-          "line": 484,
+          "byte-offset": 11383,
+          "line": 479,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 11538,
-          "line": 484,
+          "byte-offset": 11387,
+          "line": 479,
           "column": 6
         }
       },
-      "offset": 1102
+      "offset": 1093
     },
     {
       "text": "ldc",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 11587,
-          "line": 485,
+          "byte-offset": 11435,
+          "line": 480,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 11590,
-          "line": 485,
+          "byte-offset": 11438,
+          "line": 480,
           "column": 5
         }
       },
-      "offset": 1104
+      "offset": 1095
     },
     {
       "text": "inc   b",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 11596,
-          "line": 486,
+          "byte-offset": 11444,
+          "line": 481,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 11601,
-          "line": 486,
+          "byte-offset": 11449,
+          "line": 481,
           "column": 7
         }
       },
-      "offset": 1105
+      "offset": 1096
     },
     {
       "text": "st    @R2",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 11644,
-          "line": 487,
+          "byte-offset": 11492,
+          "line": 482,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 11650,
-          "line": 487,
+          "byte-offset": 11498,
+          "line": 482,
           "column": 8
         }
       },
-      "offset": 1107
+      "offset": 1098
     },
     {
       "text": "ld    r2",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 11698,
-          "line": 488,
+          "byte-offset": 11546,
+          "line": 483,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 11703,
-          "line": 488,
+          "byte-offset": 11551,
+          "line": 483,
           "column": 7
         }
       },
-      "offset": 1108
+      "offset": 1099
     },
     {
-      "text": "add   #10",
+      "text": "add   #6",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 11744,
-          "line": 489,
+          "byte-offset": 11591,
+          "line": 484,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 11751,
-          "line": 489,
-          "column": 9
+          "byte-offset": 11597,
+          "line": 484,
+          "column": 8
         }
       },
-      "offset": 1110
+      "offset": 1101
     },
     {
       "text": "st    r2",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 11757,
+          "byte-offset": 11603,
+          "line": 485,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 11608,
+          "line": 485,
+          "column": 7
+        }
+      },
+      "offset": 1103
+    },
+    {
+      "text": "ld    b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 11616,
+          "line": 487,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 11620,
+          "line": 487,
+          "column": 6
+        }
+      },
+      "offset": 1105
+    },
+    {
+      "text": "ldc",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 11669,
+          "line": 488,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 11672,
+          "line": 488,
+          "column": 5
+        }
+      },
+      "offset": 1107
+    },
+    {
+      "text": "inc   b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 11678,
+          "line": 489,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 11683,
+          "line": 489,
+          "column": 7
+        }
+      },
+      "offset": 1108
+    },
+    {
+      "text": "st    @R2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 11726,
           "line": 490,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 11762,
+          "byte-offset": 11732,
           "line": 490,
+          "column": 8
+        }
+      },
+      "offset": 1110
+    },
+    {
+      "text": "ld    r2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 11780,
+          "line": 491,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 11785,
+          "line": 491,
           "column": 7
         }
       },
-      "offset": 1112
+      "offset": 1111
+    },
+    {
+      "text": "add   #10",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 11826,
+          "line": 492,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 11833,
+          "line": 492,
+          "column": 9
+        }
+      },
+      "offset": 1113
+    },
+    {
+      "text": "st    r2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 11839,
+          "line": 493,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 11844,
+          "line": 493,
+          "column": 7
+        }
+      },
+      "offset": 1115
     },
     {
       "text": "dec   c",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 11770,
-          "line": 492,
+          "byte-offset": 11852,
+          "line": 495,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 11775,
-          "line": 492,
+          "byte-offset": 11857,
+          "line": 495,
           "column": 7
         }
       },
-      "offset": 1114
+      "offset": 1117
     },
     {
       "text": "ld    c",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 11809,
-          "line": 493,
+          "byte-offset": 11891,
+          "line": 496,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 11813,
-          "line": 493,
+          "byte-offset": 11895,
+          "line": 496,
           "column": 6
         }
       },
-      "offset": 1116
+      "offset": 1119
     },
     {
       "text": "bnz   loop1",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 11819,
-          "line": 494,
+          "byte-offset": 11901,
+          "line": 497,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 11828,
-          "line": 494,
+          "byte-offset": 11910,
+          "line": 497,
           "column": 11
         }
       },
-      "offset": 1118
+      "offset": 1121
     },
     {
       "text": "pop   ocr",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 11869,
-          "line": 496,
+          "byte-offset": 11951,
+          "line": 499,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 11876,
-          "line": 496,
+          "byte-offset": 11958,
+          "line": 499,
           "column": 9
         }
       },
-      "offset": 1120
+      "offset": 1123
     },
     {
       "text": "pop   psw",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 11918,
-          "line": 497,
+          "byte-offset": 12000,
+          "line": 500,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 11925,
-          "line": 497,
+          "byte-offset": 12007,
+          "line": 500,
           "column": 9
         }
       },
-      "offset": 1122
+      "offset": 1125
     },
     {
       "text": "ret",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 11969,
-          "line": 499,
+          "byte-offset": 12051,
+          "line": 502,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 11972,
-          "line": 499,
+          "byte-offset": 12054,
+          "line": 502,
           "column": 5
         }
       },
-      "offset": 1124
+      "offset": 1127
     }
   ]
 }
