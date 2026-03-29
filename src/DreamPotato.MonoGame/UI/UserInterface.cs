@@ -1222,7 +1222,9 @@ partial class UserInterface
             if (!ImGui.CollapsingHeader("Labels", ImGuiTreeNodeFlags.DefaultOpen))
                 return;
 
-            ImGui.BeginChild("Labels", size: new Numerics.Vector2(x: 0, y: 200), ImGuiChildFlags.ResizeY);
+            if (!ImGui.BeginChild("Labels", size: new Numerics.Vector2(x: 0, y: 200), ImGuiChildFlags.ResizeY))
+                return;
+
             if (ImGui.BeginTable("Labels", columns: 1, flags: ImGuiTableFlags.BordersInnerV))
             {
                 var labels = bankInfo.Labels;
@@ -1310,6 +1312,7 @@ partial class UserInterface
                     stackData.Count,
                     new StackEntry(
                         StackValueKind.CallReturn,
+                        Interrupt: 0,
                         Source: cpu.ProgramCounter,
                         Value: 0,
                         Offset: 0,
@@ -1326,8 +1329,16 @@ partial class UserInterface
                     return; // TODO: display these
 
                 ImGui.PushID(i);
-                ImGui.TableNextColumn();
+                if (entry.Kind == StackValueKind.InterruptReturn)
+                {
+                    ImGui.TableNextColumn();
+                    ImGui.TableNextColumn();
+                    ImGui.Text($"INTERRUPT");
+                    ImGui.TableNextColumn();
+                    ImGui.Text(entry.Interrupt.ToString());
+                }
 
+                ImGui.TableNextColumn();
                 var bankInfo = debugInfo.GetBankInfo(entry.BankId);
                 var callAddr = entry.Source;
                 var bpIndex = bankInfo.Breakpoints.FindIndex(bp => bp.Offset == callAddr);

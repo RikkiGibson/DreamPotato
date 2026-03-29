@@ -43,7 +43,7 @@ readonly record struct Instruction(ushort Offset, Operation Operation, ushort Ar
             && waterbearInstructions.BinarySearch(WB.Instruction.SearchFor(Offset)) is >= 0 and var instIndex)
         {
             var waterbearInst = waterbearInstructions[instIndex];
-            return waterbearInst.Text;
+            return waterbearInst.Text.Replace("%", "%%"); // Don't treat a single '%' as a C++ format specifier
         }
 
         if (Parameters.IsEmpty)
@@ -82,11 +82,10 @@ readonly record struct Instruction(ushort Offset, Operation Operation, ushort Ar
             _ => ""
         };
         builder.Append(prefix);
-
         var displayValue = param.Kind switch
         {
-            ParameterKind.R8 => Offset + Operation.Size + (sbyte)arg,
-            ParameterKind.R16 => Offset + arg,
+            ParameterKind.R8 => (Offset + Operation.Size + (sbyte)arg) & 0xffff,
+            ParameterKind.R16 => (Offset + Operation.Size - 1 + arg) & 0xffff,
             ParameterKind.A8 => (Offset & 0xff00) | arg,
             ParameterKind.A12 => (Offset & 0xf000) | arg,
             _ => arg
