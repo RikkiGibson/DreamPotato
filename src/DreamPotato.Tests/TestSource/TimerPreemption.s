@@ -33,6 +33,7 @@
 int3_bt:
   clr1 BTCR,1 ; Clears the base timer interrupt source
   clr1 BTCR,3 ; Clears the base timer interrupt source
+  mov #1, BTIntRan
   reti ; User interrupt processing end
 
 int_t0h:
@@ -125,6 +126,7 @@ T0OvfSet = $18
 T1OvfSet = $19
 T0IntCount = $1a
 T1IntCount = $1b
+BTIntRan = $1c
 
 ;
 ; *-------------------------------------------------------------------------*
@@ -347,6 +349,91 @@ WaitForTimers4:
   call putch_xy
 
   ; 1,5: T1IntCount ones digit
+  inc xpos
+  pop flag
+  call putch_xy
+
+; Now check how many T1 interrupts are processed in a unit of real time
+Row2:
+  inc ypos
+  xor acc
+  st xpos
+  st T0IntCount ; Used as a simple counter only here
+  st T1IntCount
+
+  ; Wait for BT interrupt to run, then setup and run
+  mov #%01000001, BTCR ; CountEnable | Int0Enable
+  set1 IE, 7
+  set1 pcon, 0
+  mov #0, BTIntRan
+
+TimerSetup5:
+  ; T1: lower priority, high frequency
+  mov #$ff, T1L
+  mov #%01000001, T1CNT ; T1LRUN | T1LIE
+
+; Busy wait until BT interrupt runs
+.WaitForBaseTimer:
+  inc T0IntCount  ; reusing as a basic counter var
+  bn BTIntRan, 0, .WaitForBaseTimer
+
+  clr1 IE, 7
+  mov #0, T1CNT
+  set1 IE, 7
+
+  ; T1IntCount on REAL HW displays: 114
+  ; 1,0: T1IntCount hundreds digit
+  ld T1IntCount
+  st c        ; divisor(7-0)
+  xor acc     ; divisor(15-8)
+  mov #100, b ; dividend
+  div
+  ld c        ; result(7-0)
+  st flag
+  push b ; Save remainder (dec 0-99) for next step
+  call putch_xy
+
+  ; 1,1: T1IntCount tens digit
+  inc xpos
+  pop c       ; use remainder as new divisor(7-0)
+  xor acc     ; divisor(15-8)
+  mov #10, b  ; dividend
+  div
+  ld c        ; result(7-0)
+  st flag
+  push b      ; Save remainder (dec 0-9) for next step
+  call putch_xy
+
+  ; 1,2: T1IntCount ones digit
+  inc xpos
+  pop flag
+  call putch_xy
+
+  ; T0IntCount on REAL HW displays: ?
+  ; 1,3: flag hundreds digit
+  inc xpos
+  ld T0IntCount
+  st c        ; divisor(7-0)
+  xor acc     ; divisor(15-8)
+  mov #100, b ; dividend
+  div
+  ld c        ; result(7-0)
+  st flag
+  push b ; Save remainder (dec 0-99) for next step
+  call putch_xy
+
+  ; 1,4: flag tens digit
+  inc xpos
+  pop c       ; use remainder as new divisor(7-0)
+  xor acc     ; divisor(15-8)
+  mov #10, b  ; dividend
+  div
+  ld c        ; result(7-0)
+  st flag
+  push b      ; Save remainder (dec 0-9) for next step
+  call putch_xy
+
+  ; 1,5: flag ones digit
   inc xpos
   pop flag
   call putch_xy

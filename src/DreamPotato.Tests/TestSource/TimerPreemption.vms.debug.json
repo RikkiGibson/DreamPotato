@@ -8,7 +8,7 @@
     {
       "path": "\\\\?\\C:\\Users\\rikki\\src\\DreamPotato\\src\\DreamPotato.Tests\\TestSource\\TimerPreemption.s",
       "id": 0,
-      "hash": "5588c6b375fe58fbcd19958c2747d70f4b1b8fbf6f428d10dedff68b3d23d2b5"
+      "hash": "a78406cec4c7db73002937047fc86e7ede2fa9cbfe0b881d79fce304ac174e75"
     },
     {
       "path": "\\\\?\\C:\\Users\\rikki\\src\\DreamPotato\\src\\DreamPotato.Tests\\TestSource\\sfr.i",
@@ -40,36 +40,36 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 1144,
-          "line": 38,
+          "byte-offset": 1164,
+          "line": 39,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 1152,
-          "line": 38,
+          "byte-offset": 1172,
+          "line": 39,
           "column": 8
         }
       },
-      "offset": 82
+      "offset": 85
     },
     {
       "name": ".exit",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 1343,
-          "line": 49,
+          "byte-offset": 1363,
+          "line": 50,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 1349,
-          "line": 49,
+          "byte-offset": 1369,
+          "line": 50,
           "column": 6
         }
       },
-      "offset": 104,
+      "offset": 107,
       "parent": "int_t0h"
     },
     {
@@ -77,36 +77,36 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 1397,
-          "line": 54,
+          "byte-offset": 1417,
+          "line": 55,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 1404,
-          "line": 54,
+          "byte-offset": 1424,
+          "line": 55,
           "column": 7
         }
       },
-      "offset": 110
+      "offset": 113
     },
     {
       "name": ".exit",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 1595,
-          "line": 65,
+          "byte-offset": 1615,
+          "line": 66,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 1601,
-          "line": 65,
+          "byte-offset": 1621,
+          "line": 66,
           "column": 6
         }
       },
-      "offset": 132,
+      "offset": 135,
       "parent": "int_t1"
     },
     {
@@ -114,32 +114,32 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 1648,
-          "line": 70,
+          "byte-offset": 1668,
+          "line": 71,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 1655,
-          "line": 70,
+          "byte-offset": 1675,
+          "line": 71,
           "column": 7
         }
       },
-      "offset": 138
+      "offset": 141
     },
     {
       "name": "game_end",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 1918,
-          "line": 78,
+          "byte-offset": 1938,
+          "line": 79,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 1927,
-          "line": 78,
+          "byte-offset": 1947,
+          "line": 79,
           "column": 9
         }
       },
@@ -150,14 +150,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 3853,
-          "line": 136,
+          "byte-offset": 3889,
+          "line": 138,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 3858,
-          "line": 136,
+          "byte-offset": 3894,
+          "line": 138,
           "column": 5
         }
       },
@@ -168,14 +168,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 3897,
-          "line": 138,
+          "byte-offset": 3933,
+          "line": 140,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 3903,
-          "line": 138,
+          "byte-offset": 3939,
+          "line": 140,
           "column": 6
         }
       },
@@ -186,14 +186,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 3907,
-          "line": 140,
+          "byte-offset": 3943,
+          "line": 142,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 3922,
-          "line": 140,
+          "byte-offset": 3958,
+          "line": 142,
           "column": 15
         }
       },
@@ -204,14 +204,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4169,
-          "line": 157,
+          "byte-offset": 4205,
+          "line": 159,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 4181,
-          "line": 157,
+          "byte-offset": 4217,
+          "line": 159,
           "column": 12
         }
       },
@@ -222,14 +222,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4496,
-          "line": 173,
+          "byte-offset": 4532,
+          "line": 175,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 4511,
-          "line": 173,
+          "byte-offset": 4547,
+          "line": 175,
           "column": 15
         }
       },
@@ -240,14 +240,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4530,
-          "line": 175,
+          "byte-offset": 4566,
+          "line": 177,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 4537,
-          "line": 175,
+          "byte-offset": 4573,
+          "line": 177,
           "column": 7
         }
       },
@@ -259,14 +259,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4864,
-          "line": 196,
+          "byte-offset": 4900,
+          "line": 198,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 4876,
-          "line": 196,
+          "byte-offset": 4912,
+          "line": 198,
           "column": 12
         }
       },
@@ -277,14 +277,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5219,
-          "line": 212,
+          "byte-offset": 5255,
+          "line": 214,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 5234,
-          "line": 212,
+          "byte-offset": 5270,
+          "line": 214,
           "column": 15
         }
       },
@@ -295,14 +295,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5253,
-          "line": 214,
+          "byte-offset": 5289,
+          "line": 216,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 5260,
-          "line": 214,
+          "byte-offset": 5296,
+          "line": 216,
           "column": 7
         }
       },
@@ -314,14 +314,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5556,
-          "line": 234,
+          "byte-offset": 5592,
+          "line": 236,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 5568,
-          "line": 234,
+          "byte-offset": 5604,
+          "line": 236,
           "column": 12
         }
       },
@@ -332,14 +332,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5826,
-          "line": 247,
+          "byte-offset": 5862,
+          "line": 249,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 5841,
-          "line": 247,
+          "byte-offset": 5877,
+          "line": 249,
           "column": 15
         }
       },
@@ -350,14 +350,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5860,
-          "line": 249,
+          "byte-offset": 5896,
+          "line": 251,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 5867,
-          "line": 249,
+          "byte-offset": 5903,
+          "line": 251,
           "column": 7
         }
       },
@@ -369,14 +369,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6183,
-          "line": 268,
+          "byte-offset": 6219,
+          "line": 270,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 6188,
-          "line": 268,
+          "byte-offset": 6224,
+          "line": 270,
           "column": 5
         }
       },
@@ -387,14 +387,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6260,
-          "line": 275,
+          "byte-offset": 6296,
+          "line": 277,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 6272,
-          "line": 275,
+          "byte-offset": 6308,
+          "line": 277,
           "column": 12
         }
       },
@@ -405,14 +405,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6530,
-          "line": 288,
+          "byte-offset": 6566,
+          "line": 290,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 6545,
-          "line": 288,
+          "byte-offset": 6581,
+          "line": 290,
           "column": 15
         }
       },
@@ -423,14 +423,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6564,
-          "line": 290,
+          "byte-offset": 6600,
+          "line": 292,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 6571,
-          "line": 290,
+          "byte-offset": 6607,
+          "line": 292,
           "column": 7
         }
       },
@@ -438,238 +438,293 @@
       "parent": "waitfortimers4"
     },
     {
-      "name": "next4",
+      "name": "row2",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 8013,
-          "line": 355,
+          "byte-offset": 8074,
+          "line": 357,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 8019,
-          "line": 355,
-          "column": 6
+          "byte-offset": 8079,
+          "line": 357,
+          "column": 5
         }
       },
       "offset": 963
+    },
+    {
+      "name": "timersetup5",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8345,
+          "line": 370,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8357,
+          "line": 370,
+          "column": 12
+        }
+      },
+      "offset": 983
+    },
+    {
+      "name": ".waitforbasetimer",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8497,
+          "line": 376,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8515,
+          "line": 376,
+          "column": 18
+        }
+      },
+      "offset": 989,
+      "parent": "timersetup5"
+    },
+    {
+      "name": "next4",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9991,
+          "line": 442,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9997,
+          "line": 442,
+          "column": 6
+        }
+      },
+      "offset": 1087
     },
     {
       "name": "finish",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 8176,
-          "line": 362,
+          "byte-offset": 10154,
+          "line": 449,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 8183,
-          "line": 362,
+          "byte-offset": 10161,
+          "line": 449,
           "column": 7
         }
       },
-      "offset": 972
+      "offset": 1096
     },
     {
       "name": "cls",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 8655,
-          "line": 379,
+          "byte-offset": 10633,
+          "line": 466,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 8659,
-          "line": 379,
+          "byte-offset": 10637,
+          "line": 466,
           "column": 4
         }
       },
-      "offset": 974
+      "offset": 1098
     },
     {
       "name": "cls_s",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9051,
-          "line": 392,
+          "byte-offset": 11029,
+          "line": 479,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 9057,
-          "line": 392,
+          "byte-offset": 11035,
+          "line": 479,
           "column": 6
         }
       },
-      "offset": 992
+      "offset": 1116
     },
     {
       "name": "loop3",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9246,
-          "line": 395,
+          "byte-offset": 11224,
+          "line": 482,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 9252,
-          "line": 395,
+          "byte-offset": 11230,
+          "line": 482,
           "column": 6
         }
       },
-      "offset": 998
+      "offset": 1122
     },
     {
       "name": "putch_xy",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9462,
-          "line": 404,
+          "byte-offset": 11440,
+          "line": 491,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 9471,
-          "line": 404,
+          "byte-offset": 11449,
+          "line": 491,
           "column": 9
         }
       },
-      "offset": 1006
+      "offset": 1130
     },
     {
       "name": "putch",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9907,
-          "line": 419,
+          "byte-offset": 11885,
+          "line": 506,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 9913,
-          "line": 419,
+          "byte-offset": 11891,
+          "line": 506,
           "column": 6
         }
       },
-      "offset": 1019
+      "offset": 1143
     },
     {
       "name": "locate",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 10102,
-          "line": 429,
+          "byte-offset": 12080,
+          "line": 516,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 10109,
-          "line": 429,
+          "byte-offset": 12087,
+          "line": 516,
           "column": 7
         }
       },
-      "offset": 1032
+      "offset": 1156
     },
     {
       "name": "next1",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 10545,
-          "line": 440,
+          "byte-offset": 12523,
+          "line": 527,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 10551,
-          "line": 440,
+          "byte-offset": 12529,
+          "line": 527,
           "column": 6
         }
       },
-      "offset": 1044
+      "offset": 1168
     },
     {
       "name": "next2",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 10627,
-          "line": 443,
+          "byte-offset": 12605,
+          "line": 530,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 10633,
-          "line": 443,
+          "byte-offset": 12611,
+          "line": 530,
           "column": 6
         }
       },
-      "offset": 1049
+      "offset": 1173
     },
     {
       "name": "put_chara",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 10889,
-          "line": 459,
+          "byte-offset": 12867,
+          "line": 546,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 10899,
-          "line": 459,
+          "byte-offset": 12877,
+          "line": 546,
           "column": 10
         }
       },
-      "offset": 1064
+      "offset": 1188
     },
     {
       "name": "loop1",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 11373,
-          "line": 478,
+          "byte-offset": 13351,
+          "line": 565,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 11379,
-          "line": 478,
+          "byte-offset": 13357,
+          "line": 565,
           "column": 6
         }
       },
-      "offset": 1093
+      "offset": 1217
     },
     {
       "name": "fontdata",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 12264,
-          "line": 507,
+          "byte-offset": 14242,
+          "line": 594,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 12273,
-          "line": 507,
+          "byte-offset": 14251,
+          "line": 594,
           "column": 9
         }
       },
-      "offset": 1128
+      "offset": 1252
     }
   ],
   "constants": [
@@ -1758,14 +1813,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 3166,
-          "line": 109,
+          "byte-offset": 3186,
+          "line": 110,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 3178,
-          "line": 109,
+          "byte-offset": 3198,
+          "line": 110,
           "column": 12
         }
       },
@@ -1776,14 +1831,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 3237,
-          "line": 110,
+          "byte-offset": 3257,
+          "line": 111,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 3249,
-          "line": 110,
+          "byte-offset": 3269,
+          "line": 111,
           "column": 12
         }
       },
@@ -1794,14 +1849,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 3306,
-          "line": 112,
+          "byte-offset": 3326,
+          "line": 113,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 3313,
-          "line": 112,
+          "byte-offset": 3333,
+          "line": 113,
           "column": 7
         }
       },
@@ -1812,14 +1867,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 3350,
-          "line": 113,
+          "byte-offset": 3370,
+          "line": 114,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 3357,
-          "line": 113,
+          "byte-offset": 3377,
+          "line": 114,
           "column": 7
         }
       },
@@ -1830,14 +1885,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 3412,
-          "line": 117,
+          "byte-offset": 3432,
+          "line": 118,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 3422,
-          "line": 117,
+          "byte-offset": 3442,
+          "line": 118,
           "column": 10
         }
       },
@@ -1848,14 +1903,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 3424,
-          "line": 118,
+          "byte-offset": 3444,
+          "line": 119,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 3434,
-          "line": 118,
+          "byte-offset": 3454,
+          "line": 119,
           "column": 10
         }
       },
@@ -1866,14 +1921,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 3467,
-          "line": 119,
+          "byte-offset": 3487,
+          "line": 120,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 3477,
-          "line": 119,
+          "byte-offset": 3497,
+          "line": 120,
           "column": 10
         }
       },
@@ -1884,14 +1939,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 3510,
-          "line": 120,
+          "byte-offset": 3530,
+          "line": 121,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 3529,
-          "line": 120,
+          "byte-offset": 3549,
+          "line": 121,
           "column": 19
         }
       },
@@ -1902,14 +1957,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 3531,
-          "line": 121,
+          "byte-offset": 3551,
+          "line": 122,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 3549,
-          "line": 121,
+          "byte-offset": 3569,
+          "line": 122,
           "column": 18
         }
       },
@@ -1920,14 +1975,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 3551,
-          "line": 122,
+          "byte-offset": 3571,
+          "line": 123,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 3570,
-          "line": 122,
+          "byte-offset": 3590,
+          "line": 123,
           "column": 19
         }
       },
@@ -1938,14 +1993,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 3572,
-          "line": 123,
+          "byte-offset": 3592,
+          "line": 124,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 3591,
-          "line": 123,
+          "byte-offset": 3611,
+          "line": 124,
           "column": 19
         }
       },
@@ -1956,14 +2011,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 3593,
-          "line": 124,
+          "byte-offset": 3613,
+          "line": 125,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 3607,
-          "line": 124,
+          "byte-offset": 3627,
+          "line": 125,
           "column": 14
         }
       },
@@ -1974,14 +2029,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 3609,
-          "line": 125,
+          "byte-offset": 3629,
+          "line": 126,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 3623,
-          "line": 125,
+          "byte-offset": 3643,
+          "line": 126,
           "column": 14
         }
       },
@@ -1992,14 +2047,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 3625,
-          "line": 126,
+          "byte-offset": 3645,
+          "line": 127,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 3641,
-          "line": 126,
+          "byte-offset": 3661,
+          "line": 127,
           "column": 16
         }
       },
@@ -2010,18 +2065,36 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 3643,
-          "line": 127,
+          "byte-offset": 3663,
+          "line": 128,
           "column": 0
         },
         "end": {
           "source": 0,
-          "byte-offset": 3659,
-          "line": 127,
+          "byte-offset": 3679,
+          "line": 128,
           "column": 16
         }
       },
       "value": 27
+    },
+    {
+      "name": "btintran",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 3681,
+          "line": 129,
+          "column": 0
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 3695,
+          "line": 129,
+          "column": 14
+        }
+      },
+      "value": 28
     }
   ],
   "instructions": [
@@ -2260,7 +2333,7 @@
       "offset": 79
     },
     {
-      "text": "reti",
+      "text": "mov   #1, btintran",
       "span": {
         "start": {
           "source": 0,
@@ -2270,379 +2343,379 @@
         },
         "end": {
           "source": 0,
-          "byte-offset": 1108,
+          "byte-offset": 1120,
           "line": 36,
-          "column": 6
+          "column": 18
         }
       },
       "offset": 81
-    },
-    {
-      "text": "push  acc",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 1156,
-          "line": 39,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 1164,
-          "line": 39,
-          "column": 10
-        }
-      },
-      "offset": 82
-    },
-    {
-      "text": "clr1  t0cnt, 3",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 1168,
-          "line": 40,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 1181,
-          "line": 40,
-          "column": 15
-        }
-      },
-      "offset": 84
-    },
-    {
-      "text": "inc   t0intcount",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 1194,
-          "line": 41,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 1208,
-          "line": 41,
-          "column": 16
-        }
-      },
-      "offset": 86
-    },
-    {
-      "text": "mov   #1, ishandlingt0h",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 1212,
-          "line": 42,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 1233,
-          "line": 42,
-          "column": 23
-        }
-      },
-      "offset": 88
-    },
-    {
-      "text": "ld    t0cnt",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 1237,
-          "line": 43,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 1245,
-          "line": 43,
-          "column": 10
-        }
-      },
-      "offset": 91
-    },
-    {
-      "text": "and   #$08",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 1249,
-          "line": 44,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 1256,
-          "line": 44,
-          "column": 9
-        }
-      },
-      "offset": 93
-    },
-    {
-      "text": "st    t0ovfset",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 1274,
-          "line": 45,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 1285,
-          "line": 45,
-          "column": 13
-        }
-      },
-      "offset": 95
-    },
-    {
-      "text": "ld    ishandlingt1",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 1289,
-          "line": 46,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 1304,
-          "line": 46,
-          "column": 17
-        }
-      },
-      "offset": 97
-    },
-    {
-      "text": "bz    .exit",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 1308,
-          "line": 47,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 1316,
-          "line": 47,
-          "column": 10
-        }
-      },
-      "offset": 99
-    },
-    {
-      "text": "mov   #1, t0preemptedt1",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 1320,
-          "line": 48,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 1341,
-          "line": 48,
-          "column": 23
-        }
-      },
-      "offset": 101
-    },
-    {
-      "text": "mov   #0, ishandlingt0h",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 1353,
-          "line": 50,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 1374,
-          "line": 50,
-          "column": 23
-        }
-      },
-      "offset": 104
-    },
-    {
-      "text": "pop   acc",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 1378,
-          "line": 51,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 1385,
-          "line": 51,
-          "column": 9
-        }
-      },
-      "offset": 107
     },
     {
       "text": "reti",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 1389,
-          "line": 52,
+          "byte-offset": 1124,
+          "line": 37,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 1393,
-          "line": 52,
+          "byte-offset": 1128,
+          "line": 37,
           "column": 6
         }
       },
-      "offset": 109
+      "offset": 84
     },
     {
       "text": "push  acc",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 1408,
-          "line": 55,
+          "byte-offset": 1176,
+          "line": 40,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 1416,
-          "line": 55,
+          "byte-offset": 1184,
+          "line": 40,
           "column": 10
         }
       },
+      "offset": 85
+    },
+    {
+      "text": "clr1  t0cnt, 3",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1188,
+          "line": 41,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1201,
+          "line": 41,
+          "column": 15
+        }
+      },
+      "offset": 87
+    },
+    {
+      "text": "inc   t0intcount",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1214,
+          "line": 42,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1228,
+          "line": 42,
+          "column": 16
+        }
+      },
+      "offset": 89
+    },
+    {
+      "text": "mov   #1, ishandlingt0h",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1232,
+          "line": 43,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1253,
+          "line": 43,
+          "column": 23
+        }
+      },
+      "offset": 91
+    },
+    {
+      "text": "ld    t0cnt",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1257,
+          "line": 44,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1265,
+          "line": 44,
+          "column": 10
+        }
+      },
+      "offset": 94
+    },
+    {
+      "text": "and   #$08",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1269,
+          "line": 45,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1276,
+          "line": 45,
+          "column": 9
+        }
+      },
+      "offset": 96
+    },
+    {
+      "text": "st    t0ovfset",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1294,
+          "line": 46,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1305,
+          "line": 46,
+          "column": 13
+        }
+      },
+      "offset": 98
+    },
+    {
+      "text": "ld    ishandlingt1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1309,
+          "line": 47,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1324,
+          "line": 47,
+          "column": 17
+        }
+      },
+      "offset": 100
+    },
+    {
+      "text": "bz    .exit",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1328,
+          "line": 48,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1336,
+          "line": 48,
+          "column": 10
+        }
+      },
+      "offset": 102
+    },
+    {
+      "text": "mov   #1, t0preemptedt1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1340,
+          "line": 49,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1361,
+          "line": 49,
+          "column": 23
+        }
+      },
+      "offset": 104
+    },
+    {
+      "text": "mov   #0, ishandlingt0h",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1373,
+          "line": 51,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1394,
+          "line": 51,
+          "column": 23
+        }
+      },
+      "offset": 107
+    },
+    {
+      "text": "pop   acc",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1398,
+          "line": 52,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1405,
+          "line": 52,
+          "column": 9
+        }
+      },
       "offset": 110
+    },
+    {
+      "text": "reti",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1409,
+          "line": 53,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1413,
+          "line": 53,
+          "column": 6
+        }
+      },
+      "offset": 112
+    },
+    {
+      "text": "push  acc",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1428,
+          "line": 56,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1436,
+          "line": 56,
+          "column": 10
+        }
+      },
+      "offset": 113
     },
     {
       "text": "clr1  t1cnt, 1",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 1420,
-          "line": 56,
+          "byte-offset": 1440,
+          "line": 57,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 1433,
-          "line": 56,
+          "byte-offset": 1453,
+          "line": 57,
           "column": 15
         }
       },
-      "offset": 112
+      "offset": 115
     },
     {
       "text": "inc   t1intcount",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 1446,
-          "line": 57,
+          "byte-offset": 1466,
+          "line": 58,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 1460,
-          "line": 57,
+          "byte-offset": 1480,
+          "line": 58,
           "column": 16
         }
       },
-      "offset": 114
+      "offset": 117
     },
     {
       "text": "mov   #1, ishandlingt1",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 1464,
-          "line": 58,
+          "byte-offset": 1484,
+          "line": 59,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 1484,
-          "line": 58,
+          "byte-offset": 1504,
+          "line": 59,
           "column": 22
         }
       },
-      "offset": 116
+      "offset": 119
     },
     {
       "text": "ld    t1cnt",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 1488,
-          "line": 59,
+          "byte-offset": 1508,
+          "line": 60,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 1496,
-          "line": 59,
+          "byte-offset": 1516,
+          "line": 60,
           "column": 10
         }
       },
-      "offset": 119
+      "offset": 122
     },
     {
       "text": "and   #$02",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 1500,
-          "line": 60,
+          "byte-offset": 1520,
+          "line": 61,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 1507,
-          "line": 60,
+          "byte-offset": 1527,
+          "line": 61,
           "column": 9
         }
       },
-      "offset": 121
+      "offset": 124
     },
     {
       "text": "st    t1ovfset",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 1525,
-          "line": 61,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 1536,
-          "line": 61,
-          "column": 13
-        }
-      },
-      "offset": 123
-    },
-    {
-      "text": "ld    ishandlingt0h",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 1540,
+          "byte-offset": 1545,
           "line": 62,
           "column": 2
         },
@@ -2650,13 +2723,13 @@
           "source": 0,
           "byte-offset": 1556,
           "line": 62,
-          "column": 18
+          "column": 13
         }
       },
-      "offset": 125
+      "offset": 126
     },
     {
-      "text": "bz    .exit",
+      "text": "ld    ishandlingt0h",
       "span": {
         "start": {
           "source": 0,
@@ -2666,99 +2739,81 @@
         },
         "end": {
           "source": 0,
-          "byte-offset": 1568,
+          "byte-offset": 1576,
           "line": 63,
+          "column": 18
+        }
+      },
+      "offset": 128
+    },
+    {
+      "text": "bz    .exit",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1580,
+          "line": 64,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1588,
+          "line": 64,
           "column": 10
         }
       },
-      "offset": 127
+      "offset": 130
     },
     {
       "text": "mov   #1, t1preemptedt0",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 1572,
-          "line": 64,
+          "byte-offset": 1592,
+          "line": 65,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 1593,
-          "line": 64,
+          "byte-offset": 1613,
+          "line": 65,
           "column": 23
         }
       },
-      "offset": 129
+      "offset": 132
     },
     {
       "text": "mov   #0, ishandlingt1",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 1605,
-          "line": 66,
+          "byte-offset": 1625,
+          "line": 67,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 1625,
-          "line": 66,
+          "byte-offset": 1645,
+          "line": 67,
           "column": 22
         }
       },
-      "offset": 132
+      "offset": 135
     },
     {
       "text": "pop   acc",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 1629,
-          "line": 67,
+          "byte-offset": 1649,
+          "line": 68,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 1636,
-          "line": 67,
+          "byte-offset": 1656,
+          "line": 68,
           "column": 9
-        }
-      },
-      "offset": 135
-    },
-    {
-      "text": "reti",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 1640,
-          "line": 68,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 1644,
-          "line": 68,
-          "column": 6
-        }
-      },
-      "offset": 137
-    },
-    {
-      "text": "clr1  p3int, 1",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 1659,
-          "line": 71,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 1671,
-          "line": 71,
-          "column": 14
         }
       },
       "offset": 138
@@ -2768,32 +2823,68 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 1698,
-          "line": 72,
+          "byte-offset": 1660,
+          "line": 69,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 1702,
-          "line": 72,
+          "byte-offset": 1664,
+          "line": 69,
           "column": 6
         }
       },
       "offset": 140
     },
     {
+      "text": "clr1  p3int, 1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1679,
+          "line": 72,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1691,
+          "line": 72,
+          "column": 14
+        }
+      },
+      "offset": 141
+    },
+    {
+      "text": "reti",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 1718,
+          "line": 73,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 1722,
+          "line": 73,
+          "column": 6
+        }
+      },
+      "offset": 143
+    },
+    {
       "text": "not1  ext, 0",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 1933,
-          "line": 79,
+          "byte-offset": 1953,
+          "line": 80,
           "column": 4
         },
         "end": {
           "source": 0,
-          "byte-offset": 1944,
-          "line": 79,
+          "byte-offset": 1964,
+          "line": 80,
           "column": 15
         }
       },
@@ -2804,14 +2895,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 1952,
-          "line": 80,
+          "byte-offset": 1972,
+          "line": 81,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 1965,
-          "line": 80,
+          "byte-offset": 1985,
+          "line": 81,
           "column": 15
         }
       },
@@ -2822,14 +2913,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 3862,
-          "line": 137,
+          "byte-offset": 3898,
+          "line": 139,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 3870,
-          "line": 137,
+          "byte-offset": 3906,
+          "line": 139,
           "column": 10
         }
       },
@@ -2840,14 +2931,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 3926,
-          "line": 141,
+          "byte-offset": 3962,
+          "line": 143,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 3933,
-          "line": 141,
+          "byte-offset": 3969,
+          "line": 143,
           "column": 9
         }
       },
@@ -2858,14 +2949,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 3952,
-          "line": 142,
+          "byte-offset": 3988,
+          "line": 144,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 3959,
-          "line": 142,
+          "byte-offset": 3995,
+          "line": 144,
           "column": 9
         }
       },
@@ -2876,14 +2967,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 3980,
-          "line": 143,
+          "byte-offset": 4016,
+          "line": 145,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 3987,
-          "line": 143,
+          "byte-offset": 4023,
+          "line": 145,
           "column": 9
         }
       },
@@ -2894,14 +2985,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 3991,
-          "line": 144,
+          "byte-offset": 4027,
+          "line": 146,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 3998,
-          "line": 144,
+          "byte-offset": 4034,
+          "line": 146,
           "column": 9
         }
       },
@@ -2912,14 +3003,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4002,
-          "line": 145,
+          "byte-offset": 4038,
+          "line": 147,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4009,
-          "line": 145,
+          "byte-offset": 4045,
+          "line": 147,
           "column": 9
         }
       },
@@ -2930,14 +3021,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4013,
-          "line": 146,
+          "byte-offset": 4049,
+          "line": 148,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4020,
-          "line": 146,
+          "byte-offset": 4056,
+          "line": 148,
           "column": 9
         }
       },
@@ -2948,14 +3039,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4024,
-          "line": 147,
+          "byte-offset": 4060,
+          "line": 149,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4040,
-          "line": 147,
+          "byte-offset": 4076,
+          "line": 149,
           "column": 18
         }
       },
@@ -2966,14 +3057,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4044,
-          "line": 148,
+          "byte-offset": 4080,
+          "line": 150,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4059,
-          "line": 148,
+          "byte-offset": 4095,
+          "line": 150,
           "column": 17
         }
       },
@@ -2984,14 +3075,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4063,
-          "line": 149,
+          "byte-offset": 4099,
+          "line": 151,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4079,
-          "line": 149,
+          "byte-offset": 4115,
+          "line": 151,
           "column": 18
         }
       },
@@ -3002,14 +3093,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4083,
-          "line": 150,
+          "byte-offset": 4119,
+          "line": 152,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4099,
-          "line": 150,
+          "byte-offset": 4135,
+          "line": 152,
           "column": 18
         }
       },
@@ -3020,14 +3111,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4103,
-          "line": 151,
+          "byte-offset": 4139,
+          "line": 153,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4114,
-          "line": 151,
+          "byte-offset": 4150,
+          "line": 153,
           "column": 13
         }
       },
@@ -3038,14 +3129,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4118,
-          "line": 152,
+          "byte-offset": 4154,
+          "line": 154,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4129,
-          "line": 152,
+          "byte-offset": 4165,
+          "line": 154,
           "column": 13
         }
       },
@@ -3056,14 +3147,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4133,
-          "line": 153,
+          "byte-offset": 4169,
+          "line": 155,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4146,
-          "line": 153,
+          "byte-offset": 4182,
+          "line": 155,
           "column": 15
         }
       },
@@ -3074,14 +3165,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4150,
-          "line": 154,
+          "byte-offset": 4186,
+          "line": 156,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4163,
-          "line": 154,
+          "byte-offset": 4199,
+          "line": 156,
           "column": 15
         }
       },
@@ -3092,14 +3183,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4185,
-          "line": 158,
+          "byte-offset": 4221,
+          "line": 160,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4195,
-          "line": 158,
+          "byte-offset": 4231,
+          "line": 160,
           "column": 12
         }
       },
@@ -3110,14 +3201,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4281,
-          "line": 162,
+          "byte-offset": 4317,
+          "line": 164,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4294,
-          "line": 162,
+          "byte-offset": 4330,
+          "line": 164,
           "column": 15
         }
       },
@@ -3128,14 +3219,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4298,
-          "line": 163,
+          "byte-offset": 4334,
+          "line": 165,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4319,
-          "line": 163,
+          "byte-offset": 4355,
+          "line": 165,
           "column": 23
         }
       },
@@ -3146,14 +3237,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4384,
-          "line": 166,
+          "byte-offset": 4420,
+          "line": 168,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4397,
-          "line": 166,
+          "byte-offset": 4433,
+          "line": 168,
           "column": 15
         }
       },
@@ -3164,14 +3255,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4401,
-          "line": 167,
+          "byte-offset": 4437,
+          "line": 169,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4415,
-          "line": 167,
+          "byte-offset": 4451,
+          "line": 169,
           "column": 16
         }
       },
@@ -3182,14 +3273,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4419,
-          "line": 168,
+          "byte-offset": 4455,
+          "line": 170,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4434,
-          "line": 168,
+          "byte-offset": 4470,
+          "line": 170,
           "column": 17
         }
       },
@@ -3200,14 +3291,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4438,
-          "line": 169,
+          "byte-offset": 4474,
+          "line": 171,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4459,
-          "line": 169,
+          "byte-offset": 4495,
+          "line": 171,
           "column": 23
         }
       },
@@ -3218,14 +3309,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4482,
-          "line": 171,
+          "byte-offset": 4518,
+          "line": 173,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4492,
-          "line": 171,
+          "byte-offset": 4528,
+          "line": 173,
           "column": 12
         }
       },
@@ -3236,14 +3327,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4515,
-          "line": 174,
+          "byte-offset": 4551,
+          "line": 176,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4528,
-          "line": 174,
+          "byte-offset": 4564,
+          "line": 176,
           "column": 15
         }
       },
@@ -3254,14 +3345,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4541,
-          "line": 176,
+          "byte-offset": 4577,
+          "line": 178,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4557,
-          "line": 176,
+          "byte-offset": 4593,
+          "line": 178,
           "column": 18
         }
       },
@@ -3272,14 +3363,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4563,
-          "line": 178,
+          "byte-offset": 4599,
+          "line": 180,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4573,
-          "line": 178,
+          "byte-offset": 4609,
+          "line": 180,
           "column": 12
         }
       },
@@ -3290,14 +3381,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4577,
-          "line": 179,
+          "byte-offset": 4613,
+          "line": 181,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4590,
-          "line": 179,
+          "byte-offset": 4626,
+          "line": 181,
           "column": 15
         }
       },
@@ -3308,14 +3399,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4594,
-          "line": 180,
+          "byte-offset": 4630,
+          "line": 182,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4607,
-          "line": 180,
+          "byte-offset": 4643,
+          "line": 182,
           "column": 15
         }
       },
@@ -3326,14 +3417,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4611,
-          "line": 181,
+          "byte-offset": 4647,
+          "line": 183,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4621,
-          "line": 181,
+          "byte-offset": 4657,
+          "line": 183,
           "column": 12
         }
       },
@@ -3344,14 +3435,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4669,
-          "line": 184,
+          "byte-offset": 4705,
+          "line": 186,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4685,
-          "line": 184,
+          "byte-offset": 4721,
+          "line": 186,
           "column": 18
         }
       },
@@ -3362,14 +3453,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4689,
-          "line": 185,
+          "byte-offset": 4725,
+          "line": 187,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4696,
-          "line": 185,
+          "byte-offset": 4732,
+          "line": 187,
           "column": 9
         }
       },
@@ -3380,14 +3471,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4700,
-          "line": 186,
+          "byte-offset": 4736,
+          "line": 188,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4713,
-          "line": 186,
+          "byte-offset": 4749,
+          "line": 188,
           "column": 15
         }
       },
@@ -3398,14 +3489,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4761,
-          "line": 189,
+          "byte-offset": 4797,
+          "line": 191,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4769,
-          "line": 189,
+          "byte-offset": 4805,
+          "line": 191,
           "column": 10
         }
       },
@@ -3416,14 +3507,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4773,
-          "line": 190,
+          "byte-offset": 4809,
+          "line": 192,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4789,
-          "line": 190,
+          "byte-offset": 4825,
+          "line": 192,
           "column": 18
         }
       },
@@ -3434,14 +3525,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4793,
-          "line": 191,
+          "byte-offset": 4829,
+          "line": 193,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4800,
-          "line": 191,
+          "byte-offset": 4836,
+          "line": 193,
           "column": 9
         }
       },
@@ -3452,14 +3543,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4804,
-          "line": 192,
+          "byte-offset": 4840,
+          "line": 194,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4817,
-          "line": 192,
+          "byte-offset": 4853,
+          "line": 194,
           "column": 15
         }
       },
@@ -3470,14 +3561,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4823,
-          "line": 194,
+          "byte-offset": 4859,
+          "line": 196,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4833,
-          "line": 194,
+          "byte-offset": 4869,
+          "line": 196,
           "column": 12
         }
       },
@@ -3488,14 +3579,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 4926,
-          "line": 198,
+          "byte-offset": 4962,
+          "line": 200,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 4936,
-          "line": 198,
+          "byte-offset": 4972,
+          "line": 200,
           "column": 12
         }
       },
@@ -3506,14 +3597,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5003,
-          "line": 201,
+          "byte-offset": 5039,
+          "line": 203,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5016,
-          "line": 201,
+          "byte-offset": 5052,
+          "line": 203,
           "column": 15
         }
       },
@@ -3524,14 +3615,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5020,
-          "line": 202,
+          "byte-offset": 5056,
+          "line": 204,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5041,
-          "line": 202,
+          "byte-offset": 5077,
+          "line": 204,
           "column": 23
         }
       },
@@ -3542,14 +3633,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5107,
-          "line": 205,
+          "byte-offset": 5143,
+          "line": 207,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5120,
-          "line": 205,
+          "byte-offset": 5156,
+          "line": 207,
           "column": 15
         }
       },
@@ -3560,14 +3651,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5124,
-          "line": 206,
+          "byte-offset": 5160,
+          "line": 208,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5138,
-          "line": 206,
+          "byte-offset": 5174,
+          "line": 208,
           "column": 16
         }
       },
@@ -3578,14 +3669,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5142,
-          "line": 207,
+          "byte-offset": 5178,
+          "line": 209,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5157,
-          "line": 207,
+          "byte-offset": 5193,
+          "line": 209,
           "column": 17
         }
       },
@@ -3596,14 +3687,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5161,
-          "line": 208,
+          "byte-offset": 5197,
+          "line": 210,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5182,
-          "line": 208,
+          "byte-offset": 5218,
+          "line": 210,
           "column": 23
         }
       },
@@ -3614,14 +3705,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5205,
-          "line": 210,
+          "byte-offset": 5241,
+          "line": 212,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5215,
-          "line": 210,
+          "byte-offset": 5251,
+          "line": 212,
           "column": 12
         }
       },
@@ -3632,14 +3723,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5238,
-          "line": 213,
+          "byte-offset": 5274,
+          "line": 215,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5251,
-          "line": 213,
+          "byte-offset": 5287,
+          "line": 215,
           "column": 15
         }
       },
@@ -3650,14 +3741,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5264,
-          "line": 215,
+          "byte-offset": 5300,
+          "line": 217,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5280,
-          "line": 215,
+          "byte-offset": 5316,
+          "line": 217,
           "column": 18
         }
       },
@@ -3668,14 +3759,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5286,
-          "line": 217,
+          "byte-offset": 5322,
+          "line": 219,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5296,
-          "line": 217,
+          "byte-offset": 5332,
+          "line": 219,
           "column": 12
         }
       },
@@ -3686,14 +3777,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5300,
-          "line": 218,
+          "byte-offset": 5336,
+          "line": 220,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5313,
-          "line": 218,
+          "byte-offset": 5349,
+          "line": 220,
           "column": 15
         }
       },
@@ -3704,14 +3795,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5317,
-          "line": 219,
+          "byte-offset": 5353,
+          "line": 221,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5330,
-          "line": 219,
+          "byte-offset": 5366,
+          "line": 221,
           "column": 15
         }
       },
@@ -3722,14 +3813,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5334,
-          "line": 220,
+          "byte-offset": 5370,
+          "line": 222,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5344,
-          "line": 220,
+          "byte-offset": 5380,
+          "line": 222,
           "column": 12
         }
       },
@@ -3740,14 +3831,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5392,
-          "line": 223,
+          "byte-offset": 5428,
+          "line": 225,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5400,
-          "line": 223,
+          "byte-offset": 5436,
+          "line": 225,
           "column": 10
         }
       },
@@ -3758,14 +3849,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5404,
-          "line": 224,
+          "byte-offset": 5440,
+          "line": 226,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5420,
-          "line": 224,
+          "byte-offset": 5456,
+          "line": 226,
           "column": 18
         }
       },
@@ -3776,14 +3867,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5424,
-          "line": 225,
+          "byte-offset": 5460,
+          "line": 227,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5431,
-          "line": 225,
+          "byte-offset": 5467,
+          "line": 227,
           "column": 9
         }
       },
@@ -3794,14 +3885,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5435,
-          "line": 226,
+          "byte-offset": 5471,
+          "line": 228,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5448,
-          "line": 226,
+          "byte-offset": 5484,
+          "line": 228,
           "column": 15
         }
       },
@@ -3812,14 +3903,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5496,
-          "line": 229,
+          "byte-offset": 5532,
+          "line": 231,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5504,
-          "line": 229,
+          "byte-offset": 5540,
+          "line": 231,
           "column": 10
         }
       },
@@ -3830,14 +3921,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5508,
-          "line": 230,
+          "byte-offset": 5544,
+          "line": 232,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5524,
-          "line": 230,
+          "byte-offset": 5560,
+          "line": 232,
           "column": 18
         }
       },
@@ -3848,14 +3939,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5528,
-          "line": 231,
+          "byte-offset": 5564,
+          "line": 233,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5535,
-          "line": 231,
+          "byte-offset": 5571,
+          "line": 233,
           "column": 9
         }
       },
@@ -3866,14 +3957,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5539,
-          "line": 232,
+          "byte-offset": 5575,
+          "line": 234,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5552,
-          "line": 232,
+          "byte-offset": 5588,
+          "line": 234,
           "column": 15
         }
       },
@@ -3884,14 +3975,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5612,
-          "line": 236,
+          "byte-offset": 5648,
+          "line": 238,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5625,
-          "line": 236,
+          "byte-offset": 5661,
+          "line": 238,
           "column": 15
         }
       },
@@ -3902,14 +3993,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5629,
-          "line": 237,
+          "byte-offset": 5665,
+          "line": 239,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5650,
-          "line": 237,
+          "byte-offset": 5686,
+          "line": 239,
           "column": 23
         }
       },
@@ -3920,14 +4011,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5714,
-          "line": 240,
+          "byte-offset": 5750,
+          "line": 242,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5727,
-          "line": 240,
+          "byte-offset": 5763,
+          "line": 242,
           "column": 15
         }
       },
@@ -3938,14 +4029,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5731,
-          "line": 241,
+          "byte-offset": 5767,
+          "line": 243,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5745,
-          "line": 241,
+          "byte-offset": 5781,
+          "line": 243,
           "column": 16
         }
       },
@@ -3956,14 +4047,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5749,
-          "line": 242,
+          "byte-offset": 5785,
+          "line": 244,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5764,
-          "line": 242,
+          "byte-offset": 5800,
+          "line": 244,
           "column": 17
         }
       },
@@ -3974,14 +4065,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5768,
-          "line": 243,
+          "byte-offset": 5804,
+          "line": 245,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5789,
-          "line": 243,
+          "byte-offset": 5825,
+          "line": 245,
           "column": 23
         }
       },
@@ -3992,14 +4083,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5812,
-          "line": 245,
+          "byte-offset": 5848,
+          "line": 247,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5822,
-          "line": 245,
+          "byte-offset": 5858,
+          "line": 247,
           "column": 12
         }
       },
@@ -4010,14 +4101,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5845,
-          "line": 248,
+          "byte-offset": 5881,
+          "line": 250,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5858,
-          "line": 248,
+          "byte-offset": 5894,
+          "line": 250,
           "column": 15
         }
       },
@@ -4028,14 +4119,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5871,
-          "line": 250,
+          "byte-offset": 5907,
+          "line": 252,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5887,
-          "line": 250,
+          "byte-offset": 5923,
+          "line": 252,
           "column": 18
         }
       },
@@ -4046,14 +4137,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5891,
-          "line": 251,
+          "byte-offset": 5927,
+          "line": 253,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5901,
-          "line": 251,
+          "byte-offset": 5937,
+          "line": 253,
           "column": 12
         }
       },
@@ -4064,14 +4155,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5905,
-          "line": 252,
+          "byte-offset": 5941,
+          "line": 254,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5918,
-          "line": 252,
+          "byte-offset": 5954,
+          "line": 254,
           "column": 15
         }
       },
@@ -4082,14 +4173,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5922,
-          "line": 253,
+          "byte-offset": 5958,
+          "line": 255,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5935,
-          "line": 253,
+          "byte-offset": 5971,
+          "line": 255,
           "column": 15
         }
       },
@@ -4100,14 +4191,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 5939,
-          "line": 254,
+          "byte-offset": 5975,
+          "line": 256,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 5949,
-          "line": 254,
+          "byte-offset": 5985,
+          "line": 256,
           "column": 12
         }
       },
@@ -4118,14 +4209,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6013,
-          "line": 257,
+          "byte-offset": 6049,
+          "line": 259,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6021,
-          "line": 257,
+          "byte-offset": 6057,
+          "line": 259,
           "column": 10
         }
       },
@@ -4136,14 +4227,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6025,
-          "line": 258,
+          "byte-offset": 6061,
+          "line": 260,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6036,
-          "line": 258,
+          "byte-offset": 6072,
+          "line": 260,
           "column": 13
         }
       },
@@ -4154,14 +4245,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6040,
-          "line": 259,
+          "byte-offset": 6076,
+          "line": 261,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6047,
-          "line": 259,
+          "byte-offset": 6083,
+          "line": 261,
           "column": 9
         }
       },
@@ -4172,14 +4263,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6051,
-          "line": 260,
+          "byte-offset": 6087,
+          "line": 262,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6064,
-          "line": 260,
+          "byte-offset": 6100,
+          "line": 262,
           "column": 15
         }
       },
@@ -4190,14 +4281,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6128,
-          "line": 263,
+          "byte-offset": 6164,
+          "line": 265,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6136,
-          "line": 263,
+          "byte-offset": 6172,
+          "line": 265,
           "column": 10
         }
       },
@@ -4208,14 +4299,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6140,
-          "line": 264,
+          "byte-offset": 6176,
+          "line": 266,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6151,
-          "line": 264,
+          "byte-offset": 6187,
+          "line": 266,
           "column": 13
         }
       },
@@ -4226,14 +4317,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6155,
-          "line": 265,
+          "byte-offset": 6191,
+          "line": 267,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6162,
-          "line": 265,
+          "byte-offset": 6198,
+          "line": 267,
           "column": 9
         }
       },
@@ -4244,14 +4335,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6166,
-          "line": 266,
+          "byte-offset": 6202,
+          "line": 268,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6179,
-          "line": 266,
+          "byte-offset": 6215,
+          "line": 268,
           "column": 15
         }
       },
@@ -4262,14 +4353,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6192,
-          "line": 269,
+          "byte-offset": 6228,
+          "line": 271,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6200,
-          "line": 269,
+          "byte-offset": 6236,
+          "line": 271,
           "column": 10
         }
       },
@@ -4280,14 +4371,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6204,
-          "line": 270,
+          "byte-offset": 6240,
+          "line": 272,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6211,
-          "line": 270,
+          "byte-offset": 6247,
+          "line": 272,
           "column": 9
         }
       },
@@ -4298,14 +4389,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6215,
-          "line": 271,
+          "byte-offset": 6251,
+          "line": 273,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6222,
-          "line": 271,
+          "byte-offset": 6258,
+          "line": 273,
           "column": 9
         }
       },
@@ -4316,14 +4407,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6226,
-          "line": 272,
+          "byte-offset": 6262,
+          "line": 274,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6239,
-          "line": 272,
+          "byte-offset": 6275,
+          "line": 274,
           "column": 15
         }
       },
@@ -4334,14 +4425,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6243,
-          "line": 273,
+          "byte-offset": 6279,
+          "line": 275,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6256,
-          "line": 273,
+          "byte-offset": 6292,
+          "line": 275,
           "column": 15
         }
       },
@@ -4352,14 +4443,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6316,
-          "line": 277,
+          "byte-offset": 6352,
+          "line": 279,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6329,
-          "line": 277,
+          "byte-offset": 6365,
+          "line": 279,
           "column": 15
         }
       },
@@ -4370,14 +4461,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6333,
-          "line": 278,
+          "byte-offset": 6369,
+          "line": 280,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6354,
-          "line": 278,
+          "byte-offset": 6390,
+          "line": 280,
           "column": 23
         }
       },
@@ -4388,14 +4479,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6418,
-          "line": 281,
+          "byte-offset": 6454,
+          "line": 283,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6431,
-          "line": 281,
+          "byte-offset": 6467,
+          "line": 283,
           "column": 15
         }
       },
@@ -4406,14 +4497,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6435,
-          "line": 282,
+          "byte-offset": 6471,
+          "line": 284,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6449,
-          "line": 282,
+          "byte-offset": 6485,
+          "line": 284,
           "column": 16
         }
       },
@@ -4424,14 +4515,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6453,
-          "line": 283,
+          "byte-offset": 6489,
+          "line": 285,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6468,
-          "line": 283,
+          "byte-offset": 6504,
+          "line": 285,
           "column": 17
         }
       },
@@ -4442,14 +4533,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6472,
-          "line": 284,
+          "byte-offset": 6508,
+          "line": 286,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6493,
-          "line": 284,
+          "byte-offset": 6529,
+          "line": 286,
           "column": 23
         }
       },
@@ -4460,14 +4551,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6516,
-          "line": 286,
+          "byte-offset": 6552,
+          "line": 288,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6526,
-          "line": 286,
+          "byte-offset": 6562,
+          "line": 288,
           "column": 12
         }
       },
@@ -4478,14 +4569,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6549,
-          "line": 289,
+          "byte-offset": 6585,
+          "line": 291,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6562,
-          "line": 289,
+          "byte-offset": 6598,
+          "line": 291,
           "column": 15
         }
       },
@@ -4496,14 +4587,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6575,
-          "line": 291,
+          "byte-offset": 6611,
+          "line": 293,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6591,
-          "line": 291,
+          "byte-offset": 6627,
+          "line": 293,
           "column": 18
         }
       },
@@ -4514,14 +4605,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6595,
-          "line": 292,
+          "byte-offset": 6631,
+          "line": 294,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6605,
-          "line": 292,
+          "byte-offset": 6641,
+          "line": 294,
           "column": 12
         }
       },
@@ -4532,14 +4623,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6609,
-          "line": 293,
+          "byte-offset": 6645,
+          "line": 295,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6622,
-          "line": 293,
+          "byte-offset": 6658,
+          "line": 295,
           "column": 15
         }
       },
@@ -4550,14 +4641,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6626,
-          "line": 294,
+          "byte-offset": 6662,
+          "line": 296,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6639,
-          "line": 294,
+          "byte-offset": 6675,
+          "line": 296,
           "column": 15
         }
       },
@@ -4568,14 +4659,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6643,
-          "line": 295,
+          "byte-offset": 6679,
+          "line": 297,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6653,
-          "line": 295,
+          "byte-offset": 6689,
+          "line": 297,
           "column": 12
         }
       },
@@ -4586,14 +4677,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6736,
-          "line": 299,
+          "byte-offset": 6772,
+          "line": 301,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6749,
-          "line": 299,
+          "byte-offset": 6785,
+          "line": 301,
           "column": 15
         }
       },
@@ -4604,14 +4695,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6753,
-          "line": 300,
+          "byte-offset": 6789,
+          "line": 302,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6757,
-          "line": 300,
+          "byte-offset": 6793,
+          "line": 302,
           "column": 6
         }
       },
@@ -4622,14 +4713,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6783,
-          "line": 301,
+          "byte-offset": 6819,
+          "line": 303,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6790,
-          "line": 301,
+          "byte-offset": 6826,
+          "line": 303,
           "column": 9
         }
       },
@@ -4640,14 +4731,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6814,
-          "line": 302,
+          "byte-offset": 6850,
+          "line": 304,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6825,
-          "line": 302,
+          "byte-offset": 6861,
+          "line": 304,
           "column": 13
         }
       },
@@ -4658,14 +4749,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6840,
-          "line": 303,
+          "byte-offset": 6876,
+          "line": 305,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6843,
-          "line": 303,
+          "byte-offset": 6879,
+          "line": 305,
           "column": 5
         }
       },
@@ -4676,14 +4767,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6847,
-          "line": 304,
+          "byte-offset": 6883,
+          "line": 306,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6851,
-          "line": 304,
+          "byte-offset": 6887,
+          "line": 306,
           "column": 6
         }
       },
@@ -4694,14 +4785,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6876,
-          "line": 305,
+          "byte-offset": 6912,
+          "line": 307,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6883,
-          "line": 305,
+          "byte-offset": 6919,
+          "line": 307,
           "column": 9
         }
       },
@@ -4712,14 +4803,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6887,
-          "line": 306,
+          "byte-offset": 6923,
+          "line": 308,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6893,
-          "line": 306,
+          "byte-offset": 6929,
+          "line": 308,
           "column": 8
         }
       },
@@ -4730,14 +4821,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6939,
-          "line": 307,
+          "byte-offset": 6975,
+          "line": 309,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6952,
-          "line": 307,
+          "byte-offset": 6988,
+          "line": 309,
           "column": 15
         }
       },
@@ -4748,14 +4839,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 6990,
-          "line": 310,
+          "byte-offset": 7026,
+          "line": 312,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 6998,
-          "line": 310,
+          "byte-offset": 7034,
+          "line": 312,
           "column": 10
         }
       },
@@ -4766,14 +4857,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7002,
-          "line": 311,
+          "byte-offset": 7038,
+          "line": 313,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7007,
-          "line": 311,
+          "byte-offset": 7043,
+          "line": 313,
           "column": 7
         }
       },
@@ -4784,14 +4875,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7053,
-          "line": 312,
+          "byte-offset": 7089,
+          "line": 314,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7060,
-          "line": 312,
+          "byte-offset": 7096,
+          "line": 314,
           "column": 9
         }
       },
@@ -4802,14 +4893,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7084,
-          "line": 313,
+          "byte-offset": 7120,
+          "line": 315,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7094,
-          "line": 313,
+          "byte-offset": 7130,
+          "line": 315,
           "column": 12
         }
       },
@@ -4820,14 +4911,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7110,
-          "line": 314,
+          "byte-offset": 7146,
+          "line": 316,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7113,
-          "line": 314,
+          "byte-offset": 7149,
+          "line": 316,
           "column": 5
         }
       },
@@ -4838,14 +4929,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7117,
-          "line": 315,
+          "byte-offset": 7153,
+          "line": 317,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7121,
-          "line": 315,
+          "byte-offset": 7157,
+          "line": 317,
           "column": 6
         }
       },
@@ -4856,14 +4947,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7146,
-          "line": 316,
+          "byte-offset": 7182,
+          "line": 318,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7153,
-          "line": 316,
+          "byte-offset": 7189,
+          "line": 318,
           "column": 9
         }
       },
@@ -4874,14 +4965,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7157,
-          "line": 317,
+          "byte-offset": 7193,
+          "line": 319,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7163,
-          "line": 317,
+          "byte-offset": 7199,
+          "line": 319,
           "column": 8
         }
       },
@@ -4892,14 +4983,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7213,
-          "line": 318,
+          "byte-offset": 7249,
+          "line": 320,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7226,
-          "line": 318,
+          "byte-offset": 7262,
+          "line": 320,
           "column": 15
         }
       },
@@ -4910,14 +5001,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7264,
-          "line": 321,
+          "byte-offset": 7300,
+          "line": 323,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7272,
-          "line": 321,
+          "byte-offset": 7308,
+          "line": 323,
           "column": 10
         }
       },
@@ -4928,14 +5019,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7276,
-          "line": 322,
+          "byte-offset": 7312,
+          "line": 324,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7284,
-          "line": 322,
+          "byte-offset": 7320,
+          "line": 324,
           "column": 10
         }
       },
@@ -4946,14 +5037,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7288,
-          "line": 323,
+          "byte-offset": 7324,
+          "line": 325,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7301,
-          "line": 323,
+          "byte-offset": 7337,
+          "line": 325,
           "column": 15
         }
       },
@@ -4964,14 +5055,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7384,
-          "line": 327,
+          "byte-offset": 7420,
+          "line": 329,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7392,
-          "line": 327,
+          "byte-offset": 7428,
+          "line": 329,
           "column": 10
         }
       },
@@ -4982,14 +5073,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7396,
-          "line": 328,
+          "byte-offset": 7432,
+          "line": 330,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7409,
-          "line": 328,
+          "byte-offset": 7445,
+          "line": 330,
           "column": 15
         }
       },
@@ -5000,14 +5091,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7413,
-          "line": 329,
+          "byte-offset": 7449,
+          "line": 331,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7417,
-          "line": 329,
+          "byte-offset": 7453,
+          "line": 331,
           "column": 6
         }
       },
@@ -5018,14 +5109,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7443,
-          "line": 330,
+          "byte-offset": 7479,
+          "line": 332,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7450,
-          "line": 330,
+          "byte-offset": 7486,
+          "line": 332,
           "column": 9
         }
       },
@@ -5036,14 +5127,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7474,
-          "line": 331,
+          "byte-offset": 7510,
+          "line": 333,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7485,
-          "line": 331,
+          "byte-offset": 7521,
+          "line": 333,
           "column": 13
         }
       },
@@ -5054,14 +5145,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7500,
-          "line": 332,
+          "byte-offset": 7536,
+          "line": 334,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7503,
-          "line": 332,
+          "byte-offset": 7539,
+          "line": 334,
           "column": 5
         }
       },
@@ -5072,14 +5163,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7507,
-          "line": 333,
+          "byte-offset": 7543,
+          "line": 335,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7511,
-          "line": 333,
+          "byte-offset": 7547,
+          "line": 335,
           "column": 6
         }
       },
@@ -5090,14 +5181,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7536,
-          "line": 334,
+          "byte-offset": 7572,
+          "line": 336,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7543,
-          "line": 334,
+          "byte-offset": 7579,
+          "line": 336,
           "column": 9
         }
       },
@@ -5108,14 +5199,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7547,
-          "line": 335,
+          "byte-offset": 7583,
+          "line": 337,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7553,
-          "line": 335,
+          "byte-offset": 7589,
+          "line": 337,
           "column": 8
         }
       },
@@ -5126,14 +5217,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7599,
-          "line": 336,
+          "byte-offset": 7635,
+          "line": 338,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7612,
-          "line": 336,
+          "byte-offset": 7648,
+          "line": 338,
           "column": 15
         }
       },
@@ -5144,14 +5235,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7650,
-          "line": 339,
+          "byte-offset": 7686,
+          "line": 341,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7658,
-          "line": 339,
+          "byte-offset": 7694,
+          "line": 341,
           "column": 10
         }
       },
@@ -5162,14 +5253,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7662,
-          "line": 340,
+          "byte-offset": 7698,
+          "line": 342,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7667,
-          "line": 340,
+          "byte-offset": 7703,
+          "line": 342,
           "column": 7
         }
       },
@@ -5180,14 +5271,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7713,
-          "line": 341,
+          "byte-offset": 7749,
+          "line": 343,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7720,
-          "line": 341,
+          "byte-offset": 7756,
+          "line": 343,
           "column": 9
         }
       },
@@ -5198,14 +5289,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7744,
-          "line": 342,
+          "byte-offset": 7780,
+          "line": 344,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7754,
-          "line": 342,
+          "byte-offset": 7790,
+          "line": 344,
           "column": 12
         }
       },
@@ -5216,14 +5307,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7770,
-          "line": 343,
+          "byte-offset": 7806,
+          "line": 345,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7773,
-          "line": 343,
+          "byte-offset": 7809,
+          "line": 345,
           "column": 5
         }
       },
@@ -5234,14 +5325,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7777,
-          "line": 344,
+          "byte-offset": 7813,
+          "line": 346,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7781,
-          "line": 344,
+          "byte-offset": 7817,
+          "line": 346,
           "column": 6
         }
       },
@@ -5252,14 +5343,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7806,
-          "line": 345,
+          "byte-offset": 7842,
+          "line": 347,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7813,
-          "line": 345,
+          "byte-offset": 7849,
+          "line": 347,
           "column": 9
         }
       },
@@ -5270,14 +5361,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7817,
-          "line": 346,
+          "byte-offset": 7853,
+          "line": 348,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7823,
-          "line": 346,
+          "byte-offset": 7859,
+          "line": 348,
           "column": 8
         }
       },
@@ -5288,14 +5379,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7873,
-          "line": 347,
+          "byte-offset": 7909,
+          "line": 349,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7886,
-          "line": 347,
+          "byte-offset": 7922,
+          "line": 349,
           "column": 15
         }
       },
@@ -5306,14 +5397,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7924,
-          "line": 350,
+          "byte-offset": 7960,
+          "line": 352,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7932,
-          "line": 350,
+          "byte-offset": 7968,
+          "line": 352,
           "column": 10
         }
       },
@@ -5324,14 +5415,14 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7936,
-          "line": 351,
+          "byte-offset": 7972,
+          "line": 353,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7944,
-          "line": 351,
+          "byte-offset": 7980,
+          "line": 353,
           "column": 10
         }
       },
@@ -5342,1548 +5433,2610 @@
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 7948,
-          "line": 352,
+          "byte-offset": 7984,
+          "line": 354,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 7961,
-          "line": 352,
+          "byte-offset": 7997,
+          "line": 354,
           "column": 15
         }
       },
       "offset": 961
     },
     {
-      "text": "set1  pcon, 0",
+      "text": "inc   ypos",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 8055,
-          "line": 356,
+          "byte-offset": 8083,
+          "line": 358,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 8067,
-          "line": 356,
-          "column": 14
+          "byte-offset": 8091,
+          "line": 358,
+          "column": 10
         }
       },
       "offset": 963
     },
     {
-      "text": "ld    p3",
+      "text": "xor   acc",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 8071,
-          "line": 357,
+          "byte-offset": 8095,
+          "line": 359,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 8076,
-          "line": 357,
-          "column": 7
+          "byte-offset": 8102,
+          "line": 359,
+          "column": 9
         }
       },
       "offset": 965
     },
     {
-      "text": "bn    acc, 6, finish",
+      "text": "st    xpos",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 8080,
-          "line": 358,
+          "byte-offset": 8106,
+          "line": 360,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 8095,
-          "line": 358,
-          "column": 17
+          "byte-offset": 8113,
+          "line": 360,
+          "column": 9
         }
       },
       "offset": 967
     },
     {
-      "text": "jmp   next4",
+      "text": "st    t0intcount",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 8154,
-          "line": 360,
+          "byte-offset": 8117,
+          "line": 361,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 8163,
-          "line": 360,
-          "column": 11
+          "byte-offset": 8130,
+          "line": 361,
+          "column": 15
         }
       },
-      "offset": 970
+      "offset": 969
     },
     {
-      "text": "jmp   game_end",
+      "text": "st    t1intcount",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 8222,
-          "line": 363,
+          "byte-offset": 8171,
+          "line": 362,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 8234,
-          "line": 363,
-          "column": 14
+          "byte-offset": 8184,
+          "line": 362,
+          "column": 15
         }
       },
-      "offset": 972
+      "offset": 971
     },
     {
-      "text": "push  ocr",
+      "text": "mov   #%01000001, btcr",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 8663,
-          "line": 380,
+          "byte-offset": 8244,
+          "line": 365,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 8671,
-          "line": 380,
-          "column": 10
+          "byte-offset": 8264,
+          "line": 365,
+          "column": 22
         }
       },
-      "offset": 974
+      "offset": 973
     },
     {
-      "text": "mov   #osc_rc, ocr",
+      "text": "set1  ie, 7",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 8713,
-          "line": 381,
+          "byte-offset": 8295,
+          "line": 366,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 8728,
-          "line": 381,
-          "column": 17
+          "byte-offset": 8305,
+          "line": 366,
+          "column": 12
         }
       },
       "offset": 976
     },
     {
-      "text": "mov   #0, xbnk",
+      "text": "set1  pcon, 0",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 8763,
-          "line": 383,
+          "byte-offset": 8309,
+          "line": 367,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 8774,
-          "line": 383,
-          "column": 13
+          "byte-offset": 8321,
+          "line": 367,
+          "column": 14
         }
       },
-      "offset": 979
+      "offset": 978
     },
     {
-      "text": "call  cls_s",
+      "text": "mov   #0, btintran",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 8827,
-          "line": 384,
+          "byte-offset": 8325,
+          "line": 368,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 8837,
-          "line": 384,
-          "column": 12
+          "byte-offset": 8341,
+          "line": 368,
+          "column": 18
         }
       },
-      "offset": 982
+      "offset": 980
     },
     {
-      "text": "mov   #1, xbnk",
+      "text": "mov   #$FF, t1l",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 8874,
-          "line": 386,
+          "byte-offset": 8401,
+          "line": 372,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 8885,
-          "line": 386,
-          "column": 13
+          "byte-offset": 8414,
+          "line": 372,
+          "column": 15
         }
       },
-      "offset": 984
+      "offset": 983
     },
     {
-      "text": "call  cls_s",
+      "text": "mov   #%01000001, t1cnt",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 8938,
-          "line": 387,
+          "byte-offset": 8418,
+          "line": 373,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 8948,
-          "line": 387,
-          "column": 12
+          "byte-offset": 8439,
+          "line": 373,
+          "column": 23
         }
       },
-      "offset": 987
+      "offset": 986
     },
     {
-      "text": "pop   ocr",
+      "text": "inc   t0intcount",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 8983,
-          "line": 388,
+          "byte-offset": 8519,
+          "line": 377,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 8990,
-          "line": 388,
-          "column": 9
+          "byte-offset": 8533,
+          "line": 377,
+          "column": 16
         }
       },
       "offset": 989
     },
     {
-      "text": "ret",
+      "text": "bn    btintran, 0, .waitforbasetimer",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9034,
-          "line": 390,
+          "byte-offset": 8571,
+          "line": 378,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 9037,
-          "line": 390,
-          "column": 5
+          "byte-offset": 8604,
+          "line": 378,
+          "column": 35
         }
       },
       "offset": 991
     },
     {
-      "text": "mov   #$80, r2",
+      "text": "clr1  ie, 7",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9104,
-          "line": 393,
+          "byte-offset": 8610,
+          "line": 380,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 9115,
-          "line": 393,
-          "column": 13
-        }
-      },
-      "offset": 992
-    },
-    {
-      "text": "mov   #$80, b",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 9189,
-          "line": 394,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 9199,
-          "line": 394,
+          "byte-offset": 8620,
+          "line": 380,
           "column": 12
         }
       },
-      "offset": 995
+      "offset": 994
     },
     {
-      "text": "mov   #0, @R2",
+      "text": "mov   #0, t1cnt",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9256,
-          "line": 396,
+          "byte-offset": 8624,
+          "line": 381,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 9266,
-          "line": 396,
+          "byte-offset": 8637,
+          "line": 381,
+          "column": 15
+        }
+      },
+      "offset": 996
+    },
+    {
+      "text": "set1  ie, 7",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8641,
+          "line": 382,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8651,
+          "line": 382,
           "column": 12
         }
       },
-      "offset": 998
+      "offset": 999
     },
     {
-      "text": "inc   r2",
+      "text": "ld    t1intcount",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9314,
-          "line": 397,
+          "byte-offset": 8734,
+          "line": 386,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 9320,
-          "line": 397,
-          "column": 8
+          "byte-offset": 8747,
+          "line": 386,
+          "column": 15
         }
       },
-      "offset": 1000
-    },
-    {
-      "text": "dbnz  b, loop3",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 9326,
-          "line": 398,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 9338,
-          "line": 398,
-          "column": 14
-        }
-      },
-      "offset": 1002
-    },
-    {
-      "text": "ret",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 9369,
-          "line": 400,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 9372,
-          "line": 400,
-          "column": 5
-        }
-      },
-      "offset": 1005
-    },
-    {
-      "text": "ld    xpos",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 9475,
-          "line": 405,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 9482,
-          "line": 405,
-          "column": 9
-        }
-      },
-      "offset": 1006
+      "offset": 1001
     },
     {
       "text": "st    c",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9486,
-          "line": 406,
+          "byte-offset": 8751,
+          "line": 387,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 9490,
-          "line": 406,
+          "byte-offset": 8755,
+          "line": 387,
           "column": 6
         }
       },
-      "offset": 1008
+      "offset": 1003
     },
     {
-      "text": "ld    ypos",
+      "text": "xor   acc",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9494,
-          "line": 407,
+          "byte-offset": 8781,
+          "line": 388,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 9501,
-          "line": 407,
+          "byte-offset": 8788,
+          "line": 388,
           "column": 9
         }
       },
-      "offset": 1010
+      "offset": 1005
     },
     {
-      "text": "st    b",
+      "text": "mov   #100, b",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 9505,
-          "line": 408,
+          "byte-offset": 8812,
+          "line": 389,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 9509,
-          "line": 408,
-          "column": 6
-        }
-      },
-      "offset": 1012
-    },
-    {
-      "text": "ld    flag",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 9513,
-          "line": 409,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 9520,
-          "line": 409,
-          "column": 9
-        }
-      },
-      "offset": 1014
-    },
-    {
-      "text": "call  putch",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 9556,
-          "line": 410,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 9566,
-          "line": 410,
-          "column": 12
-        }
-      },
-      "offset": 1016
-    },
-    {
-      "text": "ret",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 9570,
-          "line": 411,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 9573,
-          "line": 411,
-          "column": 5
-        }
-      },
-      "offset": 1018
-    },
-    {
-      "text": "push  xbnk",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 9917,
-          "line": 420,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 9926,
-          "line": 420,
-          "column": 11
-        }
-      },
-      "offset": 1019
-    },
-    {
-      "text": "push  acc",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 9930,
-          "line": 421,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 9938,
-          "line": 421,
-          "column": 10
-        }
-      },
-      "offset": 1021
-    },
-    {
-      "text": "call  locate",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 9942,
-          "line": 422,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 9953,
-          "line": 422,
+          "byte-offset": 8823,
+          "line": 389,
           "column": 13
         }
       },
-      "offset": 1023
+      "offset": 1007
     },
     {
-      "text": "pop   acc",
+      "text": "div",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 10015,
-          "line": 423,
+          "byte-offset": 8838,
+          "line": 390,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 10022,
-          "line": 423,
-          "column": 9
-        }
-      },
-      "offset": 1025
-    },
-    {
-      "text": "call  put_chara",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10026,
-          "line": 424,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10040,
-          "line": 424,
-          "column": 16
-        }
-      },
-      "offset": 1027
-    },
-    {
-      "text": "pop   xbnk",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10069,
-          "line": 425,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10077,
-          "line": 425,
-          "column": 10
-        }
-      },
-      "offset": 1029
-    },
-    {
-      "text": "ret",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10083,
-          "line": 427,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10086,
-          "line": 427,
+          "byte-offset": 8841,
+          "line": 390,
           "column": 5
         }
       },
-      "offset": 1031
-    },
-    {
-      "text": "ld    b",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10399,
-          "line": 434,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10403,
-          "line": 434,
-          "column": 6
-        }
-      },
-      "offset": 1032
-    },
-    {
-      "text": "sub   #2",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10435,
-          "line": 435,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10441,
-          "line": 435,
-          "column": 8
-        }
-      },
-      "offset": 1034
-    },
-    {
-      "text": "bn    psw, 7, next1",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10447,
-          "line": 436,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10461,
-          "line": 436,
-          "column": 16
-        }
-      },
-      "offset": 1036
-    },
-    {
-      "text": "mov   #$00, xbnk",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10469,
-          "line": 438,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10482,
-          "line": 438,
-          "column": 15
-        }
-      },
-      "offset": 1039
-    },
-    {
-      "text": "br    next2",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10535,
-          "line": 439,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10543,
-          "line": 439,
-          "column": 10
-        }
-      },
-      "offset": 1042
-    },
-    {
-      "text": "st    b",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10555,
-          "line": 441,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10559,
-          "line": 441,
-          "column": 6
-        }
-      },
-      "offset": 1044
-    },
-    {
-      "text": "mov   #$01, xbnk",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10563,
-          "line": 442,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10576,
-          "line": 442,
-          "column": 15
-        }
-      },
-      "offset": 1046
-    },
-    {
-      "text": "ld    b",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10720,
-          "line": 446,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10724,
-          "line": 446,
-          "column": 6
-        }
-      },
-      "offset": 1049
-    },
-    {
-      "text": "rol",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10748,
-          "line": 447,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10751,
-          "line": 447,
-          "column": 5
-        }
-      },
-      "offset": 1051
-    },
-    {
-      "text": "rol",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10757,
-          "line": 448,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10760,
-          "line": 448,
-          "column": 5
-        }
-      },
-      "offset": 1052
-    },
-    {
-      "text": "rol",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10766,
-          "line": 449,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10769,
-          "line": 449,
-          "column": 5
-        }
-      },
-      "offset": 1053
-    },
-    {
-      "text": "rol",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10775,
-          "line": 450,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10778,
-          "line": 450,
-          "column": 5
-        }
-      },
-      "offset": 1054
-    },
-    {
-      "text": "rol",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10784,
-          "line": 451,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10787,
-          "line": 451,
-          "column": 5
-        }
-      },
-      "offset": 1055
-    },
-    {
-      "text": "rol",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10793,
-          "line": 452,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10796,
-          "line": 452,
-          "column": 5
-        }
-      },
-      "offset": 1056
-    },
-    {
-      "text": "add   c",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10802,
-          "line": 453,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10807,
-          "line": 453,
-          "column": 7
-        }
-      },
-      "offset": 1057
-    },
-    {
-      "text": "add   #$80",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10813,
-          "line": 454,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10821,
-          "line": 454,
-          "column": 10
-        }
-      },
-      "offset": 1059
-    },
-    {
-      "text": "st    r2",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10827,
-          "line": 455,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10832,
-          "line": 455,
-          "column": 7
-        }
-      },
-      "offset": 1061
-    },
-    {
-      "text": "ret",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10869,
-          "line": 457,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10872,
-          "line": 457,
-          "column": 5
-        }
-      },
-      "offset": 1063
-    },
-    {
-      "text": "push  psw",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10903,
-          "line": 460,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10911,
-          "line": 460,
-          "column": 10
-        }
-      },
-      "offset": 1064
-    },
-    {
-      "text": "set1  psw, 1",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 10953,
-          "line": 461,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 10963,
-          "line": 461,
-          "column": 12
-        }
-      },
-      "offset": 1066
-    },
-    {
-      "text": "rol",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11047,
-          "line": 464,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11050,
-          "line": 464,
-          "column": 5
-        }
-      },
-      "offset": 1068
-    },
-    {
-      "text": "rol",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11085,
-          "line": 465,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11088,
-          "line": 465,
-          "column": 5
-        }
-      },
-      "offset": 1069
-    },
-    {
-      "text": "rol",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11094,
-          "line": 466,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11097,
-          "line": 466,
-          "column": 5
-        }
-      },
-      "offset": 1070
-    },
-    {
-      "text": "add   #<fontdata",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11103,
-          "line": 467,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11109,
-          "line": 467,
-          "column": 8
-        }
-      },
-      "offset": 1071
-    },
-    {
-      "text": "st    trl",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11125,
-          "line": 468,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11131,
-          "line": 468,
-          "column": 8
-        }
-      },
-      "offset": 1073
-    },
-    {
-      "text": "mov   #0, acc",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11137,
-          "line": 469,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11147,
-          "line": 469,
-          "column": 12
-        }
-      },
-      "offset": 1075
-    },
-    {
-      "text": "addc  #>fontdata",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11153,
-          "line": 470,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11160,
-          "line": 470,
-          "column": 9
-        }
-      },
-      "offset": 1078
-    },
-    {
-      "text": "st    trh",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11176,
-          "line": 471,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11182,
-          "line": 471,
-          "column": 8
-        }
-      },
-      "offset": 1080
-    },
-    {
-      "text": "push  ocr",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11190,
-          "line": 473,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11198,
-          "line": 473,
-          "column": 10
-        }
-      },
-      "offset": 1082
-    },
-    {
-      "text": "mov   #osc_rc, ocr",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11240,
-          "line": 474,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11255,
-          "line": 474,
-          "column": 17
-        }
-      },
-      "offset": 1084
-    },
-    {
-      "text": "mov   #0, b",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11290,
-          "line": 476,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11298,
-          "line": 476,
-          "column": 10
-        }
-      },
-      "offset": 1087
-    },
-    {
-      "text": "mov   #4, c",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11348,
-          "line": 477,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11356,
-          "line": 477,
-          "column": 10
-        }
-      },
-      "offset": 1090
-    },
-    {
-      "text": "ld    b",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11383,
-          "line": 479,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11387,
-          "line": 479,
-          "column": 6
-        }
-      },
-      "offset": 1093
-    },
-    {
-      "text": "ldc",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11435,
-          "line": 480,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11438,
-          "line": 480,
-          "column": 5
-        }
-      },
-      "offset": 1095
-    },
-    {
-      "text": "inc   b",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11444,
-          "line": 481,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11449,
-          "line": 481,
-          "column": 7
-        }
-      },
-      "offset": 1096
-    },
-    {
-      "text": "st    @R2",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11492,
-          "line": 482,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11498,
-          "line": 482,
-          "column": 8
-        }
-      },
-      "offset": 1098
-    },
-    {
-      "text": "ld    r2",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11546,
-          "line": 483,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11551,
-          "line": 483,
-          "column": 7
-        }
-      },
-      "offset": 1099
-    },
-    {
-      "text": "add   #6",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11591,
-          "line": 484,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11597,
-          "line": 484,
-          "column": 8
-        }
-      },
-      "offset": 1101
-    },
-    {
-      "text": "st    r2",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11603,
-          "line": 485,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11608,
-          "line": 485,
-          "column": 7
-        }
-      },
-      "offset": 1103
-    },
-    {
-      "text": "ld    b",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11616,
-          "line": 487,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11620,
-          "line": 487,
-          "column": 6
-        }
-      },
-      "offset": 1105
-    },
-    {
-      "text": "ldc",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11669,
-          "line": 488,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11672,
-          "line": 488,
-          "column": 5
-        }
-      },
-      "offset": 1107
-    },
-    {
-      "text": "inc   b",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11678,
-          "line": 489,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11683,
-          "line": 489,
-          "column": 7
-        }
-      },
-      "offset": 1108
-    },
-    {
-      "text": "st    @R2",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11726,
-          "line": 490,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11732,
-          "line": 490,
-          "column": 8
-        }
-      },
-      "offset": 1110
-    },
-    {
-      "text": "ld    r2",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11780,
-          "line": 491,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11785,
-          "line": 491,
-          "column": 7
-        }
-      },
-      "offset": 1111
-    },
-    {
-      "text": "add   #10",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11826,
-          "line": 492,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11833,
-          "line": 492,
-          "column": 9
-        }
-      },
-      "offset": 1113
-    },
-    {
-      "text": "st    r2",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11839,
-          "line": 493,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11844,
-          "line": 493,
-          "column": 7
-        }
-      },
-      "offset": 1115
-    },
-    {
-      "text": "dec   c",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 11852,
-          "line": 495,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 11857,
-          "line": 495,
-          "column": 7
-        }
-      },
-      "offset": 1117
+      "offset": 1010
     },
     {
       "text": "ld    c",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 11891,
-          "line": 496,
+          "byte-offset": 8845,
+          "line": 391,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 11895,
-          "line": 496,
+          "byte-offset": 8849,
+          "line": 391,
           "column": 6
         }
       },
-      "offset": 1119
+      "offset": 1011
     },
     {
-      "text": "bnz   loop1",
+      "text": "st    flag",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 11901,
-          "line": 497,
+          "byte-offset": 8874,
+          "line": 392,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 11910,
-          "line": 497,
+          "byte-offset": 8881,
+          "line": 392,
+          "column": 9
+        }
+      },
+      "offset": 1013
+    },
+    {
+      "text": "push  b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8885,
+          "line": 393,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8891,
+          "line": 393,
+          "column": 8
+        }
+      },
+      "offset": 1015
+    },
+    {
+      "text": "call  putch_xy",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8937,
+          "line": 394,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8950,
+          "line": 394,
+          "column": 15
+        }
+      },
+      "offset": 1017
+    },
+    {
+      "text": "inc   xpos",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 8988,
+          "line": 397,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 8996,
+          "line": 397,
+          "column": 10
+        }
+      },
+      "offset": 1019
+    },
+    {
+      "text": "pop   c",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9000,
+          "line": 398,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9005,
+          "line": 398,
+          "column": 7
+        }
+      },
+      "offset": 1021
+    },
+    {
+      "text": "xor   acc",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9051,
+          "line": 399,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9058,
+          "line": 399,
+          "column": 9
+        }
+      },
+      "offset": 1023
+    },
+    {
+      "text": "mov   #10, b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9082,
+          "line": 400,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9092,
+          "line": 400,
+          "column": 12
+        }
+      },
+      "offset": 1025
+    },
+    {
+      "text": "div",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9108,
+          "line": 401,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9111,
+          "line": 401,
+          "column": 5
+        }
+      },
+      "offset": 1028
+    },
+    {
+      "text": "ld    c",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9115,
+          "line": 402,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9119,
+          "line": 402,
+          "column": 6
+        }
+      },
+      "offset": 1029
+    },
+    {
+      "text": "st    flag",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9144,
+          "line": 403,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9151,
+          "line": 403,
+          "column": 9
+        }
+      },
+      "offset": 1031
+    },
+    {
+      "text": "push  b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9155,
+          "line": 404,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9161,
+          "line": 404,
+          "column": 8
+        }
+      },
+      "offset": 1033
+    },
+    {
+      "text": "call  putch_xy",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9211,
+          "line": 405,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9224,
+          "line": 405,
+          "column": 15
+        }
+      },
+      "offset": 1035
+    },
+    {
+      "text": "inc   xpos",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9262,
+          "line": 408,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9270,
+          "line": 408,
+          "column": 10
+        }
+      },
+      "offset": 1037
+    },
+    {
+      "text": "pop   flag",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9274,
+          "line": 409,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9282,
+          "line": 409,
+          "column": 10
+        }
+      },
+      "offset": 1039
+    },
+    {
+      "text": "call  putch_xy",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9286,
+          "line": 410,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9299,
+          "line": 410,
+          "column": 15
+        }
+      },
+      "offset": 1041
+    },
+    {
+      "text": "inc   xpos",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9374,
+          "line": 414,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9382,
+          "line": 414,
+          "column": 10
+        }
+      },
+      "offset": 1043
+    },
+    {
+      "text": "ld    t0intcount",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9386,
+          "line": 415,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9399,
+          "line": 415,
+          "column": 15
+        }
+      },
+      "offset": 1045
+    },
+    {
+      "text": "st    c",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9403,
+          "line": 416,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9407,
+          "line": 416,
+          "column": 6
+        }
+      },
+      "offset": 1047
+    },
+    {
+      "text": "xor   acc",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9433,
+          "line": 417,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9440,
+          "line": 417,
+          "column": 9
+        }
+      },
+      "offset": 1049
+    },
+    {
+      "text": "mov   #100, b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9464,
+          "line": 418,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9475,
+          "line": 418,
+          "column": 13
+        }
+      },
+      "offset": 1051
+    },
+    {
+      "text": "div",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9490,
+          "line": 419,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9493,
+          "line": 419,
+          "column": 5
+        }
+      },
+      "offset": 1054
+    },
+    {
+      "text": "ld    c",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9497,
+          "line": 420,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9501,
+          "line": 420,
+          "column": 6
+        }
+      },
+      "offset": 1055
+    },
+    {
+      "text": "st    flag",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9526,
+          "line": 421,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9533,
+          "line": 421,
+          "column": 9
+        }
+      },
+      "offset": 1057
+    },
+    {
+      "text": "push  b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9537,
+          "line": 422,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9543,
+          "line": 422,
+          "column": 8
+        }
+      },
+      "offset": 1059
+    },
+    {
+      "text": "call  putch_xy",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9589,
+          "line": 423,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9602,
+          "line": 423,
+          "column": 15
+        }
+      },
+      "offset": 1061
+    },
+    {
+      "text": "inc   xpos",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9634,
+          "line": 426,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9642,
+          "line": 426,
+          "column": 10
+        }
+      },
+      "offset": 1063
+    },
+    {
+      "text": "pop   c",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9646,
+          "line": 427,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9651,
+          "line": 427,
+          "column": 7
+        }
+      },
+      "offset": 1065
+    },
+    {
+      "text": "xor   acc",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9697,
+          "line": 428,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9704,
+          "line": 428,
+          "column": 9
+        }
+      },
+      "offset": 1067
+    },
+    {
+      "text": "mov   #10, b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9728,
+          "line": 429,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9738,
+          "line": 429,
+          "column": 12
+        }
+      },
+      "offset": 1069
+    },
+    {
+      "text": "div",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9754,
+          "line": 430,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9757,
+          "line": 430,
+          "column": 5
+        }
+      },
+      "offset": 1072
+    },
+    {
+      "text": "ld    c",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9761,
+          "line": 431,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9765,
+          "line": 431,
+          "column": 6
+        }
+      },
+      "offset": 1073
+    },
+    {
+      "text": "st    flag",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9790,
+          "line": 432,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9797,
+          "line": 432,
+          "column": 9
+        }
+      },
+      "offset": 1075
+    },
+    {
+      "text": "push  b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9801,
+          "line": 433,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9807,
+          "line": 433,
+          "column": 8
+        }
+      },
+      "offset": 1077
+    },
+    {
+      "text": "call  putch_xy",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9857,
+          "line": 434,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9870,
+          "line": 434,
+          "column": 15
+        }
+      },
+      "offset": 1079
+    },
+    {
+      "text": "inc   xpos",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9902,
+          "line": 437,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9910,
+          "line": 437,
+          "column": 10
+        }
+      },
+      "offset": 1081
+    },
+    {
+      "text": "pop   flag",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9914,
+          "line": 438,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9922,
+          "line": 438,
+          "column": 10
+        }
+      },
+      "offset": 1083
+    },
+    {
+      "text": "call  putch_xy",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 9926,
+          "line": 439,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 9939,
+          "line": 439,
+          "column": 15
+        }
+      },
+      "offset": 1085
+    },
+    {
+      "text": "set1  pcon, 0",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 10033,
+          "line": 443,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 10045,
+          "line": 443,
+          "column": 14
+        }
+      },
+      "offset": 1087
+    },
+    {
+      "text": "ld    p3",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 10049,
+          "line": 444,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 10054,
+          "line": 444,
+          "column": 7
+        }
+      },
+      "offset": 1089
+    },
+    {
+      "text": "bn    acc, 6, finish",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 10058,
+          "line": 445,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 10073,
+          "line": 445,
+          "column": 17
+        }
+      },
+      "offset": 1091
+    },
+    {
+      "text": "jmp   next4",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 10132,
+          "line": 447,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 10141,
+          "line": 447,
           "column": 11
         }
       },
-      "offset": 1121
+      "offset": 1094
+    },
+    {
+      "text": "jmp   game_end",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 10200,
+          "line": 450,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 10212,
+          "line": 450,
+          "column": 14
+        }
+      },
+      "offset": 1096
+    },
+    {
+      "text": "push  ocr",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 10641,
+          "line": 467,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 10649,
+          "line": 467,
+          "column": 10
+        }
+      },
+      "offset": 1098
+    },
+    {
+      "text": "mov   #osc_rc, ocr",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 10691,
+          "line": 468,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 10706,
+          "line": 468,
+          "column": 17
+        }
+      },
+      "offset": 1100
+    },
+    {
+      "text": "mov   #0, xbnk",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 10741,
+          "line": 470,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 10752,
+          "line": 470,
+          "column": 13
+        }
+      },
+      "offset": 1103
+    },
+    {
+      "text": "call  cls_s",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 10805,
+          "line": 471,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 10815,
+          "line": 471,
+          "column": 12
+        }
+      },
+      "offset": 1106
+    },
+    {
+      "text": "mov   #1, xbnk",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 10852,
+          "line": 473,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 10863,
+          "line": 473,
+          "column": 13
+        }
+      },
+      "offset": 1108
+    },
+    {
+      "text": "call  cls_s",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 10916,
+          "line": 474,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 10926,
+          "line": 474,
+          "column": 12
+        }
+      },
+      "offset": 1111
     },
     {
       "text": "pop   ocr",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 11951,
-          "line": 499,
+          "byte-offset": 10961,
+          "line": 475,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 11958,
-          "line": 499,
+          "byte-offset": 10968,
+          "line": 475,
           "column": 9
         }
       },
-      "offset": 1123
-    },
-    {
-      "text": "pop   psw",
-      "span": {
-        "start": {
-          "source": 0,
-          "byte-offset": 12000,
-          "line": 500,
-          "column": 2
-        },
-        "end": {
-          "source": 0,
-          "byte-offset": 12007,
-          "line": 500,
-          "column": 9
-        }
-      },
-      "offset": 1125
+      "offset": 1113
     },
     {
       "text": "ret",
       "span": {
         "start": {
           "source": 0,
-          "byte-offset": 12051,
-          "line": 502,
+          "byte-offset": 11012,
+          "line": 477,
           "column": 2
         },
         "end": {
           "source": 0,
-          "byte-offset": 12054,
-          "line": 502,
+          "byte-offset": 11015,
+          "line": 477,
           "column": 5
         }
       },
-      "offset": 1127
+      "offset": 1115
+    },
+    {
+      "text": "mov   #$80, r2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 11082,
+          "line": 480,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 11093,
+          "line": 480,
+          "column": 13
+        }
+      },
+      "offset": 1116
+    },
+    {
+      "text": "mov   #$80, b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 11167,
+          "line": 481,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 11177,
+          "line": 481,
+          "column": 12
+        }
+      },
+      "offset": 1119
+    },
+    {
+      "text": "mov   #0, @R2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 11234,
+          "line": 483,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 11244,
+          "line": 483,
+          "column": 12
+        }
+      },
+      "offset": 1122
+    },
+    {
+      "text": "inc   r2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 11292,
+          "line": 484,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 11298,
+          "line": 484,
+          "column": 8
+        }
+      },
+      "offset": 1124
+    },
+    {
+      "text": "dbnz  b, loop3",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 11304,
+          "line": 485,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 11316,
+          "line": 485,
+          "column": 14
+        }
+      },
+      "offset": 1126
+    },
+    {
+      "text": "ret",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 11347,
+          "line": 487,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 11350,
+          "line": 487,
+          "column": 5
+        }
+      },
+      "offset": 1129
+    },
+    {
+      "text": "ld    xpos",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 11453,
+          "line": 492,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 11460,
+          "line": 492,
+          "column": 9
+        }
+      },
+      "offset": 1130
+    },
+    {
+      "text": "st    c",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 11464,
+          "line": 493,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 11468,
+          "line": 493,
+          "column": 6
+        }
+      },
+      "offset": 1132
+    },
+    {
+      "text": "ld    ypos",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 11472,
+          "line": 494,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 11479,
+          "line": 494,
+          "column": 9
+        }
+      },
+      "offset": 1134
+    },
+    {
+      "text": "st    b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 11483,
+          "line": 495,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 11487,
+          "line": 495,
+          "column": 6
+        }
+      },
+      "offset": 1136
+    },
+    {
+      "text": "ld    flag",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 11491,
+          "line": 496,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 11498,
+          "line": 496,
+          "column": 9
+        }
+      },
+      "offset": 1138
+    },
+    {
+      "text": "call  putch",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 11534,
+          "line": 497,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 11544,
+          "line": 497,
+          "column": 12
+        }
+      },
+      "offset": 1140
+    },
+    {
+      "text": "ret",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 11548,
+          "line": 498,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 11551,
+          "line": 498,
+          "column": 5
+        }
+      },
+      "offset": 1142
+    },
+    {
+      "text": "push  xbnk",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 11895,
+          "line": 507,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 11904,
+          "line": 507,
+          "column": 11
+        }
+      },
+      "offset": 1143
+    },
+    {
+      "text": "push  acc",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 11908,
+          "line": 508,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 11916,
+          "line": 508,
+          "column": 10
+        }
+      },
+      "offset": 1145
+    },
+    {
+      "text": "call  locate",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 11920,
+          "line": 509,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 11931,
+          "line": 509,
+          "column": 13
+        }
+      },
+      "offset": 1147
+    },
+    {
+      "text": "pop   acc",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 11993,
+          "line": 510,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 12000,
+          "line": 510,
+          "column": 9
+        }
+      },
+      "offset": 1149
+    },
+    {
+      "text": "call  put_chara",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 12004,
+          "line": 511,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 12018,
+          "line": 511,
+          "column": 16
+        }
+      },
+      "offset": 1151
+    },
+    {
+      "text": "pop   xbnk",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 12047,
+          "line": 512,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 12055,
+          "line": 512,
+          "column": 10
+        }
+      },
+      "offset": 1153
+    },
+    {
+      "text": "ret",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 12061,
+          "line": 514,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 12064,
+          "line": 514,
+          "column": 5
+        }
+      },
+      "offset": 1155
+    },
+    {
+      "text": "ld    b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 12377,
+          "line": 521,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 12381,
+          "line": 521,
+          "column": 6
+        }
+      },
+      "offset": 1156
+    },
+    {
+      "text": "sub   #2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 12413,
+          "line": 522,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 12419,
+          "line": 522,
+          "column": 8
+        }
+      },
+      "offset": 1158
+    },
+    {
+      "text": "bn    psw, 7, next1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 12425,
+          "line": 523,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 12439,
+          "line": 523,
+          "column": 16
+        }
+      },
+      "offset": 1160
+    },
+    {
+      "text": "mov   #$00, xbnk",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 12447,
+          "line": 525,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 12460,
+          "line": 525,
+          "column": 15
+        }
+      },
+      "offset": 1163
+    },
+    {
+      "text": "br    next2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 12513,
+          "line": 526,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 12521,
+          "line": 526,
+          "column": 10
+        }
+      },
+      "offset": 1166
+    },
+    {
+      "text": "st    b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 12533,
+          "line": 528,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 12537,
+          "line": 528,
+          "column": 6
+        }
+      },
+      "offset": 1168
+    },
+    {
+      "text": "mov   #$01, xbnk",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 12541,
+          "line": 529,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 12554,
+          "line": 529,
+          "column": 15
+        }
+      },
+      "offset": 1170
+    },
+    {
+      "text": "ld    b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 12698,
+          "line": 533,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 12702,
+          "line": 533,
+          "column": 6
+        }
+      },
+      "offset": 1173
+    },
+    {
+      "text": "rol",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 12726,
+          "line": 534,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 12729,
+          "line": 534,
+          "column": 5
+        }
+      },
+      "offset": 1175
+    },
+    {
+      "text": "rol",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 12735,
+          "line": 535,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 12738,
+          "line": 535,
+          "column": 5
+        }
+      },
+      "offset": 1176
+    },
+    {
+      "text": "rol",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 12744,
+          "line": 536,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 12747,
+          "line": 536,
+          "column": 5
+        }
+      },
+      "offset": 1177
+    },
+    {
+      "text": "rol",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 12753,
+          "line": 537,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 12756,
+          "line": 537,
+          "column": 5
+        }
+      },
+      "offset": 1178
+    },
+    {
+      "text": "rol",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 12762,
+          "line": 538,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 12765,
+          "line": 538,
+          "column": 5
+        }
+      },
+      "offset": 1179
+    },
+    {
+      "text": "rol",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 12771,
+          "line": 539,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 12774,
+          "line": 539,
+          "column": 5
+        }
+      },
+      "offset": 1180
+    },
+    {
+      "text": "add   c",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 12780,
+          "line": 540,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 12785,
+          "line": 540,
+          "column": 7
+        }
+      },
+      "offset": 1181
+    },
+    {
+      "text": "add   #$80",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 12791,
+          "line": 541,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 12799,
+          "line": 541,
+          "column": 10
+        }
+      },
+      "offset": 1183
+    },
+    {
+      "text": "st    r2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 12805,
+          "line": 542,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 12810,
+          "line": 542,
+          "column": 7
+        }
+      },
+      "offset": 1185
+    },
+    {
+      "text": "ret",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 12847,
+          "line": 544,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 12850,
+          "line": 544,
+          "column": 5
+        }
+      },
+      "offset": 1187
+    },
+    {
+      "text": "push  psw",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 12881,
+          "line": 547,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 12889,
+          "line": 547,
+          "column": 10
+        }
+      },
+      "offset": 1188
+    },
+    {
+      "text": "set1  psw, 1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 12931,
+          "line": 548,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 12941,
+          "line": 548,
+          "column": 12
+        }
+      },
+      "offset": 1190
+    },
+    {
+      "text": "rol",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13025,
+          "line": 551,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13028,
+          "line": 551,
+          "column": 5
+        }
+      },
+      "offset": 1192
+    },
+    {
+      "text": "rol",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13063,
+          "line": 552,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13066,
+          "line": 552,
+          "column": 5
+        }
+      },
+      "offset": 1193
+    },
+    {
+      "text": "rol",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13072,
+          "line": 553,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13075,
+          "line": 553,
+          "column": 5
+        }
+      },
+      "offset": 1194
+    },
+    {
+      "text": "add   #<fontdata",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13081,
+          "line": 554,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13087,
+          "line": 554,
+          "column": 8
+        }
+      },
+      "offset": 1195
+    },
+    {
+      "text": "st    trl",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13103,
+          "line": 555,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13109,
+          "line": 555,
+          "column": 8
+        }
+      },
+      "offset": 1197
+    },
+    {
+      "text": "mov   #0, acc",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13115,
+          "line": 556,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13125,
+          "line": 556,
+          "column": 12
+        }
+      },
+      "offset": 1199
+    },
+    {
+      "text": "addc  #>fontdata",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13131,
+          "line": 557,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13138,
+          "line": 557,
+          "column": 9
+        }
+      },
+      "offset": 1202
+    },
+    {
+      "text": "st    trh",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13154,
+          "line": 558,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13160,
+          "line": 558,
+          "column": 8
+        }
+      },
+      "offset": 1204
+    },
+    {
+      "text": "push  ocr",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13168,
+          "line": 560,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13176,
+          "line": 560,
+          "column": 10
+        }
+      },
+      "offset": 1206
+    },
+    {
+      "text": "mov   #osc_rc, ocr",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13218,
+          "line": 561,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13233,
+          "line": 561,
+          "column": 17
+        }
+      },
+      "offset": 1208
+    },
+    {
+      "text": "mov   #0, b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13268,
+          "line": 563,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13276,
+          "line": 563,
+          "column": 10
+        }
+      },
+      "offset": 1211
+    },
+    {
+      "text": "mov   #4, c",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13326,
+          "line": 564,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13334,
+          "line": 564,
+          "column": 10
+        }
+      },
+      "offset": 1214
+    },
+    {
+      "text": "ld    b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13361,
+          "line": 566,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13365,
+          "line": 566,
+          "column": 6
+        }
+      },
+      "offset": 1217
+    },
+    {
+      "text": "ldc",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13413,
+          "line": 567,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13416,
+          "line": 567,
+          "column": 5
+        }
+      },
+      "offset": 1219
+    },
+    {
+      "text": "inc   b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13422,
+          "line": 568,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13427,
+          "line": 568,
+          "column": 7
+        }
+      },
+      "offset": 1220
+    },
+    {
+      "text": "st    @R2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13470,
+          "line": 569,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13476,
+          "line": 569,
+          "column": 8
+        }
+      },
+      "offset": 1222
+    },
+    {
+      "text": "ld    r2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13524,
+          "line": 570,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13529,
+          "line": 570,
+          "column": 7
+        }
+      },
+      "offset": 1223
+    },
+    {
+      "text": "add   #6",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13569,
+          "line": 571,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13575,
+          "line": 571,
+          "column": 8
+        }
+      },
+      "offset": 1225
+    },
+    {
+      "text": "st    r2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13581,
+          "line": 572,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13586,
+          "line": 572,
+          "column": 7
+        }
+      },
+      "offset": 1227
+    },
+    {
+      "text": "ld    b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13594,
+          "line": 574,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13598,
+          "line": 574,
+          "column": 6
+        }
+      },
+      "offset": 1229
+    },
+    {
+      "text": "ldc",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13647,
+          "line": 575,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13650,
+          "line": 575,
+          "column": 5
+        }
+      },
+      "offset": 1231
+    },
+    {
+      "text": "inc   b",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13656,
+          "line": 576,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13661,
+          "line": 576,
+          "column": 7
+        }
+      },
+      "offset": 1232
+    },
+    {
+      "text": "st    @R2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13704,
+          "line": 577,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13710,
+          "line": 577,
+          "column": 8
+        }
+      },
+      "offset": 1234
+    },
+    {
+      "text": "ld    r2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13758,
+          "line": 578,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13763,
+          "line": 578,
+          "column": 7
+        }
+      },
+      "offset": 1235
+    },
+    {
+      "text": "add   #10",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13804,
+          "line": 579,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13811,
+          "line": 579,
+          "column": 9
+        }
+      },
+      "offset": 1237
+    },
+    {
+      "text": "st    r2",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13817,
+          "line": 580,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13822,
+          "line": 580,
+          "column": 7
+        }
+      },
+      "offset": 1239
+    },
+    {
+      "text": "dec   c",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13830,
+          "line": 582,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13835,
+          "line": 582,
+          "column": 7
+        }
+      },
+      "offset": 1241
+    },
+    {
+      "text": "ld    c",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13869,
+          "line": 583,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13873,
+          "line": 583,
+          "column": 6
+        }
+      },
+      "offset": 1243
+    },
+    {
+      "text": "bnz   loop1",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13879,
+          "line": 584,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13888,
+          "line": 584,
+          "column": 11
+        }
+      },
+      "offset": 1245
+    },
+    {
+      "text": "pop   ocr",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13929,
+          "line": 586,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13936,
+          "line": 586,
+          "column": 9
+        }
+      },
+      "offset": 1247
+    },
+    {
+      "text": "pop   psw",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 13978,
+          "line": 587,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 13985,
+          "line": 587,
+          "column": 9
+        }
+      },
+      "offset": 1249
+    },
+    {
+      "text": "ret",
+      "span": {
+        "start": {
+          "source": 0,
+          "byte-offset": 14029,
+          "line": 589,
+          "column": 2
+        },
+        "end": {
+          "source": 0,
+          "byte-offset": 14032,
+          "line": 589,
+          "column": 5
+        }
+      },
+      "offset": 1251
     }
   ]
 }
