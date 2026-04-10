@@ -1,0 +1,4 @@
+#!/bin/bash
+SELF="$(readlink -f "$0")"
+APPDIR="$(dirname "$SELF")"
+exec "$APPDIR/usr/bin/DreamPotato" "$@"
