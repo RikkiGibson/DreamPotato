@@ -42,7 +42,9 @@ jobs:
         list-tests: failed
 
   PublishLinux:
-    runs-on: ubuntu-latest
+    # Use ubuntu-22.04 (Jammy) to build with glibc 2.35
+    # See https://www.ubuntuupdates.org/pm/glibc
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v6
     - name: Setup .NET
