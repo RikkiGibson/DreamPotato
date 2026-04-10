@@ -8,6 +8,9 @@
 **/Data/*.debug.json
 **/Data/*.s
 
+# TestSource
+**/TestSource/*.debug.json
+
 # dotenv files
 .env
 
