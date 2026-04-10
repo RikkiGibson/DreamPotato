@@ -11,7 +11,8 @@
                 "assemble",
                 "${file}",
                 "--output",
-                "${fileDirname}/${fileBasenameNoExtension}.vms"
+                "${fileDirname}/${fileBasenameNoExtension}.vms",
+                "--debug"
             ],
             "group": "build"
         },

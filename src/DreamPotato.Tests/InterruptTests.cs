@@ -177,7 +177,6 @@ public class InterruptTests
         Assert.Equal(2, cpu.SFRs.C);
         Assert.Equal("RETI", cpu.StepInstruction().ToString());
         Assert.Equal(0x280, cpu.Pc);
-        Assert.Equal(Interrupts.None, cpu.RequestedInterrupts);
         Assert.Equal(0, cpu._interruptsCount);
 
         Assert.Equal("INC Acc", cpu.StepInstruction().ToString());
@@ -212,49 +211,287 @@ public class InterruptTests
         Assert.True(cpu.SFRs.P3Int.Continuous);
         Assert.True(cpu.SFRs.P3Int.Enable);
 
-        // TODO: write several more interrupts tests showing how they stack or not
         cpu.SFRs.P3 = new P3(0b1111_0111);
-
-        Assert.Equal(Interrupts.None, cpu.RequestedInterrupts);
+        Assert.False(cpu.SFRs.P3Int.Source);
         Assert.Equal(0, cpu._interruptsCount);
         Assert.Equal(0, cpu.Pc);
 
         // Note that continuous P3 interrupts are only generated in cpu.Step()
         // (We don't do it in both places to avoid generating the same interrupt twice in one cycle)
-        cpu.Step(); // JMPF
-        Assert.Equal(Interrupts.P3, cpu.RequestedInterrupts);
+
+        Assert.Equal("JMPF 200H", cpu.StepInstruction().ToString());
+        Assert.True(cpu.SFRs.P3Int.Source);
         Assert.Equal(0, cpu._interruptsCount);
         Assert.Equal(0x200, cpu.Pc);
 
-        cpu.Step(); // NOP
-        Assert.Equal(Interrupts.P3, cpu.RequestedInterrupts);
+        // Runs the NOP at 0x200 itself
+        Assert.Equal("NOP", cpu.StepInstruction().ToString());
+        Assert.True(cpu.SFRs.P3Int.Source);
+        Assert.Equal(1, cpu._interruptsCount);
+        Assert.Equal(InterruptVectors.P3, cpu.Pc);
+
+        // Run the NOP at start of p3 handler
+        Assert.Equal("NOP", cpu.StepInstruction().ToString());
+        Assert.True(cpu.SFRs.P3Int.Source);
         Assert.Equal(1, cpu._interruptsCount);
         Assert.Equal(InterruptVectors.P3 + 1, cpu.Pc);
 
-        cpu.Step(); // RETI
-        Assert.Equal(Interrupts.P3, cpu.RequestedInterrupts);
+        Assert.Equal("RETI", cpu.StepInstruction().ToString());
+        Assert.True(cpu.SFRs.P3Int.Source);
         Assert.Equal(0, cpu._interruptsCount);
-        Assert.Equal(0x200, cpu.Pc);
+        Assert.Equal(0x201, cpu.Pc);
 
         // Stop the interrupt-generating signal
         cpu.SFRs.P3 = new P3(0b1111_1111);
 
-        cpu.Step(); // NOP
+        // Run the NOP at 0x201
+        Assert.Equal("NOP", cpu.StepInstruction().ToString());
         // Since we RETI'd, another instruction needs to be executed before we can service the pending P3 interrupt
-        Assert.Equal(Interrupts.P3, cpu.RequestedInterrupts);
-        Assert.Equal(0, cpu._interruptsCount);
-        Assert.Equal(0x201, cpu.Pc);
+        Assert.True(cpu.SFRs.P3Int.Source);
+        Assert.Equal(1, cpu._interruptsCount);
+        Assert.Equal(InterruptVectors.P3, cpu.Pc);
 
-        cpu.Step(); // NOP
-        Assert.Equal(Interrupts.None, cpu.RequestedInterrupts);
+        // Run the NOP at start of p3 handler
+        Assert.Equal("NOP", cpu.StepInstruction().ToString());
+        Assert.True(cpu.SFRs.P3Int.Source); // Note: nothing in the user code is actually disabling this flag. The system doesn't automatically disable it.
         Assert.Equal(1, cpu._interruptsCount);
         Assert.Equal(InterruptVectors.P3 + 1, cpu.Pc);
 
-        cpu.Step(); // RETI
-        Assert.Equal(Interrupts.None, cpu.RequestedInterrupts);
+        Assert.Equal("RETI", cpu.StepInstruction().ToString());
+        Assert.True(cpu.SFRs.P3Int.Source);
         Assert.Equal(0, cpu._interruptsCount);
-        Assert.Equal(0x201, cpu.Pc);
+        Assert.Equal(0x202, cpu.Pc);
 
         cpu.SFRs.P3 = new P3(0b1111_0111);
+    }
+
+    [Fact]
+    public void IntDelays()
+    {
+        // Execute the assembled version of 'IntDelays.s'
+        if (!File.Exists("Data/american_v1.05.bin"))
+            Assert.Skip("Test requires a BIOS");
+
+        var vmu = new Vmu();
+        var cpu = vmu._cpu;
+        cpu.DreamcastSlot = DreamcastSlot.Slot1;
+        vmu.LoadRom();
+        vmu.LoadGameVms("TestSource/IntDelays.vms", date: DateTimeOffset.Parse("09/09/1999"), autoInitializeRTCDate: true);
+
+        cpu.Run(TimeSpan.TicksPerSecond);
+        pressButtonAndWait(cpu, new P3(0xff) { ButtonMode = false });
+        pressButtonAndWait(cpu, new P3(0xff) { ButtonA = false });
+
+        // Real HW result:
+        // 1100
+        // 0000
+        // 00 0
+        // 10
+        // Emu result (matching):
+        // 1100
+        // 0000
+        // 00 0
+        // 10
+        Assert.Equal<object>("""
+            |  ▄██     ▄██   ▄██▀▀█▄ ▄██▀▀█▄
+            |   ██      ██   ██   ██ ██   ██
+            |   ██      ██   ██  ▄██ ██  ▄██
+            |  ▀▀▀▀    ▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀
+            |▄██▀▀█▄ ▄██▀▀█▄ ▄██▀▀█▄ ▄██▀▀█▄
+            |██   ██ ██   ██ ██   ██ ██   ██
+            |██  ▄██ ██  ▄██ ██  ▄██ ██  ▄██
+            | ▀▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀
+            |▄██▀▀█▄ ▄██▀▀█▄         ▄██▀▀█▄
+            |██   ██ ██   ██         ██   ██
+            |██  ▄██ ██  ▄██         ██  ▄██
+            | ▀▀▀▀▀   ▀▀▀▀▀           ▀▀▀▀▀
+            |  ▄██   ▄██▀▀█▄
+            |   ██   ██   ██
+            |   ██   ██  ▄██
+            |  ▀▀▀▀   ▀▀▀▀▀
+            """,
+            cpu.Display.ToTestDisplayString());
+
+        static void pressButtonAndWait(Cpu cpu, P3 pressedState)
+        {
+            const long halfSecond = TimeSpan.TicksPerSecond / 2;
+            cpu.SFRs.P3 = pressedState;
+            cpu.Run(halfSecond);
+            cpu.SFRs.P3 = new P3(0xff);
+            cpu.Run(TimeSpan.TicksPerSecond * 2);
+        }
+    }
+
+    [Fact]
+    public void TimerIntSeq1()
+    {
+        // Execute the assembled version of 'TimerIntSeq1.s'
+        if (!File.Exists("Data/american_v1.05.bin"))
+            Assert.Skip("Test requires a BIOS");
+
+        var vmu = new Vmu();
+        var cpu = vmu._cpu;
+        cpu.DreamcastSlot = DreamcastSlot.Slot1;
+        vmu.LoadRom();
+        vmu.LoadGameVms("TestSource/TimerIntSeq1.vms", date: DateTimeOffset.Parse("09/09/1999"), autoInitializeRTCDate: true);
+
+        cpu.Run(TimeSpan.TicksPerSecond);
+        pressButtonAndWait(cpu, new P3(0xff) { ButtonMode = false });
+        pressButtonAndWait(cpu, new P3(0xff) { ButtonA = false });
+
+        // Real HW result:
+        // 238855
+        // 234877
+        // 234877
+        // 238855
+        // Emu result (matching):
+        // 238855
+        // 234877
+        // 234877
+        // 238855
+        Assert.Equal<object>("""
+            |▄█▀▀▀█▄ ▄██▀▀█▄ ▄█▀▀▀█▄ ▄█▀▀▀█▄ ██▀▀▀▀▀ ██▀▀▀▀▀
+            |▀▀  ▄█▀    ▄▄█▀ ▀█▄▄▄█▀ ▀█▄▄▄█▀ ▀▀▀▀▀█▄ ▀▀▀▀▀█▄
+            | ▄█▀▀   ▄▄▄  ██ ██   ██ ██   ██ ▄▄   ██ ▄▄   ██
+            |▀▀▀▀▀▀▀  ▀▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀
+            |▄█▀▀▀█▄ ▄██▀▀█▄    ▄██  ▄█▀▀▀█▄ ██▀▀▀██ ██▀▀▀██
+            |▀▀  ▄█▀    ▄▄█▀  ▄█▀██  ▀█▄▄▄█▀     ▄█      ▄█
+            | ▄█▀▀   ▄▄▄  ██ ██▄▄██▄ ██   ██    ██      ██
+            |▀▀▀▀▀▀▀  ▀▀▀▀▀      ▀▀   ▀▀▀▀▀    ▀▀▀     ▀▀▀
+            |▄█▀▀▀█▄ ▄██▀▀█▄    ▄██  ▄█▀▀▀█▄ ██▀▀▀██ ██▀▀▀██
+            |▀▀  ▄█▀    ▄▄█▀  ▄█▀██  ▀█▄▄▄█▀     ▄█      ▄█
+            | ▄█▀▀   ▄▄▄  ██ ██▄▄██▄ ██   ██    ██      ██
+            |▀▀▀▀▀▀▀  ▀▀▀▀▀      ▀▀   ▀▀▀▀▀    ▀▀▀     ▀▀▀
+            |▄█▀▀▀█▄ ▄██▀▀█▄ ▄█▀▀▀█▄ ▄█▀▀▀█▄ ██▀▀▀▀▀ ██▀▀▀▀▀
+            |▀▀  ▄█▀    ▄▄█▀ ▀█▄▄▄█▀ ▀█▄▄▄█▀ ▀▀▀▀▀█▄ ▀▀▀▀▀█▄
+            | ▄█▀▀   ▄▄▄  ██ ██   ██ ██   ██ ▄▄   ██ ▄▄   ██
+            |▀▀▀▀▀▀▀  ▀▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀
+            """,
+            cpu.Display.ToTestDisplayString());
+
+        static void pressButtonAndWait(Cpu cpu, P3 pressedState)
+        {
+            const long halfSecond = TimeSpan.TicksPerSecond / 2;
+            cpu.SFRs.P3 = pressedState;
+            cpu.Run(halfSecond);
+            cpu.SFRs.P3 = new P3(0xff);
+            cpu.Run(TimeSpan.TicksPerSecond * 2);
+        }
+    }
+
+    [Fact]
+    public void TimerPreemption()
+    {
+        // Execute the assembled version of 'TimerPreemption.s'
+        if (!File.Exists("Data/american_v1.05.bin"))
+            Assert.Skip("Test requires a BIOS");
+
+        var vmu = new Vmu();
+        var cpu = vmu._cpu;
+        cpu.DreamcastSlot = DreamcastSlot.Slot1;
+        vmu.LoadRom();
+        vmu.LoadGameVms("TestSource/TimerPreemption.vms", date: DateTimeOffset.Parse("09/09/1999"), autoInitializeRTCDate: true);
+
+        cpu.Run(TimeSpan.TicksPerSecond);
+        pressButtonAndWait(cpu, new P3(0xff) { ButtonMode = false });
+        pressButtonAndWait(cpu, new P3(0xff) { ButtonA = false });
+        cpu.Run(TimeSpan.TicksPerSecond * 10);
+
+        // Real hardware result:
+        // 000028
+        // 081000
+        // 118060
+        // 024026
+        // Emu result (not matching):
+        // 000028
+        // 081003
+        // 118060
+        // 024028
+        Assert.Equal<object>("""
+            |▄██▀▀█▄ ▄██▀▀█▄ ▄██▀▀█▄ ▄██▀▀█▄ ▄█▀▀▀█▄ ▄█▀▀▀█▄
+            |██   ██ ██   ██ ██   ██ ██   ██ ▀▀  ▄█▀ ▀█▄▄▄█▀
+            |██  ▄██ ██  ▄██ ██  ▄██ ██  ▄██  ▄█▀▀   ██   ██
+            | ▀▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀  ▀▀▀▀▀▀▀  ▀▀▀▀▀
+            |▄██▀▀█▄ ▄█▀▀▀█▄   ▄██   ▄██▀▀█▄ ▄██▀▀█▄ ▄██▀▀█▄
+            |██   ██ ▀█▄▄▄█▀    ██   ██   ██ ██   ██ ██   ██
+            |██  ▄██ ██   ██    ██   ██  ▄██ ██  ▄██ ██  ▄██
+            | ▀▀▀▀▀   ▀▀▀▀▀    ▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀
+            |  ▄██     ▄██   ▄█▀▀▀█▄ ▄██▀▀█▄   ▄█▀▀  ▄██▀▀█▄
+            |   ██      ██   ▀█▄▄▄█▀ ██   ██ ▄██▄▄▄  ██   ██
+            |   ██      ██   ██   ██ ██  ▄██ ██   ██ ██  ▄██
+            |  ▀▀▀▀    ▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀
+            |▄██▀▀█▄ ▄█▀▀▀█▄    ▄██  ▄██▀▀█▄ ▄█▀▀▀█▄ ▄█▀▀▀█▄
+            |██   ██ ▀▀  ▄█▀  ▄█▀██  ██   ██ ▀▀  ▄█▀ ▀█▄▄▄█▀
+            |██  ▄██  ▄█▀▀   ██▄▄██▄ ██  ▄██  ▄█▀▀   ██   ██
+            | ▀▀▀▀▀  ▀▀▀▀▀▀▀     ▀▀   ▀▀▀▀▀  ▀▀▀▀▀▀▀  ▀▀▀▀▀
+            """,
+            cpu.Display.ToTestDisplayString());
+
+        static void pressButtonAndWait(Cpu cpu, P3 pressedState)
+        {
+            const long halfSecond = TimeSpan.TicksPerSecond / 2;
+            cpu.SFRs.P3 = pressedState;
+            cpu.Run(halfSecond);
+            cpu.SFRs.P3 = new P3(0xff);
+            cpu.Run(TimeSpan.TicksPerSecond * 2);
+        }
+    }
+
+    [Fact]
+    public void IntServicingAndHaltDelays()
+    {
+        // Execute the assembled version of 'IntServicingAndHaltDelays.s'
+        if (!File.Exists("Data/american_v1.05.bin"))
+            Assert.Skip("Test requires a BIOS");
+
+        var vmu = new Vmu();
+        var cpu = vmu._cpu;
+        cpu.DreamcastSlot = DreamcastSlot.Slot1;
+        vmu.LoadRom();
+        vmu.LoadGameVms("TestSource/IntServicingAndHaltDelays.vms", date: DateTimeOffset.Parse("09/09/1999"), autoInitializeRTCDate: true);
+
+        cpu.Run(TimeSpan.TicksPerSecond);
+        pressButtonAndWait(cpu, new P3(0xff) { ButtonMode = false });
+        pressButtonAndWait(cpu, new P3(0xff) { ButtonA = false });
+        cpu.Run(TimeSpan.TicksPerSecond * 10);
+
+        // Real HW result:
+        // 008009
+        // 008017
+        // 000009
+        // 009067
+        // Emu result (not matching):
+        // 008000
+        // 008017
+        // 000009
+        // 009000
+        Assert.Equal<object>("""
+            |▄██▀▀█▄ ▄██▀▀█▄ ▄█▀▀▀█▄ ▄██▀▀█▄ ▄██▀▀█▄ ▄██▀▀█▄
+            |██   ██ ██   ██ ▀█▄▄▄█▀ ██   ██ ██   ██ ██   ██
+            |██  ▄██ ██  ▄██ ██   ██ ██  ▄██ ██  ▄██ ██  ▄██
+            | ▀▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀
+            |▄██▀▀█▄ ▄██▀▀█▄ ▄█▀▀▀█▄ ▄██▀▀█▄   ▄██   ██▀▀▀██
+            |██   ██ ██   ██ ▀█▄▄▄█▀ ██   ██    ██       ▄█
+            |██  ▄██ ██  ▄██ ██   ██ ██  ▄██    ██      ██
+            | ▀▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀    ▀▀▀▀    ▀▀▀
+            |▄██▀▀█▄ ▄██▀▀█▄ ▄██▀▀█▄ ▄██▀▀█▄ ▄██▀▀█▄ ▄█▀▀▀█▄
+            |██   ██ ██   ██ ██   ██ ██   ██ ██   ██ ▀█▄▄▄██
+            |██  ▄██ ██  ▄██ ██  ▄██ ██  ▄██ ██  ▄██     ▄█▀
+            | ▀▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀
+            |▄██▀▀█▄ ▄██▀▀█▄ ▄█▀▀▀█▄ ▄██▀▀█▄ ▄██▀▀█▄ ▄██▀▀█▄
+            |██   ██ ██   ██ ▀█▄▄▄██ ██   ██ ██   ██ ██   ██
+            |██  ▄██ ██  ▄██     ▄█▀ ██  ▄██ ██  ▄██ ██  ▄██
+            | ▀▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀    ▀▀▀▀▀   ▀▀▀▀▀   ▀▀▀▀▀
+            """,
+            cpu.Display.ToTestDisplayString());
+
+        static void pressButtonAndWait(Cpu cpu, P3 pressedState)
+        {
+            const long halfSecond = TimeSpan.TicksPerSecond / 2;
+            cpu.SFRs.P3 = pressedState;
+            cpu.Run(halfSecond);
+            cpu.SFRs.P3 = new P3(0xff);
+            cpu.Run(TimeSpan.TicksPerSecond * 2);
+        }
     }
 }

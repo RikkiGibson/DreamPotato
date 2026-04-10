@@ -276,7 +276,7 @@ public class Vmu
 
     public const string RomFileName = "american_v1.05.bin";
     public const string SaveStateHeaderMessage = $"DreamPotatoSaveStateV{SaveStateVersion}";
-    public const string SaveStateVersion = "5";
+    public const string SaveStateVersion = "6";
     public string RomFilePath => Path.Combine(DataFolder, RomFileName);
 
     public static string GetSaveStatePath(string loadedFilePath, string id)
@@ -349,7 +349,7 @@ public class Vmu
             using var readStream = File.OpenRead(filePath);
             using var zipArchive = new ZipArchive(readStream);
             if (zipArchive.Comment != SaveStateHeaderMessage)
-                return (success: false, $"Outdated '{zipArchive.Comment}' is not supported. '{SaveStateHeaderMessage}'.");
+                return (success: false, $"Outdated '{zipArchive.Comment}' is not supported. Expected '{SaveStateHeaderMessage}'.");
 
             if (zipArchive.GetEntry(SaveState_CpuStateFile) is not { } cpuStateEntry)
                 return (success: false, $"'{SaveState_CpuStateFile}' not found.");
