@@ -118,9 +118,11 @@ public class Memory
             case >= 0x100 and < 0x180:
                 return SFRs.Read((byte)(address - 0x100), doSideEffects);
             case >= 0x180 and < 0x200:
-                return ReadXram((byte)(address - 0x180));
+                return ReadXram((byte)(address - 0x180), doSideEffects);
             default:
-                _logger.LogDebug($"Read out of range: 0x{address:X}");
+                if (doSideEffects)
+                    _logger.LogDebug($"Read out of range: 0x{address:X}");
+
                 return 0xff;
         }
     }
@@ -240,7 +242,7 @@ public class Memory
         return bank[address];
     }
 
-    private byte ReadXram(ushort address)
+    private byte ReadXram(ushort address, bool doSideEffects)
     {
         Debug.Assert(address < 0x100);
         switch (SFRs.Xbnk)
@@ -253,14 +255,18 @@ public class Memory
                 return readIconXram(_xram2, address);
         }
 
-        _logger.LogDebug($"Reading from nonexistent XRAM bank {SFRs.Xbnk}! Address: 0x{address:X}");
+        if (doSideEffects)
+            _logger.LogDebug($"Reading from nonexistent XRAM bank {SFRs.Xbnk}! Address: 0x{address:X}");
+
         return 0xff;
 
         byte readMainXram(byte[] bank, ushort address)
         {
             if ((address & 0xf) is >= 0xc and <= 0xf)
             {
-                _logger.LogDebug($"Reading skipped XRAM {SFRs.Xbnk} 0x{address:X}!");
+                if (doSideEffects)
+                    _logger.LogDebug($"Reading skipped XRAM {SFRs.Xbnk} 0x{address:X}!");
+
                 return 0xff;
             }
 
@@ -271,14 +277,17 @@ public class Memory
         {
             if (address > 0xf)
             {
-                _logger.LogDebug($"Read out of range of icon XRAM! Address: 0x{address:X}");
-                // TODO: There is weird undocumented behavior around what this range does.
+                if (doSideEffects)
+                    _logger.LogDebug($"Read out of range of icon XRAM! Address: 0x{address:X}");
+
                 return 0xff;
             }
 
             if (address >= XramBank2Size)
             {
-                _logger.LogDebug($"Reading skipped XRAM 2 0x{address:X}!");
+                if (doSideEffects)
+                    _logger.LogDebug($"Reading skipped XRAM 2 0x{address:X}!");
+
                 return 0xff;
             }
 
