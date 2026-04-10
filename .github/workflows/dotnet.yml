@@ -32,7 +32,7 @@ jobs:
     - name: Test
       run: dotnet test --logger "trx;LogFileName=test-results.trx" --results-directory "artifacts/TestResults"
     - name: Publish Test Results
-      uses: dorny/test-reporter@v2
+      uses: dorny/test-reporter@v3
       if: ${{ !cancelled() }}
       with:
         name: dotnet test
