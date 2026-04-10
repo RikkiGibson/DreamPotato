@@ -599,6 +599,7 @@ public class DebugInfo(Cpu cpu)
         DebuggingState = DebuggingState.Break;
         var bankInfo = CurrentBankInfo;
         var instructionInfo = bankInfo.GetOrLoadInstruction(cpu.ProgramCounter);
+        cpu.Audio.SubmitAudioBuffer();
         DebugBreak?.Invoke(instructionInfo);
     }
 

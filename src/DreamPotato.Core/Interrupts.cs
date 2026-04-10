@@ -5,16 +5,8 @@ namespace DreamPotato.Core;
 
 enum InterruptServicingState : byte
 {
-    /// <summary>
-    /// Ready to service an interrupt.
-    /// </summary>
     Ready,
-
-    /// <summary>
-    /// Returned from an interrupt in the previous instruction.
-    /// Not ready to service again until another instruction is executed.
-    /// </summary>
-    ReturnedFromInterrupt,
+    NotReady,
 }
 
 /// <summary>
@@ -22,8 +14,7 @@ enum InterruptServicingState : byte
 /// Flags enumeration of all interrupts which can be requested.
 /// Note that higher-priority interrupts have smaller values in this scheme.
 /// </summary>
-// TODO: DebuggerDisplay
-enum Interrupts : ushort
+public enum Interrupts : ushort
 {
     None = 0,
 
@@ -88,6 +79,26 @@ static class InterruptsExtensions
         return @this == Interrupts.None ? false :
             other == Interrupts.None ? true :
             @this < other;
+    }
+
+    public static ushort GetRoutineAddress(this Interrupts @this)
+    {
+#pragma warning disable CS8524 // The switch expression does not handle some values of its input type (it is not exhaustive) involving an unnamed enum value.
+        return @this switch
+        {
+            Interrupts.None => throw new ArgumentException(message: null, paramName: nameof(@this)),
+            Interrupts.INT0 => InterruptVectors.INT0,
+            Interrupts.INT1 => InterruptVectors.INT1,
+            Interrupts.INT2_T0L => InterruptVectors.INT2_T0L,
+            Interrupts.INT3_BT => InterruptVectors.INT3_BT,
+            Interrupts.T0H => InterruptVectors.T0H,
+            Interrupts.T1 => InterruptVectors.T1,
+            Interrupts.SIO0 => InterruptVectors.SIO0,
+            Interrupts.SIO1 => InterruptVectors.SIO1,
+            Interrupts.Maple => InterruptVectors.Maple,
+            Interrupts.P3 => InterruptVectors.P3,
+        };
+#pragma warning restore CS8524 // The switch expression does not handle some values of its input type (it is not exhaustive) involving an unnamed enum value.
     }
 }
 

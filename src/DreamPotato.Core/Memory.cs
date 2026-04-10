@@ -366,6 +366,9 @@ public enum StackValueKind : byte
 
 }
 
+/// <param name="Interrupt">
+/// Only meaningful for InterruptReturn. This is the interrupt currently being serviced.
+/// </param>
 /// <param name="Source">
 /// Meaning depends on the Kind.
 /// - Push: the operand of the 'PUSH d9' instruction.
@@ -383,4 +386,11 @@ public enum StackValueKind : byte
 /// The instruction bank we were in when the value was pushed.
 /// This is needed to resolve a memory address for a Return case
 /// </param>
-public record struct StackEntry(StackValueKind Kind, ushort Source, ushort Value, ushort Offset, InstructionBank BankId);
+[DebuggerDisplay("{GetDebuggerDisplay(),nq}")]
+public record struct StackEntry(StackValueKind Kind, Interrupts Interrupt, ushort Source, ushort Value, ushort Offset, InstructionBank BankId)
+{
+    string GetDebuggerDisplay()
+    {
+        return $"{Kind} Offset = 0x{Offset:X4}, Source = 0x{Source:X4}, Value = 0x{Value:X4}";
+    }
+}
