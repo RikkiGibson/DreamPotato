@@ -35,7 +35,7 @@ public record Configuration(
     DreamcastPort DreamcastPort = DreamcastPort.A)
 {
     private const string FileName = "configuration.json";
-    private static string FilePath => Path.Combine(Vmu.DataFolder, FileName);
+    private static string FilePath => Path.Combine(Vmu.UserDataFolder, FileName);
 
     public string ColorPaletteName { get; init; } = ColorPaletteName ?? ColorPalette.White.Name;
     public InputMappings PrimaryInput { get; init; } = SetupPrimaryInput(PrimaryInput);
@@ -70,6 +70,7 @@ public record Configuration(
 
     public void Save()
     {
+        Directory.CreateDirectory(Vmu.UserDataFolder);
         using var fileStream = File.Open(FilePath, FileMode.Create);
         JsonSerializer.Serialize(fileStream, this, ConfigurationJsonSerializerContext.Default.Configuration);
     }

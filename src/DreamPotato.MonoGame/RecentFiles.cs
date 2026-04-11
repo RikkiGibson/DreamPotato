@@ -22,7 +22,7 @@ public record RecentFilesInfo
 
     public const int MaxRecentCount = 8;
     const string FileName = "recent.json";
-    private static string FilePath => Path.Combine(Vmu.DataFolder, FileName);
+    private static string FilePath => Path.Combine(Vmu.UserDataFolder, FileName);
 
     public static readonly RecentFilesInfo Default = new() { RecentFiles = [] };
     public static RecentFilesInfo Load()
