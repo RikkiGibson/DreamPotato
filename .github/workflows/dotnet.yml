@@ -42,7 +42,9 @@ jobs:
         list-tests: failed
 
   PublishLinux:
-    runs-on: ubuntu-latest
+    # Use ubuntu-22.04 (Jammy) to build with glibc 2.35
+    # See https://www.ubuntuupdates.org/pm/glibc
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v6
     - name: Setup .NET
@@ -52,13 +54,13 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
 
-    - name: dotnet publish linux-x64
-      run: dotnet publish src/DreamPotato.MonoGame -r linux-x64 -p:DebugSymbols=False
+    - name: Run pack-x64.sh
+      run: ./src/DreamPotato.MonoGame/Linux/pack-x64.sh
     - name: Upload Linux x64
       uses: actions/upload-artifact@v6
       with:
         name: DreamPotato-Linux-x64-dev
-        path: artifacts/publish/DreamPotato.MonoGame/release_linux-x64/
+        path: artifacts/DreamPotato-linux-x64.AppImage
 
   PublishWindows:
     runs-on: windows-latest

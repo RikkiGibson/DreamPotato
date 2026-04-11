@@ -96,12 +96,12 @@ public class Vmu
             var filePath = RomFilePath;
             var bios = File.ReadAllBytes(filePath);
             if (bios.Length != Cpu.InstructionBankSize)
-                throw new ArgumentException($"VMU ROM '{filePath}' needs to be exactly 64KB in size.", nameof(filePath));
+                throw new InvalidOperationException($"VMU ROM '{filePath}' needs to be exactly 64KB in size.");
             bios.AsSpan().CopyTo(_cpu.ROM);
         }
-        catch (FileNotFoundException ex)
+        catch (IOException ex)
         {
-            throw new InvalidOperationException($"'{RomFileName}' must be included in '{DataFolder}'.", ex);
+            throw new InvalidOperationException($"'{RomFileName}' must be included in '{UserDataFolder}'.", ex);
         }
     }
 
@@ -231,7 +231,17 @@ public class Vmu
             _cpu.ConnectVmu(other._cpu);
     }
 
-    public static string DataFolder => Path.Combine(AppContext.BaseDirectory, "Data");
+    public static string EmbeddedDataFolder => Path.Combine(AppContext.BaseDirectory, "Data");
+
+    private static bool UseNonEmbeddedUserDataFolder => Environment.GetEnvironmentVariable("APPIMAGE") != null;
+
+    public static string UserDataRootFolder => UseNonEmbeddedUserDataFolder
+        ? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
+        : AppContext.BaseDirectory;
+
+    public static string UserDataFolder => UseNonEmbeddedUserDataFolder
+        ? Path.Combine(UserDataRootFolder, "DreamPotato")
+        : EmbeddedDataFolder;
 
     public DreamcastSlot DreamcastSlot { get => _cpu.DreamcastSlot; set => _cpu.DreamcastSlot = value; }
     public DebugInfo GetOrCreateDebugInfo()
@@ -277,12 +287,12 @@ public class Vmu
     public const string RomFileName = "american_v1.05.bin";
     public const string SaveStateHeaderMessage = $"DreamPotatoSaveStateV{SaveStateVersion}";
     public const string SaveStateVersion = "6";
-    public string RomFilePath => Path.Combine(DataFolder, RomFileName);
+    public string RomFilePath => Path.Combine(EmbeddedDataFolder, RomFileName);
 
     public static string GetSaveStatePath(string loadedFilePath, string id)
     {
         var filePath = $"{Path.GetFileNameWithoutExtension(loadedFilePath)}_{id}.dpstate";
-        return Path.Combine(DataFolder, "SaveStates", filePath);
+        return Path.Combine(UserDataFolder, "SaveStates", filePath);
     }
 
     public bool SaveState(string id)
@@ -294,7 +304,7 @@ public class Vmu
            return false;
 
         var directory = Path.GetDirectoryName(filePath);
-        Debug.Assert(directory != null && directory.StartsWith(DataFolder, StringComparison.Ordinal));
+        Debug.Assert(directory != null && directory.StartsWith(UserDataFolder, StringComparison.Ordinal));
         Directory.CreateDirectory(directory);
         using var fileStream = File.Create(filePath);
         using var zipArchive = new ZipArchive(fileStream, ZipArchiveMode.Create);

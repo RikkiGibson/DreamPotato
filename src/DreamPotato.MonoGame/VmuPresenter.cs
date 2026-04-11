@@ -362,13 +362,13 @@ class VmuPresenter
         var timeDescription = now.ToString($"yyyy-MM-dd_HH-mm-ss");
         var baseName = Path.GetFileNameWithoutExtension(Vmu.LoadedFilePath) ?? "DreamPotato";
 
-        var screenshotsFolder = Path.Combine(Vmu.DataFolder, "Screenshots");
+        var screenshotsFolder = Path.Combine(Vmu.UserDataFolder, "Screenshots");
         Directory.CreateDirectory(screenshotsFolder);
 
         var filePath = Path.Combine(screenshotsFolder, $"{baseName}_{timeDescription}.png");
-        using var outFile = File.Create(Path.Combine(Vmu.DataFolder, filePath));
+        using var outFile = File.Create(filePath);
         _vmuScreenTexture.SaveAsPng(outFile, _vmuScreenTexture.Width, _vmuScreenTexture.Height);
-        var displayPath = Path.GetRelativePath(AppContext.BaseDirectory, filePath);
+        var displayPath = Path.GetRelativePath(Vmu.UserDataRootFolder, filePath);
         _game1.UserInterface.ShowScreenshotToast(this, $"Screenshot saved to {displayPath}", durationFrames: 3 * 60);
     }
 }

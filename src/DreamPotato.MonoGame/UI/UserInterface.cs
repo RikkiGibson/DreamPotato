@@ -224,7 +224,7 @@ partial class UserInterface
         unsafe
         {
             // Note: if we supported tearing down the UserInterface then we would want to take care to dispose of the handle.
-            var iniFilename = Encoding.UTF8.GetBytes($"{AppContext.BaseDirectory}/Data/imgui.ini\0");
+            var iniFilename = Encoding.UTF8.GetBytes($"{Vmu.UserDataFolder}/imgui.ini\0");
             _iniFilenameHandle = GCHandle.Alloc(iniFilename, GCHandleType.Pinned);
             fixed (byte* ptr = iniFilename)
             {
@@ -503,7 +503,7 @@ partial class UserInterface
             {
                 new Process()
                 {
-                    StartInfo = new ProcessStartInfo(Vmu.DataFolder)
+                    StartInfo = new ProcessStartInfo(Vmu.UserDataFolder)
                     {
                         UseShellExecute = true,
                     }
