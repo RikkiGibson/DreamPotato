@@ -231,9 +231,13 @@ public class Vmu
             _cpu.ConnectVmu(other._cpu);
     }
 
-    public static string EmbeddedDataFolder => Path.Combine(AppContext.BaseDirectory, "Data");
+    public static string EmbeddedDataFolder => IsMacAppBundle
+        ? Path.Combine(AppContext.BaseDirectory, "..", "Resources", "Data")
+        : Path.Combine(AppContext.BaseDirectory, "Data");
 
-    private static bool UseNonEmbeddedUserDataFolder => Environment.GetEnvironmentVariable("APPIMAGE") != null;
+    private static bool IsLinuxAppImage => OperatingSystem.IsLinux() && Environment.GetEnvironmentVariable("APPIMAGE") != null;
+    private static bool IsMacAppBundle => OperatingSystem.IsMacOS() && AppContext.BaseDirectory.Contains(".app/Contents/", StringComparison.Ordinal);
+    private static bool UseNonEmbeddedUserDataFolder => IsLinuxAppImage || IsMacAppBundle;
 
     public static string UserDataRootFolder => UseNonEmbeddedUserDataFolder
         ? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)

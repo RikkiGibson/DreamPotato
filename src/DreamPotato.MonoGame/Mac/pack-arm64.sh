@@ -20,8 +20,6 @@ cp $artifacts/publish/DreamPotato.MonoGame/release_osx-arm64/*.dylib $artifacts/
 cp $artifacts/publish/DreamPotato.MonoGame/release_osx-arm64/DreamPotato $artifacts/mac-arm64/DreamPotato.app/Contents/MacOS/
 cp -R $artifacts/publish/DreamPotato.MonoGame/release_osx-arm64/Data/ $artifacts/mac-arm64/DreamPotato.app/Contents/Resources/Data/
 cp -R $artifacts/publish/DreamPotato.MonoGame/release_osx-arm64/Content/ $artifacts/mac-arm64/DreamPotato.app/Contents/Resources/Content/
-# Symlink so the executable can find Data/ at its expected relative path
-ln -s ../Resources/Data $artifacts/mac-arm64/DreamPotato.app/Contents/MacOS/Data
 
 # Icons
 echo "Writing icons..."
@@ -39,8 +37,6 @@ sips -z 1024 1024 $project/Icon.png --out $artifacts/obj/DreamPotato.MonoGame/re
 iconutil -c icns $artifacts/obj/DreamPotato.MonoGame/release_osx-arm64/DreamPotato.iconset --output $artifacts/obj/DreamPotato.MonoGame/release_osx-arm64/DreamPotato.icns
 cp $artifacts/obj/DreamPotato.MonoGame/release_osx-arm64/DreamPotato.icns $artifacts/mac-arm64/DreamPotato.app/Contents/Resources/DreamPotato.icns
 
-cp $scriptroot/README.txt $artifacts/mac-arm64/
-
 # Code signing
 if [ -n "$CODESIGN_IDENTITY" ]; then
     echo "Signing app bundle..."
@@ -55,6 +51,8 @@ if [ -n "$CODESIGN_IDENTITY" ]; then
 
     echo "Verifying signature..."
     codesign --verify --deep --strict "$app"
+else
+    cp $scriptroot/README.txt $artifacts/mac-arm64/
 fi
 
 ditto -c -k --sequesterRsrc --keepParent $artifacts/mac-arm64/ $artifacts/DreamPotato-mac-arm64.zip
