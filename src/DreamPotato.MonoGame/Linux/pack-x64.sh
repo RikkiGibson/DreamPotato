@@ -14,8 +14,6 @@ appimagetool="$artifacts/tools/appimagetool.AppImage"
 
 if ! command -v $appimagetool &> /dev/null; then
     mkdir -p $artifacts/tools/
-
-*.AppImage
     wget https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage -O $appimagetool
     chmod +x $appimagetool
 fi
