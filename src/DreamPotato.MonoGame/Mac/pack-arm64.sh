@@ -1,3 +1,6 @@
+#!/bin/bash
+set -euo pipefail
+
 # Runs a publish and creates an app bundle for Mac.
 # See https://docs.monogame.net/articles/tutorials/building_2d_games/25_packaging_game/index.html?tabs=macOS#platform-specific-packaging
 scriptroot="$(dirname $0)"
@@ -14,10 +17,11 @@ mkdir -p $artifacts/mac-arm64/DreamPotato.app/Contents/Resources/
 
 cp $scriptroot/Info.plist $artifacts/mac-arm64/DreamPotato.app/Contents/
 cp $artifacts/publish/DreamPotato.MonoGame/release_osx-arm64/*.dylib $artifacts/mac-arm64/DreamPotato.app/Contents/MacOS/
-cp $artifacts/publish/DreamPotato.MonoGame/release_osx-arm64/*.pdb $artifacts/mac-arm64/DreamPotato.app/Contents/MacOS/
 cp $artifacts/publish/DreamPotato.MonoGame/release_osx-arm64/DreamPotato $artifacts/mac-arm64/DreamPotato.app/Contents/MacOS/
-cp -R $artifacts/publish/DreamPotato.MonoGame/release_osx-arm64/Data/ $artifacts/mac-arm64/DreamPotato.app/Contents/MacOS/Data/
+cp -R $artifacts/publish/DreamPotato.MonoGame/release_osx-arm64/Data/ $artifacts/mac-arm64/DreamPotato.app/Contents/Resources/Data/
 cp -R $artifacts/publish/DreamPotato.MonoGame/release_osx-arm64/Content/ $artifacts/mac-arm64/DreamPotato.app/Contents/Resources/Content/
+# Symlink so the executable can find Data/ at its expected relative path
+ln -s ../Resources/Data $artifacts/mac-arm64/DreamPotato.app/Contents/MacOS/Data
 
 # Icons
 echo "Writing icons..."
@@ -62,7 +66,17 @@ if [ -n "$APPLE_ID" ] && [ -n "$APPLE_ID_PASSWORD" ] && [ -n "$APPLE_TEAM_ID" ];
         --apple-id "$APPLE_ID" \
         --password "$APPLE_ID_PASSWORD" \
         --team-id "$APPLE_TEAM_ID" \
-        --wait
+        --wait 2>&1 | tee /tmp/notarytool-output.txt
+
+    # Fetch the notarization log for diagnostics
+    SUBMISSION_ID=$(grep 'id:' /tmp/notarytool-output.txt | head -1 | awk '{print $2}')
+    if [ -n "$SUBMISSION_ID" ]; then
+        echo "Fetching notarization log for submission $SUBMISSION_ID..."
+        xcrun notarytool log "$SUBMISSION_ID" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_ID_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" || true
+    fi
 
     echo "Stapling notarization ticket..."
     xcrun stapler staple "$app"
