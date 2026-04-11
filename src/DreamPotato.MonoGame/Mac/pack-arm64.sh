@@ -38,7 +38,7 @@ iconutil -c icns $artifacts/obj/DreamPotato.MonoGame/release_osx-arm64/DreamPota
 cp $artifacts/obj/DreamPotato.MonoGame/release_osx-arm64/DreamPotato.icns $artifacts/mac-arm64/DreamPotato.app/Contents/Resources/DreamPotato.icns
 
 # Code signing
-if [ -n "$CODESIGN_IDENTITY" ]; then
+if [ -n "${CODESIGN_IDENTITY:-}" ]; then
     echo "Signing app bundle..."
     entitlements="$scriptroot/DreamPotato.entitlements"
     app="$artifacts/mac-arm64/DreamPotato.app"
@@ -58,7 +58,7 @@ fi
 ditto -c -k --sequesterRsrc --keepParent $artifacts/mac-arm64/ $artifacts/DreamPotato-mac-arm64.zip
 
 # Notarization
-if [ -n "$APPLE_ID" ] && [ -n "$APPLE_ID_PASSWORD" ] && [ -n "$APPLE_TEAM_ID" ]; then
+if [ -n "${APPLE_ID:-}" ] && [ -n "${APPLE_ID_PASSWORD:-}" ] && [ -n "${APPLE_TEAM_ID:-}" ]; then
     echo "Submitting for notarization..."
     xcrun notarytool submit "$artifacts/DreamPotato-mac-arm64.zip" \
         --apple-id "$APPLE_ID" \
