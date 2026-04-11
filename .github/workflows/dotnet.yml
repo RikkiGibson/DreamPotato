@@ -61,6 +61,7 @@ jobs:
       with:
         name: DreamPotato-Linux-x64-dev
         path: artifacts/DreamPotato-linux-x64.AppImage
+        archive: false
 
   PublishWindows:
     runs-on: windows-latest
