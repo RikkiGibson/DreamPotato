@@ -96,7 +96,7 @@ public class Vmu
             var filePath = RomFilePath;
             var bios = File.ReadAllBytes(filePath);
             if (bios.Length != Cpu.InstructionBankSize)
-                throw new InvalidOperationException($"VMU ROM '{filePath}' needs to be exactly 64KB in size");
+                throw new InvalidOperationException($"VMU ROM '{filePath}' needs to be exactly 64KB in size.");
             bios.AsSpan().CopyTo(_cpu.ROM);
         }
         catch (IOException ex)
