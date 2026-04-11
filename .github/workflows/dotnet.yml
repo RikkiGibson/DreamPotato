@@ -62,14 +62,6 @@ jobs:
         name: DreamPotato-Linux-x64-dev
         path: artifacts/DreamPotato-linux-x64.AppImage
 
-    - name: dotnet publish linux-x64
-      run: dotnet publish src/DreamPotato.MonoGame -r linux-x64 -p:DebugSymbols=False
-    - name: Upload Linux x64
-      uses: actions/upload-artifact@v6
-      with:
-        name: DreamPotato-Linux-x64-dev
-        path: artifacts/publish/DreamPotato.MonoGame/release_linux-x64/
-
   PublishWindows:
     runs-on: windows-latest
     steps:
