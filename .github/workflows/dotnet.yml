@@ -25,7 +25,7 @@ jobs:
       run: dotnet build --no-restore -bl
     - name: Upload Binlog
       if: failure()
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: msbuild.binlog
         path: msbuild.binlog
@@ -57,9 +57,8 @@ jobs:
     - name: Run pack-x64.sh
       run: ./src/DreamPotato.MonoGame/Linux/pack-x64.sh
     - name: Upload Linux x64
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
-        name: DreamPotato-Linux-x64-dev
         path: artifacts/DreamPotato-linux-x64.AppImage
         archive: false
 
@@ -94,7 +93,7 @@ jobs:
           timestamp-digest: SHA256
 
       - name: Upload win-x64
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: DreamPotato-Windows-x64-dev
           path: artifacts/publish/DreamPotato.MonoGame/release_win-x64/
@@ -110,7 +109,7 @@ jobs:
     - name: Run pack-arm64.sh
       run: ./src/DreamPotato.MonoGame/Mac/pack-arm64.sh
     - name: Upload Mac arm64
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: DreamPotato-Mac-arm64-dev
         path: artifacts/DreamPotato-mac-arm64.zip
