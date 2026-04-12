@@ -9,6 +9,9 @@ namespace DreamPotato.Core;
 /// </summary>
 internal class FileSystem(byte[] flash)
 {
+    private const int ShiftJisCodePage = 932;
+    public static readonly Encoding Encoding = CodePagesEncodingProvider.Instance.GetEncoding(ShiftJisCodePage) ?? Encoding.ASCII;
+
     private const int VolumeSizeBytes = 128 * 1024; // 128kb
 
     // user region: where user visible files are stored.
@@ -25,10 +28,10 @@ internal class FileSystem(byte[] flash)
     internal const byte RootBlockId = BlocksCount - 1;
     internal const byte FATBlockId = BlocksCount - 2;
     internal const byte DirectoryLastBlockId = BlocksCount - 3;
+    private const int DirectoryTableSizeBlocks = 13;
+    internal const byte DirectoryFirstBlockId = DirectoryLastBlockId - DirectoryTableSizeBlocks + 1;
 
     internal const int DirectoryEntrySize = 0x20; // 32
-
-    private const int DirectoryTableSizeBlocks = 13;
 
     private const byte DirectoryFileTypeNone = 0;
     private const byte DirectoryFileTypeData = 0x33;
@@ -231,9 +234,7 @@ internal class FileSystem(byte[] flash)
         var directoryEntryFilename = directoryLastBlock.Slice(start: 0x04, length: 12);
         directoryEntryFilename.Clear();
 
-        const int shiftJisCodePage = 932;
-        var encoding = CodePagesEncodingProvider.Instance.GetEncoding(shiftJisCodePage) ?? Encoding.ASCII;
-        var encodedBytes = encoding.GetBytes(filename, directoryLastBlock.Slice(start: 0x04, length: 12));
+        var encodedBytes = Encoding.GetBytes(filename, directoryLastBlock.Slice(start: 0x04, length: 12));
         if (encodedBytes != filename.Length)
             throw new InvalidOperationException();
 
