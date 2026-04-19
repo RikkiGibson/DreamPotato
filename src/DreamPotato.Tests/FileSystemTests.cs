@@ -2,8 +2,16 @@ using DreamPotato.Core;
 
 namespace DreamPotato.Tests;
 
-public class FileSystemTests
+public class FileSystemTests : IDisposable
 {
+    private DirectoryInfo? _tempRoot;
+
+    public void Dispose()
+    {
+        if (_tempRoot?.Exists == true)
+            _tempRoot.Delete(recursive: true);
+    }
+
     [Fact]
     public void InitializeFileSystem()
     {
@@ -15,7 +23,8 @@ public class FileSystemTests
         verifyRootBlock();
         verifyFATBlock();
 
-        fileSystem.WriteGameFile(File.ReadAllBytes("TestSource/helloworld.vms"), "HelloWorld", date);
+        var success = fileSystem.TryWriteGameFile(File.ReadAllBytes("TestSource/helloworld.vms"), "HelloWorld", date);
+        Assert.True(success);
 
         void verifyRootBlock()
         {
@@ -77,6 +86,7 @@ public class FileSystemTests
             Assert.Equal(expected, fatBlock);
         }
     }
+
     [Fact]
     public void WriteGameFile()
     {
@@ -84,7 +94,8 @@ public class FileSystemTests
         var flash = new byte[Cpu.FlashSize];
         var fileSystem = new FileSystem(flash);
         fileSystem.InitializeFileSystem(date);
-        fileSystem.WriteGameFile(File.ReadAllBytes("TestSource/helloworld.vms"), "HelloWorld", date);
+        var success = fileSystem.TryWriteGameFile(File.ReadAllBytes("TestSource/helloworld.vms"), "HelloWorld", date);
+        Assert.True(success);
 
         var fatEntry = fileSystem.GetBlock(FileSystem.FATBlockId);
         ReadOnlySpan<byte> expectedFATStart = [
@@ -101,5 +112,33 @@ public class FileSystemTests
             0x20, 0x18, 0x08, 0x18, 0x07, 0x22, 0x16, 0x06, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
         ];
         Assert.Equal(expectedEntry, directoryEntry[0..FileSystem.DirectoryEntrySize]);
+    }
+
+    [Fact]
+    public void ReadFiles_01()
+    {
+        // Test the functionality used to implement 'Save as Folder'
+        // Use a pre-existing VMU
+        // TODO2: also export vmi files
+        // I have a gut feeling that while vms/vmi needs to just work,
+        // dci is going to be a way better format to work with..
+        _tempRoot = Directory.CreateTempSubdirectory("DreamPotato.Tests");
+        var flash = File.ReadAllBytes("TestSource/ReadFiles_01.vmu");
+        var fileSystem = new FileSystem(flash);
+
+        var outDir = _tempRoot.CreateSubdirectory("ReadFiles_01");
+        fileSystem.ReadAllFiles(outDir);
+
+        var fileNames = string.Join(Environment.NewLine, Directory.EnumerateFiles(outDir.FullName).Select(f => Path.GetFileName(f)));
+        Assert.Equal<object>("""
+            ICONDATA_VMS.vms
+            S.ARCADIA001.vms
+            S.ARCADIA002.vms
+            S.ARCADIA003.vms
+            S.ARCADIA_VM.vms
+            VMUTOOL__OPT.vms
+            ZOMBIE_U_SYS.vms
+            """,
+            fileNames);
     }
 }

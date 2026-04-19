@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Text;
 
@@ -32,6 +33,15 @@ internal class FileSystem(byte[] flash)
     internal const byte DirectoryFirstBlockId = DirectoryLastBlockId - DirectoryTableSizeBlocks + 1;
 
     internal const int DirectoryEntrySize = 0x20; // 32
+    internal const int DirectoryFileTypeOffset = 0;
+    internal const int DirectoryCopyProtectionOffset = 1;
+    internal const int DirectoryStartFATOffset = 2;
+    internal const int DirectoryFilenameOffset = 4;
+    internal const int DirectoryDateOffset = 0x10;
+    internal const int DirectoryDateLength = 8;
+
+    internal const int DirectorySizeInBlocksOffset = 0x18;
+    internal const int DirectoryVmsHeaderBlockOffset = 0x1a;
 
     private const byte DirectoryFileTypeNone = 0;
     private const byte DirectoryFileTypeData = 0x33;
@@ -48,7 +58,7 @@ internal class FileSystem(byte[] flash)
     const int FAT_UnallocatedLsb = 0xfc;
     const int FAT_UnallocatedMsb = 0xff;
 
-    // 0xfffa: Last in File
+    const int FAT_LastInFile = 0xfffa;
     const int FAT_LastInFileLsb = 0xfa;
     const int FAT_LastInFileMsb = 0xff;
 
@@ -95,7 +105,7 @@ internal class FileSystem(byte[] flash)
             rootBlock[0x15..0x30].Clear();
 
             // 0x30-0x38: Timestamp
-            WriteDate(date, rootBlock.Slice(0x30, length: 8));
+            WriteDate(rootBlock.Slice(0x30, length: 8), date);
 
             // 0x38-0x40: Reserved
             rootBlock[0x38..0x40].Clear();
@@ -176,7 +186,22 @@ internal class FileSystem(byte[] flash)
         }
     }
 
-    private static void WriteDate(DateTimeOffset date, Span<byte> dest)
+    internal static DateTimeOffset ReadDate(ReadOnlySpan<byte> source)
+    {
+        if (source.Length < 8)
+            throw new ArgumentException(null, nameof(source));
+
+        var year = BinaryPrimitives.ReadUInt16LittleEndian(source[0..2]);
+        var month = source[2];
+        var day = source[3];
+        var hour = source[4];
+        var minute = source[5];
+        var second = source[6];
+        // note: source[7] (day of week) is ignored as the other info will let us reconstitute that
+        return new DateTime(year, month, day, hour, minute, second, DateTimeKind.Local);
+    }
+
+    internal static void WriteDate(Span<byte> dest, DateTimeOffset date)
     {
         Debug.Assert(dest.Length >= 8);
 
@@ -197,7 +222,7 @@ internal class FileSystem(byte[] flash)
     // Note: this only works on a newly initialized file system.
     // Possibly in future will support more generalized file I/O operations.
     // At that point though why not just expose it as a .vms/.vmi folder a la Dolphin's .gci folder.
-    public void WriteGameFile(ReadOnlySpan<byte> gameFileData, string filename, DateTimeOffset date)
+    public bool TryWriteGameFile(ReadOnlySpan<byte> gameFileData, string filename, DateTimeOffset date)
     {
         if (gameFileData.Length == 0)
             throw new ArgumentException(null, paramName: nameof(gameFileData));
@@ -208,12 +233,19 @@ internal class FileSystem(byte[] flash)
         if (filename.Length > DirectoryEntryFileNameLength)
             throw new ArgumentException(null, paramName: nameof(filename));
 
-        // Game data itself must be written to start of bank 0
-        gameFileData.CopyTo(flash);
-
-        // Update FAT table indicating the game data starts at block 0 and grows toward the end
+        // Verify sufficient free space
         var fatBlock = GetBlock(FATBlockId);
         var lastBlockId = (gameFileData.Length + BlockSize - 1) / BlockSize - 1;
+        for (int i = 0; i <= lastBlockId; i++)
+        {
+            if (fatBlock[i * 2] != FAT_UnallocatedLsb
+                || fatBlock[i * 2 + 1] != FAT_UnallocatedMsb)
+            {
+                return false;
+            }
+        }
+
+        // Update FAT table indicating the game data starts at block 0 and grows toward the end
         for (int i = 0; i < lastBlockId; i++)
         {
             fatBlock[i * 2] = (byte)(i + 1);
@@ -223,31 +255,99 @@ internal class FileSystem(byte[] flash)
         fatBlock[lastBlockId * 2] = FAT_LastInFileLsb;
         fatBlock[lastBlockId * 2 + 1] = FAT_LastInFileMsb;
 
+        // Game data itself must be written to start of bank 0
+        gameFileData.CopyTo(flash);
+
         // Create a directory entry
-        var directoryLastBlock = GetBlock(DirectoryLastBlockId);
-        directoryLastBlock[0x00] = DirectoryFileTypeGame;
-        directoryLastBlock[0x01] = DirectoryEntryNotCopyProtected;
+        if (!tryGetFreeDirectoryEntry(out var directoryEntry))
+            return false;
 
-        directoryLastBlock[0x02] = 0; // Start FAT: first block containing file data. Should be same as "Game First" in the root block.
-        directoryLastBlock[0x03] = 0;
+        directoryEntry[DirectoryFileTypeOffset] = DirectoryFileTypeGame;
+        directoryEntry[DirectoryCopyProtectionOffset] = DirectoryEntryNotCopyProtected;
 
-        var directoryEntryFilename = directoryLastBlock.Slice(start: 0x04, length: 12);
+        directoryEntry[DirectoryStartFATOffset] = 0; // Start FAT: first block containing file data. Should be same as "Game First" in the root block.
+        directoryEntry[DirectoryStartFATOffset + 1] = 0;
+
+        var directoryEntryFilename = directoryEntry.Slice(start: DirectoryFilenameOffset, length: DirectoryEntryFileNameLength);
         directoryEntryFilename.Clear();
 
-        var encodedBytes = Encoding.GetBytes(filename, directoryLastBlock.Slice(start: 0x04, length: 12));
+        var encodedBytes = Encoding.GetBytes(filename, directoryEntry.Slice(start: DirectoryFilenameOffset, length: DirectoryEntryFileNameLength));
         if (encodedBytes != filename.Length)
             throw new InvalidOperationException();
 
-        WriteDate(date, directoryLastBlock.Slice(0x10, length: 8));
+        WriteDate(directoryEntry.Slice(DirectoryDateOffset, length: DirectoryDateLength), date);
 
         var sizeInBlocks = (gameFileData.Length + BlockSize - 1) / BlockSize; // integer division rounding up
-        directoryLastBlock[0x18] = (byte)sizeInBlocks; // Size in blocks
-        directoryLastBlock[0x19] = 0;
+        directoryEntry[DirectorySizeInBlocksOffset] = (byte)sizeInBlocks; // Size in blocks
+        directoryEntry[DirectorySizeInBlocksOffset + 1] = 0;
 
-        directoryLastBlock[0x1a] = 1; // Location of the VMS header within the file. (Ignored for game files?)
-        directoryLastBlock[0x1b] = 0;
+        directoryEntry[DirectoryVmsHeaderBlockOffset] = 1; // Location of the VMS header within the file. (Ignored for game files?)
+        directoryEntry[DirectoryVmsHeaderBlockOffset + 1] = 0;
 
-        directoryLastBlock.Slice(0x1c, length: 4).Clear();
+        // Unused
+        directoryEntry.Slice(0x1c, length: 4).Clear();
+
+        return true;
+
+        bool tryGetFreeDirectoryEntry(out Span<byte> foundEntry)
+        {
+            // Scan directory blocks starting from the end, toward the start.
+            for (var blockId = DirectoryLastBlockId; blockId >= DirectoryFirstBlockId; blockId--)
+            {
+                var directoryBlock = GetBlock(blockId);
+                // Scan from start to end within a block.
+                for (var offset = 0; offset < BlockSize; offset += DirectoryEntrySize)
+                {
+                    var directoryEntry = directoryBlock.Slice(start: offset, length: DirectoryEntrySize);
+                    if (directoryEntry[0] == DirectoryFileTypeNone)
+                    {
+                        foundEntry = directoryEntry;
+                        return true;
+                    }
+                }
+            }
+
+            foundEntry = default;
+            return false;
+        }
+    }
+
+    public void ReadAllFiles(DirectoryInfo outDir)
+    {
+        // Scan directory blocks starting from the end, toward the start.
+        for (var blockId = DirectoryLastBlockId; blockId >= DirectoryFirstBlockId; blockId--)
+        {
+            var directoryBlock = GetBlockMemory(blockId);
+            // Scan from start to end within a block.
+            for (var offset = 0; offset < BlockSize; offset += DirectoryEntrySize)
+            {
+                var directoryEntry = new DirectoryEntry(directoryBlock.Slice(start: offset, length: DirectoryEntrySize));
+                if (directoryEntry.Type != FileType.None)
+                {
+                    readFile(directoryEntry);
+                }
+            }
+        }
+
+        void readFile(DirectoryEntry directoryEntry)
+        {
+            var outFileName = directoryEntry.Name;
+            var fatBlock = GetBlock(FATBlockId);
+
+
+            using var vmsFile = File.Open(Path.Combine(outDir.FullName, $"{outFileName}.vms"), FileMode.CreateNew);
+
+            for (var blockId = directoryEntry.StartFAT;
+                blockId != FAT_LastInFile;
+                blockId = BinaryPrimitives.ReadUInt16LittleEndian(fatBlock.Slice(blockId * 2, length: 2)))
+            {
+                var block = this.GetBlock(blockId);
+                vmsFile.Write(block);
+            }
+
+            // using var vmiFile = File.Open(Path.Combine(outDir.FullName, $"{outFileName}.vmi"), FileMode.CreateNew);
+            // var vmiInfo = new VmiInfo(new byte[VmiInfo.Size]);
+        }
     }
 
     internal Span<byte> GetBlock(int blockId)
@@ -255,6 +355,13 @@ internal class FileSystem(byte[] flash)
         var rangeStart = blockId * BlockSize;
         var rangeEnd = (blockId + 1) * BlockSize;
         return flash.AsSpan(rangeStart..rangeEnd);
+    }
+
+    internal Memory<byte> GetBlockMemory(int blockId)
+    {
+        var rangeStart = blockId * BlockSize;
+        var rangeEnd = (blockId + 1) * BlockSize;
+        return flash.AsMemory(rangeStart..rangeEnd);
     }
 
     internal static byte ToBinaryCodedDecimal(int value)
@@ -266,4 +373,82 @@ internal class FileSystem(byte[] flash)
         Debug.Assert((byte)digits == digits);
         return (byte)digits;
     }
+}
+
+internal readonly struct DirectoryEntry
+{
+    public DirectoryEntry(Memory<byte> data)
+    {
+        if (data.Length != DirectoryEntrySize)
+            throw new ArgumentException(null, nameof(data));
+
+        _data = data;
+    }
+
+    private readonly Memory<byte> _data;
+
+    internal FileType Type
+    {
+        get => (FileType)_data.Span[DirectoryFileTypeOffset];
+        set => _data.Span[DirectoryFileTypeOffset] = (byte)value;
+    }
+
+    internal FileCopyProtection CopyProtection
+    {
+        get => (FileCopyProtection)_data.Span[DirectoryCopyProtectionOffset];
+        set => _data.Span[DirectoryCopyProtectionOffset] = (byte)value;
+    }
+
+    internal ushort StartFAT
+    {
+        get => BinaryPrimitives.ReadUInt16LittleEndian(_data.Span.Slice(DirectoryStartFATOffset));
+        set => BinaryPrimitives.WriteUInt16LittleEndian(_data.Span.Slice(DirectoryStartFATOffset), value);
+    }
+
+    internal Memory<byte> NameBytes => _data.Slice(DirectoryFilenameOffset, length: DirectoryEntryFileNameLength);
+    internal string Name => FileSystem.Encoding.GetString(NameBytes.Span).Trim();
+
+    internal DateTimeOffset Date
+    {
+        get => FileSystem.ReadDate(_data.Span.Slice(DirectoryDateOffset, DirectoryDateLength));
+        set => FileSystem.WriteDate(_data.Span.Slice(DirectoryDateOffset, DirectoryDateLength), value);
+    }
+
+    internal ushort SizeInBlocks
+    {
+        get => BinaryPrimitives.ReadUInt16LittleEndian(_data.Span.Slice(DirectorySizeInBlocksOffset));
+        set => BinaryPrimitives.WriteUInt16LittleEndian(_data.Span.Slice(DirectorySizeInBlocksOffset), value);
+    }
+
+    internal ushort VmsHeaderBlockId
+    {
+        get => BinaryPrimitives.ReadUInt16LittleEndian(_data.Span.Slice(DirectoryVmsHeaderBlockOffset));
+        set => BinaryPrimitives.WriteUInt16LittleEndian(_data.Span.Slice(DirectoryVmsHeaderBlockOffset), value);
+    }
+
+    internal const int DirectoryEntrySize = 0x20; // 32
+    internal const int DirectoryFileTypeOffset = 0;
+    internal const int DirectoryCopyProtectionOffset = 1;
+    internal const int DirectoryStartFATOffset = 2;
+    internal const int DirectoryFilenameOffset = 4;
+    internal const int DirectoryDateOffset = 0x10;
+    internal const int DirectoryDateLength = 8;
+
+    internal const int DirectorySizeInBlocksOffset = 0x18;
+    internal const int DirectoryVmsHeaderBlockOffset = 0x1a;
+
+    internal const int DirectoryEntryFileNameLength = 12;
+}
+
+internal enum FileCopyProtection : byte
+{
+    NotCopyProtected = 0,
+    CopyProtected = 0xff,
+}
+
+internal enum FileType : byte
+{
+    None = 0,
+    Data = 0x33,
+    Game = 0xcc,
 }

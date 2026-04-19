@@ -134,7 +134,9 @@ public class Vmu
         var gameData = File.ReadAllBytes(filePath);
         var fileName = Path.GetFileNameWithoutExtension(filePath);
         fileName = fileName.Substring(0, Math.Min(FileSystem.DirectoryEntryFileNameLength, fileName.Length));
-        _fileSystem.WriteGameFile(gameData, fileName, date);
+        if (!_fileSystem.TryWriteGameFile(gameData, fileName, date))
+            throw new InvalidOperationException($"Insufficient space to save the VMS file '{filePath}' on a new volume.");
+
         LoadedFilePath = filePath;
         _cpu.HasUnsavedChanges = false;
         _cpu.VmuFileWriteStream = null;
