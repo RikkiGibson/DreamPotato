@@ -117,9 +117,7 @@ public class FileSystemTests : IDisposable
     [Fact]
     public void ReadFiles_01()
     {
-        // Test the functionality used to implement 'Save as Folder'
-        // Use a pre-existing VMU
-        // TODO2: also export vmi files
+        // Test the functionality used to implement 'Save as Folder' using a pre-existing VMU
         // I have a gut feeling that while vms/vmi needs to just work,
         // dci is going to be a way better format to work with..
         _tempRoot = Directory.CreateTempSubdirectory("DreamPotato.Tests");
@@ -129,14 +127,25 @@ public class FileSystemTests : IDisposable
         var outDir = _tempRoot.CreateSubdirectory("ReadFiles_01");
         fileSystem.ReadAllFiles(outDir);
 
-        var fileNames = string.Join(Environment.NewLine, Directory.EnumerateFiles(outDir.FullName).Select(f => Path.GetFileName(f)));
+        var fileNames = string.Join(Environment.NewLine,
+            Directory.EnumerateFiles(outDir.FullName)
+                .Select(f => Path.GetFileName(f))
+                .OrderBy(f => f));
+
         Assert.Equal<object>("""
+            ICONDATA_VMS.vmi
             ICONDATA_VMS.vms
-            S.ARCADIA001.vms
-            S.ARCADIA002.vms
-            S.ARCADIA003.vms
+            S.ARCADIA_VM.vmi
             S.ARCADIA_VM.vms
+            S.ARCADIA001.vmi
+            S.ARCADIA001.vms
+            S.ARCADIA002.vmi
+            S.ARCADIA002.vms
+            S.ARCADIA003.vmi
+            S.ARCADIA003.vms
+            VMUTOOL__OPT.vmi
             VMUTOOL__OPT.vms
+            ZOMBIE_U_SYS.vmi
             ZOMBIE_U_SYS.vms
             """,
             fileNames);

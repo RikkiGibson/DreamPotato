@@ -1,10 +1,9 @@
 using System.Buffers.Binary;
-using System.Text;
 
 namespace DreamPotato.Core;
 
 /// <summary>https://vmu.falcogirgis.net/formats.html#formats_vmi</summary>
-public struct VmiInfo
+public class VmiInfo
 {
     public const int Size = 0x6c; // 108 bytes
 
@@ -13,29 +12,54 @@ public struct VmiInfo
         if (data.Length != Size)
             throw new ArgumentException(null, nameof(data));
 
-        this.data = data;
-
-        Checksum = BinaryPrimitives.ReadInt32LittleEndian(data.Span.Slice(0, length: 4));
-        CreationTime = FileSystem.ReadDate(data.Span.Slice(0x44, length: 8));
-        Version = BinaryPrimitives.ReadUInt16LittleEndian(data.Span.Slice(0x4c, length: 2));
-        FileNumber = BinaryPrimitives.ReadUInt16LittleEndian(data.Span.Slice(0x4e, length: 2));
-        FileMode = (VmuFileMode)BinaryPrimitives.ReadUInt16LittleEndian(data.Span.Slice(0x64, length: 2));
-        VmsFileSize = BinaryPrimitives.ReadInt32LittleEndian(data.Span.Slice(0x68, length: 4));
+        RawData = data;
     }
 
-    private readonly Memory<byte> data;
+    public Memory<byte> RawData { get; }
 
-    public int Checksum { get; init; }
-    public string Description => field ??= FileSystem.Encoding.GetString(data.Span.Slice(4, length: 0x20));
-    public string Copyright => field ??= FileSystem.Encoding.GetString(data.Span.Slice(0x24, length: 0x20));
-    public DateTimeOffset CreationTime { get; init; }
-    public ushort Version { get; init; }
-    public ushort FileNumber { get; init; }
-    public string VmsResourceName => field ??= FileSystem.Encoding.GetString(data.Span.Slice(0x50, length: 8));
-    public ReadOnlySpan<byte> VmuFileNameBytes => data.Span.Slice(0x58, 0xc);
-    public string VmuFileName => field ??= FileSystem.Encoding.GetString(VmuFileNameBytes);
-    public VmuFileMode FileMode { get; init; }
-    public int VmsFileSize { get; init; }
+    public int Checksum
+    {
+        get => BinaryPrimitives.ReadInt32LittleEndian(RawData.Span.Slice(0, length: 4));
+        set => BinaryPrimitives.WriteInt32LittleEndian(RawData.Span.Slice(0, length: 4), value);
+    }
+
+    public Memory<byte> Description => RawData.Slice(4, length: 0x20);
+    public Memory<byte> Copyright => RawData.Slice(0x24, length: 0x20);
+    public Memory<byte> CreationTime => RawData.Slice(0x44, length: 8);
+
+    public DateTimeOffset CreationDateTimeOffset
+    {
+        get => FileSystem.ReadDate(CreationTime.Span);
+        set => FileSystem.WriteDate(CreationTime.Span, value);
+    }
+
+    public ushort Version
+    {
+        get => BinaryPrimitives.ReadUInt16LittleEndian(RawData.Span.Slice(0x4c, length: 2));
+        set => BinaryPrimitives.WriteUInt16LittleEndian(RawData.Span.Slice(0x4c, length: 2), value);
+    }
+
+    public ushort FileNumber
+    {
+        get => BinaryPrimitives.ReadUInt16LittleEndian(RawData.Span.Slice(0x4e, length: 2));
+        set => BinaryPrimitives.WriteUInt16LittleEndian(RawData.Span.Slice(0x4e, length: 2), value);
+    }
+
+    public Memory<byte> VmsResourceName => RawData.Slice(0x50, length: 8);
+
+    public Memory<byte> VmuFileName => RawData.Slice(0x58, 0xc);
+
+    public VmuFileMode FileMode
+    {
+        get => (VmuFileMode)BinaryPrimitives.ReadUInt16LittleEndian(RawData.Span.Slice(0x64, length: 2));
+        set => BinaryPrimitives.WriteUInt16LittleEndian(RawData.Span.Slice(0x64, length: 2), (ushort)value);
+    }
+
+    public int VmsFileSize
+    {
+        get => BinaryPrimitives.ReadInt32LittleEndian(RawData.Span.Slice(0x68, length: 4));
+        set => BinaryPrimitives.WriteInt32LittleEndian(RawData.Span.Slice(0x68, length: 4), value);
+    }
 }
 
 public enum VmuFileMode : ushort
