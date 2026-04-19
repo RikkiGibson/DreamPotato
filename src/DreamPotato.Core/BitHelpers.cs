@@ -46,10 +46,9 @@ public static class BitHelpers
     /// <summary>Display bytes as hex rows of length 0x10 for debugging</summary>
     public static List<string> AsHexRows(this ReadOnlySpan<byte> bytes)
     {
-        Debug.Assert((bytes.Length % 0x10) == 0);
-
         List<string> ret = [];
-        var rows = bytes.Length / 0x10;
+        // get rows rounded up
+        var rows = (bytes.Length + 0xf) / 0x10;
 
         // aligner
         {
@@ -68,7 +67,8 @@ public static class BitHelpers
             var builder = new StringBuilder();
             builder.Append($"{i:X2} | ");
 
-            for (int addr = i * 0x10; addr < (i + 1) * 0x10; addr++)
+            var end = Math.Min(bytes.Length, (i + 1) * 0x10);
+            for (int addr = i * 0x10; addr < end; addr++)
             {
                 builder.Append($"{bytes[addr]:X2} ");
             }

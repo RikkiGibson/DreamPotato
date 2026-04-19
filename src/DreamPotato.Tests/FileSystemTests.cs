@@ -149,5 +149,21 @@ public class FileSystemTests : IDisposable
             ZOMBIE_U_SYS.vms
             """,
             fileNames);
+
+        var vmiBytes = File.ReadAllBytes(Path.Combine(outDir.FullName, "S.ARCADIA001.vmi"));
+        // TODO2: date (0x44) is probably wrong here, I don't think the year digits are BCD.
+        // Probably best handled by using separate routines for FileSystem/VmiInfo date handling
+        // Convert to date and back to binary representation
+        Assert.Equal<object>("""
+               | 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F 
+            00 | 53 04 41 40 41 72 63 61 64 69 61 20 20 20 20 20 
+            01 | 20 53 61 69 6C 6F 72 73 27 20 49 73 6C 61 6E 64 
+            02 | 20 49 6E 6E 47 65 6E 65 72 61 74 65 64 20 62 79 
+            03 | 20 44 72 65 61 6D 50 6F 74 61 74 6F 00 00 00 00 
+            04 | 00 00 00 00 20 23 07 19 22 47 30 02 00 00 01 00 
+            05 | 53 2E 41 52 43 41 44 49 53 2E 41 52 43 41 44 49 
+            06 | 41 30 30 31 00 00 00 00 00 36 00 00 
+            """,
+            ((ReadOnlySpan<byte>)vmiBytes).AsHexBlock());
     }
 }

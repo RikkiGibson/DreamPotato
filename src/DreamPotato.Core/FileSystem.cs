@@ -351,7 +351,7 @@ internal class FileSystem(byte[] flash)
 
         VmiInfo toVmiInfo(DirectoryEntry directoryEntry)
         {
-            var vmsHeaderBlock = GetBlockMemory(directoryEntry.VmsHeaderBlockId);
+            var vmsHeaderBlock = GetBlockMemory(directoryEntry.StartFAT + directoryEntry.VmsHeaderBlockOffset);
             var vmsHeaderInfo = new VmsHeaderInfo(vmsHeaderBlock[..VmsHeaderInfo.Size]);
 
             var vmiInfo = new VmiInfo(new byte[VmiInfo.Size]);
@@ -371,6 +371,12 @@ internal class FileSystem(byte[] flash)
                 | (directoryEntry.Type == FileType.Game ? VmuFileMode.Game : 0);
 
             vmiInfo.VmsFileSize = directoryEntry.SizeInBlocks * BlockSize;
+
+            var resourceNameSpan = vmiInfo.VmsResourceName.Span;
+            vmiInfo.Checksum.Span[0] = (byte)(resourceNameSpan[0] & 'S');
+            vmiInfo.Checksum.Span[1] = (byte)(resourceNameSpan[1] & 'E');
+            vmiInfo.Checksum.Span[2] = (byte)(resourceNameSpan[2] & 'G');
+            vmiInfo.Checksum.Span[3] = (byte)(resourceNameSpan[3] & 'A');
 
             return vmiInfo;
         }
@@ -448,7 +454,7 @@ internal readonly struct DirectoryEntry
         set => BinaryPrimitives.WriteUInt16LittleEndian(_data.Span.Slice(DirectorySizeInBlocksOffset), value);
     }
 
-    internal ushort VmsHeaderBlockId
+    internal ushort VmsHeaderBlockOffset
     {
         get => BinaryPrimitives.ReadUInt16LittleEndian(_data.Span.Slice(DirectoryVmsHeaderBlockOffset));
         set => BinaryPrimitives.WriteUInt16LittleEndian(_data.Span.Slice(DirectoryVmsHeaderBlockOffset), value);

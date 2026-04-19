@@ -17,12 +17,7 @@ public class VmiInfo
 
     public Memory<byte> RawData { get; }
 
-    public int Checksum
-    {
-        get => BinaryPrimitives.ReadInt32LittleEndian(RawData.Span.Slice(0, length: 4));
-        set => BinaryPrimitives.WriteInt32LittleEndian(RawData.Span.Slice(0, length: 4), value);
-    }
-
+    public Memory<byte> Checksum => RawData.Slice(0, length: 4);
     public Memory<byte> Description => RawData.Slice(4, length: 0x20);
     public Memory<byte> Copyright => RawData.Slice(0x24, length: 0x20);
     public Memory<byte> CreationTime => RawData.Slice(0x44, length: 8);
