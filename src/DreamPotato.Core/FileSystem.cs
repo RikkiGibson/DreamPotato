@@ -416,7 +416,7 @@ internal class FileSystem(byte[] flash)
 
         // Note: We could consider writing in the hidden region to fit more files, but, it doesn't seem consistent with ordinary VMUs.
         ushort currentDataBlockId = UserRegionLastBlockId;
-        foreach (var vmsFileInfo in sourceDirectory.EnumerateFiles("*.vms"))
+        foreach (var vmsFileInfo in sourceDirectory.EnumerateFiles("*.vms").OrderBy(f => f.Name))
         {
             if (vmsFileInfo.Length == 0)
                 return (false, $"{vmsFileInfo.Name}: Cannot write an empty file");
