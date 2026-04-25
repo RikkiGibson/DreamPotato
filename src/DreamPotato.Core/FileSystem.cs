@@ -18,19 +18,22 @@ internal class FileSystem(byte[] flash)
     // user region: where user visible files are stored.
     private const int UserRegionSizeBlocks = 200;
     private const int UserRegionSizeBytes = UserRegionSizeBlocks * BlockSize; // 100kb
+    private const int UserRegionLastBlockId = UserRegionSizeBlocks - 1;
 
     // hidden region: extra storage which is used on-demand to store user files when blocks in the user region being to malfunction.
     private const int HiddenRegionSizeBlocks = 31;
     private const int HiddenRegionSizeBytes = HiddenRegionSizeBlocks * BlockSize;
+    internal const int HiddenRegionLastBlockId = DirectoryTableFirstBlockId - 1;
 
     internal const int BlockSize = 0x200; // 512b
+    internal const int BlockIdSize = 2;
     private const int BlocksCount = VolumeSizeBytes / BlockSize; // 256
 
     internal const byte RootBlockId = BlocksCount - 1;
     internal const byte FATBlockId = BlocksCount - 2;
-    internal const byte DirectoryLastBlockId = BlocksCount - 3;
+    internal const byte DirectoryTableLastBlockId = BlocksCount - 3;
     private const int DirectoryTableSizeBlocks = 13;
-    internal const byte DirectoryFirstBlockId = DirectoryLastBlockId - DirectoryTableSizeBlocks + 1;
+    internal const byte DirectoryTableFirstBlockId = DirectoryTableLastBlockId - DirectoryTableSizeBlocks + 1;
 
     internal const int DirectoryEntrySize = 0x20; // 32
     internal const int DirectoryFileTypeOffset = 0;
@@ -54,7 +57,7 @@ internal class FileSystem(byte[] flash)
 
     private const int Magic = 0x55;
 
-    // 0xfffc: Unallocated space
+    const int FAT_Unallocated = 0xfffc;
     const int FAT_UnallocatedLsb = 0xfc;
     const int FAT_UnallocatedMsb = 0xff;
 
@@ -126,7 +129,7 @@ internal class FileSystem(byte[] flash)
             rootBlock[0x48] = 1; // FAT size. How many blocks does the FAT take up.
             rootBlock[0x49] = 0;
 
-            rootBlock[0x4a] = DirectoryLastBlockId; // DIR last. Last block of the Directory table, which holds file metadata
+            rootBlock[0x4a] = DirectoryTableLastBlockId; // DIR last. Last block of the Directory table, which holds file metadata
             rootBlock[0x4b] = 0;
 
             Debug.Assert(DirectoryTableSizeBlocks == Math.Ceiling((double)UserRegionSizeBlocks * DirectoryEntrySize / BlockSize));
@@ -173,8 +176,8 @@ internal class FileSystem(byte[] flash)
             fatBlock[FATBlockId * 2 + 1] = FAT_LastInFileMsb;
 
             // directory: mark as growing from end toward start of the volume.
-            var directoryStartBlockId = DirectoryLastBlockId - DirectoryTableSizeBlocks + 1;
-            for (int i = DirectoryLastBlockId; i > directoryStartBlockId; i--)
+            var directoryStartBlockId = DirectoryTableLastBlockId - DirectoryTableSizeBlocks + 1;
+            for (int i = DirectoryTableLastBlockId; i > directoryStartBlockId; i--)
             {
                 // Point to the previous block.
                 fatBlock[i * 2] = (byte)(i - 1);
@@ -250,7 +253,7 @@ internal class FileSystem(byte[] flash)
     // Note: this only works on a newly initialized file system.
     // Possibly in future will support more generalized file I/O operations.
     // At that point though why not just expose it as a .vms/.vmi folder a la Dolphin's .gci folder.
-    public bool TryWriteGameFile(ReadOnlySpan<byte> gameFileData, string filename, DateTimeOffset date)
+    public (bool ok, string? errorMessage) TryWriteGameFile(ReadOnlySpan<byte> gameFileData, string onDiskFileName, Memory<byte> onVmuFileName, DateTimeOffset date, FileCopyProtection copyProtection)
     {
         if (gameFileData.Length == 0)
             throw new ArgumentException(null, paramName: nameof(gameFileData));
@@ -258,8 +261,8 @@ internal class FileSystem(byte[] flash)
         if (gameFileData.Length > Cpu.InstructionBankSize)
             throw new ArgumentException(null, paramName: nameof(gameFileData));
 
-        if (filename.Length > DirectoryEntryFileNameLength)
-            throw new ArgumentException(null, paramName: nameof(filename));
+        if (onVmuFileName.Length > DirectoryEntryFileNameLength)
+            throw new ArgumentException(null, paramName: nameof(onVmuFileName));
 
         // Verify sufficient free space
         var fatBlock = GetBlock(FATBlockId);
@@ -269,7 +272,7 @@ internal class FileSystem(byte[] flash)
             if (fatBlock[i * 2] != FAT_UnallocatedLsb
                 || fatBlock[i * 2 + 1] != FAT_UnallocatedMsb)
             {
-                return false;
+                return (false, $"{onDiskFileName}: Insufficient space");
             }
         }
 
@@ -288,10 +291,10 @@ internal class FileSystem(byte[] flash)
 
         // Create a directory entry
         if (!tryGetFreeDirectoryEntry(out var directoryEntry))
-            return false;
+            return (false, $"{onDiskFileName}: The file system directory is full.");
 
         directoryEntry[DirectoryFileTypeOffset] = DirectoryFileTypeGame;
-        directoryEntry[DirectoryCopyProtectionOffset] = DirectoryEntryNotCopyProtected;
+        directoryEntry[DirectoryCopyProtectionOffset] = (byte)copyProtection;
 
         directoryEntry[DirectoryStartFATOffset] = 0; // Start FAT: first block containing file data. Should be same as "Game First" in the root block.
         directoryEntry[DirectoryStartFATOffset + 1] = 0;
@@ -299,10 +302,7 @@ internal class FileSystem(byte[] flash)
         var directoryEntryFilename = directoryEntry.Slice(start: DirectoryFilenameOffset, length: DirectoryEntryFileNameLength);
         directoryEntryFilename.Clear();
 
-        var encodedBytes = Encoding.GetBytes(filename, directoryEntry.Slice(start: DirectoryFilenameOffset, length: DirectoryEntryFileNameLength));
-        if (encodedBytes != filename.Length)
-            throw new InvalidOperationException();
-
+        onVmuFileName.Span.CopyTo(directoryEntry.Slice(start: DirectoryFilenameOffset, length: DirectoryEntryFileNameLength));
         WriteBcdDate(directoryEntry.Slice(DirectoryDateOffset, length: DirectoryDateLength), date);
 
         var sizeInBlocks = (gameFileData.Length + BlockSize - 1) / BlockSize; // integer division rounding up
@@ -315,12 +315,12 @@ internal class FileSystem(byte[] flash)
         // Unused
         directoryEntry.Slice(0x1c, length: 4).Clear();
 
-        return true;
+        return (true, null);
 
         bool tryGetFreeDirectoryEntry(out Span<byte> foundEntry)
         {
             // Scan directory blocks starting from the end, toward the start.
-            for (var blockId = DirectoryLastBlockId; blockId >= DirectoryFirstBlockId; blockId--)
+            for (var blockId = DirectoryTableLastBlockId; blockId >= DirectoryTableFirstBlockId; blockId--)
             {
                 var directoryBlock = GetBlock(blockId);
                 // Scan from start to end within a block.
@@ -343,7 +343,7 @@ internal class FileSystem(byte[] flash)
     public void ReadAllFiles(DirectoryInfo outDir)
     {
         // Scan directory blocks starting from the end, toward the start.
-        for (var blockId = DirectoryLastBlockId; blockId >= DirectoryFirstBlockId; blockId--)
+        for (var blockId = DirectoryTableLastBlockId; blockId >= DirectoryTableFirstBlockId; blockId--)
         {
             var directoryBlock = GetBlockMemory(blockId);
             // Scan from start to end within a block.
@@ -407,6 +407,128 @@ internal class FileSystem(byte[] flash)
             vmiInfo.Checksum.Span[3] = (byte)(resourceNameSpan[3] & 'A');
 
             return vmiInfo;
+        }
+    }
+
+    public (bool ok, string? errorMessage) TryWriteAllFiles(DirectoryInfo sourceDirectory)
+    {
+        string? foundGameName = null;
+
+        // Note: We could consider writing in the hidden region to fit more files, but, it doesn't seem consistent with ordinary VMUs.
+        ushort currentDataBlockId = UserRegionLastBlockId;
+        foreach (var vmsFileInfo in sourceDirectory.EnumerateFiles("*.vms"))
+        {
+            if (vmsFileInfo.Length == 0)
+                return (false, $"{vmsFileInfo.Name}: Cannot write an empty file");
+
+            var vmiFileInfo = new FileInfo(Path.ChangeExtension(vmsFileInfo.FullName, ".vmi"));
+            if (!vmiFileInfo.Exists)
+                return (false, $"{vmsFileInfo.Name}: No matching .vmi found");
+
+            if (vmiFileInfo.Length != VmiInfo.Size)
+                return (false, $"{vmiFileInfo.Name}: Bad format");
+
+            var vmiInfo = new VmiInfo(File.ReadAllBytes(vmiFileInfo.FullName));
+            var vmsFileBytes = File.ReadAllBytes(vmsFileInfo.FullName);
+            if (vmiInfo.FileMode.HasFlag(VmuFileMode.Game))
+            {
+                if (foundGameName != null)
+                    return (false, $"Cannot use multiple games in VMS folder: '{foundGameName}', '{vmiFileInfo.Name}'");
+
+                foundGameName = vmiFileInfo.Name;
+                var copyProtection = vmiInfo.FileMode.HasFlag(VmuFileMode.CopyProtected) ? FileCopyProtection.CopyProtected : FileCopyProtection.NotCopyProtected;
+                if (TryWriteGameFile(vmsFileBytes, onDiskFileName: vmsFileInfo.Name, onVmuFileName: vmiInfo.VmuFileName, vmiInfo.CreationDateTimeOffset, copyProtection) is (false, var error))
+                    return (false, error);
+
+                continue;
+            }
+
+            if (getNewDirectoryEntry() is not { } directoryEntry)
+                return (false, $"{vmsFileInfo.Name}: The file system directory is full.");
+
+            if (tryWriteDataFile(directoryEntry, vmsFileInfo.Name, vmsFileBytes, vmiInfo) is (false, var error1))
+                return (false, error1);
+        }
+
+        return (true, null);
+
+        DirectoryEntry? getNewDirectoryEntry()
+        {
+            for (var blockId = DirectoryTableLastBlockId; blockId >= DirectoryTableFirstBlockId; blockId--)
+            {
+                var directoryBlock = GetBlockMemory(blockId);
+                // Scan from start to end within a block.
+                for (var offset = 0; offset < BlockSize; offset += DirectoryEntrySize)
+                {
+                    var directoryEntry = new DirectoryEntry(directoryBlock.Slice(start: offset, length: DirectoryEntrySize));
+                    if (directoryEntry.Type == FileType.None)
+                        return directoryEntry;
+                }
+            }
+
+            return null;
+        }
+
+        (bool ok, string? error) tryWriteDataFile(DirectoryEntry directoryEntry, string onDiskFileName, ReadOnlySpan<byte> vmsFileBytes, VmiInfo vmiInfo)
+        {
+            Debug.Assert(!vmiInfo.FileMode.HasFlag(VmuFileMode.Game));
+
+            var sizeInBlocks = (ushort)((vmsFileBytes.Length + (BlockSize - 1)) / BlockSize);
+            var fatBlock = GetBlock(FATBlockId);
+
+            // Scan to next free data block
+            while (BinaryPrimitives.ReadUInt16LittleEndian(fatBlock.Slice(currentDataBlockId * 2, length: 2)) != FAT_Unallocated)
+            {
+                if (currentDataBlockId == 0)
+                    return (false, $"{onDiskFileName}: Insufficient space on VMU");
+
+                currentDataBlockId--;
+            }
+
+            ushort startFAT = currentDataBlockId;
+            for (var i = 0; i < sizeInBlocks; i++)
+            {
+                var dataBlock = GetBlock(currentDataBlockId);
+                vmsFileBytes.Slice(i * BlockSize, length: BlockSize).CopyTo(dataBlock);
+
+                if (i == sizeInBlocks - 1)
+                {
+                    BinaryPrimitives.WriteUInt16LittleEndian(fatBlock.Slice(currentDataBlockId * 2, length: 2), value: FAT_LastInFile);
+                    break;
+                }
+
+                // Each FAT entry (indexed by block ID) points to the block ID for the next block
+                // think 'FAT[prevDataBlockId] = currentDataBlockId;'
+                var prevDataBlockId = currentDataBlockId;
+
+                // Scan to next free data block
+                do
+                {
+                    if (currentDataBlockId == 0)
+                        return (false, $"{onDiskFileName}: Insufficient space on VMU");
+
+                    currentDataBlockId--;
+                } while (BinaryPrimitives.ReadUInt16LittleEndian(fatBlock.Slice(currentDataBlockId * 2, length: 2)) != FAT_Unallocated);
+
+                BinaryPrimitives.WriteUInt16LittleEndian(fatBlock.Slice(prevDataBlockId * 2, length: 2), value: currentDataBlockId);
+            }
+
+            directoryEntry.Type = FileType.Data;
+            directoryEntry.CopyProtection = vmiInfo.FileMode.HasFlag(VmuFileMode.CopyProtected) ? FileCopyProtection.CopyProtected : FileCopyProtection.NotCopyProtected;
+            directoryEntry.StartFAT = startFAT;
+
+            Debug.Assert(vmiInfo.VmuFileName.Length == directoryEntry.Name.Length);
+            vmiInfo.VmuFileName.CopyTo(directoryEntry.Name);
+
+            directoryEntry.DateTimeOffset = vmiInfo.CreationDateTimeOffset;
+
+            // Divide size in bytes by block size, round up
+            directoryEntry.SizeInBlocks = (ushort)((vmiInfo.VmsFileSize + (BlockSize - 1)) / BlockSize);
+
+            // Note: if the vms doesn't match this convention, then we have no way of really knowing where its header is.
+            // We might want to verify the header is in the expected location in 'ReadAllFiles'.
+            directoryEntry.VmsHeaderBlockOffset = 0;
+            return (true, null);
         }
     }
 
@@ -516,7 +638,7 @@ internal readonly struct DirectoryEntry
 
 internal enum FileCopyProtection : byte
 {
-    NotCopyProtected = 0,
+    NotCopyProtected = 0x80,
     CopyProtected = 0xff,
 }
 
