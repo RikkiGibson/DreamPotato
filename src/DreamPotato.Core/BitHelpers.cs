@@ -79,7 +79,7 @@ public static class BitHelpers
 
     public static string AsHexBlock(this ReadOnlySpan<byte> bytes)
     {
-        return string.Join('\n', AsHexRows(bytes));
+        return string.Join(Environment.NewLine, AsHexRows(bytes));
     }
 
     public static int ModPositive(int x, int m)

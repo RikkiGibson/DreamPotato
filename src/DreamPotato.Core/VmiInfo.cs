@@ -20,12 +20,12 @@ public class VmiInfo
     public Memory<byte> Checksum => RawData.Slice(0, length: 4);
     public Memory<byte> Description => RawData.Slice(4, length: 0x20);
     public Memory<byte> Copyright => RawData.Slice(0x24, length: 0x20);
-    public Memory<byte> CreationTime => RawData.Slice(0x44, length: 8);
+    public Memory<byte> CreationTimeBinary => RawData.Slice(0x44, length: 8);
 
     public DateTimeOffset CreationDateTimeOffset
     {
-        get => FileSystem.ReadDate(CreationTime.Span);
-        set => FileSystem.WriteDate(CreationTime.Span, value);
+        get => FileSystem.ReadBinaryDate(CreationTimeBinary.Span);
+        set => FileSystem.WriteBinaryDate(CreationTimeBinary.Span, value);
     }
 
     public ushort Version
