@@ -107,11 +107,11 @@ public class FileSystemTests : IDisposable
         Assert.Equal(expectedFATStart, fatEntry[0..0x10]);
 
         var directoryEntry = fileSystem.GetBlock(FileSystem.DirectoryTableLastBlockId);
-        ReadOnlySpan<byte> expectedEntry = [
-            0xcc, 0x00, 0x00, 0x00, 0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x57, 0x6F, 0x72, 0x6C, 0x64, 0x00, 0x00,
-            0x20, 0x18, 0x08, 0x18, 0x07, 0x22, 0x16, 0x06, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
-        ];
-        Assert.Equal(expectedEntry, directoryEntry[0..FileSystem.DirectoryEntrySize]);
+        Assert.Equal<object>("""
+               | 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F 
+            00 | CC 80 00 00 48 65 6C 6C 6F 57 6F 72 6C 64 00 00 
+            01 | 20 18 08 18 07 22 16 06 04 00 01 00 00 00 00 00 
+            """, ((ReadOnlySpan<byte>)directoryEntry[0..FileSystem.DirectoryEntrySize]).AsHexBlock());
     }
 
     [Fact]
