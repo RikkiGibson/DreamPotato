@@ -277,7 +277,7 @@ public class FileSystemTests : IDisposable
         }
     }
 
-    // Additional test cases:
+    // Additional WriteFiles test cases:
     // - No game file
     // - Multiple game files
     // - Insufficient VMU space (too many files)
@@ -286,4 +286,9 @@ public class FileSystemTests : IDisposable
     // - only vmi renamed
     // - only vms renamed
     // - duplicate vmu filenames in vmi's
+    //
+    // Additional Flush test cases:
+    // - File deleted
+    // - File added
+    // - File modified
 }

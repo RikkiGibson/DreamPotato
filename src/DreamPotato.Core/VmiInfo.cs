@@ -44,6 +44,8 @@ public class VmiInfo
 
     public Memory<byte> VmuFileName => RawData.Slice(0x58, 0xc);
 
+    public string VmuFileNameString => FileSystem.Encoding.GetString(RawData.Slice(0x58, 0xc).Span);
+
     public VmuFileMode FileMode
     {
         get => (VmuFileMode)BinaryPrimitives.ReadUInt16LittleEndian(RawData.Span.Slice(0x64, length: 2));
