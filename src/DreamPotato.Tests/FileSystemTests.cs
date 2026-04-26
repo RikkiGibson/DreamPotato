@@ -276,4 +276,14 @@ public class FileSystemTests : IDisposable
             Assert.Equal(expected, actual);
         }
     }
+
+    // Additional test cases:
+    // - No game file
+    // - Multiple game files
+    // - Insufficient VMU space (too many files)
+    // - vmi file missing
+    // - vmi+vms renamed together
+    // - only vmi renamed
+    // - only vms renamed
+    // - duplicate vmu filenames in vmi's
 }

@@ -210,7 +210,11 @@ public class Game1 : Game
         var vmu = presenter.Vmu;
         var date = DateTimeOffset.Now;
         var extension = Path.GetExtension(filePath);
-        if (extension.Equals(".vms", StringComparison.OrdinalIgnoreCase))
+        if (string.IsNullOrEmpty(extension))
+        {
+            vmu.LoadVmsFolder(filePath, date, autoInitializeRtcDate: Configuration.AutoInitializeDate);
+        }
+        else if (extension.Equals(".vms", StringComparison.OrdinalIgnoreCase))
         {
             vmu.LoadGameVms(filePath, date, autoInitializeRTCDate: Configuration.AutoInitializeDate);
         }

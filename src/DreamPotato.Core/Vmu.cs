@@ -169,6 +169,27 @@ public class Vmu
         _cpu.ResyncMapleOutbound();
     }
 
+    public (bool ok, string? error) LoadVmsFolder(string folderPath, DateTimeOffset date, bool autoInitializeRtcDate)
+    {
+        var folderInfo = new DirectoryInfo(folderPath);
+        if (!folderInfo.Exists)
+            throw new ArgumentException(null, nameof(folderPath));
+
+        Reset(autoInitializeRtcDate ? date : null);
+        Array.Clear(_cpu.Flash);
+        _fileSystem.InitializeFileSystem(date);
+        if (_fileSystem.TryWriteAllFiles(sourceDirectory: folderInfo) is (false, var error))
+            return (false, error);
+
+        _cpu.LazyDebugInfo?.ClearFlash();
+        LoadedFilePath = folderPath; // TODO2: verify use sites can handle a folder path being used here.
+        _cpu.HasUnsavedChanges = false;
+        _cpu.VmuFileWriteStream = null;
+        _cpu.ResyncMapleOutbound();
+
+        return (true, null);
+    }
+
     public void SaveVmuAs(string filePath)
     {
         if (IsDockedToDreamcast)
