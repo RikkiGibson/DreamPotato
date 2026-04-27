@@ -176,6 +176,9 @@ class VmuPresenter
 
         Vmu._cpu.SFRs.P3 = newP3;
         PreviousGamepad = gamepad;
+
+        if (Vmu.PollFileSystem(now: DateTime.Now))
+            _game1.UserInterface.ShowToast(this, $"Saved folder '{Path.GetFileName(Vmu.LoadedPath)}'");
     }
 
     internal void UpdateAndRun(GameTime gameTime, KeyboardState previousKeys, KeyboardState keyboard)
@@ -360,7 +363,7 @@ class VmuPresenter
     {
         var now = DateTimeOffset.Now;
         var timeDescription = now.ToString($"yyyy-MM-dd_HH-mm-ss");
-        var baseName = Path.GetFileNameWithoutExtension(Vmu.LoadedFilePath) ?? "DreamPotato";
+        var baseName = Path.GetFileNameWithoutExtension(Vmu.LoadedPath) ?? "DreamPotato";
 
         var screenshotsFolder = Path.Combine(Vmu.UserDataFolder, "Screenshots");
         Directory.CreateDirectory(screenshotsFolder);

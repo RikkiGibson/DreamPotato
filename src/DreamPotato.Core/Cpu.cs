@@ -101,6 +101,7 @@ public class Cpu
     public readonly Memory Memory;
     public readonly Audio Audio;
     public readonly Display Display;
+    internal readonly FileSystem FileSystem;
 
     /// <summary>NOTE: only 'TryReceiveMessage' and 'SendMessage' methods are safe to call from here.</summary>
     public readonly MapleMessageBroker MapleMessageBroker;
@@ -205,6 +206,7 @@ public class Cpu
         Memory = new Memory(this, Logger);
         Audio = new Audio(this, Logger);
         Display = new Display(this);
+        FileSystem = new FileSystem(Flash);
         MapleMessageBroker = mapleMessageBroker ?? new MapleMessageBroker(LogLevel.Default);
         SetInstructionBank(InstructionBank.ROM);
     }
@@ -2081,6 +2083,9 @@ public class Cpu
             var a17 = a16 | (SFRs.FPR.FlashAddressBank ? InstructionBankSize : 0);
             Flash[a17] = value;
             LazyDebugInfo?.CurrentBankInfo.ClearInstruction(a16);
+
+            // TODO2: Should probably abstract this.
+            FileSystem.OnFlashModified(a17, DateTime.Now);
             if (VmuFileHandle is not null)
             {
                 var absoluteAddress = (SFRs.FPR.FlashAddressBank ? (1 << 16) : 0) | a16;

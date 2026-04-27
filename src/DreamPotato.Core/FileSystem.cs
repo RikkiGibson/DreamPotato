@@ -120,6 +120,7 @@ internal class FileSystem
 
         initializeRootBlock();
         initializeFAT();
+        UpdateDirectoryMirror();
 
         void initializeRootBlock()
         {
@@ -370,7 +371,7 @@ internal class FileSystem
         }
     }
 
-    public void ReadAllFiles(DirectoryInfo outDir)
+    public void ReadAllFiles(DirectoryInfo destDirectory)
     {
         // Scan directory blocks starting from the end, toward the start.
         for (var blockId = DirectoryTableLastBlockId; blockId >= DirectoryTableFirstBlockId; blockId--)
@@ -392,7 +393,7 @@ internal class FileSystem
             var outFileName = directoryEntry.NameString;
             var fatBlock = GetBlock(FATBlockId);
 
-            using var vmsFile = File.Open(Path.Combine(outDir.FullName, $"{outFileName}.vms"), FileMode.CreateNew);
+            using var vmsFile = File.Open(Path.Combine(destDirectory.FullName, $"{outFileName}.vms"), FileMode.CreateNew);
 
             for (var blockId = directoryEntry.StartFAT;
                 blockId != FAT_LastInFile;
@@ -402,7 +403,7 @@ internal class FileSystem
                 vmsFile.Write(block);
             }
 
-            using var vmiFile = File.Open(Path.Combine(outDir.FullName, $"{outFileName}.vmi"), FileMode.CreateNew);
+            using var vmiFile = File.Open(Path.Combine(destDirectory.FullName, $"{outFileName}.vmi"), FileMode.CreateNew);
             var vmiInfo = CreateVmiInfo(directoryEntry);
             vmiFile.Write(vmiInfo.RawData.Span);
         }
@@ -597,7 +598,7 @@ internal class FileSystem
         return (byte)sum;
     }
 
-    internal void OnFlashModified(ushort offset, DateTimeOffset now)
+    internal void OnFlashModified(int offset, DateTimeOffset now)
     {
         var blockId = offset / BlockSize;
         Debug.Assert((ushort)blockId == blockId);
@@ -605,10 +606,15 @@ internal class FileSystem
         _flushDeadline = now.AddSeconds(1);
     }
 
-    internal void Poll(DirectoryInfo vmsFolder, DateTimeOffset now)
+    internal bool Poll(DirectoryInfo vmsFolder, DateTimeOffset now)
     {
         if (now >= _flushDeadline)
+        {
             Flush(vmsFolder);
+            return true;
+        }
+
+        return false;
     }
 
     internal void Flush(DirectoryInfo vmsFolder)
@@ -637,6 +643,9 @@ internal class FileSystem
         var toWrite = new List<DirectoryEntry>();
         foreach (var newEntry in EnumerateDirectoryTable())
         {
+            if (newEntry.Type == FileType.None)
+                continue;
+
             var fatBlock = GetBlock(FATBlockId);
             for (var blockId = newEntry.StartFAT; blockId != FAT_LastInFile; blockId = BinaryPrimitives.ReadUInt16LittleEndian(fatBlock.Slice(blockId * 2, length: 2)))
             {
@@ -682,6 +691,8 @@ internal class FileSystem
             }
         }
 
+        _changedBlockIds.Clear();
+        _flushDeadline = DateTimeOffset.MaxValue;
         UpdateDirectoryMirror();
     }
 

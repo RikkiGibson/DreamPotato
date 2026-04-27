@@ -158,6 +158,9 @@ public class Game1 : Game
             _userInterface.ShowConfirmCommandDialog(PendingCommandKind.Exit, vmuPresenter: null);
         }
 
+        PrimaryVmu.FlushFileSystem();
+        SecondaryVmu?.FlushFileSystem();
+
         // Save window size and position on exit
         var viewport = _graphics.GraphicsDevice.Viewport;
         var position = Window.Position;
@@ -188,9 +191,9 @@ public class Game1 : Game
             ? "* "
             : "";
 
-        var fileDesc = PrimaryVmu.LoadedFilePath is null
+        var fileDesc = PrimaryVmu.LoadedPath is null
             ? ""
-            : $"{Path.GetFileName(PrimaryVmu.LoadedFilePath)} - ";
+            : $"{Path.GetFileName(PrimaryVmu.LoadedPath)} - ";
 
         Window.Title = $"{star}{fileDesc}DreamPotato";
     }
@@ -212,7 +215,9 @@ public class Game1 : Game
         var extension = Path.GetExtension(filePath);
         if (string.IsNullOrEmpty(extension))
         {
-            vmu.LoadVmsFolder(filePath, date, autoInitializeRtcDate: Configuration.AutoInitializeDate);
+            var (ok, error) = vmu.LoadVmsFolder(filePath, date, autoInitializeRtcDate: Configuration.AutoInitializeDate);
+            if (!ok && error is { })
+                _userInterface.ShowToast(presenter, error);
         }
         else if (extension.Equals(".vms", StringComparison.OrdinalIgnoreCase))
         {
@@ -240,7 +245,7 @@ public class Game1 : Game
             // Otherwise they could stomp on each others' on-disk content.
             // (Opening the same .vms file is fine.)
             var otherVmu = vmu == PrimaryVmu ? SecondaryVmu : PrimaryVmu;
-            if (otherVmu?.LoadedFilePath == filePath)
+            if (otherVmu?.LoadedPath == filePath)
             {
                 _userInterface.ShowToast(presenter, $"Cannot open {Path.GetFileName(filePath)} because it is already open on the other VMU.");
                 return false;
@@ -268,9 +273,17 @@ public class Game1 : Game
             vmuFilePath = Path.ChangeExtension(vmuFilePath, ".vmu");
         }
 
-        vmu.SaveVmuAs(vmuFilePath);
+        vmu.SaveVmuAsFile(vmuFilePath);
         UpdateWindowTitle();
         RecentFilesInfo = RecentFilesInfo.AddRecentFile(forPrimary: vmu == PrimaryVmu, vmuFilePath);
+        RecentFilesInfo.Save();
+    }
+
+    internal void SaveVmuAsFolder(Vmu vmu, string folderPath)
+    {
+        vmu.SaveVmuAsFolder(folderPath);
+        UpdateWindowTitle();
+        RecentFilesInfo = RecentFilesInfo.AddRecentFile(forPrimary: vmu == PrimaryVmu, folderPath);
         RecentFilesInfo.Save();
     }
 

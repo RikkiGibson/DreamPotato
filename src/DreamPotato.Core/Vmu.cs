@@ -12,11 +12,11 @@ namespace DreamPotato.Core;
 public class Vmu
 {
     public readonly Cpu _cpu; // TODO: probably want to wrap everything a front-end would want to use thru here
-    private readonly FileSystem _fileSystem;
+    private FileSystem FileSystem => _cpu.FileSystem;
     public Audio Audio => _cpu.Audio;
     public Display Display => _cpu.Display;
-    public string? LoadedFilePath { get; private set; }
-    public (byte a, byte r, byte g, byte b) Color => _fileSystem.VmuColor;
+    public string? LoadedPath { get; private set; }
+    public (byte a, byte r, byte g, byte b) Color => FileSystem.VmuColor;
 
     public bool HasUnsavedChanges => _cpu.HasUnsavedChanges;
     public event Action UnsavedChangesDetected
@@ -29,12 +29,11 @@ public class Vmu
     {
         _cpu = new Cpu(mapleMessageBroker);
         _cpu.Reset();
-        _fileSystem = new FileSystem(_cpu.Flash);
     }
 
     public void InitializeFlash(DateTimeOffset date)
     {
-        _fileSystem.InitializeFileSystem(date);
+        FileSystem.InitializeFileSystem(date);
     }
 
     public void InitializeRTCDate(DateTimeOffset date)
@@ -107,11 +106,11 @@ public class Vmu
 
     public void LoadNewVmu(DateTimeOffset date, bool autoInitializeRTCDate)
     {
-        LoadedFilePath = null;
+        LoadedPath = null;
         Reset(autoInitializeRTCDate ? date : null);
         InitializeFlash(date);
 
-        LoadedFilePath = null;
+        LoadedPath = null;
         _cpu.HasUnsavedChanges = false;
         _cpu.VmuFileWriteStream = null;
         _cpu.ResyncMapleOutbound();
@@ -129,19 +128,19 @@ public class Vmu
 
         Reset(autoInitializeRTCDate ? date : null);
 
-        _fileSystem.InitializeFileSystem(date);
+        FileSystem.InitializeFileSystem(date);
 
         var gameData = File.ReadAllBytes(filePath);
         var fileName = Path.GetFileNameWithoutExtension(filePath);
         fileName = fileName.Substring(0, Math.Min(FileSystem.DirectoryEntryFileNameLength, fileName.Length));
-        if (_fileSystem.TryWriteGameFile(gameData, fileName, FileSystem.Encoding.GetBytes(fileName), date, FileCopyProtection.NotCopyProtected) is (false, var error))
+        if (FileSystem.TryWriteGameFile(gameData, fileName, FileSystem.Encoding.GetBytes(fileName), date, FileCopyProtection.NotCopyProtected) is (false, var error))
             throw new InvalidOperationException(error);
 
-        LoadedFilePath = filePath;
+        LoadedPath = filePath;
         _cpu.HasUnsavedChanges = false;
         _cpu.VmuFileWriteStream = null;
         _cpu.LazyDebugInfo?.ClearFlash();
-        _cpu.LazyDebugInfo?.GetBankInfo(InstructionBank.FlashBank0).WaterbearInfo = GetWaterbearInfo(LoadedFilePath);
+        _cpu.LazyDebugInfo?.GetBankInfo(InstructionBank.FlashBank0).WaterbearInfo = GetWaterbearInfo(LoadedPath);
 
         _cpu.ResyncMapleOutbound();
     }
@@ -163,7 +162,7 @@ public class Vmu
 
         fileStream.ReadExactly(_cpu.Flash);
         _cpu.LazyDebugInfo?.ClearFlash();
-        LoadedFilePath = filePath;
+        LoadedPath = filePath;
         _cpu.HasUnsavedChanges = false;
         _cpu.VmuFileWriteStream = fileStream;
         _cpu.ResyncMapleOutbound();
@@ -177,12 +176,12 @@ public class Vmu
 
         Reset(autoInitializeRtcDate ? date : null);
         Array.Clear(_cpu.Flash);
-        _fileSystem.InitializeFileSystem(date);
-        if (_fileSystem.TryWriteAllFiles(sourceDirectory: folderInfo) is (false, var error))
+        FileSystem.InitializeFileSystem(date);
+        if (FileSystem.TryWriteAllFiles(sourceDirectory: folderInfo) is (false, var error))
             return (false, error);
 
         _cpu.LazyDebugInfo?.ClearFlash();
-        LoadedFilePath = folderPath; // TODO2: verify use sites can handle a folder path being used here.
+        LoadedPath = folderPath; // TODO2: verify use sites can handle a folder path being used here.
         _cpu.HasUnsavedChanges = false;
         _cpu.VmuFileWriteStream = null;
         _cpu.ResyncMapleOutbound();
@@ -190,18 +189,39 @@ public class Vmu
         return (true, null);
     }
 
-    public void SaveVmuAs(string filePath)
+    public void SaveVmuAsFile(string filePath)
     {
         if (IsDockedToDreamcast)
             _cpu.ResyncMapleInbound();
 
         var fileStream = File.Open(filePath, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite);
         fileStream.Write(_cpu.Flash);
-        LoadedFilePath = filePath;
+        LoadedPath = filePath;
         _cpu.HasUnsavedChanges = false;
         _cpu.VmuFileWriteStream = fileStream;
         if (IsDockedToDreamcast)
             _cpu.ResyncMapleOutbound();
+    }
+
+    public (bool ok, string? error) SaveVmuAsFolder(string folderPath)
+    {
+        if (IsDockedToDreamcast)
+            _cpu.ResyncMapleInbound();
+
+        var info = new DirectoryInfo(folderPath);
+        if (!info.Exists)
+            return (false, $"The folder '{info.Name}' does not exist.");
+
+        FileSystem.ReadAllFiles(destDirectory: info);
+        // TODO2: clear pending flush?
+
+        LoadedPath = folderPath;
+        _cpu.HasUnsavedChanges = false;
+        _cpu.VmuFileWriteStream = null;
+        if (IsDockedToDreamcast)
+            _cpu.ResyncMapleOutbound();
+
+        return (true, null);
     }
 
     public bool IsServerConnected
@@ -280,7 +300,7 @@ public class Vmu
 
         var debugInfo = _cpu.InitializeDebugInfo();
         debugInfo.GetBankInfo(InstructionBank.ROM).WaterbearInfo = GetWaterbearInfo(RomFilePath);
-        debugInfo.GetBankInfo(InstructionBank.FlashBank0).WaterbearInfo = GetWaterbearInfo(LoadedFilePath);
+        debugInfo.GetBankInfo(InstructionBank.FlashBank0).WaterbearInfo = GetWaterbearInfo(LoadedPath);
         return debugInfo;
     }
 
@@ -324,7 +344,7 @@ public class Vmu
 
     public bool SaveState(string id)
     {
-        if (LoadedFilePath is null || GetSaveStatePath(LoadedFilePath, id) is not string filePath)
+        if (LoadedPath is null || GetSaveStatePath(LoadedPath, id) is not string filePath)
             return false;
 
         if (IsOtherVmuConnected)
@@ -357,10 +377,10 @@ public class Vmu
 
     public (bool success, string? error) LoadStateById(string id, bool saveOopsFile)
     {
-        if (LoadedFilePath is null)
+        if (LoadedPath is null)
             return (success: false, error: "Cannot load state because no VMU/VMS file is currently open.");
 
-        var filePath = GetSaveStatePath(LoadedFilePath, id);
+        var filePath = GetSaveStatePath(LoadedPath, id);
         if (filePath is null)
             return (success: false, "");
 
@@ -403,5 +423,36 @@ public class Vmu
         {
             return (false, $"Invalid or outdated save state: '{filePath}'");
         }
+    }
+
+    public bool PollFileSystem(DateTimeOffset now)
+    {
+        if (LoadedPath is null)
+            return false;
+
+        var vmsFolder = new DirectoryInfo(LoadedPath);
+        if (!vmsFolder.Exists)
+            return false;
+
+        // TODO2: can we do this only when we are actually ready to flush?
+        if (IsDockedToDreamcast)
+            _cpu.ResyncMapleInbound();
+
+        return FileSystem.Poll(vmsFolder, now);
+    }
+
+    public void FlushFileSystem()
+    {
+        if (LoadedPath is null)
+            return;
+
+        var vmsFolder = new DirectoryInfo(LoadedPath);
+        if (!vmsFolder.Exists)
+            return;
+
+        if (IsDockedToDreamcast)
+            _cpu.ResyncMapleInbound();
+
+        FileSystem.Flush(vmsFolder);
     }
 }

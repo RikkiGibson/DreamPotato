@@ -42,6 +42,7 @@ enum PendingCommandKind
     None,
     NewVmu,
     OpenVmu,
+    OpenFolder,
     OpenRecent,
     Reset,
     Exit
@@ -300,6 +301,22 @@ partial class UserInterface
         }
 
         var result = Dialog.FileOpen("vmu,bin,vms", defaultPath: null);
+        if (result.IsOk)
+        {
+            _game.LoadAndStartVmsOrVmuFile(presenter, result.Path);
+        }
+    }
+
+    internal void OpenFolderDialog(VmuPresenter presenter)
+    {
+        var vmu = presenter.Vmu;
+        if (vmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.OpenFolder, State: ConfirmationState.Confirmed })
+        {
+            ShowConfirmCommandDialog(PendingCommandKind.OpenFolder, presenter);
+            return;
+        }
+
+        var result = Dialog.FolderPicker(defaultPath: null);
         if (result.IsOk)
         {
             _game.LoadAndStartVmsOrVmuFile(presenter, result.Path);
@@ -614,7 +631,7 @@ partial class UserInterface
             }
 
             ImGui.Separator();
-            using (new DisabledScope(vmu.LoadedFilePath is null || vmu.IsOtherVmuConnected))
+            using (new DisabledScope(vmu.LoadedPath is null || vmu.IsOtherVmuConnected))
             {
                 if (ImGui.MenuItem("Save State"))
                     SaveStateWithThumbnail(presenter);
@@ -690,7 +707,7 @@ partial class UserInterface
 
     private void UpdateThumbnail(Vmu vmu, SaveStateInfo stateInfo)
     {
-        var filePath = vmu.LoadedFilePath is null ? null : Vmu.GetSaveStatePath(vmu.LoadedFilePath, id: _game.Configuration.CurrentSaveStateSlot.ToString());
+        var filePath = vmu.LoadedPath is null ? null : Vmu.GetSaveStatePath(vmu.LoadedPath, id: _game.Configuration.CurrentSaveStateSlot.ToString());
 
         // thumbnail up to date
         if (stateInfo.StateFilePath == filePath)
@@ -742,9 +759,9 @@ partial class UserInterface
         ImGui.BeginMenuBar();
         if (ImGui.BeginMenu(vmu.HasUnsavedChanges ? "* File" : "File"))
         {
-            if (vmu.LoadedFilePath is not null)
+            if (vmu.LoadedPath is not null)
             {
-                ImGui.TextUnformatted(Path.GetFileName(vmu.LoadedFilePath.AsSpan()));
+                ImGui.TextUnformatted(Path.GetFileName(vmu.LoadedPath.AsSpan()));
                 ImGui.Separator();
             }
 
@@ -817,6 +834,31 @@ partial class UserInterface
         if (ImGui.MenuItem("Open"))
             OpenVmuDialog(presenter);
 
+        if (ImGui.MenuItem("Save As"))
+        {
+            var result = Dialog.FileSave(filterList: "vmu,bin", defaultPath: null);
+            if (result.IsOk)
+            {
+                _game.SaveVmuFileAs(presenter.Vmu, result.Path);
+            }
+        }
+
+        ImGui.Separator();
+
+        if (ImGui.MenuItem("Open Folder"))
+            OpenFolderDialog(presenter);
+
+        if (ImGui.MenuItem("Save As Folder"))
+        {
+            var result = Dialog.FolderPicker(defaultPath: null);
+            if (result.IsOk)
+            {
+                _game.SaveVmuAsFolder(presenter.Vmu, result.Path);
+            }
+        }
+
+        ImGui.Separator();
+
         var (displayFileNames, recentFilePaths) = calcRecentFilesInfo();
         if (ImGui.BeginMenu("Open Recent", enabled: recentFilePaths.Any()))
         {
@@ -832,15 +874,6 @@ partial class UserInterface
             }
 
             ImGui.EndMenu();
-        }
-
-        if (ImGui.MenuItem("Save As"))
-        {
-            var result = Dialog.FileSave(filterList: "vmu,bin", defaultPath: null);
-            if (result.IsOk)
-            {
-                _game.SaveVmuFileAs(presenter.Vmu, result.Path);
-            }
         }
 
         (string[] displayFileNames, ImmutableArray<string> recentFiles) calcRecentFilesInfo()
@@ -1794,7 +1827,7 @@ partial class UserInterface
         var title = PendingCommand.Kind switch
         {
             PendingCommandKind.NewVmu => "Create new VMU without saving?",
-            PendingCommandKind.OpenVmu or PendingCommandKind.OpenRecent => "Open without saving?",
+            PendingCommandKind.OpenVmu or PendingCommandKind.OpenFolder or PendingCommandKind.OpenRecent => "Open without saving?",
             PendingCommandKind.Reset when !_game.UseSecondaryVmu => "Reset?",
             PendingCommandKind.Reset when PendingCommand.VmuPresenter == _game.PrimaryVmuPresenter => "Reset slot 1?",
             PendingCommandKind.Reset => "Reset slot 2?",
@@ -1813,7 +1846,7 @@ partial class UserInterface
             var confirmLabel = PendingCommand.Kind switch
             {
                 PendingCommandKind.NewVmu => "Create",
-                PendingCommandKind.OpenVmu or PendingCommandKind.OpenRecent => "Open",
+                PendingCommandKind.OpenVmu or PendingCommandKind.OpenFolder or PendingCommandKind.OpenRecent => "Open",
                 PendingCommandKind.Reset => "Reset",
                 PendingCommandKind.Exit => "Exit",
                 _ => throw new InvalidOperationException(),
@@ -1857,6 +1890,10 @@ partial class UserInterface
                     break;
                 case PendingCommandKind.OpenVmu:
                     OpenVmuDialog(PendingCommand.VmuPresenter ?? throw new InvalidOperationException());
+                    PendingCommand = default;
+                    break;
+                case PendingCommandKind.OpenFolder:
+                    OpenFolderDialog(PendingCommand.VmuPresenter ?? throw new InvalidOperationException());
                     PendingCommand = default;
                     break;
                 case PendingCommandKind.OpenRecent:
