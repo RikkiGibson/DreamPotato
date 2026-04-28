@@ -156,6 +156,7 @@ public class Game1 : Game
         {
             args.Cancel = true;
             _userInterface.ShowConfirmCommandDialog(PendingCommandKind.Exit, vmuPresenter: null);
+            return;
         }
 
         PrimaryVmu.FlushFileSystem();
@@ -217,7 +218,10 @@ public class Game1 : Game
         {
             var (ok, error) = vmu.LoadVmsFolder(filePath, date, autoInitializeRtcDate: Configuration.AutoInitializeDate);
             if (!ok && error is { })
+            {
                 _userInterface.ShowToast(presenter, error);
+                return;
+            }
         }
         else if (extension.Equals(".vms", StringComparison.OrdinalIgnoreCase))
         {

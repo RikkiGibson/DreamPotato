@@ -280,10 +280,6 @@ internal class FileSystem
         dest[0x7] = (byte)date.DayOfWeek; // week_day: 0(Mon)-6(Sun)
     }
 
-
-    // Note: this only works on a newly initialized file system.
-    // Possibly in future will support more generalized file I/O operations.
-    // At that point though why not just expose it as a .vms/.vmi folder a la Dolphin's .gci folder.
     public (bool ok, string? errorMessage) TryWriteGameFile(ReadOnlySpan<byte> gameFileData, string onDiskFileName, Memory<byte> onVmuFileName, DateTimeOffset date, FileCopyProtection copyProtection)
     {
         if (gameFileData.Length == 0)
@@ -677,7 +673,7 @@ internal class FileSystem
             var onVmuFileName = entryToWrite.NameString;
             var vmiFileInfo = vmiFilesByVmuFileName.TryGetValue(entryToWrite.NameString, out var existingInfo)
                 ? existingInfo
-                : new FileInfo(Path.Combine(vmsFolder.FullName, Path.ChangeExtension(onVmuFileName, ".vmi"))); // new file
+                : new FileInfo(Path.Combine(vmsFolder.FullName, $"{onVmuFileName}.vmi")); // new file
 
             var vmiInfo = CreateVmiInfo(entryToWrite);
             using var vmiFileStream = vmiFileInfo.Create();

@@ -561,6 +561,9 @@ public class Cpu
                     if (VmuFileHandle is null)
                         HasUnsavedChanges = true;
 
+                    var blockNumber = (message.AdditionalWords[1] >> 24) & 0xff;
+                    FileSystem.OnFlashModified(blockNumber * FileSystem.BlockSize, DateTimeOffset.Now);
+
                     break;
                 case (MapleMessageType.CompleteWrite, MapleFunction.Storage):
                     // Do nothing, allow timeout counter to turn off flash icon.
