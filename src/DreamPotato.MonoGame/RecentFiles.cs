@@ -53,6 +53,7 @@ public record RecentFilesInfo
 
     public void Save()
     {
+        Directory.CreateDirectory(Vmu.UserDataFolder);
         using var fileStream = File.Open(FilePath, FileMode.Create);
         JsonSerializer.Serialize(fileStream, this, RecentFilesInfoJsonSerializerContext.Default.RecentFilesInfo);
     }
