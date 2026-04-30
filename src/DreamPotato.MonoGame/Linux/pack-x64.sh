@@ -35,8 +35,9 @@ if [ ! -x "$polyfill_glibc" ]; then
     fi
 
     git init "$artifacts/tools/polyfill-glibc-src"
-    git -C "$artifacts/tools/polyfill-glibc-src" fetch --depth 1 https://github.com/corsix/polyfill-glibc dd59051
-    git -C "$artifacts/tools/polyfill-glibc-src" checkout FETCH_HEAD
+    git -C "$artifacts/tools/polyfill-glibc-src" remote add origin https://github.com/corsix/polyfill-glibc
+    git -C "$artifacts/tools/polyfill-glibc-src" fetch origin dd59051faaa10ee63c1b96f1b47bf9fcd3770ee2
+    git -C "$artifacts/tools/polyfill-glibc-src" checkout dd59051faaa10ee63c1b96f1b47bf9fcd3770ee2
     "$ninja_bin" -C "$artifacts/tools/polyfill-glibc-src" polyfill-glibc
     cp "$artifacts/tools/polyfill-glibc-src/polyfill-glibc" "$polyfill_glibc"
     rm -rf "$artifacts/tools/polyfill-glibc-src"
