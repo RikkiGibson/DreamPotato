@@ -3,9 +3,6 @@ using System.Diagnostics;
 
 using DreamPotato.Core.SFRs;
 
-// note that these also work on unix despite the name
-using Microsoft.Win32.SafeHandles;
-
 namespace DreamPotato.Core;
 
 [DebuggerDisplay("{GetDebuggerDisplay(),nq}")]
@@ -48,35 +45,6 @@ public class Cpu
         LazyDebugInfo = new(this);
         return LazyDebugInfo;
     }
-
-    internal event Action? UnsavedChangesDetected;
-    internal bool HasUnsavedChanges
-    {
-        get;
-        set
-        {
-            var isNewUnsavedChanges = !field && value;
-            field = value;
-            if (isNewUnsavedChanges)
-                UnsavedChangesDetected?.Invoke();
-        }
-    }
-
-    internal FileStream? VmuFileWriteStream
-    {
-        private get;
-        set
-        {
-            field?.Dispose();
-            field = value;
-        }
-    }
-
-    /// <summary>
-    /// Allows reading/writing to the VMU file in a thread-safe manner.
-    /// </summary>
-    internal SafeFileHandle? VmuFileHandle
-        => VmuFileWriteStream?.SafeFileHandle;
 
     /// <summary>
     /// May point to either ROM (BIOS), flash memory bank 0 or bank 1.
@@ -562,7 +530,7 @@ public class Cpu
                         HasUnsavedChanges = true;
 
                     var blockNumber = (message.AdditionalWords[1] >> 24) & 0xff;
-                    FileSystem.OnFlashModified(blockNumber * FileSystem.BlockSize, DateTimeOffset.Now);
+                    FileSystem.WriteFlash(blockNumber * FileSystem.BlockSize, DateTimeOffset.Now);
 
                     break;
                 case (MapleMessageType.CompleteWrite, MapleFunction.Storage):
@@ -2088,11 +2056,10 @@ public class Cpu
             LazyDebugInfo?.CurrentBankInfo.ClearInstruction(a16);
 
             // TODO2: Should probably abstract this.
-            FileSystem.OnFlashModified(a17, DateTime.Now);
+            FileSystem.WriteFlash(a17, DateTime.Now);
             if (VmuFileHandle is not null)
             {
-                var absoluteAddress = (SFRs.FPR.FlashAddressBank ? (1 << 16) : 0) | a16;
-                RandomAccess.Write(VmuFileHandle, [value], absoluteAddress);
+                RandomAccess.Write(VmuFileHandle, [value], a17);
             }
             else
             {

@@ -2,15 +2,18 @@ using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Text;
 
+using Microsoft.Win32.SafeHandles;
+
 namespace DreamPotato.Core;
 
 /// <summary>
-/// Performs file system operations on flash memory.
-/// NOTE: does not own its state. The same flash memory buffers used by <see cref="Cpu"/> are shared here.
+/// Exposes the VMU file system.
+/// Mirrors changes to the VMU contents to the host file system.
 /// </summary>
 internal class FileSystem
 {
-    private readonly byte[] flash;
+    /// <summary>Note: this is the same instance as <see cref="Cpu.Flash"/>.</summary>
+    private readonly byte[] _flash;
 
     /// <summary>
     /// Records the IDs of FAT blocks whose contents were modified.
@@ -27,9 +30,39 @@ internal class FileSystem
     /// <summary>Records the time at which VMS folder I/O should be flushed.</summary>
     private DateTimeOffset _flushDeadline = DateTimeOffset.MaxValue;
 
+    /// <summary>
+    /// The file stream for the currently loaded VMU image (.vmu/.bin).
+    /// Note: this isn't used if a .vms or a folder is open.
+    /// </summary>
+    public FileStream? VmuFileWriteStream { private get; set; }
+
+    /// <summary>
+    /// Allows reading/writing to the VMU file in a thread-safe manner.
+    /// See <see cref="VmuFileWriteStream"/>.
+    /// </summary>
+    public SafeFileHandle? VmuFileHandle => VmuFileWriteStream?.SafeFileHandle;
+
+    internal event Action? UnsavedChangesDetected;
+
+    /// <summary>
+    /// Indicates whether the current VMU session has changes that aren't saved to disk.
+    /// This can generally be true when a '.vms' file or no file is being used, but, otherwise we will mirror the changes automatically and not raise this.
+    /// </summary>
+    internal bool HasUnsavedChanges
+    {
+        get;
+        private set
+        {
+            var isNewUnsavedChanges = !field && value;
+            field = value;
+            if (isNewUnsavedChanges)
+                UnsavedChangesDetected?.Invoke();
+        }
+    }
+
     public FileSystem(byte[] flash)
     {
-        this.flash = flash;
+        _flash = flash;
         UpdateDirectoryMirror();
     }
 
@@ -107,7 +140,7 @@ internal class FileSystem
 
     private void UpdateDirectoryMirror()
     {
-        var newTable = flash.AsSpan(DirectoryTableFirstBlockId * BlockSize, length: DirectoryTableSizeBlocks * BlockSize);
+        var newTable = _flash.AsSpan(DirectoryTableFirstBlockId * BlockSize, length: DirectoryTableSizeBlocks * BlockSize);
         Debug.Assert(newTable.Length == _directoryMirror.Length);
         newTable.CopyTo(_directoryMirror);
     }
@@ -115,8 +148,8 @@ internal class FileSystem
     public void InitializeFileSystem(DateTimeOffset date)
     {
         // Note that multi-byte values are little-endian encoded!
-        Debug.Assert(flash.Length == Cpu.FlashSize);
-        Array.Clear(flash);
+        Debug.Assert(_flash.Length == Cpu.FlashSize);
+        Array.Clear(_flash);
 
         initializeRootBlock();
         initializeFAT();
@@ -314,7 +347,7 @@ internal class FileSystem
         fatBlock[lastBlockId * 2 + 1] = FAT_LastInFileMsb;
 
         // Game data itself must be written to start of bank 0
-        gameFileData.CopyTo(flash);
+        gameFileData.CopyTo(_flash);
 
         // Create a directory entry
         if (!tryGetFreeDirectoryEntry(out var directoryEntry))
@@ -563,14 +596,14 @@ internal class FileSystem
     {
         var rangeStart = blockId * BlockSize;
         var rangeEnd = (blockId + 1) * BlockSize;
-        return flash.AsSpan(rangeStart..rangeEnd);
+        return _flash.AsSpan(rangeStart..rangeEnd);
     }
 
     internal Memory<byte> GetBlockMemory(int blockId)
     {
         var rangeStart = blockId * BlockSize;
         var rangeEnd = (blockId + 1) * BlockSize;
-        return flash.AsMemory(rangeStart..rangeEnd);
+        return _flash.AsMemory(rangeStart..rangeEnd);
     }
 
     internal static byte ToBinaryCodedDecimal(int value)
@@ -594,8 +627,12 @@ internal class FileSystem
         return (byte)sum;
     }
 
-    internal void OnFlashModified(int offset, DateTimeOffset now)
+    internal void WriteFlash(int offset, ReadOnlySpan<byte> content, DateTimeOffset now)
     {
+        // TODO2: I think we basically want all modifications to cpu's copy of the flash, to flow through here.
+        // What are we going to do when maple wants to write the flash? Maybe we will just let maple write to its copy instantly, like it's a cache, and demand to sync back over here to actually persist things?
+        
+
         var blockId = offset / BlockSize;
         Debug.Assert((ushort)blockId == blockId);
         _changedBlockIds.Add((ushort)blockId);
