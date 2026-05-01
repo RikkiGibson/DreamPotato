@@ -111,7 +111,7 @@ public class FileSystemTests : IDisposable
                | 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F 
             00 | CC 80 00 00 48 65 6C 6C 6F 57 6F 72 6C 64 00 00 
             01 | 20 18 08 18 07 22 16 06 04 00 01 00 00 00 00 00 
-            """, ((ReadOnlySpan<byte>)directoryEntry[0..FileSystem.DirectoryEntrySize]).AsHexBlock());
+            """, ((ReadOnlySpan<byte>)directoryEntry[0..DirectoryEntry.Size]).AsHexBlock());
     }
 
     [Fact]

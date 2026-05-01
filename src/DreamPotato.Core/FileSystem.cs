@@ -40,16 +40,13 @@ internal class FileSystem
 
     // user region: where user visible files are stored.
     private const int UserRegionSizeBlocks = 200;
-    private const int UserRegionSizeBytes = UserRegionSizeBlocks * BlockSize; // 100kb
     private const int UserRegionLastBlockId = UserRegionSizeBlocks - 1;
 
     // hidden region: extra storage which is used on-demand to store user files when blocks in the user region being to malfunction.
-    private const int HiddenRegionSizeBlocks = 31;
-    private const int HiddenRegionSizeBytes = HiddenRegionSizeBlocks * BlockSize;
-    internal const int HiddenRegionLastBlockId = DirectoryTableFirstBlockId - 1;
+    private const int HiddenRegionSizeBlocks = 31; // TODO2: this seems likely wrong
 
     internal const int BlockSize = 0x200; // 512b
-    internal const int BlockIdSize = 2;
+    internal const int BlockIdSize = 2; // TODO2: probably should use this instead of literal 2 in some places
     private const int BlocksCount = VolumeSizeBytes / BlockSize; // 256
 
     internal const byte RootBlockId = BlocksCount - 1;
@@ -57,26 +54,6 @@ internal class FileSystem
     internal const byte DirectoryTableLastBlockId = BlocksCount - 3;
     private const int DirectoryTableSizeBlocks = 13;
     internal const byte DirectoryTableFirstBlockId = DirectoryTableLastBlockId - DirectoryTableSizeBlocks + 1;
-
-    internal const int DirectoryEntrySize = 0x20; // 32
-    internal const int DirectoryFileTypeOffset = 0;
-    internal const int DirectoryCopyProtectionOffset = 1;
-    internal const int DirectoryStartFATOffset = 2;
-    internal const int DirectoryFilenameOffset = 4;
-    internal const int DirectoryDateOffset = 0x10;
-    internal const int DirectoryDateLength = 8;
-
-    internal const int DirectorySizeInBlocksOffset = 0x18;
-    internal const int DirectoryVmsHeaderBlockOffset = 0x1a;
-
-    private const byte DirectoryFileTypeNone = 0;
-    private const byte DirectoryFileTypeData = 0x33;
-    private const byte DirectoryFileTypeGame = 0xcc;
-
-    private const byte DirectoryEntryCopyProtected = 0xff;
-    private const byte DirectoryEntryNotCopyProtected = 0;
-
-    internal const int DirectoryEntryFileNameLength = 12;
 
     private const int Magic = 0x55;
 
@@ -163,7 +140,7 @@ internal class FileSystem
             rootBlock[0x4a] = DirectoryTableLastBlockId; // DIR last. Last block of the Directory table, which holds file metadata
             rootBlock[0x4b] = 0;
 
-            Debug.Assert(DirectoryTableSizeBlocks == Math.Ceiling((double)UserRegionSizeBlocks * DirectoryEntrySize / BlockSize));
+            Debug.Assert(DirectoryTableSizeBlocks == Math.Ceiling((double)UserRegionSizeBlocks * DirectoryEntry.Size / BlockSize));
             rootBlock[0x4c] = DirectoryTableSizeBlocks; // DIR size. How many blocks does the Directory table take up.
             rootBlock[0x4d] = 0;
 
@@ -288,7 +265,7 @@ internal class FileSystem
         if (gameFileData.Length > Cpu.InstructionBankSize)
             throw new ArgumentException(null, paramName: nameof(gameFileData));
 
-        if (onVmuFileName.Length > DirectoryEntryFileNameLength)
+        if (onVmuFileName.Length > DirectoryEntry.FileNameLength)
             throw new ArgumentException(null, paramName: nameof(onVmuFileName));
 
         // Verify sufficient free space
@@ -317,70 +294,28 @@ internal class FileSystem
         gameFileData.CopyTo(flash);
 
         // Create a directory entry
-        if (!tryGetFreeDirectoryEntry(out var directoryEntry))
+        var directoryEntry = EnumerateDirectoryTable().FirstOrDefault(entry => entry.Type == FileType.None);
+        if (!directoryEntry.HasValue)
             return (false, $"{onDiskFileName}: The file system directory is full.");
 
-        directoryEntry[DirectoryFileTypeOffset] = DirectoryFileTypeGame;
-        directoryEntry[DirectoryCopyProtectionOffset] = (byte)copyProtection;
-
-        directoryEntry[DirectoryStartFATOffset] = 0; // Start FAT: first block containing file data. Should be same as "Game First" in the root block.
-        directoryEntry[DirectoryStartFATOffset + 1] = 0;
-
-        var directoryEntryFilename = directoryEntry.Slice(start: DirectoryFilenameOffset, length: DirectoryEntryFileNameLength);
-        directoryEntryFilename.Clear();
-
-        onVmuFileName.Span.CopyTo(directoryEntry.Slice(start: DirectoryFilenameOffset, length: DirectoryEntryFileNameLength));
-        WriteBcdDate(directoryEntry.Slice(DirectoryDateOffset, length: DirectoryDateLength), date);
-
-        var sizeInBlocks = (gameFileData.Length + BlockSize - 1) / BlockSize; // integer division rounding up
-        directoryEntry[DirectorySizeInBlocksOffset] = (byte)sizeInBlocks; // Size in blocks
-        directoryEntry[DirectorySizeInBlocksOffset + 1] = 0;
-
-        directoryEntry[DirectoryVmsHeaderBlockOffset] = 1; // Location of the VMS header within the file. (Ignored for game files?)
-        directoryEntry[DirectoryVmsHeaderBlockOffset + 1] = 0;
-
-        // Unused
-        directoryEntry.Slice(0x1c, length: 4).Clear();
+        directoryEntry.Type = FileType.Game;
+        directoryEntry.CopyProtection = copyProtection;
+        directoryEntry.StartFAT = 0;
+        onVmuFileName.CopyTo(directoryEntry.Name);
+        directoryEntry.DateTimeOffset = date;
+        directoryEntry.SizeInBlocks = (ushort)((gameFileData.Length + BlockSize - 1) / BlockSize);
+        directoryEntry.VmsHeaderBlockOffset = 1;
 
         return (true, null);
-
-        bool tryGetFreeDirectoryEntry(out Span<byte> foundEntry)
-        {
-            // Scan directory blocks starting from the end, toward the start.
-            for (var blockId = DirectoryTableLastBlockId; blockId >= DirectoryTableFirstBlockId; blockId--)
-            {
-                var directoryBlock = GetBlock(blockId);
-                // Scan from start to end within a block.
-                for (var offset = 0; offset < BlockSize; offset += DirectoryEntrySize)
-                {
-                    var directoryEntry = directoryBlock.Slice(start: offset, length: DirectoryEntrySize);
-                    if (directoryEntry[0] == DirectoryFileTypeNone)
-                    {
-                        foundEntry = directoryEntry;
-                        return true;
-                    }
-                }
-            }
-
-            foundEntry = default;
-            return false;
-        }
     }
 
     public void ReadAllFiles(DirectoryInfo destDirectory)
     {
-        // Scan directory blocks starting from the end, toward the start.
-        for (var blockId = DirectoryTableLastBlockId; blockId >= DirectoryTableFirstBlockId; blockId--)
+        foreach (var directoryEntry in EnumerateDirectoryTable())
         {
-            var directoryBlock = GetBlockMemory(blockId);
-            // Scan from start to end within a block.
-            for (var offset = 0; offset < BlockSize; offset += DirectoryEntrySize)
+            if (directoryEntry.Type != FileType.None)
             {
-                var directoryEntry = new DirectoryEntry(directoryBlock.Slice(start: offset, length: DirectoryEntrySize));
-                if (directoryEntry.Type != FileType.None)
-                {
-                    readFile(directoryEntry);
-                }
+                readFile(directoryEntry);
             }
         }
 
@@ -470,7 +405,8 @@ internal class FileSystem
                 continue;
             }
 
-            if (getNewDirectoryEntry() is not { } directoryEntry)
+            var directoryEntry = EnumerateDirectoryTable().FirstOrDefault(entry => entry.Type == FileType.None);
+            if (!directoryEntry.HasValue)
                 return (false, $"{vmsFileInfo.Name}: The file system directory is full.");
 
             if (tryWriteDataFile(directoryEntry, vmsFileInfo.Name, vmsFileBytes, vmiInfo) is (false, var error1))
@@ -478,23 +414,6 @@ internal class FileSystem
         }
 
         return (true, null);
-
-        DirectoryEntry? getNewDirectoryEntry()
-        {
-            for (var blockId = DirectoryTableLastBlockId; blockId >= DirectoryTableFirstBlockId; blockId--)
-            {
-                var directoryBlock = GetBlockMemory(blockId);
-                // Scan from start to end within a block.
-                for (var offset = 0; offset < BlockSize; offset += DirectoryEntrySize)
-                {
-                    var directoryEntry = new DirectoryEntry(directoryBlock.Slice(start: offset, length: DirectoryEntrySize));
-                    if (directoryEntry.Type == FileType.None)
-                        return directoryEntry;
-                }
-            }
-
-            return null;
-        }
 
         (bool ok, string? error) tryWriteDataFile(DirectoryEntry directoryEntry, string onDiskFileName, ReadOnlySpan<byte> vmsFileBytes, VmiInfo vmiInfo)
         {
@@ -698,9 +617,9 @@ internal class FileSystem
         {
             var directoryBlock = GetBlockMemory(blockId);
             // Scan from start to end within a block.
-            for (var offset = 0; offset < BlockSize; offset += DirectoryEntrySize)
+            for (var offset = 0; offset < BlockSize; offset += DirectoryEntry.Size)
             {
-                var directoryEntry = new DirectoryEntry(directoryBlock.Slice(start: offset, length: DirectoryEntrySize));
+                var directoryEntry = new DirectoryEntry(directoryBlock.Slice(start: offset, length: DirectoryEntry.Size));
                 yield return directoryEntry;
             }
         }
@@ -712,9 +631,9 @@ internal class FileSystem
         {
             var directoryBlock = _directoryMirror.AsMemory(blockId * BlockSize, length: BlockSize);
             // Scan from start to end within a block.
-            for (var offset = 0; offset < BlockSize; offset += DirectoryEntrySize)
+            for (var offset = 0; offset < BlockSize; offset += DirectoryEntry.Size)
             {
-                var directoryEntry = new DirectoryEntry(directoryBlock.Slice(start: offset, length: DirectoryEntrySize));
+                var directoryEntry = new DirectoryEntry(directoryBlock.Slice(start: offset, length: DirectoryEntry.Size));
                 yield return directoryEntry;
             }
         }
@@ -726,13 +645,15 @@ internal readonly struct DirectoryEntry
 {
     public DirectoryEntry(Memory<byte> data)
     {
-        if (data.Length != DirectoryEntrySize)
+        if (data.Length != Size)
             throw new ArgumentException(null, nameof(data));
 
         _data = data;
     }
 
     private readonly Memory<byte> _data;
+
+    internal bool HasValue => _data.Length == Size;
 
     internal FileType Type
     {
@@ -752,7 +673,7 @@ internal readonly struct DirectoryEntry
         set => BinaryPrimitives.WriteUInt16LittleEndian(_data.Span.Slice(DirectoryStartFATOffset), value);
     }
 
-    internal Memory<byte> Name => _data.Slice(DirectoryFilenameOffset, length: DirectoryEntryFileNameLength);
+    internal Memory<byte> Name => _data.Slice(DirectoryFilenameOffset, length: FileNameLength);
     internal string NameString => FileSystem.Encoding.GetString(Name.Span).Trim();
 
     internal Memory<byte> DateBcd => _data.Slice(DirectoryDateOffset, DirectoryDateLength);
@@ -775,7 +696,7 @@ internal readonly struct DirectoryEntry
         set => BinaryPrimitives.WriteUInt16LittleEndian(_data.Span.Slice(DirectoryVmsHeaderBlockOffset), value);
     }
 
-    internal const int DirectoryEntrySize = 0x20; // 32
+    internal const int Size = 0x20; // 32
     internal const int DirectoryFileTypeOffset = 0;
     internal const int DirectoryCopyProtectionOffset = 1;
     internal const int DirectoryStartFATOffset = 2;
@@ -786,7 +707,7 @@ internal readonly struct DirectoryEntry
     internal const int DirectorySizeInBlocksOffset = 0x18;
     internal const int DirectoryVmsHeaderBlockOffset = 0x1a;
 
-    internal const int DirectoryEntryFileNameLength = 12;
+    internal const int FileNameLength = 12;
 }
 
 internal enum FileCopyProtection : byte

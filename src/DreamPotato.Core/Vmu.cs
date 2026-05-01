@@ -132,7 +132,7 @@ public class Vmu
 
         var gameData = File.ReadAllBytes(filePath);
         var fileName = Path.GetFileNameWithoutExtension(filePath);
-        fileName = fileName.Substring(0, Math.Min(FileSystem.DirectoryEntryFileNameLength, fileName.Length));
+        fileName = fileName.Substring(0, Math.Min(DirectoryEntry.FileNameLength, fileName.Length));
         if (FileSystem.TryWriteGameFile(gameData, fileName, FileSystem.Encoding.GetBytes(fileName), date, FileCopyProtection.NotCopyProtected) is (false, var error))
             throw new InvalidOperationException(error);
 
