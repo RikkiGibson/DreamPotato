@@ -480,16 +480,12 @@ internal class FileSystem
 
     internal Span<byte> GetBlock(int blockId)
     {
-        var rangeStart = blockId * BlockSize;
-        var rangeEnd = (blockId + 1) * BlockSize;
-        return flash.AsSpan(rangeStart..rangeEnd);
+        return flash.AsSpan(blockId * BlockSize, length: BlockSize);
     }
 
     internal Memory<byte> GetBlockMemory(int blockId)
     {
-        var rangeStart = blockId * BlockSize;
-        var rangeEnd = (blockId + 1) * BlockSize;
-        return flash.AsMemory(rangeStart..rangeEnd);
+        return flash.AsMemory(blockId * BlockSize, length: BlockSize);
     }
 
     internal static byte ToBinaryCodedDecimal(int value)
