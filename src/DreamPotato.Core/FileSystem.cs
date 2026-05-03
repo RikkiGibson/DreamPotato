@@ -6,10 +6,10 @@ namespace DreamPotato.Core;
 
 /// <summary>
 /// Performs file system operations on flash memory.
-/// NOTE: does not own its state. The same flash memory buffers used by <see cref="Cpu"/> are shared here.
 /// </summary>
 internal class FileSystem
 {
+    /// <summary>Same instance as <see cref="Cpu.Flash"/>.</summary>
     private readonly byte[] flash;
 
     /// <summary>
@@ -31,6 +31,19 @@ internal class FileSystem
     {
         this.flash = flash;
         UpdateDirectoryMirror();
+    }
+
+    public void SetUnbacked(string filePath)
+    {
+        // TODO2: for each of these changes, flush the current state, then update to the new state.
+    }
+
+    public void SetBackingVmuFile(string filePath, FileStream vmuFileStream)
+    {
+    }
+
+    public void SetBackingFolder(string folderPath)
+    {
     }
 
     private const int ShiftJisCodePage = 932;
@@ -717,6 +730,18 @@ internal readonly struct DirectoryEntry
 
     internal const int Offset_SizeInBlocks = 0x18;
     internal const int Offset_VmsHeaderBlockOffset = 0x1a;
+
+    private enum BackingMode
+    {
+        /// <summary>Changes are not saved anywhere. Used for a '.vms' file or no file.</summary>
+        None,
+
+        /// <summary>Changes are saved to a backing '.vmu'/'.bin' file.</summary>
+        BackingFile,
+
+        /// <summary>Changes are saved to a backing folder which mirrors the VMU's file system.</summary>
+        BackingFolder
+    }
 }
 
 internal enum FileCopyProtection : byte
