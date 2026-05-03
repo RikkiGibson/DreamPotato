@@ -657,26 +657,26 @@ internal readonly struct DirectoryEntry
 
     internal FileType Type
     {
-        get => (FileType)_data.Span[DirectoryFileTypeOffset];
-        set => _data.Span[DirectoryFileTypeOffset] = (byte)value;
+        get => (FileType)_data.Span[Offset_FileType];
+        set => _data.Span[Offset_FileType] = (byte)value;
     }
 
     internal FileCopyProtection CopyProtection
     {
-        get => (FileCopyProtection)_data.Span[DirectoryCopyProtectionOffset];
-        set => _data.Span[DirectoryCopyProtectionOffset] = (byte)value;
+        get => (FileCopyProtection)_data.Span[Offset_CopyProtection];
+        set => _data.Span[Offset_CopyProtection] = (byte)value;
     }
 
     internal ushort StartFAT
     {
-        get => BinaryPrimitives.ReadUInt16LittleEndian(_data.Span.Slice(DirectoryStartFATOffset));
-        set => BinaryPrimitives.WriteUInt16LittleEndian(_data.Span.Slice(DirectoryStartFATOffset), value);
+        get => BinaryPrimitives.ReadUInt16LittleEndian(_data.Span.Slice(Offset_StartFAT));
+        set => BinaryPrimitives.WriteUInt16LittleEndian(_data.Span.Slice(Offset_StartFAT), value);
     }
 
-    internal Memory<byte> Name => _data.Slice(DirectoryFilenameOffset, length: FileNameLength);
+    internal Memory<byte> Name => _data.Slice(Offset_Filename, length: FileNameLength);
     internal string NameString => FileSystem.Encoding.GetString(Name.Span).Trim();
 
-    internal Memory<byte> DateBcd => _data.Slice(DirectoryDateOffset, DirectoryDateLength);
+    internal Memory<byte> DateBcd => _data.Slice(Offset_Date, DateLength);
 
     internal DateTimeOffset DateTimeOffset
     {
@@ -686,28 +686,29 @@ internal readonly struct DirectoryEntry
 
     internal ushort SizeInBlocks
     {
-        get => BinaryPrimitives.ReadUInt16LittleEndian(_data.Span.Slice(DirectorySizeInBlocksOffset));
-        set => BinaryPrimitives.WriteUInt16LittleEndian(_data.Span.Slice(DirectorySizeInBlocksOffset), value);
+        get => BinaryPrimitives.ReadUInt16LittleEndian(_data.Span.Slice(Offset_SizeInBlocks));
+        set => BinaryPrimitives.WriteUInt16LittleEndian(_data.Span.Slice(Offset_SizeInBlocks), value);
     }
 
     internal ushort VmsHeaderBlockOffset
     {
-        get => BinaryPrimitives.ReadUInt16LittleEndian(_data.Span.Slice(DirectoryVmsHeaderBlockOffset));
-        set => BinaryPrimitives.WriteUInt16LittleEndian(_data.Span.Slice(DirectoryVmsHeaderBlockOffset), value);
+        get => BinaryPrimitives.ReadUInt16LittleEndian(_data.Span.Slice(Offset_VmsHeaderBlockOffset));
+        set => BinaryPrimitives.WriteUInt16LittleEndian(_data.Span.Slice(Offset_VmsHeaderBlockOffset), value);
     }
 
     internal const int Size = 0x20; // 32
-    internal const int DirectoryFileTypeOffset = 0;
-    internal const int DirectoryCopyProtectionOffset = 1;
-    internal const int DirectoryStartFATOffset = 2;
-    internal const int DirectoryFilenameOffset = 4;
-    internal const int DirectoryDateOffset = 0x10;
-    internal const int DirectoryDateLength = 8;
+    internal const int Offset_FileType = 0;
+    internal const int Offset_CopyProtection = 1;
+    internal const int Offset_StartFAT = 2;
 
-    internal const int DirectorySizeInBlocksOffset = 0x18;
-    internal const int DirectoryVmsHeaderBlockOffset = 0x1a;
-
+    internal const int Offset_Filename = 4;
     internal const int FileNameLength = 12;
+
+    internal const int Offset_Date = 0x10;
+    internal const int DateLength = 8;
+
+    internal const int Offset_SizeInBlocks = 0x18;
+    internal const int Offset_VmsHeaderBlockOffset = 0x1a;
 }
 
 internal enum FileCopyProtection : byte
