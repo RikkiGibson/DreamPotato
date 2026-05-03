@@ -46,7 +46,7 @@ internal class FileSystem
     private const int HiddenRegionSizeBlocks = 31; // TODO2: this seems likely wrong
 
     internal const int BlockSize = 0x200; // 512b
-    internal const int BlockIdSize = 2; // TODO2: probably should use this instead of literal 2 in some places
+    internal const int BlockIdSize = 2;
     private const int BlocksCount = VolumeSizeBytes / BlockSize; // 256
 
     internal const byte RootBlockId = BlocksCount - 1;
@@ -57,13 +57,9 @@ internal class FileSystem
 
     private const int Magic = 0x55;
 
-    const int FAT_Unallocated = 0xfffc;
-    const int FAT_UnallocatedLsb = 0xfc;
-    const int FAT_UnallocatedMsb = 0xff;
+    const ushort FAT_Unallocated = 0xfffc;
 
-    const int FAT_LastInFile = 0xfffa;
-    const int FAT_LastInFileLsb = 0xfa;
-    const int FAT_LastInFileMsb = 0xff;
+    const ushort FAT_LastInFile = 0xfffa;
 
     // offsets for color data within the root block
     const int UsingCustomColor = 0x10;
@@ -165,35 +161,29 @@ internal class FileSystem
 
         void initializeFAT()
         {
-            var fatBlock = GetBlock(FATBlockId);
+            var fatBlock = GetFATBlock();
 
             // mark all blocks unused to start
-            Debug.Assert(fatBlock.Length == BlockSize);
-            for (int i = 0; i < BlockSize;)
+            for (int i = 0; i < FATBlock.Length; i++)
             {
-                fatBlock[i++] = FAT_UnallocatedLsb;
-                fatBlock[i++] = FAT_UnallocatedMsb;
+                fatBlock[i] = FAT_Unallocated;
             }
 
             // mark root block as last in its file
-            fatBlock[RootBlockId * 2] = FAT_LastInFileLsb;
-            fatBlock[RootBlockId * 2 + 1] = FAT_LastInFileMsb;
+            fatBlock[RootBlockId] = FAT_LastInFile;
 
             // mark FAT itself as last in its file
-            fatBlock[FATBlockId * 2] = FAT_LastInFileLsb;
-            fatBlock[FATBlockId * 2 + 1] = FAT_LastInFileMsb;
+            fatBlock[FATBlockId] = FAT_LastInFile;
 
             // directory: mark as growing from end toward start of the volume.
             var directoryStartBlockId = DirectoryTableLastBlockId - DirectoryTableSizeBlocks + 1;
             for (int i = DirectoryTableLastBlockId; i > directoryStartBlockId; i--)
             {
                 // Point to the previous block.
-                fatBlock[i * 2] = (byte)(i - 1);
-                fatBlock[i * 2 + 1] = 0;
+                fatBlock[i] = (ushort)(i - 1);
             }
 
-            fatBlock[directoryStartBlockId * 2] = FAT_LastInFileLsb;
-            fatBlock[directoryStartBlockId * 2 + 1] = FAT_LastInFileMsb;
+            fatBlock[directoryStartBlockId] = FAT_LastInFile;
         }
     }
 
@@ -269,12 +259,11 @@ internal class FileSystem
             throw new ArgumentException(null, paramName: nameof(onVmuFileName));
 
         // Verify sufficient free space
-        var fatBlock = GetBlock(FATBlockId);
+        var fatBlock = GetFATBlock();
         var lastBlockId = (gameFileData.Length + BlockSize - 1) / BlockSize - 1;
         for (int i = 0; i <= lastBlockId; i++)
         {
-            if (fatBlock[i * 2] != FAT_UnallocatedLsb
-                || fatBlock[i * 2 + 1] != FAT_UnallocatedMsb)
+            if (fatBlock[i] != FAT_Unallocated)
             {
                 return (false, $"{onDiskFileName}: Insufficient space");
             }
@@ -283,12 +272,10 @@ internal class FileSystem
         // Update FAT table indicating the game data starts at block 0 and grows toward the end
         for (int i = 0; i < lastBlockId; i++)
         {
-            fatBlock[i * 2] = (byte)(i + 1);
-            fatBlock[i * 2 + 1] = 0;
+            fatBlock[i] = (ushort)(i + 1);
         }
 
-        fatBlock[lastBlockId * 2] = FAT_LastInFileLsb;
-        fatBlock[lastBlockId * 2 + 1] = FAT_LastInFileMsb;
+        fatBlock[lastBlockId] = FAT_LastInFile;
 
         // Game data itself must be written to start of bank 0
         gameFileData.CopyTo(flash);
@@ -322,13 +309,13 @@ internal class FileSystem
         void readFile(DirectoryEntry directoryEntry)
         {
             var outFileName = directoryEntry.NameString;
-            var fatBlock = GetBlock(FATBlockId);
+            var fatBlock = GetFATBlock();
 
             using var vmsFile = File.Open(Path.Combine(destDirectory.FullName, $"{outFileName}.vms"), FileMode.CreateNew);
 
             for (var blockId = directoryEntry.StartFAT;
                 blockId != FAT_LastInFile;
-                blockId = BinaryPrimitives.ReadUInt16LittleEndian(fatBlock.Slice(blockId * 2, length: 2)))
+                blockId = fatBlock[blockId])
             {
                 var block = this.GetBlock(blockId);
                 vmsFile.Write(block);
@@ -420,10 +407,10 @@ internal class FileSystem
             Debug.Assert(!vmiInfo.FileMode.HasFlag(VmuFileMode.Game));
 
             var sizeInBlocks = (ushort)((vmsFileBytes.Length + (BlockSize - 1)) / BlockSize);
-            var fatBlock = GetBlock(FATBlockId);
+            var fatBlock = GetFATBlock();
 
             // Scan to next free data block
-            while (BinaryPrimitives.ReadUInt16LittleEndian(fatBlock.Slice(currentDataBlockId * 2, length: 2)) != FAT_Unallocated)
+            while (fatBlock[currentDataBlockId] != FAT_Unallocated)
             {
                 if (currentDataBlockId == 0)
                     return (false, $"{onDiskFileName}: Insufficient space on VMU");
@@ -439,12 +426,10 @@ internal class FileSystem
 
                 if (i == sizeInBlocks - 1)
                 {
-                    BinaryPrimitives.WriteUInt16LittleEndian(fatBlock.Slice(currentDataBlockId * 2, length: 2), value: FAT_LastInFile);
+                    fatBlock[currentDataBlockId] = FAT_LastInFile;
                     break;
                 }
 
-                // Each FAT entry (indexed by block ID) points to the block ID for the next block
-                // think 'FAT[prevDataBlockId] = currentDataBlockId;'
                 var prevDataBlockId = currentDataBlockId;
 
                 // Scan to next free data block
@@ -454,9 +439,9 @@ internal class FileSystem
                         return (false, $"{onDiskFileName}: Insufficient space on VMU");
 
                     currentDataBlockId--;
-                } while (BinaryPrimitives.ReadUInt16LittleEndian(fatBlock.Slice(currentDataBlockId * 2, length: 2)) != FAT_Unallocated);
+                } while (fatBlock[currentDataBlockId] != FAT_Unallocated);
 
-                BinaryPrimitives.WriteUInt16LittleEndian(fatBlock.Slice(prevDataBlockId * 2, length: 2), value: currentDataBlockId);
+                fatBlock[prevDataBlockId] = currentDataBlockId;
             }
 
             directoryEntry.Type = FileType.Data;
@@ -486,6 +471,33 @@ internal class FileSystem
     internal Memory<byte> GetBlockMemory(int blockId)
     {
         return flash.AsMemory(blockId * BlockSize, length: BlockSize);
+    }
+
+    private FATBlock GetFATBlock() => new FATBlock(GetBlockMemory(FATBlockId));
+
+    private readonly struct FATBlock
+    {
+        public const int Length = BlockSize / BlockIdSize;
+        private readonly Memory<byte> _fatBlock;
+
+        public FATBlock(Memory<byte> fatBlock)
+        {
+            Debug.Assert(fatBlock.Length == BlockSize);
+            _fatBlock = fatBlock;
+        }
+
+        /// <summary>Gets or sets the successor block ID for a given <paramref name="blockId"/>.</summary>
+        public ushort this[int blockId]
+        {
+            get
+            {
+                return BinaryPrimitives.ReadUInt16LittleEndian(_fatBlock.Span.Slice(blockId * BlockIdSize, length: BlockIdSize));
+            }
+            set
+            {
+                BinaryPrimitives.WriteUInt16LittleEndian(_fatBlock.Span.Slice(blockId * BlockIdSize, length: BlockIdSize), value);
+            }
+        }
     }
 
     internal static byte ToBinaryCodedDecimal(int value)
@@ -557,8 +569,8 @@ internal class FileSystem
             if (newEntry.Type == FileType.None)
                 continue;
 
-            var fatBlock = GetBlock(FATBlockId);
-            for (var blockId = newEntry.StartFAT; blockId != FAT_LastInFile; blockId = BinaryPrimitives.ReadUInt16LittleEndian(fatBlock.Slice(blockId * 2, length: 2)))
+            var fatBlock = GetFATBlock();
+            for (var blockId = newEntry.StartFAT; blockId != FAT_LastInFile; blockId = fatBlock[blockId])
             {
                 if (_changedBlockIds.Contains(blockId))
                 {
@@ -595,8 +607,8 @@ internal class FileSystem
             vmiFileStream.Write(vmiInfo.RawData.Span);
 
             using var vmsFile = File.Create(Path.ChangeExtension(vmiFileInfo.FullName, ".vms"));
-            var fatBlock = GetBlock(FATBlockId);
-            for (var blockId = entryToWrite.StartFAT; blockId != FAT_LastInFile; blockId = BinaryPrimitives.ReadUInt16LittleEndian(fatBlock.Slice(blockId * 2, length: 2)))
+            var fatBlock = GetFATBlock();
+            for (var blockId = entryToWrite.StartFAT; blockId != FAT_LastInFile; blockId = fatBlock[blockId])
             {
                 vmsFile.Write(GetBlock(blockId));
             }
