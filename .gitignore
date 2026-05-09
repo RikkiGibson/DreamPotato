@@ -3,6 +3,8 @@
 ##
 ## Get latest from `dotnet new gitignore`
 
+*.lscache
+
 # Data
 **/Data/*.bin
 **/Data/*.debug.json
