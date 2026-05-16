@@ -266,6 +266,32 @@ public class MapleTests
     }
 
     [Fact]
+    public void OpenFile_01()
+    {
+        var cpu = new Cpu() { DreamcastSlot = DreamcastSlot.Slot1 };
+        var messageBroker = cpu.MapleMessageBroker;
+
+        cpu.Reset();
+        cpu.ConnectDreamcast();
+
+        // [0..3]: MDCF_ReadBlock, destAP (VMU in slot 0), originAP (Dreamcast), length.
+        // [4..7]: function Storage
+        // [8..]: "C:\\Users\\rikki\\src\\Hollycast\\build-debug\\Debug\\data\\vmu_save_A1.bin" + '\0' (null padding since Maple messages are in 32-bit words)
+        var openFile = "C0 01 00 12 00 00 00 02 43 3A 5C 55 73 65 72 73 5C 72 69 6B 6B 69 5C 73 72 63 5C 48 6F 6C 6C 79 63 61 73 74 5C 62 75 69 6C 64 2D 64 65 62 75 67 5C 44 65 62 75 67 5C 64 61 74 61 5C 76 6D 75 5F 73 61 76 65 5F 41 31 2E 62 69 6E 00\r\n"u8;
+        Queue<MapleMessage> inbound = [];
+        messageBroker.ScanAsciiHexFragment(asciiMessageBuilder: [], inbound, openFile);
+        cpu.Run(ticksToRun: TimeSpan.TicksPerMillisecond);
+
+        var inboundMessage = inbound.Dequeue();
+        Assert.Equal<object>("""C:\Users\rikki\src\Hollycast\build-debug\Debug\data\vmu_save_A1.bin""", inboundMessage.ReadContentString());
+
+        // No response expected
+        // TODO: perhaps it would be appropriate to give a response indicating whether the operation is supported
+        var outboundMessage = messageBroker.HandleMapleMessage(inboundMessage);
+        Assert.False(outboundMessage.HasValue);
+    }
+
+    [Fact]
     public void WriteBlock_01()
     {
         var cpu = new Cpu() { DreamcastSlot = DreamcastSlot.Slot1 };

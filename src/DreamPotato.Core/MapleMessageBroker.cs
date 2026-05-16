@@ -267,9 +267,7 @@ public class MapleMessageBroker
                 Logger.LogWarning($"(WriteBlock, Clock) not yet implemented", category: LogCategories.Maple);
                 return default; // No reply
             case (MapleMessageType.WriteBlock, MapleFunction.LCD):
-                // Cpu handles this message.
-                var written = vmuInfo._inboundCpuMessages.Writer.TryWrite(message);
-                Debug.Assert(written);
+                handleCpuMessage(vmuInfo, message);
                 return default; // No reply
             case (MapleMessageType.ReadBlock, MapleFunction.Storage):
                 return handleReadBlockStorage(vmuInfo, message);
@@ -277,10 +275,20 @@ public class MapleMessageBroker
                 return handleWriteBlockStorage(vmuInfo, message);
             case (MapleMessageType.CompleteWrite, MapleFunction.Storage):
                 return handleCompleteWriteStorage(vmuInfo, message);
+            case (MapleMessageType.DPOpenFile, MapleFunction.Storage):
+                handleCpuMessage(vmuInfo, message);
+                return default; // No reply
             default:
                 Debug.Fail($"Unhandled Maple message '({message.Type}, {message.Function})'");
                 Logger.LogError($"Unhandled Maple message '({message.Type}, {message.Function})'", category: LogCategories.Maple);
                 return default; // No reply
+        }
+
+        void handleCpuMessage(VmuInfo vmuInfo, MapleMessage message)
+        {
+            // Forward message to cpu thread.
+            var written = vmuInfo._inboundCpuMessages.Writer.TryWrite(message);
+            Debug.Assert(written);
         }
 
         MapleMessage handleGetConditionInput()

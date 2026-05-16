@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Diagnostics;
+using System.Text;
 using System.Text.Json.Serialization;
 
 namespace DreamPotato.Core;
@@ -48,6 +49,24 @@ internal record struct MapleMessage()
         }
 
         return buffer;
+    }
+
+    public string ReadContentString()
+    {
+        Debug.Assert(Type == MapleMessageType.DPOpenFile);
+        var sourceSpan = AdditionalWords.AsSpan(startIndex: 1);
+        byte[] destBuffer = new byte[sourceSpan.Length * 4];
+        for (int i = 0; i < sourceSpan.Length; i++)
+        {
+            BinaryPrimitives.WriteInt32LittleEndian(destBuffer.AsSpan(i * 4, length: 4), sourceSpan[i]);
+        }
+
+        // Trim any trailing null terminators
+        var length = destBuffer.AsSpan().IndexOf((byte)'\0');
+        if (length == -1)
+            length = destBuffer.Length;
+
+        return Encoding.UTF8.GetString(destBuffer[..length]);
     }
 }
 
@@ -120,6 +139,9 @@ enum MapleMessageType : byte
     ResendLastPacket = 0xfc,
     ErrorUnknownCommand = 0xfd,
     ErrorUnknownFunction = 0xfe,
+
+    /// <summary>Custom Maple message to instruct DreamPotato to open a file by path.</summary>
+    DPOpenFile = 0xc0,
 }
 
 enum MapleFunction
