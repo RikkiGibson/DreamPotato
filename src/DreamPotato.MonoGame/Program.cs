@@ -1,13 +1,11 @@
 ﻿
 using System;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 using DreamPotato.Core;
 using DreamPotato.MonoGame;
 
 Console.WriteLine($"DreamPotato VMU Emulator");
-Debugger.Launch();
 string? gameFilePath = null;
 bool integrated = false;
 DreamcastPort? port = null;

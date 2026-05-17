@@ -465,6 +465,10 @@ partial class UserInterface
                 var vmu = presenter.Vmu;
                 ImGui.TextUnformatted("Integrated mode");
                 ImGui.Separator();
+
+                // TODO2: options should be: "Reveal File In Explorer", and, "Save As"
+                // Perhaps we should have the option to "Overwrite With".. also?
+                // Just don't want user to regret being in integrated mode due to constrained ability to actually manage files.
                 if (vmu.LoadedFilePath is { } && ImGui.MenuItem(Path.GetFileName(vmu.LoadedFilePath.AsSpan())))
                     RevealFileInExplorer(vmu.LoadedFilePath);
             }
