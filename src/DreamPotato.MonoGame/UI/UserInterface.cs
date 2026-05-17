@@ -460,18 +460,28 @@ partial class UserInterface
         ImGui.BeginMenuBar();
         if (ImGui.BeginMenu("File"))
         {
-            LayoutNewOpenSaveMenuItems(presenter);
-            ImGui.Separator();
-            if (ImGui.MenuItem(_game.UseSecondaryVmu ? "Close Slot 2 VMU" : "Open Slot 2 VMU"))
+            if (_game.IsIntegratedMode)
             {
-                _game.Configuration_ExpansionSlotsChanged(
-                    _game.UseSecondaryVmu ? ExpansionSlots.Slot1 : ExpansionSlots.Slot1And2);
+                var vmu = presenter.Vmu;
+                ImGui.TextUnformatted("Integrated mode");
+                ImGui.Separator();
+                if (vmu.LoadedFilePath is { } && ImGui.MenuItem(Path.GetFileName(vmu.LoadedFilePath.AsSpan())))
+                    RevealFileInExplorer(vmu.LoadedFilePath);
             }
+            else
+            {
+                LayoutNewOpenSaveMenuItems(presenter);
+                ImGui.Separator();
+                if (ImGui.MenuItem(_game.UseSecondaryVmu ? "Close Slot 2 VMU" : "Open Slot 2 VMU"))
+                {
+                    _game.Configuration_ExpansionSlotsChanged(
+                        _game.UseSecondaryVmu ? ExpansionSlots.Slot1 : ExpansionSlots.Slot1And2);
+                }
 
-            ImGui.Separator();
-            if (ImGui.MenuItem("Quit"))
-                _game.Exit();
-
+                ImGui.Separator();
+                if (ImGui.MenuItem("Quit"))
+                    _game.Exit();
+            }
             ImGui.EndMenu();
         }
 
@@ -501,13 +511,7 @@ partial class UserInterface
 
             if (ImGui.MenuItem("Open Data Folder"))
             {
-                new Process()
-                {
-                    StartInfo = new ProcessStartInfo(Vmu.UserDataFolder)
-                    {
-                        UseShellExecute = true,
-                    }
-                }.Start();
+                Process.Start(new ProcessStartInfo(Vmu.UserDataFolder) { UseShellExecute = true });
             }
 
             if (ImGui.BeginMenu("Set Window Size"))
@@ -742,16 +746,27 @@ partial class UserInterface
         ImGui.BeginMenuBar();
         if (ImGui.BeginMenu(vmu.HasUnsavedChanges ? "* File" : "File"))
         {
-            if (vmu.LoadedFilePath is not null)
+            if (_game.IsIntegratedMode)
             {
-                ImGui.TextUnformatted(Path.GetFileName(vmu.LoadedFilePath.AsSpan()));
+                ImGui.TextUnformatted($"Integrated mode");
                 ImGui.Separator();
+                if (vmu.LoadedFilePath is { } && ImGui.MenuItem(Path.GetFileName(vmu.LoadedFilePath.AsSpan())))
+                    RevealFileInExplorer(vmu.LoadedFilePath);
             }
+            else
+            {
+                if (vmu.LoadedFilePath is not null)
+                {
+                    ImGui.TextUnformatted(Path.GetFileName(vmu.LoadedFilePath.AsSpan()));
+                    ImGui.Separator();
+                }
 
-            LayoutNewOpenSaveMenuItems(presenter);
-            ImGui.Separator();
-            if (ImGui.MenuItem("Close Slot 2 VMU"))
-                _game.Configuration_ExpansionSlotsChanged(ExpansionSlots.Slot1);
+                LayoutNewOpenSaveMenuItems(presenter);
+                ImGui.Separator();
+                if (ImGui.MenuItem("Close Slot 2 VMU"))
+                    _game.Configuration_ExpansionSlotsChanged(ExpansionSlots.Slot1);
+
+            }
 
             ImGui.EndMenu();
         }
@@ -784,6 +799,43 @@ partial class UserInterface
 
         ImGui.EndMenuBar();
         ImGui.End();
+    }
+
+    private static void RevealFileInExplorer(string filePath)
+    {
+        // TODO2: test non-Windows
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            Process.Start("explorer.exe", $"/select,\"{filePath}\"");
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            Process.Start("open", $"-R \"{filePath}\"");
+        }
+        else
+        {
+            // Try D-Bus FileManager1 interface (works with most Linux file managers).
+            // Falls back to just opening the containing directory.
+            var uri = "file://" + Uri.EscapeDataString(filePath).Replace("%2F", "/");
+            var result = Process.Start(new ProcessStartInfo
+            {
+                FileName = "dbus-send",
+                Arguments = $"--session --dest=org.freedesktop.FileManager1 "
+                        + $"--type=method_call /org/freedesktop/FileManager1 "
+                        + $"org.freedesktop.FileManager1.ShowItems "
+                        + $"array:string:\"{uri}\" string:\"\"",
+                UseShellExecute = false,
+            });
+
+            // If dbus-send isn't available or fails, fall back to opening the folder
+            if (result is null || (result.WaitForExit(1000) && result.ExitCode != 0))
+            {
+                Process.Start(new ProcessStartInfo(Path.GetDirectoryName(filePath)!)
+                {
+                    UseShellExecute = true,
+                });
+            }
+        }
     }
 
     private void LayoutVmusConnectedIcon()
@@ -845,6 +897,7 @@ partial class UserInterface
 
         (string[] displayFileNames, ImmutableArray<string> recentFiles) calcRecentFilesInfo()
         {
+            Debug.Assert(!_game.IsIntegratedMode && _game.RecentFilesInfo is { });
             var recentFiles = _game.RecentFilesInfo.RecentFiles;
             const int maxFileNameLength = 18;
             string[] displayFileNames = new string[recentFiles.Length];
@@ -949,6 +1002,7 @@ partial class UserInterface
             }
 
             // Dreamcast Port
+            if (!_game.IsIntegratedMode)
             {
                 ImGui.Text("Dreamcast controller port");
                 ImGui.SameLine();
