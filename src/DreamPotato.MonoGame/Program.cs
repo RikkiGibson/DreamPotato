@@ -14,6 +14,10 @@ ExpansionSlots? slots = null;
 
 bool showHelp = false;
 
+// Console.WriteLine("Waiting for debugger to attach...");
+// while(!System.Diagnostics.Debugger.IsAttached)
+//     System.Threading.Thread.Sleep(100);
+
 for (int i = 0; i < args.Length; i++)
 {
     switch (args[i])
@@ -134,7 +138,7 @@ else
 if (showHelp)
 {
     Console.WriteLine("""
-        Usage: 'DreamPotato [vmu-or-vms-path] [options]
+        Usage: 'DreamPotato [vmu-or-vms-path] [options]'
 
         options:
           --integrated          Run in "integrated mode". See Hollycast documentation for more info.

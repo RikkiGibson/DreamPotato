@@ -32,12 +32,19 @@ public record RecentFilesInfo
             return Default;
 
         using var fileStream = File.OpenRead(path);
-        var value = JsonSerializer.Deserialize(fileStream, RecentFilesInfoJsonSerializerContext.Default.RecentFilesInfo);
-        // We used to intentionally place null values in 'RecentFiles' in recent.json. Now we don't, and don't want to consume such values.
-        if (value != null && value.RecentFiles.Any(recentFile => recentFile == null))
-            value = value with { RecentFiles = [.. value.RecentFiles.Where(file => file != null)] };
+        try
+        {
+            var value = JsonSerializer.Deserialize(fileStream, RecentFilesInfoJsonSerializerContext.Default.RecentFilesInfo);
+            // We used to intentionally place null values in 'RecentFiles' in recent.json. Now we don't, and don't want to consume such values.
+            if (value != null && value.RecentFiles.Any(recentFile => recentFile == null))
+                value = value with { RecentFiles = [.. value.RecentFiles.Where(file => file != null)] };
 
-        return value ?? Default;
+            return value ?? Default;
+        }
+        catch (JsonException)
+        {
+            return Default;
+        }
     }
 
     public RecentFilesInfo AddRecentFile(bool forPrimary, string? newRecentFile)

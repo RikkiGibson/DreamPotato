@@ -593,11 +593,13 @@ public class MapleMessageBroker
 
                 OnDisconnect();
                 await Task.Delay(1000); // Retry connection after a delay
-                // TODO: we probably want to close the process when the connection fails in a specific way (connection refused?)
             }
         }
         catch (Exception ex)
         {
+            // We failed to reconnect and won't attempt again here.
+            // I would consider exiting the process, but, I don't like the idea of
+            // user losing something they were doing on the VMU just because the server crashed.
             Logger.LogError($"Exception in SocketListenerEntryPoint: {ex.Message}", LogCategories.Maple);
             throw;
         }

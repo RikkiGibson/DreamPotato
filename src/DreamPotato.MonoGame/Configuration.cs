@@ -82,7 +82,14 @@ public record Configuration(
             return Default;
 
         using var fileStream = File.OpenRead(path);
-        return JsonSerializer.Deserialize(fileStream, ConfigurationJsonSerializerContext.Default.Configuration) ?? Default;
+        try
+        {
+            return JsonSerializer.Deserialize(fileStream, ConfigurationJsonSerializerContext.Default.Configuration) ?? Default;
+        }
+        catch (JsonException)
+        {
+            return Default;
+        }
     }
 
     public static readonly ImmutableArray<KeyMapping> KeyPreset_WASD = [
