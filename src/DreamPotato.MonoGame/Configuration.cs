@@ -88,6 +88,9 @@ public record Configuration(
         }
         catch (JsonException)
         {
+            // Note: if the configuration is malformed, this means we will use a default configuration instead,
+            // and overwrite the malformed configuration on exit.
+            // We need to take care that we don't start viewing pre-existing config files as invalid in new versions.
             return Default;
         }
     }
