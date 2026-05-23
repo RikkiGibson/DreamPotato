@@ -5,9 +5,10 @@ using System.Runtime.InteropServices;
 using DreamPotato.Core;
 using DreamPotato.MonoGame;
 
-Console.WriteLine($"DreamPotato VMU Emulator");
+Console.WriteLine($"DreamPotato VMU Emulator (PID: {Environment.ProcessId})");
 string? gameFilePath = null;
 bool integrated = false;
+int? tcpPort = null;
 DreamcastPort? port = null;
 ExpansionSlots? slots = null;
 
@@ -19,6 +20,24 @@ for (int i = 0; i < args.Length; i++)
     {
         case "--integrated":
             integrated = true;
+            break;
+        case "--tcp-port":
+            i++;
+            if (i >= args.Length)
+            {
+                Console.Error.WriteLine($"Missing '--tcp-port' argument");
+                showHelp = true;
+                break;
+            }
+
+            if (!int.TryParse(args[i], out var tcpPort1) || tcpPort1 <= 0)
+            {
+                Console.Error.WriteLine($"Bad '--tcp-port' argument: {args[i]}");
+                showHelp = true;
+                break;
+            }
+
+            tcpPort = tcpPort1;
             break;
         case "--port":
             i++;
@@ -73,6 +92,12 @@ for (int i = 0; i < args.Length; i++)
 
 if (!integrated)
 {
+    if (tcpPort != null)
+    {
+        Console.Error.WriteLine($"Cannot specify --tcp-port without --integrated flag.");
+        showHelp = true;
+    }
+
     if (port != null)
     {
         Console.Error.WriteLine($"Cannot specify --port without --integrated flag.");
@@ -87,6 +112,12 @@ if (!integrated)
 }
 else
 {
+    if (tcpPort == null)
+    {
+        Console.Error.WriteLine($"Must specify --tcp-port with --integrated flag.");
+        showHelp = true;
+    }
+
     if (port == null)
     {
         Console.Error.WriteLine($"Must specify --port with --integrated flag.");
@@ -106,9 +137,10 @@ if (showHelp)
         Usage: 'DreamPotato [vmu-or-vms-path] [options]
 
         options:
-          --integrated      Run in "integrated mode". See Hollycast documentation for more info.
-          --port [PORT]     Dreamcast port letter. (A-D). Required in integrated mode and otherwise invalid.
-          --slots [SLOTS]   Dreamcast slot number. (1, 2, or 'both'). Required in integrated mode and otherwise invalid.
+          --integrated          Run in "integrated mode". See Hollycast documentation for more info.
+          --tcp-port [PORT]     TCP port that DreamPotato should connect to. Required in integrated mode and otherwise invalid.
+          --port [PORT]         Dreamcast port letter. (A-D). Required in integrated mode and otherwise invalid.
+          --slots [SLOTS]       Dreamcast slot number. (1, 2, or 'both'). Required in integrated mode and otherwise invalid.
         """);
     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         Console.ReadKey();
@@ -116,6 +148,6 @@ if (showHelp)
     return 1;
 }
 
-using var game = new Game1(gameFilePath, integrated ? (port!.Value, slots!.Value) : null);
+using var game = new Game1(gameFilePath, integrated ? (tcpPort!.Value, port!.Value, slots!.Value) : null);
 game.Run();
 return 0;

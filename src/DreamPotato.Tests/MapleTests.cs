@@ -34,7 +34,7 @@ public class MapleTests
     public void GetCondition_Input_3()
     {
         // Indicate that slots 1 and 2 are both docked
-        var messageBroker = new MapleMessageBroker(LogLevel.Default);
+        var messageBroker = new MapleMessageBroker(integratedModePort: null, LogLevel.Default);
         messageBroker.Resync(DreamcastSlot.Slot1, vmuDocked: true, writeToMapleFlash: true, flash: default, vmuFileHandle: null);
         messageBroker.Resync(DreamcastSlot.Slot2, vmuDocked: true, writeToMapleFlash: true, flash: default, vmuFileHandle: null);
 
@@ -68,7 +68,7 @@ public class MapleTests
     public void DeviceRequest_1(DreamcastSlot slot, byte[] deviceStatusMessage)
     {
         // Request info about the device in slot 1
-        var messageBroker = new MapleMessageBroker(LogLevel.Default);
+        var messageBroker = new MapleMessageBroker(integratedModePort: null, LogLevel.Default);
         messageBroker.Resync(slot, vmuDocked: true, writeToMapleFlash: true, flash: default, vmuFileHandle: null);
 
         // MDCF_GetCondition, destAP (requesting slot 1 attached device), originAP, length
@@ -87,7 +87,7 @@ public class MapleTests
     public void DeviceRequest_2(DreamcastSlot _, byte[] deviceStatusMessage)
     {
         // No device in slot
-        var messageBroker = new MapleMessageBroker(LogLevel.Default);
+        var messageBroker = new MapleMessageBroker(integratedModePort: null, LogLevel.Default);
         Queue<MapleMessage> inbound = [];
         messageBroker.ScanAsciiHexFragment(asciiMessageBuilder: [], inbound, deviceStatusMessage);
         var message = messageBroker.HandleMapleMessage(inbound.Dequeue());

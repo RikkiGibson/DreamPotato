@@ -207,7 +207,7 @@ public class Cpu
         Memory = new Memory(this, Logger);
         Audio = new Audio(this, Logger);
         Display = new Display(this);
-        MapleMessageBroker = mapleMessageBroker ?? new MapleMessageBroker(LogLevel.Default);
+        MapleMessageBroker = mapleMessageBroker ?? new MapleMessageBroker(integratedModePort: null, LogLevel.Default);
         SetInstructionBank(InstructionBank.ROM);
     }
 

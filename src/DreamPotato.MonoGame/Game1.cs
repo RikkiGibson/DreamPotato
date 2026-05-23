@@ -20,7 +20,7 @@ public class Game1 : Game
     private readonly string? _commandLineFilePath;
 
     /// <summary>When non-null, indicates the emulator is running in integrated mode.</summary>
-    private readonly (DreamcastPort Port, ExpansionSlots Slots)? _commandLineIntegratedModeInfo;
+    private readonly (int TcpPort, DreamcastPort Port, ExpansionSlots Slots)? _commandLineIntegratedModeInfo;
 
     internal Vmu PrimaryVmu => _primaryVmuPresenter.Vmu;
     internal VmuPresenter PrimaryVmuPresenter => _primaryVmuPresenter;
@@ -65,7 +65,7 @@ public class Game1 : Game
     /// <summary>Only meaningful when <see cref="UseSecondaryVmu"/> is true.</summary>
     internal bool IsHorizontalLayout;
 
-    public Game1(string? gameFilePath, (DreamcastPort Port, ExpansionSlots Slots)? integratedModeInfo)
+    public Game1(string? gameFilePath, (int TcpPort, DreamcastPort Port, ExpansionSlots Slots)? integratedModeInfo)
     {
         _graphics = new GraphicsDeviceManager(this);
         Window.AllowUserResizing = true;
@@ -103,7 +103,7 @@ public class Game1 : Game
         _userInterface = new UserInterface(this);
         _userInterface.Initialize(textures.IconDreamcastConnectedTexture, textures.IconVmusConnectedTexture);
 
-        MapleMessageBroker = new MapleMessageBroker(LogLevel.Default);
+        MapleMessageBroker = new MapleMessageBroker(_commandLineIntegratedModeInfo?.TcpPort, LogLevel.Default);
         MapleMessageBroker.RestartServer(_commandLineIntegratedModeInfo?.Port ?? Configuration.DreamcastPort);
         RecentFilesInfo = IsIntegratedMode ? null : RecentFilesInfo.Load();
 
