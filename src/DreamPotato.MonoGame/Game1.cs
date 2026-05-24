@@ -477,7 +477,12 @@ public class Game1 : Game
         _graphics.PreferredBackBufferHeight = Math.Max(viewport.Height, MinHeight);
         _graphics.ApplyChanges();
         UpdateScaleMatrix();
+        SaveWindowSize();
+    }
 
+    private void SaveWindowSize()
+    {
+        var viewport = _graphics.GraphicsDevice.Viewport;
         var position = Window.Position;
         Configuration = Configuration with
         {
@@ -586,6 +591,7 @@ public class Game1 : Game
         _graphics.PreferredBackBufferHeight = vmuCount * (VmuPresenter.TotalContentHeight * multiple + MenuBarHeight);
         _graphics.ApplyChanges();
         UpdateScaleMatrix();
+        SaveWindowSize();
     }
 
     protected override void Update(GameTime gameTime)
