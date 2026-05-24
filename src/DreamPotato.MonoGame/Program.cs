@@ -14,9 +14,15 @@ ExpansionSlots? slots = null;
 
 bool showHelp = false;
 
-// Console.WriteLine("Waiting for debugger to attach...");
-// while(!System.Diagnostics.Debugger.IsAttached)
-//     System.Threading.Thread.Sleep(100);
+#if false
+// Debug a Windows subprocess:
+System.Diagnostics.Debugger.Launch();
+
+// Debug a Mac/Linux subprocess:
+Console.WriteLine("Waiting for debugger to attach...");
+while(!System.Diagnostics.Debugger.IsAttached)
+    System.Threading.Thread.Sleep(100);
+#endif
 
 for (int i = 0; i < args.Length; i++)
 {
