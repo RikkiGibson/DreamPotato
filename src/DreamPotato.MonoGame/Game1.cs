@@ -477,6 +477,14 @@ public class Game1 : Game
         _graphics.PreferredBackBufferHeight = Math.Max(viewport.Height, MinHeight);
         _graphics.ApplyChanges();
         UpdateScaleMatrix();
+
+        var position = Window.Position;
+        Configuration = Configuration with
+        {
+            ViewportSize = new ViewportSize(viewport.Width, viewport.Height),
+            WindowPosition = new WindowPosition(position.X, position.Y),
+        };
+        Configuration.Save();
     }
 
     private Rectangle AllVmuContentRectangle
