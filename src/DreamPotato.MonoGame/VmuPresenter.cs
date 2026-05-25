@@ -72,6 +72,11 @@ class VmuPresenter
     /// <summary>The entire screen region, including margins, which bounds the VMU content.</summary>
     internal Rectangle Bounds { get; private set; }
 
+    /// <summary>
+    /// The transformed screen region where this VMU is actually drawn on screen after scaling.
+    /// </summary>
+    internal Rectangle DrawnBounds { get; private set; }
+
     private int SleepHeldFrameCount;
     internal GamePadState PreviousGamepad { get; private set; }
     private const int MinVmuScale = 3;
@@ -112,7 +117,7 @@ class VmuPresenter
         GamePadIndex = inputMappings.GamePadIndex;
     }
 
-    internal void Update(KeyboardState previousKeys, KeyboardState keyboard)
+    internal void Update(KeyboardState previousKeys, KeyboardState keyboard, Func<VmuButton, bool>? touchInput = null)
     {
         var gamepad = GamePad.GetState(index: GamePadIndex);
         if (!Vmu.IsDockedToDreamcast && ButtonChecker.IsNewlyPressed(VmuButton.Pause, previousKeys, keyboard, PreviousGamepad, gamepad))
@@ -134,14 +139,14 @@ class VmuPresenter
 
         var newP3 = new Core.SFRs.P3()
         {
-            Up = !ButtonChecker.IsPressed(VmuButton.Up, keyboard, gamepad),
-            Down = !ButtonChecker.IsPressed(VmuButton.Down, keyboard, gamepad),
-            Left = !ButtonChecker.IsPressed(VmuButton.Left, keyboard, gamepad),
-            Right = !ButtonChecker.IsPressed(VmuButton.Right, keyboard, gamepad),
-            ButtonA = !ButtonChecker.IsPressed(VmuButton.A, keyboard, gamepad),
-            ButtonB = !ButtonChecker.IsPressed(VmuButton.B, keyboard, gamepad),
-            ButtonSleep = !ButtonChecker.IsPressed(VmuButton.Sleep, keyboard, gamepad),
-            ButtonMode = !ButtonChecker.IsPressed(VmuButton.Mode, keyboard, gamepad),
+            Up = !IsPressed(VmuButton.Up, keyboard, gamepad, touchInput),
+            Down = !IsPressed(VmuButton.Down, keyboard, gamepad, touchInput),
+            Left = !IsPressed(VmuButton.Left, keyboard, gamepad, touchInput),
+            Right = !IsPressed(VmuButton.Right, keyboard, gamepad, touchInput),
+            ButtonA = !IsPressed(VmuButton.A, keyboard, gamepad, touchInput),
+            ButtonB = !IsPressed(VmuButton.B, keyboard, gamepad, touchInput),
+            ButtonSleep = !IsPressed(VmuButton.Sleep, keyboard, gamepad, touchInput),
+            ButtonMode = !IsPressed(VmuButton.Mode, keyboard, gamepad, touchInput),
         };
 
         // Holding sleep can be used to toggle insert/eject
@@ -178,9 +183,9 @@ class VmuPresenter
         PreviousGamepad = gamepad;
     }
 
-    internal void UpdateAndRun(GameTime gameTime, KeyboardState previousKeys, KeyboardState keyboard)
+    internal void UpdateAndRun(GameTime gameTime, KeyboardState previousKeys, KeyboardState keyboard, Func<VmuButton, bool>? touchInput = null)
     {
-        Update(previousKeys, keyboard);
+        Update(previousKeys, keyboard, touchInput);
 
         var rate = EffectivePaused ? 0 :
             IsFastForwarding ? gameTime.ElapsedGameTime.Ticks * 2 :
@@ -308,9 +313,15 @@ class VmuPresenter
         Matrix scaleTransform = Matrix.CreateScale(widthScale, heightScale, 1);
         float idealWidth = widthScale * TotalContentWidth;
         float idealHeight = heightScale * TotalContentHeight;
-        _spriteTransformMatrix = scaleTransform * getTranslationTransform();
+        var translationTransform = getTranslationTransform();
+        _spriteTransformMatrix = scaleTransform * translationTransform;
         ContentSize = new Point((int)idealWidth, (int)idealHeight);
         Bounds = targetRectangle;
+        DrawnBounds = new Rectangle(
+            (int)Math.Round(translationTransform.M41),
+            (int)Math.Round(translationTransform.M42),
+            (int)Math.Round(idealWidth),
+            (int)Math.Round(idealHeight));
 
         Matrix getTranslationTransform()
         {
@@ -331,6 +342,9 @@ class VmuPresenter
     {
         _dynamicSound.SubmitBuffer(args.Buffer, args.Start, args.Length);
     }
+
+    private bool IsPressed(VmuButton vmuButton, KeyboardState keyboard, GamePadState gamepad, Func<VmuButton, bool>? touchInput)
+        => touchInput?.Invoke(vmuButton) == true || ButtonChecker.IsPressed(vmuButton, keyboard, gamepad);
 
     internal void UpdateVolume(int volume)
         => Vmu.Audio.Volume = volume;

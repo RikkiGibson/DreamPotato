@@ -231,17 +231,27 @@ public class Vmu
             _cpu.ConnectVmu(other._cpu);
     }
 
-    public static string EmbeddedDataFolder => IsMacAppBundle
-        ? Path.Combine(AppContext.BaseDirectory, "..", "Resources", "Data")
-        : Path.Combine(AppContext.BaseDirectory, "Data");
+    private static string? _embeddedDataFolderOverride;
+    private static string? _userDataRootFolderOverride;
+
+    public static void ConfigurePlatformPaths(string? embeddedDataFolder = null, string? userDataRootFolder = null)
+    {
+        _embeddedDataFolderOverride = embeddedDataFolder;
+        _userDataRootFolderOverride = userDataRootFolder;
+    }
+
+    public static string EmbeddedDataFolder => _embeddedDataFolderOverride
+        ?? (IsMacAppBundle
+            ? Path.Combine(AppContext.BaseDirectory, "..", "Resources", "Data")
+            : Path.Combine(AppContext.BaseDirectory, "Data"));
 
     private static bool IsLinuxAppImage => OperatingSystem.IsLinux() && Environment.GetEnvironmentVariable("APPIMAGE") != null;
     private static bool IsMacAppBundle => OperatingSystem.IsMacOS() && AppContext.BaseDirectory.Contains(".app/Contents/", StringComparison.Ordinal);
-    private static bool UseNonEmbeddedUserDataFolder => IsLinuxAppImage || IsMacAppBundle;
+    private static bool UseNonEmbeddedUserDataFolder => _userDataRootFolderOverride is not null || IsLinuxAppImage || IsMacAppBundle;
 
-    public static string UserDataRootFolder => UseNonEmbeddedUserDataFolder
+    public static string UserDataRootFolder => _userDataRootFolderOverride ?? (UseNonEmbeddedUserDataFolder
         ? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
-        : AppContext.BaseDirectory;
+        : AppContext.BaseDirectory);
 
     public static string UserDataFolder => UseNonEmbeddedUserDataFolder
         ? Path.Combine(UserDataRootFolder, "DreamPotato")

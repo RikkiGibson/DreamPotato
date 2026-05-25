@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 using DreamPotato.Core;
 using DreamPotato.Core.SFRs;
@@ -22,8 +23,6 @@ using ImGuiNET;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-
-using NativeFileDialogSharp;
 
 using Numerics = System.Numerics;
 using WB = DreamPotato.Core.Waterbear;
@@ -165,14 +164,92 @@ partial class UserInterface
     // ---
 
     private MappingEditState _mappingEditState;
+    private bool _isDialogInProgress;
 
     private readonly string _displayVersion;
     private readonly string _commitId;
 
+    private static bool IsAndroid => OperatingSystem.IsAndroid();
+    private static float AndroidDialogWidth => MathF.Min(MathF.Max(0, ImGui.GetIO().DisplaySize.X - 32), 440);
+    private static float AndroidContentWidth(float fallbackWidth) => IsAndroid ? MathF.Max(1, ImGui.GetContentRegionAvail().X) : fallbackWidth;
+    private static float AndroidMappingTargetColumnWidth => MathF.Min(150, MathF.Max(96, ImGui.GetContentRegionAvail().X * 0.34f));
+    private const float AndroidMenuScale = 1.70f;
+
+    private static void ApplyAndroidDialogWidth()
+    {
+        if (!IsAndroid)
+            return;
+
+        ImGui.SetNextWindowSize(new Numerics.Vector2(AndroidDialogWidth, 0), ImGuiCond.Always);
+    }
+
+    private static bool AndroidMappingCell(string visibleText)
+    {
+        var text = string.IsNullOrEmpty(visibleText) ? "None" : visibleText;
+        var size = new Numerics.Vector2(MathF.Max(1, ImGui.GetContentRegionAvail().X), ImGui.GetFrameHeight());
+        return ImGui.Selectable(text, selected: false, ImGuiSelectableFlags.None, size);
+    }
+
+    private static void PushAndroidMenuStyleScale()
+    {
+        if (!IsAndroid)
+            return;
+
+        var style = ImGui.GetStyle();
+        ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, style.FramePadding * AndroidMenuScale);
+        ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, style.ItemSpacing * AndroidMenuScale);
+    }
+
+    private static void ApplyAndroidMenuFontScale()
+    {
+        if (!IsAndroid)
+            return;
+
+        ImGui.SetWindowFontScale(AndroidMenuScale);
+    }
+
+    private static void PopAndroidMenuStyleScale()
+    {
+        if (!IsAndroid)
+            return;
+
+        ImGui.PopStyleVar(2);
+    }
+
+    private static string DisplayButtonName(Buttons button) => button switch
+    {
+        Buttons.None => "None",
+        Buttons.DPadUp => "DPadUp",
+        Buttons.DPadDown => "DPadDown",
+        Buttons.DPadLeft => "DPadLeft",
+        Buttons.DPadRight => "DPadRight",
+        Buttons.A => "A",
+        Buttons.B => "B",
+        Buttons.X => "X",
+        Buttons.Y => "Y",
+        Buttons.Start => "Start",
+        Buttons.Back => "Back",
+        Buttons.LeftShoulder => "LeftShoulder",
+        Buttons.RightShoulder => "RightShoulder",
+        Buttons.LeftStick => "LeftStick",
+        Buttons.RightStick => "RightStick",
+        Buttons.LeftTrigger => "LeftTrigger",
+        Buttons.RightTrigger => "RightTrigger",
+        Buttons.LeftThumbstickUp => "LeftThumbstickUp",
+        Buttons.LeftThumbstickDown => "LeftThumbstickDown",
+        Buttons.LeftThumbstickLeft => "LeftThumbstickLeft",
+        Buttons.LeftThumbstickRight => "LeftThumbstickRight",
+        Buttons.RightThumbstickUp => "RightThumbstickUp",
+        Buttons.RightThumbstickDown => "RightThumbstickDown",
+        Buttons.RightThumbstickLeft => "RightThumbstickLeft",
+        Buttons.RightThumbstickRight => "RightThumbstickRight",
+        _ => button.ToString()
+    };
+
     // Debugger UI state
 
-    private static readonly uint Debug_ColorPc = ImGui.GetColorU32(new Numerics.Vector4(99.0f/255, 92.0f/255, 31.0f/255, 1));
-    private static readonly uint Debug_ColorStack = ImGui.GetColorU32(new Numerics.Vector4(53.0f/255, 50.0f/255, 18.0f/255, 1));
+    private static uint Debug_ColorPc => ImGui.GetColorU32(new Numerics.Vector4(99.0f/255, 92.0f/255, 31.0f/255, 1));
+    private static uint Debug_ColorStack => ImGui.GetColorU32(new Numerics.Vector4(53.0f/255, 50.0f/255, 18.0f/255, 1));
     private static readonly Numerics.Vector4 Debug_ColorScrollHighlight = new Numerics.Vector4(58.0f/255, 103.0f/255, 160.0f/255, 1);
 
     internal bool Debugger_Show = false;
@@ -243,13 +320,14 @@ partial class UserInterface
         _secondaryToastInfo = new ToastInfo(graphicsDevice, _imGuiRenderer);
     }
 
-    internal void Layout(GameTime gameTime)
+    internal void Layout(GameTime gameTime, Action? beforeRender = null)
     {
         // Call BeforeLayout first to set things up
         _imGuiRenderer.BeforeLayout(gameTime);
 
         // Draw our UI
         LayoutImpl();
+        beforeRender?.Invoke();
 
         // Call AfterLayout now to finish up and draw all the things
         _imGuiRenderer.AfterLayout();
@@ -299,11 +377,58 @@ partial class UserInterface
             return;
         }
 
-        var result = Dialog.FileOpen("vmu,bin,vms", defaultPath: null);
-        if (result.IsOk)
+        _ = OpenVmuAsync(presenter);
+    }
+
+    private async Task OpenVmuAsync(VmuPresenter presenter)
+    {
+        if (_isDialogInProgress)
+            return;
+
+        _isDialogInProgress = true;
+        try
         {
-            _game.LoadAndStartVmsOrVmuFile(presenter, result.Path);
+            var result = await PlatformServices.Current.PickOpenVmuOrVmsFileAsync();
+            if (result is not null)
+                _game.LoadAndStartVmsOrVmuFile(presenter, result);
         }
+        finally
+        {
+            _isDialogInProgress = false;
+        }
+    }
+
+    private async void SaveVmuAsAsync(VmuPresenter presenter)
+    {
+        if (_isDialogInProgress)
+            return;
+
+        _isDialogInProgress = true;
+        try
+        {
+            var currentFileName = presenter.Vmu.LoadedFilePath is null
+                ? "DreamPotato.vmu"
+                : Path.GetFileName(presenter.Vmu.LoadedFilePath);
+
+            var result = await PlatformServices.Current.PickSaveVmuAsFileAsync(currentFileName);
+            if (result is not null)
+            {
+                _game.SaveVmuFileAs(presenter.Vmu, result);
+                await PlatformServices.Current.PostSaveVmuAsFileAsync(result);
+            }
+        }
+        finally
+        {
+            _isDialogInProgress = false;
+        }
+    }
+
+    private void OpenDataFolder()
+    {
+        if (!PlatformServices.Current.CanOpenDataFolder)
+            return;
+
+        PlatformServices.Current.OpenDataFolder(Vmu.UserDataFolder);
     }
 
     internal void Reset(VmuPresenter presenter)
@@ -456,7 +581,9 @@ partial class UserInterface
         var rectangle = _game.PrimaryMenuBarRectangle;
         ImGui.SetNextWindowPos(new Numerics.Vector2(0, 0));
         ImGui.SetNextWindowSize(new Numerics.Vector2(rectangle.Width, rectangle.Height));
+        PushAndroidMenuStyleScale();
         ImGui.Begin("PrimaryMenuWindow", ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.MenuBar | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoBringToFrontOnFocus);
+        ApplyAndroidMenuFontScale();
         ImGui.BeginMenuBar();
         if (ImGui.BeginMenu("File"))
         {
@@ -499,18 +626,13 @@ partial class UserInterface
                 _mappingEditState = MappingEditState.EditButtonMappings(input.ButtonMappings, input.GamePadIndex, _game.PrimaryVmu);
             }
 
-            if (ImGui.MenuItem("Open Data Folder"))
+            if (PlatformServices.Current.CanOpenDataFolder)
             {
-                new Process()
-                {
-                    StartInfo = new ProcessStartInfo(Vmu.UserDataFolder)
-                    {
-                        UseShellExecute = true,
-                    }
-                }.Start();
+                if (ImGui.MenuItem("Open Data Folder"))
+                    OpenDataFolder();
             }
 
-            if (ImGui.BeginMenu("Set Window Size"))
+            if (!IsAndroid && ImGui.BeginMenu("Set Window Size"))
             {
                 var currentMultiple = _game.GetWindowSizeMultiple();
 
@@ -558,6 +680,7 @@ partial class UserInterface
         LayoutVmusConnectedIcon();
         ImGui.EndMenuBar();
         ImGui.End();
+        PopAndroidMenuStyleScale();
 
         if (doOpenSettings)
             OpenPopupAndPause("Settings");
@@ -738,7 +861,9 @@ partial class UserInterface
         var rectangle = _game.SecondaryMenuBarRectangle;
         ImGui.SetNextWindowPos(new Numerics.Vector2(rectangle.X, rectangle.Y));
         ImGui.SetNextWindowSize(new Numerics.Vector2(rectangle.Width, rectangle.Height));
+        PushAndroidMenuStyleScale();
         ImGui.Begin("SecondaryMenuWindow", ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.MenuBar | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoBringToFrontOnFocus);
+        ApplyAndroidMenuFontScale();
         ImGui.BeginMenuBar();
         if (ImGui.BeginMenu(vmu.HasUnsavedChanges ? "* File" : "File"))
         {
@@ -784,6 +909,7 @@ partial class UserInterface
 
         ImGui.EndMenuBar();
         ImGui.End();
+        PopAndroidMenuStyleScale();
     }
 
     private void LayoutVmusConnectedIcon()
@@ -836,11 +962,7 @@ partial class UserInterface
 
         if (ImGui.MenuItem("Save As"))
         {
-            var result = Dialog.FileSave(filterList: "vmu,bin", defaultPath: null);
-            if (result.IsOk)
-            {
-                _game.SaveVmuFileAs(presenter.Vmu, result.Path);
-            }
+            SaveVmuAsAsync(presenter);
         }
 
         (string[] displayFileNames, ImmutableArray<string> recentFiles) calcRecentFilesInfo()
@@ -892,6 +1014,7 @@ partial class UserInterface
 
     private void LayoutSettings()
     {
+        ApplyAndroidDialogWidth();
         if (ImGui.BeginPopupModal("Settings"))
         {
             if (ImGui.Button("Done"))
@@ -919,10 +1042,13 @@ partial class UserInterface
 
             // Volume
             ImGui.Text("Volume");
-            ImGui.SameLine();
+            if (!IsAndroid)
+                ImGui.SameLine();
 
             var sliderVolume = configuration.Volume;
             ImGui.PushID("VolumeSlider");
+            if (IsAndroid)
+                ImGui.SetNextItemWidth(AndroidContentWidth(0));
             ImGui.SliderInt(label: "", ref sliderVolume, v_min: Audio.MinVolume, v_max: Audio.MaxVolume);
             ImGui.PopID();
             if (configuration.Volume != sliderVolume)
@@ -931,12 +1057,13 @@ partial class UserInterface
             // Color Palette
             {
                 ImGui.Text("Color Palette");
-                ImGui.SameLine();
+                if (!IsAndroid)
+                    ImGui.SameLine();
 
                 var palette = configuration.ColorPaletteName;
                 var paletteIndex = Array.IndexOf(ColorPalette.AllPaletteNames, palette);
                 var selectedIndex = paletteIndex == -1 ? 0 : paletteIndex;
-                ImGui.SetNextItemWidth(CalcComboWidth(ColorPalette.AllPaletteNames[1]));
+                ImGui.SetNextItemWidth(AndroidContentWidth(CalcComboWidth(ColorPalette.AllPaletteNames[1])));
                 ImGui.PushID("ColorPaletteCombo");
                 ImGui.Combo(label: "", ref selectedIndex, items: ColorPalette.AllPaletteNames, items_count: ColorPalette.AllPaletteNames.Length);
                 ImGui.PopID();
@@ -951,11 +1078,12 @@ partial class UserInterface
             // Dreamcast Port
             {
                 ImGui.Text("Dreamcast controller port");
-                ImGui.SameLine();
+                if (!IsAndroid)
+                    ImGui.SameLine();
 
                 var port = configuration.DreamcastPort;
                 var selectedIndex = (int)port;
-                ImGui.SetNextItemWidth(CalcComboWidth(longestItem: AllDreamcastSlotNames[0]));
+                ImGui.SetNextItemWidth(AndroidContentWidth(CalcComboWidth(longestItem: AllDreamcastSlotNames[0])));
                 ImGui.PushID("DreamcastPortCombo");
                 ImGui.Combo(label: "", ref selectedIndex, items: AllDreamcastSlotNames, items_count: AllDreamcastSlotNames.Length);
                 ImGui.PopID();
@@ -1486,6 +1614,8 @@ partial class UserInterface
             (true, true) => "Slot 1 Keyboard Config",
             (true, false) => "Slot 2 Keyboard Config"
         };
+
+        ApplyAndroidDialogWidth();
         ImGui.Begin(title, ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.Modal);
         {
             if (ImGui.Button("Save"))
@@ -1508,7 +1638,7 @@ partial class UserInterface
 
             ImGui.SeparatorText("Presets");
             ImGui.PushID("KeyPresetCombo");
-            ImGui.SetNextItemWidth(80);
+            ImGui.SetNextItemWidth(AndroidContentWidth(80));
             var keyPresets = editingPrimaryVmu ? Configuration.AllPrimaryKeyPresets : Configuration.AllSecondaryKeyPresets;
             if (ImGui.BeginCombo(label: "", preview_value: keyPresets[_mappingEditState.PresetIndex].name))
             {
@@ -1534,7 +1664,8 @@ partial class UserInterface
             }
 
             ImGui.PopID();
-            ImGui.SameLine();
+            if (!IsAndroid)
+                ImGui.SameLine();
 
             if (ImGui.Button("Apply"))
             {
@@ -1546,7 +1677,15 @@ partial class UserInterface
 
             if (ImGui.BeginTable("Key Mappings", columns: 2, ImGuiTableFlags.Borders))
             {
-                ImGui.TableSetupColumn(label: "", flags: ImGuiTableColumnFlags.WidthFixed);
+                if (IsAndroid)
+                {
+                    ImGui.TableSetupColumn(label: "", flags: ImGuiTableColumnFlags.WidthFixed, init_width_or_weight: AndroidMappingTargetColumnWidth);
+                }
+                else
+                {
+                    ImGui.TableSetupColumn(label: "", flags: ImGuiTableColumnFlags.WidthFixed);
+                }
+
                 ImGui.TableSetupColumn(label: "", flags: ImGuiTableColumnFlags.WidthStretch);
 
                 for (int i = 0; i < _mappingEditState.KeyMappings.Count; i++)
@@ -1559,7 +1698,15 @@ partial class UserInterface
                     ImGui.Text(mapping.TargetButton.ToString());
 
                     ImGui.TableSetColumnIndex(1);
-                    if (ImGui.Button(mapping.SourceKey.ToString()))
+                    if (IsAndroid)
+                    {
+                        if (AndroidMappingCell(mapping.SourceKey.ToString()))
+                        {
+                            _mappingEditState.EditedIndex = i;
+                            doOpenEditKey = true;
+                        }
+                    }
+                    else if (ImGui.Button(mapping.SourceKey.ToString()))
                     {
                         _mappingEditState.EditedIndex = i;
                         doOpenEditKey = true;
@@ -1590,6 +1737,8 @@ partial class UserInterface
             true when _mappingEditState.TargetVmu == _game.PrimaryVmu => "Slot 1 Gamepad Config",
             _ => "Slot 2 Gamepad Config"
         };
+
+        ApplyAndroidDialogWidth();
         ImGui.Begin(title, ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.Modal);
         {
             if (ImGui.Button("Save"))
@@ -1620,6 +1769,8 @@ partial class UserInterface
                 InputMappings.GamePadIndex_None => "None",
                 var index => $"{_mappingEditState.GamePadIndex + 1}: {GamePad.GetCapabilities(index).DisplayName ?? "<not found>"}"
             };
+            if (IsAndroid)
+                ImGui.SetNextItemWidth(AndroidContentWidth(0));
             if (ImGui.BeginCombo(label: "", previewValue))
             {
                 if (ImGui.Selectable("None"))
@@ -1643,7 +1794,7 @@ partial class UserInterface
 
             ImGui.SeparatorText("Presets");
             ImGui.PushID("ButtonPresetCombo");
-            ImGui.SetNextItemWidth(80);
+            ImGui.SetNextItemWidth(AndroidContentWidth(80));
             if (ImGui.BeginCombo(label: "", preview_value: Configuration.AllButtonPresets[_mappingEditState.PresetIndex].name))
             {
                 for (int i = 0; i < Configuration.AllButtonPresets.Length; i++)
@@ -1668,7 +1819,8 @@ partial class UserInterface
             }
 
             ImGui.PopID();
-            ImGui.SameLine();
+            if (!IsAndroid)
+                ImGui.SameLine();
 
             if (ImGui.Button("Apply"))
             {
@@ -1680,7 +1832,15 @@ partial class UserInterface
 
             if (ImGui.BeginTable("Button Mappings", columns: 2, ImGuiTableFlags.Borders))
             {
-                ImGui.TableSetupColumn(label: "", flags: ImGuiTableColumnFlags.WidthFixed);
+                if (IsAndroid)
+                {
+                    ImGui.TableSetupColumn(label: "", flags: ImGuiTableColumnFlags.WidthFixed, init_width_or_weight: AndroidMappingTargetColumnWidth);
+                }
+                else
+                {
+                    ImGui.TableSetupColumn(label: "", flags: ImGuiTableColumnFlags.WidthFixed);
+                }
+
                 ImGui.TableSetupColumn(label: "", flags: ImGuiTableColumnFlags.WidthStretch);
 
                 for (int i = 0; i < _mappingEditState.ButtonMappings.Count; i++)
@@ -1693,7 +1853,16 @@ partial class UserInterface
                     ImGui.Text(mapping.TargetButton.ToString());
 
                     ImGui.TableSetColumnIndex(1);
-                    if (ImGui.Button(mapping.SourceButton.ToString()))
+                    var sourceButtonName = DisplayButtonName(mapping.SourceButton);
+                    if (IsAndroid)
+                    {
+                        if (AndroidMappingCell(sourceButtonName))
+                        {
+                            _mappingEditState.EditedIndex = i;
+                            doOpenEditKey = true;
+                        }
+                    }
+                    else if (ImGui.Button(sourceButtonName))
                     {
                         _mappingEditState.EditedIndex = i;
                         doOpenEditKey = true;
@@ -1896,3 +2065,4 @@ struct DisabledScope : IDisposable
             ImGui.EndDisabled();
     }
 }
+

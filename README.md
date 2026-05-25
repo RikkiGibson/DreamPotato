@@ -76,6 +76,19 @@ Key and button mappings can be changed in Settings -> Keyboard Config / Gamepad 
 - Run the emulator: `dotnet run --project src/DreamPotato.MonoGame`.
 - Run tests: `dotnet test`
 
+### Android Debug APK
+
+- Install Android tooling: [.NET 9 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/9.0) + `dotnet workload install android`.
+- Build debug APK:
+  - `dotnet build src\DreamPotato.MonoGame.Android\DreamPotato.MonoGame.Android.csproj -c Debug`
+- Debug APK output:
+  - `artifacts\bin\DreamPotato.MonoGame.Android\debug\com.dreampotato.monogame-Signed.apk`
+- Required ROM:
+  - `american_v1.05.bin` (64KB), selected on first launch through the Android file picker.
+- Intentional Android UI difference:
+  - `Open Data Folder` is hidden in Android.
+- Keep parity items for this milestone in [docs/android.md](./docs/android.md).
+
 ## Project Overview
 
 Under `src/`:

@@ -28,7 +28,18 @@ public class Game1 : Game
     internal VmuPresenter? SecondaryVmuPresenter => UseSecondaryVmu ? _secondaryVmuPresenter : null;
     internal UserInterface UserInterface => _userInterface;
 
-    internal const int MenuBarHeight = 20;
+    private const int DesktopMenuBarHeight = 20;
+    internal static int MenuBarHeight
+    {
+        get
+        {
+#if ANDROID
+            return 48;
+#else
+            return DesktopMenuBarHeight;
+#endif
+        }
+    }
 
 
     // Set in Initialize()
@@ -39,6 +50,7 @@ public class Game1 : Game
     private MapleMessageBroker MapleMessageBroker = null!;
     private VmuPresenter _primaryVmuPresenter = null!;
     private VmuPresenter _secondaryVmuPresenter = null!;
+    private TouchOverlay? _touchOverlay;
 
     private UserInterface _userInterface = null!;
 
@@ -78,10 +90,7 @@ public class Game1 : Game
         Configuration = Configuration.Load();
         ColorPalette = ColorPalette.AllPalettes.FirstOrDefault(palette => palette.Name == Configuration.ColorPaletteName) ?? ColorPalette.AllPalettes[0];
 
-        var windowSize = Configuration.ViewportSize;
-        _graphics.PreferredBackBufferWidth = windowSize.Width;
-        _graphics.PreferredBackBufferHeight = windowSize.Height;
-        _graphics.ApplyChanges();
+        ApplyInitialBackBufferSize();
 
         var textures = new IconTextures
         {
@@ -107,6 +116,9 @@ public class Game1 : Game
 
         var secondaryVmu = new Vmu(MapleMessageBroker) { DreamcastSlot = DreamcastSlot.Slot2 };
         _secondaryVmuPresenter = new VmuPresenter(this, secondaryVmu, textures, _graphics, Configuration.SecondaryInput);
+
+        if (PlatformServices.Current.UseTouchOverlay)
+            _touchOverlay = new TouchOverlay();
 
         var date = DateTimeOffset.Now;
         initializeVmu(_primaryVmuPresenter, date, _commandLineFilePath ?? RecentFilesInfo.PrimaryVmuMostRecent);
@@ -212,7 +224,8 @@ public class Game1 : Game
         var extension = Path.GetExtension(filePath);
         if (extension.Equals(".vms", StringComparison.OrdinalIgnoreCase))
         {
-            vmu.LoadGameVms(filePath, date, autoInitializeRTCDate: Configuration.AutoInitializeDate);
+            if (!tryLoadGameFile(() => vmu.LoadGameVms(filePath, date, autoInitializeRTCDate: Configuration.AutoInitializeDate)))
+                return;
         }
         else if (extension.Equals(".vmu", StringComparison.OrdinalIgnoreCase)
             || extension.Equals(".bin", StringComparison.OrdinalIgnoreCase))
@@ -222,7 +235,8 @@ public class Game1 : Game
         }
         else
         {
-            throw new ArgumentException($"Cannot load '{filePath}' because it is not a '.vms', '.vmu', or '.bin' file.");
+            _userInterface.ShowToast(presenter, $"Cannot open {Path.GetFileName(filePath)} because it is not a '.vms', '.vmu', or '.bin' file.");
+            return;
         }
 
         presenter.LocalPaused = false;
@@ -250,8 +264,21 @@ public class Game1 : Game
                 return false;
             }
 
-            vmu.LoadVmu(filePath, rtcDate: Configuration.AutoInitializeDate ? date : null);
-            return true;
+            return tryLoadGameFile(() => vmu.LoadVmu(filePath, rtcDate: Configuration.AutoInitializeDate ? date : null));
+        }
+
+        bool tryLoadGameFile(Action load)
+        {
+            try
+            {
+                load();
+                return true;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+            {
+                _userInterface.ShowToast(presenter, $"Cannot open {Path.GetFileName(filePath)}. {ex.Message}", durationFrames: 5 * 60);
+                return false;
+            }
         }
     }
 
@@ -342,6 +369,10 @@ public class Game1 : Game
         var usingBothSlots = newExpansionSlots == ExpansionSlots.Slot1And2;
         if (usingBothSlots != (oldExpansionSlots == ExpansionSlots.Slot1And2))
         {
+#if ANDROID
+            ApplyInitialBackBufferSize();
+            UpdateScaleMatrix();
+#else
             if (usingBothSlots)
             {
                 //  ┌──────────────────────────────┐      ┬ H
@@ -387,6 +418,7 @@ public class Game1 : Game
 
             _graphics.ApplyChanges();
             UpdateScaleMatrix();
+#endif
         }
     }
 
@@ -435,13 +467,58 @@ public class Game1 : Game
 
     private void Window_ClientSizeChanged(object? sender, EventArgs e)
     {
-        const int MinHeight = VmuPresenter.TotalContentHeight + MenuBarHeight;
+        if (_userInterface is null || _primaryVmuPresenter is null || _secondaryVmuPresenter is null)
+            return;
+
+#if ANDROID
+        var clientBounds = Window.ClientBounds;
+        if (clientBounds.Width > 0 && clientBounds.Height > 0)
+        {
+            _graphics.PreferredBackBufferWidth = clientBounds.Width;
+            _graphics.PreferredBackBufferHeight = clientBounds.Height;
+            _graphics.ApplyChanges();
+            UpdateScaleMatrix();
+            return;
+        }
+#endif
+
+        var minHeight = VmuPresenter.TotalContentHeight + MenuBarHeight;
 
         var viewport = _graphics.GraphicsDevice.Viewport;
         _graphics.PreferredBackBufferWidth = Math.Max(viewport.Width, VmuPresenter.TotalContentWidth);
-        _graphics.PreferredBackBufferHeight = Math.Max(viewport.Height, MinHeight);
+        _graphics.PreferredBackBufferHeight = Math.Max(viewport.Height, minHeight);
         _graphics.ApplyChanges();
         UpdateScaleMatrix();
+    }
+
+    private void ApplyInitialBackBufferSize()
+    {
+#if ANDROID
+        var clientBounds = Window.ClientBounds;
+        if (clientBounds.Width > 0 && clientBounds.Height > 0)
+        {
+            _graphics.IsFullScreen = true;
+            _graphics.PreferredBackBufferWidth = clientBounds.Width;
+            _graphics.PreferredBackBufferHeight = clientBounds.Height;
+            _graphics.ApplyChanges();
+            return;
+        }
+
+        var displayMode = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
+        if (displayMode.Width > 0 && displayMode.Height > 0)
+        {
+            _graphics.IsFullScreen = true;
+            _graphics.PreferredBackBufferWidth = displayMode.Width;
+            _graphics.PreferredBackBufferHeight = displayMode.Height;
+            _graphics.ApplyChanges();
+            return;
+        }
+#endif
+
+        var windowSize = Configuration.ViewportSize;
+        _graphics.PreferredBackBufferWidth = windowSize.Width;
+        _graphics.PreferredBackBufferHeight = windowSize.Height;
+        _graphics.ApplyChanges();
     }
 
     private Rectangle AllVmuContentRectangle
@@ -538,16 +615,32 @@ public class Game1 : Game
     /// <summary>Sets a window size which is a multiple of <see cref="MinWidth"/>.</summary>
     internal void SetWindowSizeMultiple(int multiple)
     {
+#if ANDROID
+        ApplyInitialBackBufferSize();
+        UpdateScaleMatrix();
+        return;
+#else
         _graphics.PreferredBackBufferWidth = VmuPresenter.TotalContentWidth * multiple;
         var vmuCount = UseSecondaryVmu ? 2 : 1;
         _graphics.PreferredBackBufferHeight = vmuCount * (VmuPresenter.TotalContentHeight * multiple + MenuBarHeight);
         _graphics.ApplyChanges();
         UpdateScaleMatrix();
+#endif
     }
 
     protected override void Update(GameTime gameTime)
     {
         var keyboard = Keyboard.GetState();
+        if (PlatformServices.Current.UseTouchOverlay)
+            _touchOverlay?.Update(gameTime, this);
+
+        Func<VmuButton, bool>? primaryTouchInput = null;
+        Func<VmuButton, bool>? secondaryTouchInput = null;
+        if (PlatformServices.Current.UseTouchOverlay && _touchOverlay is not null)
+        {
+            primaryTouchInput = _touchOverlay.CreateTouchInputFilter(isPrimary: true);
+            secondaryTouchInput = _touchOverlay.CreateTouchInputFilter(isPrimary: false);
+        }
 
         var isConnected = MapleMessageBroker.IsConnected;
         if (_previousIsConnected != isConnected)
@@ -566,12 +659,12 @@ public class Game1 : Game
             // For a VMU-to-VMU connection, the secondary should 'Update' only.
             // In that case, the primary will run both CPUs in sync in its 'UpdateAndRun' call.
             if (PrimaryVmu.IsOtherVmuConnected)
-                _secondaryVmuPresenter.Update(_previousKeys, keyboard);
+                _secondaryVmuPresenter.Update(_previousKeys, keyboard, secondaryTouchInput);
             else
-                _secondaryVmuPresenter.UpdateAndRun(gameTime, _previousKeys, keyboard);
+                _secondaryVmuPresenter.UpdateAndRun(gameTime, _previousKeys, keyboard, secondaryTouchInput);
         }
 
-        _primaryVmuPresenter.UpdateAndRun(gameTime, _previousKeys, keyboard);
+        _primaryVmuPresenter.UpdateAndRun(gameTime, _previousKeys, keyboard, primaryTouchInput);
 
         MapleMessageBroker.RefreshIfNeeded();
 
@@ -604,7 +697,9 @@ public class Game1 : Game
         if (UseSecondaryVmu)
             _secondaryVmuPresenter.Draw(_spriteBatch);
 
-        _userInterface.Layout(gameTime);
+        _userInterface.Layout(gameTime, beforeRender: PlatformServices.Current.UseTouchOverlay
+            ? () => _touchOverlay?.Layout(this)
+            : null);
 
         base.Draw(gameTime);
     }

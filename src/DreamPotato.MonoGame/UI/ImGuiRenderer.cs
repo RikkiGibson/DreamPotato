@@ -10,6 +10,10 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
+#if ANDROID
+using Microsoft.Xna.Framework.Input.Touch;
+#endif
+
 namespace DreamPotato.MonoGame.UI
 {
     /// <summary>
@@ -40,10 +44,16 @@ namespace DreamPotato.MonoGame.UI
         private IntPtr? _fontTextureId;
 
         // Input
+#if !ANDROID
         private int _scrollWheelValue;
         private int _horizontalScrollWheelValue;
         private readonly float WHEEL_DELTA = 120;
+#endif
         private readonly Keys[] _allKeys = Enum.GetValues<Keys>();
+#if ANDROID
+        private bool _wasTouchDown;
+        private Vector2 _lastTouchPosition;
+#endif
 
         public ImGuiRenderer(Game game)
         {
@@ -119,7 +129,7 @@ namespace DreamPotato.MonoGame.UI
         }
 
         /// <summary>
-        /// Sets up ImGui for a new frame, should be called at frame start
+        /// Sets up ImGui for new frame, should be called at frame start
         /// </summary>
         public virtual void BeforeLayout(GameTime gameTime)
         {
@@ -151,6 +161,7 @@ namespace DreamPotato.MonoGame.UI
         {
             var io = ImGui.GetIO();
 
+#if !ANDROID
             // MonoGame-specific //////////////////////
             _game.Window.TextInput += (s, a) =>
             {
@@ -159,6 +170,7 @@ namespace DreamPotato.MonoGame.UI
             };
 
             ///////////////////////////////////////////
+#endif
 
             // FNA-specific ///////////////////////////
             //TextInputEXT.TextInput += c =>
@@ -197,9 +209,12 @@ namespace DreamPotato.MonoGame.UI
             if (!_game.IsActive) return;
             
             var io = ImGui.GetIO();
-
-            var mouse = Mouse.GetState();
             var keyboard = Keyboard.GetState();
+
+#if ANDROID
+            UpdateTouchInput();
+#else
+            var mouse = Mouse.GetState();
             io.AddMousePosEvent(mouse.X, mouse.Y);
             io.AddMouseButtonEvent(0, mouse.LeftButton == ButtonState.Pressed);
             io.AddMouseButtonEvent(1, mouse.RightButton == ButtonState.Pressed);
@@ -212,6 +227,7 @@ namespace DreamPotato.MonoGame.UI
                 (mouse.ScrollWheelValue - _scrollWheelValue) / WHEEL_DELTA);
             _scrollWheelValue = mouse.ScrollWheelValue;
             _horizontalScrollWheelValue = mouse.HorizontalScrollWheelValue;
+#endif
 
             foreach (var key in _allKeys)
             {
@@ -224,6 +240,47 @@ namespace DreamPotato.MonoGame.UI
             io.DisplaySize = new System.Numerics.Vector2(_graphicsDevice.PresentationParameters.BackBufferWidth, _graphicsDevice.PresentationParameters.BackBufferHeight);
             io.DisplayFramebufferScale = new System.Numerics.Vector2(1f, 1f);
         }
+
+#if ANDROID
+        protected virtual void UpdateTouchInput()
+        {
+            var io = ImGui.GetIO();
+            var touches = TouchPanel.GetState();
+
+            foreach (var touchLocation in touches)
+            {
+                if (touchLocation.State is TouchLocationState.Pressed or TouchLocationState.Moved)
+                {
+                    _lastTouchPosition = touchLocation.Position;
+                    io.AddMousePosEvent(_lastTouchPosition.X, _lastTouchPosition.Y);
+                    io.AddMouseButtonEvent(0, true);
+                    _wasTouchDown = true;
+                    return;
+                }
+            }
+
+            foreach (var touchLocation in touches)
+            {
+                if (touchLocation.State == TouchLocationState.Released)
+                {
+                    _lastTouchPosition = touchLocation.Position;
+                    io.AddMousePosEvent(_lastTouchPosition.X, _lastTouchPosition.Y);
+                    if (!_wasTouchDown)
+                        io.AddMouseButtonEvent(0, true);
+                    io.AddMouseButtonEvent(0, false);
+                    _wasTouchDown = false;
+                    return;
+                }
+            }
+
+            if (_wasTouchDown)
+            {
+                io.AddMousePosEvent(_lastTouchPosition.X, _lastTouchPosition.Y);
+                io.AddMouseButtonEvent(0, false);
+                _wasTouchDown = false;
+            }
+        }
+#endif
 
         private bool TryMapKeys(Keys key, out ImGuiKey imguikey)
         {
@@ -405,12 +462,14 @@ namespace DreamPotato.MonoGame.UI
                         throw new InvalidOperationException($"Could not find a texture with id '{drawCmd.TextureId}', please check your bindings");
                     }
 
-                    _graphicsDevice.ScissorRectangle = new Rectangle(
-                        (int)drawCmd.ClipRect.X,
-                        (int)drawCmd.ClipRect.Y,
-                        (int)(drawCmd.ClipRect.Z - drawCmd.ClipRect.X),
-                        (int)(drawCmd.ClipRect.W - drawCmd.ClipRect.Y)
-                    );
+                    var left = Math.Clamp((int)MathF.Floor(drawCmd.ClipRect.X), 0, _graphicsDevice.PresentationParameters.BackBufferWidth);
+                    var top = Math.Clamp((int)MathF.Floor(drawCmd.ClipRect.Y), 0, _graphicsDevice.PresentationParameters.BackBufferHeight);
+                    var right = Math.Clamp((int)MathF.Ceiling(drawCmd.ClipRect.Z), left, _graphicsDevice.PresentationParameters.BackBufferWidth);
+                    var bottom = Math.Clamp((int)MathF.Ceiling(drawCmd.ClipRect.W), top, _graphicsDevice.PresentationParameters.BackBufferHeight);
+                    if (right == left || bottom == top)
+                        continue;
+
+                    _graphicsDevice.ScissorRectangle = new Rectangle(left, top, right - left, bottom - top);
 
                     var effect = UpdateEffect(_loadedTextures[drawCmd.TextureId]);
 
@@ -421,10 +480,10 @@ namespace DreamPotato.MonoGame.UI
 #pragma warning disable CS0618 // // FNA does not expose an alternative method.
                         _graphicsDevice.DrawIndexedPrimitives(
                             primitiveType: PrimitiveType.TriangleList,
-                            baseVertex: (int)drawCmd.VtxOffset + vtxOffset,
+                            baseVertex: vtxOffset + (int)drawCmd.VtxOffset,
                             minVertexIndex: 0,
                             numVertices: cmdList.VtxBuffer.Size,
-                            startIndex: (int)drawCmd.IdxOffset + idxOffset,
+                            startIndex: idxOffset + (int)drawCmd.IdxOffset,
                             primitiveCount: (int)drawCmd.ElemCount / 3
                         );
 #pragma warning restore CS0618

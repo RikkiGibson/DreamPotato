@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0-android</TargetFramework>
+    <RollForward>Major</RollForward>
+    <Nullable>enable</Nullable>
+    <LangVersion>preview</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationId>com.dreampotato.monogame</ApplicationId>
+    <ApplicationTitle>DreamPotato</ApplicationTitle>
+    <AssemblyName>DreamPotato.Android</AssemblyName>
+    <AndroidManifest>Properties\AndroidManifest.xml</AndroidManifest>
+    <SupportedOSPlatformVersion>21</SupportedOSPlatformVersion>
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <AndroidUseSharedRuntime>false</AndroidUseSharedRuntime>
+    <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+    <MonoGamePlatform>Android</MonoGamePlatform>
+    <MGCBCommand Condition="'$(OS)' == 'Windows_NT'">mgcb.exe</MGCBCommand>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\DreamPotato.MonoGame\**\*.cs">
+      <Link>Shared\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </Compile>
+    <Compile Remove="..\DreamPotato.MonoGame\Program.cs" />
+    <Compile Remove="..\DreamPotato.MonoGame\Platform\DesktopPlatformServices.cs" />
+    <Compile Remove="..\DreamPotato.MonoGame\Mac\**\*.cs" />
+    <Compile Remove="..\DreamPotato.MonoGame\Linux\**\*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ImGui.NET" Version="1.91.6.1">
+      <ExcludeAssets>native</ExcludeAssets>
+    </PackageReference>
+    <PackageReference Include="Humanizer" Version="3.0.1" />
+    <PackageReference Include="MonoGame.Framework.Android" Version="3.8.4.1" />
+    <PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DreamPotato.Core\DreamPotato.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <MonoGameContentReference Include="..\DreamPotato.MonoGame\Content\Content.mgcb" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AndroidAsset Include="..\DreamPotato.MonoGame\Data\**\*">
+      <Link>Data\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </AndroidAsset>
+  </ItemGroup>
+
+</Project>
