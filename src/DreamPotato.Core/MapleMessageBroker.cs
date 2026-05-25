@@ -558,8 +558,7 @@ public class MapleMessageBroker
     {
         try
         {
-            using var listener = new Socket(SocketType.Stream, ProtocolType.Tcp);
-            listener.Bind(new IPEndPoint(IPAddress.IPv6Loopback, BasePort + (int)dreamcastPort));
+            using var listener = CreateBoundLoopbackListener(dreamcastPort);
             listener.Listen();
 
             while (true) // Accept a new client whenever one disconnects
@@ -642,6 +641,44 @@ public class MapleMessageBroker
                 && _slot2._inboundCpuMessages.Writer.TryWrite(clearScreenMessage);
             Debug.Assert(written);
         }
+    }
+
+    private static Socket CreateBoundLoopbackListener(DreamcastPort dreamcastPort)
+    {
+        var port = BasePort + (int)dreamcastPort;
+        SocketException? lastException = null;
+
+        foreach (var endpoint in GetLoopbackEndPoints(port))
+        {
+            Socket? listener = null;
+            try
+            {
+                listener = new Socket(endpoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                if (OperatingSystem.IsAndroid() && endpoint.AddressFamily == AddressFamily.InterNetworkV6)
+                    listener.DualMode = true;
+                listener.Bind(endpoint);
+                return listener;
+            }
+            catch (SocketException e)
+            {
+                lastException = e;
+                listener?.Dispose();
+            }
+        }
+
+        throw new InvalidOperationException($"Unable to bind Maple loopback listener for port {port}.", lastException);
+    }
+
+    private static IPEndPoint[] GetLoopbackEndPoints(int port)
+    {
+        if (!OperatingSystem.IsAndroid())
+            return [new IPEndPoint(IPAddress.IPv6Loopback, port)];
+
+        return
+        [
+            new IPEndPoint(IPAddress.IPv6Loopback, port),
+            new IPEndPoint(IPAddress.Loopback, port),
+        ];
     }
 
     private class VmuInfo

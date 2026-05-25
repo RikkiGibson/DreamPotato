@@ -20,9 +20,9 @@ jobs:
     - name: Download resources
       run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.Tests/Data/american_v1.05.bin
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore src/DreamPotato.Tests/DreamPotato.Tests.csproj
     - name: Build
-      run: dotnet build --no-restore -bl
+      run: dotnet build src/DreamPotato.Tests/DreamPotato.Tests.csproj --no-restore -bl
     - name: Upload Binlog
       if: failure()
       uses: actions/upload-artifact@v6
@@ -30,7 +30,7 @@ jobs:
         name: msbuild.binlog
         path: msbuild.binlog
     - name: Test
-      run: dotnet test --logger "trx;LogFileName=test-results.trx" --results-directory "artifacts/TestResults"
+      run: dotnet test src/DreamPotato.Tests/DreamPotato.Tests.csproj --no-build --logger "trx;LogFileName=test-results.trx" --results-directory "artifacts/TestResults"
     - name: Publish Test Results
       uses: dorny/test-reporter@v3
       if: ${{ !cancelled() }}
@@ -52,7 +52,7 @@ jobs:
     - name: Download resources
       run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.MonoGame/Data/american_v1.05.bin
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore src/DreamPotato.MonoGame/DreamPotato.MonoGame.csproj -r linux-x64
 
     - name: Run pack-x64.sh
       run: ./src/DreamPotato.MonoGame/Linux/pack-x64.sh

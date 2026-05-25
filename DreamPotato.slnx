@@ -7,6 +7,7 @@
   <Folder Name="/src/">
     <Project Path="src/DreamPotato.Core/DreamPotato.Core.csproj" />
     <Project Path="src/DreamPotato.MonoGame/DreamPotato.MonoGame.csproj" />
+    <Project Path="src/DreamPotato.MonoGame.Android/DreamPotato.MonoGame.Android.csproj" />
     <Project Path="src/DreamPotato.SaveStateDiff/DreamPotato.SaveStateDiff.csproj" />
     <Project Path="src/DreamPotato.Tests/DreamPotato.Tests.csproj" />
   </Folder>
