@@ -176,8 +176,7 @@ public class Vmu
 
         Reset(autoInitializeRtcDate ? date : null);
         Array.Clear(_cpu.Flash);
-        FileSystem.InitializeFileSystem(date);
-        if (FileSystem.TryWriteAllFiles(sourceDirectory: folderInfo) is (false, var error))
+        if (FileSystem.TryInitializeFolder(sourceDirectory: folderInfo, fallbackDate: date) is (false, var error))
             return (false, error);
 
         _cpu.LazyDebugInfo?.ClearFlash();
@@ -432,6 +431,7 @@ public class Vmu
 
         var vmsFolder = new DirectoryInfo(LoadedPath);
         if (!vmsFolder.Exists)
+            // Either a folder is not currently open (i.e. a file is open instead), or the folder was deleted/renamed.
             return false;
 
         // TODO2: can we do this only when we are actually ready to flush?
@@ -448,6 +448,7 @@ public class Vmu
 
         var vmsFolder = new DirectoryInfo(LoadedPath);
         if (!vmsFolder.Exists)
+            // Either a folder is not currently open (i.e. a file is open instead), or the folder was deleted/renamed.
             return;
 
         if (IsDockedToDreamcast)

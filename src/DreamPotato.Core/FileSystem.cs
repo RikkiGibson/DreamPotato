@@ -19,8 +19,8 @@ internal class FileSystem
     private readonly HashSet<ushort> _changedBlockIds = [];
 
     /// <summary>
-    /// Contents of the directory table preceding the most recent flush or file load.
-    /// Mainly used to detect file deletion.
+    /// Copy of the directory table. Each time we open a file, or after we flush I/O, we update this copy.
+    /// When we flush, we compare <see cref="_directoryMirror"/> and <see cref="flash"/>, to see which files were added/removed/modified.
     /// </summary>
     private readonly byte[] _directoryMirror = new byte[DirectoryTableSizeBlocks * BlockSize];
 
@@ -49,6 +49,8 @@ internal class FileSystem
     internal const int BlockIdSize = 2;
     private const int BlocksCount = VolumeSizeBytes / BlockSize; // 256
 
+    /// <summary>Used to store the root block contents in a vms folder</summary>
+    internal const string RootBlockFilename = "fs_root.bin";
     internal const byte RootBlockId = BlocksCount - 1;
     internal const byte FATBlockId = BlocksCount - 2;
     internal const byte DirectoryTableLastBlockId = BlocksCount - 3;
@@ -306,6 +308,9 @@ internal class FileSystem
             }
         }
 
+        var rootBlock = GetBlock(RootBlockId);
+        File.WriteAllBytes(Path.Combine(destDirectory.FullName, RootBlockFilename), rootBlock);
+
         void readFile(DirectoryEntry directoryEntry)
         {
             var outFileName = directoryEntry.NameString;
@@ -359,11 +364,31 @@ internal class FileSystem
         return vmiInfo;
     }
 
+    public (bool ok, string? errorMessage) TryInitializeFolder(DirectoryInfo sourceDirectory, DateTimeOffset fallbackDate)
+    {
+        var rootBlockPath = new FileInfo(Path.Combine(sourceDirectory.FullName, RootBlockFilename));
+        if (rootBlockPath.Exists && rootBlockPath.Length == BlockSize)
+        {
+            using var rootBlockFile = rootBlockPath.OpenRead();
+            rootBlockFile.ReadExactly(GetBlock(RootBlockId));
+        }
+        else
+        {
+            // No problem if the fs_root file is missing. Just initialize it with defaults.
+            // The user selected VMU icon and color will be missing though.
+            InitializeFileSystem(fallbackDate);
+        }
+
+        var (ok, error) = TryWriteAllFiles(sourceDirectory);
+        UpdateDirectoryMirror();
+        return (ok, error);
+    }
+
     public (bool ok, string? errorMessage) TryWriteAllFiles(DirectoryInfo sourceDirectory)
     {
         string? foundGameName = null;
 
-        // Note: We could consider writing in the hidden region to fit more files, but, it doesn't seem consistent with ordinary VMUs.
+        // Data (non-game) files are written from the end of the user region toward the start
         ushort currentDataBlockId = UserRegionLastBlockId;
         foreach (var vmsFileInfo in sourceDirectory.EnumerateFiles("*.vms").OrderBy(f => f.Name))
         {
@@ -396,15 +421,18 @@ internal class FileSystem
             if (!directoryEntry.HasValue)
                 return (false, $"{vmsFileInfo.Name}: The file system directory is full.");
 
-            if (tryWriteDataFile(directoryEntry, vmsFileInfo.Name, vmsFileBytes, vmiInfo) is (false, var error1))
+            if (tryWriteDataFile(ref currentDataBlockId, directoryEntry, vmsFileInfo.Name, vmsFileBytes, vmiInfo) is (false, var error1))
                 return (false, error1);
         }
 
         return (true, null);
 
-        (bool ok, string? error) tryWriteDataFile(DirectoryEntry directoryEntry, string onDiskFileName, ReadOnlySpan<byte> vmsFileBytes, VmiInfo vmiInfo)
+        (bool ok, string? error) tryWriteDataFile(ref ushort currentDataBlockId, DirectoryEntry directoryEntry, string onDiskFileName, ReadOnlySpan<byte> vmsFileBytes, VmiInfo vmiInfo)
         {
             Debug.Assert(!vmiInfo.FileMode.HasFlag(VmuFileMode.Game));
+
+            if (vmsFileBytes.Length != vmiInfo.VmsFileSize)
+                return (false, $"{vmiInfo.VmuFileName}: VMI expected the VMS file size to be {vmiInfo.VmsFileSize} but was actually {vmsFileBytes.Length}");
 
             var sizeInBlocks = (ushort)((vmsFileBytes.Length + (BlockSize - 1)) / BlockSize);
             var fatBlock = GetFATBlock();
@@ -435,6 +463,9 @@ internal class FileSystem
                 // Scan to next free data block
                 do
                 {
+                    // Note: strictly, we should not be marking any blocks as used if there wasn't enough space.
+                    // However, this is a major failure condition (we couldn't write all the vms folder content to the VMU),
+                    // so it doesn't feel super important to try to recover.
                     if (currentDataBlockId == 0)
                         return (false, $"{onDiskFileName}: Insufficient space on VMU");
 
@@ -452,9 +483,7 @@ internal class FileSystem
             vmiInfo.VmuFileName.CopyTo(directoryEntry.Name);
 
             directoryEntry.DateTimeOffset = vmiInfo.CreationDateTimeOffset;
-
-            // Divide size in bytes by block size, round up
-            directoryEntry.SizeInBlocks = (ushort)((vmiInfo.VmsFileSize + (BlockSize - 1)) / BlockSize);
+            directoryEntry.SizeInBlocks = sizeInBlocks;
 
             // Note: if the vms doesn't match this convention, then we have no way of really knowing where its header is.
             // We might want to verify the header is in the expected location in 'ReadAllFiles'.
@@ -582,6 +611,10 @@ internal class FileSystem
             }
         }
 
+        // Look at all the .vmi files in the host folder, to find which one has a matching VMU filesystem name.
+        // Note: the filenames in the host file system, are not matched against the vms names.
+        // The user can rename a .vmi+.vms pair to anything they want (as long as the names without extension match)
+        // and we will continue to pick the right file up, update it when it changes, etc.
         var vmiFilesByVmuFileName = vmsFolder.EnumerateFiles("*.vmi").ToDictionary(
             info => new VmiInfo(File.ReadAllBytes(info.FullName)).VmuFileNameString);
 
@@ -589,6 +622,7 @@ internal class FileSystem
         foreach (var vmuFileToDelete in toDelete)
         {
             if (!vmiFilesByVmuFileName.TryGetValue(vmuFileToDelete, out var vmiInfo))
+                // Didn't find the corresponding .vmi file in the host system. Nothing to delete.
                 continue;
 
             vmiInfo.Delete();
@@ -614,6 +648,14 @@ internal class FileSystem
             }
         }
 
+        // Update the root block if it actually changed
+        var newRootBlock = GetBlock(RootBlockId);
+        var rootBlockPath = Path.Combine(vmsFolder.FullName, RootBlockFilename);
+        if (!File.Exists(rootBlockPath) || !File.ReadAllBytes(rootBlockPath).SequenceEqual(newRootBlock))
+        {
+            File.WriteAllBytes(rootBlockPath, newRootBlock);
+        }
+
         _changedBlockIds.Clear();
         _flushDeadline = DateTimeOffset.MaxValue;
         UpdateDirectoryMirror();
@@ -621,6 +663,9 @@ internal class FileSystem
 
     private IEnumerable<DirectoryEntry> EnumerateDirectoryTable()
     {
+        // TODO2: We should probably use the root block as source of truth as much as possible,
+        // and make it a precondition to initialize it before using this
+        // Similar with usages of other consts such as the sizes of various regions.
         for (var blockId = DirectoryTableLastBlockId; blockId >= DirectoryTableFirstBlockId; blockId--)
         {
             var directoryBlock = GetBlockMemory(blockId);

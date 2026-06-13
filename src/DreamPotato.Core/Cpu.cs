@@ -2092,7 +2092,7 @@ public class Cpu
             Flash[a17] = value;
             LazyDebugInfo?.CurrentBankInfo.ClearInstruction(a16);
 
-            // TODO2: Should probably abstract this.
+            // TODO2: Need a helper to uniformly decide whether to write to disk, to apply policy on whether "unsaved changes" are present, etc.
             FileSystem.OnFlashModified(a17, DateTime.Now);
             if (VmuFileHandle is not null)
             {

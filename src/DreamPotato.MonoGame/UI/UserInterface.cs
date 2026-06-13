@@ -883,6 +883,8 @@ partial class UserInterface
 
     private void LayoutNewOpenSaveMenuItems(VmuPresenter presenter)
     {
+        Debug.Assert(!_game.IsIntegratedMode && _game.RecentFilesInfo is { });
+
         if (ImGui.MenuItem("New VMU"))
             NewVmu(presenter);
 
@@ -933,7 +935,6 @@ partial class UserInterface
 
         (string[] displayFileNames, ImmutableArray<string> recentFiles) calcRecentFilesInfo()
         {
-            Debug.Assert(!_game.IsIntegratedMode && _game.RecentFilesInfo is { });
             var recentFiles = _game.RecentFilesInfo.RecentFiles;
             const int maxFileNameLength = 18;
             string[] displayFileNames = new string[recentFiles.Length];
