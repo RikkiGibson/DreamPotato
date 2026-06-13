@@ -62,6 +62,8 @@ public class Cpu
         }
     }
 
+    public event Action<string>? OpenFileRequested;
+
     internal FileStream? VmuFileWriteStream
     {
         private get;
@@ -206,8 +208,14 @@ public class Cpu
         Memory = new Memory(this, Logger);
         Audio = new Audio(this, Logger);
         Display = new Display(this);
+<<<<<<< HEAD
         FileSystem = new FileSystem(Flash);
         MapleMessageBroker = mapleMessageBroker ?? new MapleMessageBroker(LogLevel.Default);
+||||||| 4259e82
+        MapleMessageBroker = mapleMessageBroker ?? new MapleMessageBroker(LogLevel.Default);
+=======
+        MapleMessageBroker = mapleMessageBroker ?? new MapleMessageBroker(integratedModePort: null, LogLevel.Default);
+>>>>>>> origin/main
         SetInstructionBank(InstructionBank.ROM);
     }
 
@@ -567,6 +575,9 @@ public class Cpu
                     break;
                 case (MapleMessageType.CompleteWrite, MapleFunction.Storage):
                     // Do nothing, allow timeout counter to turn off flash icon.
+                    break;
+                case (MapleMessageType.DPOpenFile, MapleFunction.Storage):
+                    OpenFileRequested?.Invoke(message.ReadContentString());
                     break;
                 default:
                     Debug.Fail($"Unhandled Maple message '({message.Type}, {message.Function})'");

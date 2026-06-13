@@ -82,7 +82,17 @@ public record Configuration(
             return Default;
 
         using var fileStream = File.OpenRead(path);
-        return JsonSerializer.Deserialize(fileStream, ConfigurationJsonSerializerContext.Default.Configuration) ?? Default;
+        try
+        {
+            return JsonSerializer.Deserialize(fileStream, ConfigurationJsonSerializerContext.Default.Configuration) ?? Default;
+        }
+        catch (JsonException)
+        {
+            // Note: if the configuration is malformed, this means we will use a default configuration instead,
+            // and overwrite the malformed configuration on exit.
+            // We need to take care that we don't start viewing pre-existing config files as invalid in new versions.
+            return Default;
+        }
     }
 
     public static readonly ImmutableArray<KeyMapping> KeyPreset_WASD = [

@@ -17,6 +17,9 @@ public class MapleMessageBroker
     private const int MaxMaplePacketSize = 1025;
     public const int BasePort = 37393;
 
+    /// <summary>When present, we should connect to the given port as a client, rather than being a server.</summary>
+    private readonly int? _integratedModeTcpPort;
+
     /// <summary>A logger independent from Cpu for thread safety reasons.</summary>
     private readonly Logger Logger;
 
@@ -41,8 +44,9 @@ public class MapleMessageBroker
     private Task? _serverTask;
     private CancellationTokenSource? _cancellationTokenSource;
 
-    public MapleMessageBroker(LogLevel minimumLogLevel)
+    public MapleMessageBroker(int? integratedModePort, LogLevel minimumLogLevel)
     {
+        _integratedModeTcpPort = integratedModePort;
         Logger = new Logger(minimumLogLevel, LogCategories.Maple, _cpu: null);
     }
 
@@ -65,7 +69,9 @@ public class MapleMessageBroker
 
         _dreamcastPort = dreamcastPort;
         _cancellationTokenSource = new CancellationTokenSource();
-        _serverTask = Task.Run(() => SocketListenerEntryPoint(dreamcastPort, _cancellationTokenSource.Token));
+        _serverTask = Task.Run(() => _integratedModeTcpPort is int tcpPort
+            ? SocketClientEntryPoint(tcpPort, _cancellationTokenSource.Token)
+            : SocketListenerEntryPoint(_cancellationTokenSource.Token));
     }
 
     private VmuInfo GetVmuInfo(DreamcastSlot dreamcastSlot)
@@ -267,9 +273,7 @@ public class MapleMessageBroker
                 Logger.LogWarning($"(WriteBlock, Clock) not yet implemented", category: LogCategories.Maple);
                 return default; // No reply
             case (MapleMessageType.WriteBlock, MapleFunction.LCD):
-                // Cpu handles this message.
-                var written = vmuInfo._inboundCpuMessages.Writer.TryWrite(message);
-                Debug.Assert(written);
+                handleCpuMessage(vmuInfo, message);
                 return default; // No reply
             case (MapleMessageType.ReadBlock, MapleFunction.Storage):
                 return handleReadBlockStorage(vmuInfo, message);
@@ -277,10 +281,20 @@ public class MapleMessageBroker
                 return handleWriteBlockStorage(vmuInfo, message);
             case (MapleMessageType.CompleteWrite, MapleFunction.Storage):
                 return handleCompleteWriteStorage(vmuInfo, message);
+            case (MapleMessageType.DPOpenFile, MapleFunction.Storage):
+                handleCpuMessage(vmuInfo, message);
+                return default; // No reply
             default:
                 Debug.Fail($"Unhandled Maple message '({message.Type}, {message.Function})'");
                 Logger.LogError($"Unhandled Maple message '({message.Type}, {message.Function})'", category: LogCategories.Maple);
                 return default; // No reply
+        }
+
+        void handleCpuMessage(VmuInfo vmuInfo, MapleMessage message)
+        {
+            // Forward message to cpu thread.
+            var written = vmuInfo._inboundCpuMessages.Writer.TryWrite(message);
+            Debug.Assert(written);
         }
 
         MapleMessage handleGetConditionInput()
@@ -516,8 +530,7 @@ public class MapleMessageBroker
             var receivedLen = await clientSocket.ReceiveAsync(rawSocketBuffer, cancellationToken);
             if (receivedLen <= 0)
             {
-                // disconnected
-                asciiMessageBuilder.Clear();
+                Logger.LogDebug("Detected a remote disconnect", LogCategories.Maple);
                 return;
             }
 
@@ -554,12 +567,50 @@ public class MapleMessageBroker
         }
     }
 
-    private async Task SocketListenerEntryPoint(DreamcastPort dreamcastPort, CancellationToken cancellationToken)
+    /// <summary>When running in integrated mode, DreamPotato is the client instead.</summary>
+    private async Task SocketClientEntryPoint(int tcpPort, CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (true)
+            {
+                using var socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+                Logger.LogDebug($"Connecting to server at port {tcpPort}", LogCategories.Maple);
+                await socket.ConnectAsync(new IPEndPoint(IPAddress.IPv6Loopback, tcpPort));
+                Logger.LogDebug("Connected to server", LogCategories.Maple);
+                lock (_lock)
+                {
+                    _clientSocket = socket;
+                }
+
+                await HandleOneClientAsync(listener: null, socket, cancellationToken);
+
+                lock (_lock)
+                {
+                    _clientSocket.Close();
+                    _clientSocket = null;
+                }
+
+                OnDisconnect();
+                await Task.Delay(1000); // Retry connection after a delay
+            }
+        }
+        catch (Exception ex)
+        {
+            // We failed to reconnect and won't attempt again here.
+            // I would consider exiting the process, but, I don't like the idea of
+            // user losing something they were doing on the VMU just because the server crashed.
+            Logger.LogError($"Exception in SocketListenerEntryPoint: {ex.Message}", LogCategories.Maple);
+            throw;
+        }
+    }
+
+    private async Task SocketListenerEntryPoint(CancellationToken cancellationToken)
     {
         try
         {
             using var listener = new Socket(SocketType.Stream, ProtocolType.Tcp);
-            listener.Bind(new IPEndPoint(IPAddress.IPv6Loopback, BasePort + (int)dreamcastPort));
+            listener.Bind(new IPEndPoint(IPAddress.IPv6Loopback, BasePort + (int)_dreamcastPort));
             listener.Listen();
 
             while (true) // Accept a new client whenever one disconnects
@@ -572,7 +623,7 @@ public class MapleMessageBroker
                     _clientSocket = clientSocket;
                 }
 
-                await handleOneClientAsync(listener, clientSocket, cancellationToken);
+                await HandleOneClientAsync(listener, clientSocket, cancellationToken);
 
                 lock (_lock)
                 {
@@ -580,7 +631,7 @@ public class MapleMessageBroker
                     _clientSocket = null;
                 }
 
-                onDisconnect();
+                OnDisconnect();
             }
         }
         catch (Exception ex)
@@ -588,12 +639,15 @@ public class MapleMessageBroker
             Logger.LogError($"Exception in SocketListenerEntryPoint: {ex.Message}", LogCategories.Maple);
             throw;
         }
+    }
 
-        async Task handleOneClientAsync(Socket listener, Socket clientSocket, CancellationToken cancellationToken)
+    private async Task HandleOneClientAsync(Socket? listener, Socket clientSocket, CancellationToken cancellationToken)
+    {
+        var clientCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cancellationToken = clientCancellationSource.Token;
+
+        if (listener != null)
         {
-            var clientCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            cancellationToken = clientCancellationSource.Token;
-
             // Immediately drop other connections while the current client is connected
             _ = Task.Run(async () =>
             {
@@ -603,45 +657,45 @@ public class MapleMessageBroker
                     await droppedClient.DisconnectAsync(reuseSocket: false, cancellationToken);
                 }
             }, cancellationToken);
-
-            try
-            {
-                await Task.WhenAny(
-                    Task.Run(() => SocketReaderEntryPoint(clientSocket, cancellationToken), cancellationToken),
-                    Task.Run(() => SocketWriterEntryPoint(clientSocket, cancellationToken), cancellationToken));
-            }
-            catch (OperationCanceledException)
-            {
-                // Operation was canceled using token rather than completing (e.g. ReceiveAsync returning 0).
-            }
-            catch (Exception e)
-            {
-                Logger.LogError(e.Message, LogCategories.Maple);
-            }
-
-            // Ensure all socket tasks are completed or canceled
-            clientCancellationSource.Cancel();
-            Logger.LogDebug("Client disconnected", LogCategories.Maple);
         }
 
-        void onDisconnect()
+        try
         {
-            // discard all messages from the last connection
-            while (_slot1._inboundCpuMessages.Reader.TryRead(out _)) { }
-            while (_slot2._inboundCpuMessages.Reader.TryRead(out _)) { }
-            while (_outboundMessages.Reader.TryRead(out _)) { }
-
-            var additionalWords = new int[50];
-            additionalWords[0] = (int)MapleFunction.LCD;
-            var clearScreenMessage = new MapleMessage
-            {
-                Type = MapleMessageType.WriteBlock,
-                AdditionalWords = additionalWords,
-            };
-            bool written = _slot1._inboundCpuMessages.Writer.TryWrite(clearScreenMessage)
-                && _slot2._inboundCpuMessages.Writer.TryWrite(clearScreenMessage);
-            Debug.Assert(written);
+            await Task.WhenAny(
+                Task.Run(() => SocketReaderEntryPoint(clientSocket, cancellationToken), cancellationToken),
+                Task.Run(() => SocketWriterEntryPoint(clientSocket, cancellationToken), cancellationToken));
         }
+        catch (OperationCanceledException)
+        {
+            // Operation was canceled using token rather than completing (e.g. ReceiveAsync returning 0).
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e.Message, LogCategories.Maple);
+        }
+
+        // Ensure all socket tasks are completed or canceled
+        clientCancellationSource.Cancel();
+        Logger.LogDebug("Client disconnected", LogCategories.Maple);
+    }
+
+    private void OnDisconnect()
+    {
+        // discard all messages from the last connection
+        while (_slot1._inboundCpuMessages.Reader.TryRead(out _)) { }
+        while (_slot2._inboundCpuMessages.Reader.TryRead(out _)) { }
+        while (_outboundMessages.Reader.TryRead(out _)) { }
+
+        var additionalWords = new int[50];
+        additionalWords[0] = (int)MapleFunction.LCD;
+        var clearScreenMessage = new MapleMessage
+        {
+            Type = MapleMessageType.WriteBlock,
+            AdditionalWords = additionalWords,
+        };
+        bool written = _slot1._inboundCpuMessages.Writer.TryWrite(clearScreenMessage)
+            && _slot2._inboundCpuMessages.Writer.TryWrite(clearScreenMessage);
+        Debug.Assert(written);
     }
 
     private class VmuInfo
