@@ -317,6 +317,7 @@ public class Game1 : Game
 
     internal void SaveVmuAsFolder(Vmu vmu, string folderPath)
     {
+        Debug.Assert(!IsIntegratedMode && RecentFilesInfo is { });
         vmu.SaveVmuAsFolder(folderPath);
         UpdateWindowTitle();
         RecentFilesInfo = RecentFilesInfo.AddRecentFile(forPrimary: vmu == PrimaryVmu, folderPath);

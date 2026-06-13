@@ -483,9 +483,9 @@ partial class UserInterface
                 ImGui.TextUnformatted("Integrated mode");
                 ImGui.Separator();
 
-                bool isFileLoaded = vmu.LoadedFilePath is { };
-                if (ImGui.MenuItem(isFileLoaded ? Path.GetFileName(vmu.LoadedFilePath.AsSpan()) : "No VMU file open", enabled: isFileLoaded))
-                    RevealFileInExplorer(vmu.LoadedFilePath!);
+                bool isFileLoaded = vmu.LoadedPath is { };
+                if (ImGui.MenuItem(isFileLoaded ? Path.GetFileName(vmu.LoadedPath.AsSpan()) : "No VMU file open", enabled: isFileLoaded))
+                    RevealFileInExplorer(vmu.LoadedPath!);
             }
             else
             {
@@ -769,15 +769,15 @@ partial class UserInterface
             {
                 ImGui.TextUnformatted($"Integrated mode");
                 ImGui.Separator();
-                bool isFileLoaded = vmu.LoadedFilePath is { };
-                if (ImGui.MenuItem(isFileLoaded ? Path.GetFileName(vmu.LoadedFilePath.AsSpan()) : "No VMU file open", enabled: isFileLoaded))
-                    RevealFileInExplorer(vmu.LoadedFilePath!);
+                bool isFileLoaded = vmu.LoadedPath is { };
+                if (ImGui.MenuItem(isFileLoaded ? Path.GetFileName(vmu.LoadedPath.AsSpan()) : "No VMU file open", enabled: isFileLoaded))
+                    RevealFileInExplorer(vmu.LoadedPath!);
             }
             else
             {
-                if (vmu.LoadedFilePath is not null)
+                if (vmu.LoadedPath is not null)
                 {
-                    ImGui.TextUnformatted(Path.GetFileName(vmu.LoadedFilePath.AsSpan()));
+                    ImGui.TextUnformatted(Path.GetFileName(vmu.LoadedPath.AsSpan()));
                     ImGui.Separator();
                 }
 
