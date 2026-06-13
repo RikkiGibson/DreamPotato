@@ -208,14 +208,8 @@ public class Cpu
         Memory = new Memory(this, Logger);
         Audio = new Audio(this, Logger);
         Display = new Display(this);
-<<<<<<< HEAD
         FileSystem = new FileSystem(Flash);
-        MapleMessageBroker = mapleMessageBroker ?? new MapleMessageBroker(LogLevel.Default);
-||||||| 4259e82
-        MapleMessageBroker = mapleMessageBroker ?? new MapleMessageBroker(LogLevel.Default);
-=======
         MapleMessageBroker = mapleMessageBroker ?? new MapleMessageBroker(integratedModePort: null, LogLevel.Default);
->>>>>>> origin/main
         SetInstructionBank(InstructionBank.ROM);
     }
 

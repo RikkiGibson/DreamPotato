@@ -765,21 +765,9 @@ partial class UserInterface
         ImGui.BeginMenuBar();
         if (ImGui.BeginMenu(vmu.HasUnsavedChanges ? "* File" : "File"))
         {
-<<<<<<< HEAD
-            if (vmu.LoadedPath is not null)
-||||||| 4259e82
-            if (vmu.LoadedFilePath is not null)
-=======
             if (_game.IsIntegratedMode)
->>>>>>> origin/main
             {
-<<<<<<< HEAD
-                ImGui.TextUnformatted(Path.GetFileName(vmu.LoadedPath.AsSpan()));
-||||||| 4259e82
-                ImGui.TextUnformatted(Path.GetFileName(vmu.LoadedFilePath.AsSpan()));
-=======
                 ImGui.TextUnformatted($"Integrated mode");
->>>>>>> origin/main
                 ImGui.Separator();
                 bool isFileLoaded = vmu.LoadedFilePath is { };
                 if (ImGui.MenuItem(isFileLoaded ? Path.GetFileName(vmu.LoadedFilePath.AsSpan()) : "No VMU file open", enabled: isFileLoaded))
