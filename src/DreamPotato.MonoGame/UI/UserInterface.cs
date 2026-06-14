@@ -882,7 +882,7 @@ partial class UserInterface
         var vmu = presenter.Vmu;
         if (vmu.LoadedPath != null)
         {
-            if (ImGui.MenuItem(Path.GetFileName(vmu.LoadedPath.AsSpan())))
+            if (ImGui.MenuItem(BreakLines(Path.GetFileName(vmu.LoadedPath.AsSpan()), maxLineLength: 16, maxLineCount: 2)))
                 RevealFileInExplorer(vmu.LoadedPath);
 
             ImGui.Separator();
@@ -891,33 +891,13 @@ partial class UserInterface
         if (ImGui.MenuItem("New VMU"))
             NewVmu(presenter);
 
+        ImGui.Separator();
+
         if (ImGui.MenuItem("Open"))
             OpenVmuDialog(presenter);
 
-        if (ImGui.MenuItem("Save As"))
-        {
-            var result = Dialog.FileSave(filterList: "vmu,bin", defaultPath: null);
-            if (result.IsOk)
-            {
-                _game.SaveVmuFileAs(presenter.Vmu, result.Path);
-            }
-        }
-
-        ImGui.Separator();
-
         if (ImGui.MenuItem("Open Folder"))
             OpenFolderDialog(presenter);
-
-        if (ImGui.MenuItem("Save As Folder"))
-        {
-            var result = Dialog.FolderPicker(defaultPath: null);
-            if (result.IsOk)
-            {
-                _game.SaveVmuAsFolder(presenter.Vmu, result.Path);
-            }
-        }
-
-        ImGui.Separator();
 
         var (displayFileNames, recentFilePaths) = calcRecentFilesInfo();
         if (ImGui.BeginMenu("Open Recent", enabled: recentFilePaths.Any()))
@@ -936,6 +916,26 @@ partial class UserInterface
             ImGui.EndMenu();
         }
 
+        ImGui.Separator();
+
+        if (ImGui.MenuItem("Save As"))
+        {
+            var result = Dialog.FileSave(filterList: "vmu,bin", defaultPath: null);
+            if (result.IsOk)
+            {
+                _game.SaveVmuFileAs(presenter.Vmu, result.Path);
+            }
+        }
+
+        if (ImGui.MenuItem("Save As Folder"))
+        {
+            var result = Dialog.FolderPicker(defaultPath: null);
+            if (result.IsOk)
+            {
+                _game.SaveVmuAsFolder(presenter.Vmu, result.Path);
+            }
+        }
+
         (string[] displayFileNames, ImmutableArray<string> recentFiles) calcRecentFilesInfo()
         {
             var recentFiles = _game.RecentFilesInfo.RecentFiles;
@@ -952,11 +952,12 @@ partial class UserInterface
         }
     }
 
-    private static string BreakLines(ReadOnlySpan<char> span, int maxLineLength)
+    private static string BreakLines(ReadOnlySpan<char> span, int maxLineLength, int maxLineCount = int.MaxValue)
     {
         var builder = new StringBuilder();
         var i = 0;
         var previousMatchIndex = 0;
+        var lineCount = 0;
         var pattern = BreakLinesPattern();
         foreach (ValueMatch match in pattern.EnumerateMatches(span))
         {
@@ -968,8 +969,17 @@ partial class UserInterface
                 if (i != endIndex)
                     i = endIndex;
 
+                if (lineCount > maxLineCount)
+                {
+                    // cut off early
+                    return builder.ToString();
+                }
+
                 if (i != span.Length)
+                {
                     builder.AppendLine();
+                    lineCount++;
+                }
             }
 
             previousMatchIndex = match.Index;
