@@ -80,7 +80,7 @@ internal class FileSystem
     private const int UserRegionLastBlockId = UserRegionSizeBlocks - 1;
 
     // hidden region: extra storage which is used on-demand to store user files when blocks in the user region being to malfunction.
-    private const int HiddenRegionSizeBlocks = 31; // TODO2: this seems likely wrong
+    private const int HiddenRegionSizeBlocks = BlocksCount - UserRegionSizeBlocks - DirectoryTableSizeBlocks - 1 /*root block*/ - 1 /*FAT size*/; // 41
 
     internal const int BlockSize = 0x200; // 512b
     internal const int BlockIdSize = 2;
