@@ -122,7 +122,6 @@ public class Vmu
 
     public void LoadGameVms(string filePath, DateTimeOffset date, bool autoInitializeRTCDate)
     {
-        // TODO2: use info from a valid companion vmi file if present
         if (!filePath.EndsWith(".vms", StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException($"VMS file '{filePath}' must have .vms extension.", nameof(filePath));
 
@@ -136,10 +135,23 @@ public class Vmu
         FileSystem.InitializeFileSystem(date);
 
         using var vmsFile = File.OpenRead(filePath);
-        var fileName = Path.GetFileNameWithoutExtension(filePath);
-        fileName = fileName.Substring(0, Math.Min(DirectoryEntry.FileNameLength, fileName.Length));
-        if (FileSystem.TryWriteGameFile(vmsFile, fileName, FileSystem.Encoding.GetBytes(fileName), date, FileCopyProtection.NotCopyProtected) is (false, var error))
-            throw new InvalidOperationException(error);
+
+        var vmiFilePath = Path.ChangeExtension(filePath, ".vmi");
+        if (File.Exists(vmiFilePath))
+        {
+            var vmiInfo = new VmiInfo(File.ReadAllBytes(vmiFilePath));
+            if (FileSystem.TryWriteGameFileWithVmi(vmsFile, onDiskFileName: fileInfo.Name, vmiInfo) is (false, var error))
+                throw new InvalidOperationException(error);
+        }
+        else
+        {
+            // No .vmi file. Choose some defaults automatically for the directory entry.
+            var fileName = Path.GetFileNameWithoutExtension(filePath);
+            fileName = fileName[..Math.Min(DirectoryEntry.FileNameLength, fileName.Length)];
+            var onVmuFileName = FileSystem.Encoding.GetBytes(fileName);
+            if (FileSystem.TryWriteGameFile(vmsFile, onDiskFileName: fileInfo.Name, onVmuFileName, date, FileCopyProtection.NotCopyProtected) is (false, var error))
+                throw new InvalidOperationException(error);
+        }
 
         _cpu.LazyDebugInfo?.ClearFlash();
         _cpu.LazyDebugInfo?.GetBankInfo(InstructionBank.FlashBank0).WaterbearInfo = GetWaterbearInfo(filePath);

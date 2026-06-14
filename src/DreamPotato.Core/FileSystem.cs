@@ -290,13 +290,19 @@ internal class FileSystem
         dest[0x7] = (byte)date.DayOfWeek; // week_day: 0(Mon)-6(Sun)
     }
 
+    public (bool ok, string? errorMessage) TryWriteGameFileWithVmi(Stream vmsFile, string onDiskFileName, VmiInfo vmiInfo)
+    {
+        var copyProtection = vmiInfo.FileMode.HasFlag(VmuFileMode.CopyProtected) ? FileCopyProtection.CopyProtected : FileCopyProtection.NotCopyProtected;
+        return TryWriteGameFile(vmsFile, onDiskFileName, onVmuFileName: vmiInfo.VmuFileName, vmiInfo.CreationDateTimeOffset, copyProtection);
+    }
+
     public (bool ok, string? errorMessage) TryWriteGameFile(Stream vmsFile, string onDiskFileName, ReadOnlyMemory<byte> onVmuFileName, DateTimeOffset date, FileCopyProtection copyProtection)
     {
-        ArgumentOutOfRangeException.ThrowIfNegative(vmsFile.Length);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(vmsFile.Length, Cpu.InstructionBankSize);
+        var vmsLength = checked((int)(vmsFile.Length - vmsFile.Position));
+        ArgumentOutOfRangeException.ThrowIfNegative(vmsLength);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(vmsLength, Cpu.InstructionBankSize);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(onVmuFileName.Length, DirectoryEntry.FileNameLength);
 
-        var vmsLength = (int)vmsFile.Length;
 
         // Verify sufficient free space
         var fatBlock = GetFATBlock();
