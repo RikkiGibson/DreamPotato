@@ -932,7 +932,8 @@ partial class UserInterface
             var result = Dialog.FolderPicker(defaultPath: null);
             if (result.IsOk)
             {
-                _game.SaveVmuAsFolder(presenter.Vmu, result.Path);
+                if (_game.SaveVmuAsFolder(presenter.Vmu, result.Path) is (false, var error))
+                    ShowToast(presenter, error ?? "Unknown error");
             }
         }
 

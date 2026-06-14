@@ -242,9 +242,9 @@ public class Game1 : Game
         if (Directory.Exists(filePath))
         {
             var (ok, error) = vmu.LoadVmsFolder(filePath, date, autoInitializeRtcDate: Configuration.AutoInitializeDate);
-            if (!ok && error is { })
+            if (!ok)
             {
-                _userInterface.ShowToast(presenter, error);
+                _userInterface.ShowToast(presenter, error ?? "Unknown error");
                 return;
             }
         }
@@ -315,13 +315,16 @@ public class Game1 : Game
         RecentFilesInfo.Save();
     }
 
-    internal void SaveVmuAsFolder(Vmu vmu, string folderPath)
+    internal (bool ok, string? error) SaveVmuAsFolder(Vmu vmu, string folderPath)
     {
         Debug.Assert(!IsIntegratedMode && RecentFilesInfo is { });
-        vmu.SaveVmuAsFolder(folderPath);
+        if (vmu.SaveVmuAsFolder(folderPath) is (false, var error))
+            return (false, error);
+
         UpdateWindowTitle();
         RecentFilesInfo = RecentFilesInfo.AddRecentFile(forPrimary: vmu == PrimaryVmu, folderPath);
         RecentFilesInfo.Save();
+        return (true, null);
     }
 
     internal void Configuration_AutoInitializeDateChanged(bool newValue)

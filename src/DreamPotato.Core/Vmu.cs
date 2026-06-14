@@ -219,7 +219,8 @@ public class Vmu
         if (!info.Exists)
             return (false, $"The folder '{info.Name}' does not exist.");
 
-        FileSystem.ReadAllFiles(destDirectory: info);
+        if (FileSystem.TryReadAllFiles(destDirectory: info) is (false, var error))
+            return (false, error);
 
         _cpu.FileSystem.SetHostFileInfo(folderPath, vmuFileWriteStream: null);
         if (IsDockedToDreamcast)

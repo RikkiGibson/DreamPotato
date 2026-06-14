@@ -126,7 +126,8 @@ public class FileSystemTests : IDisposable
         var fileSystem = new FileSystem(flash);
 
         var outDir = _tempRoot.CreateSubdirectory("ReadFiles_01");
-        fileSystem.ReadAllFiles(outDir);
+        var (ok, error) = fileSystem.TryReadAllFiles(outDir);
+        Assert.True(ok, error);
 
         var fileNames = string.Join(Environment.NewLine,
             Directory.EnumerateFiles(outDir.FullName)
@@ -176,12 +177,13 @@ public class FileSystemTests : IDisposable
         var fileSystem1 = new FileSystem(flash1);
 
         var vmsFolder = _tempRoot.CreateSubdirectory("ReadFiles_01");
-        fileSystem1.ReadAllFiles(vmsFolder);
+        var (ok, error) = fileSystem1.TryReadAllFiles(vmsFolder);
+        Assert.True(ok, error);
 
         var flash2 = new byte[Cpu.FlashSize];
         var fileSystem2 = new FileSystem(flash2);
-        var (success, error) = fileSystem2.TryInitializeFromFolder(vmsFolder, fallbackDate: DateTimeOffset.MaxValue);
-        Assert.True(success, error);
+        (ok, error) = fileSystem2.TryInitializeFromFolder(vmsFolder, fallbackDate: DateTimeOffset.MaxValue);
+        Assert.True(ok, error);
 
         var expectedFatBlock = ((ReadOnlySpan<byte>)fileSystem2.GetBlock(FileSystem.FATBlockId)).AsHexBlock();
         Assert.Equal<object>("""
@@ -260,7 +262,8 @@ public class FileSystemTests : IDisposable
 
         // Round trip from flash back to VMS folder
         var vmsFolder2 = _tempRoot.CreateSubdirectory("ReadFiles_02");
-        fileSystem2.ReadAllFiles(vmsFolder2);
+        (ok, error) = fileSystem2.TryReadAllFiles(vmsFolder2);
+        Assert.True(ok, error);
 
         // All files in 'vmsFolder' are present in 'vmsFolder2'
         foreach (var info in vmsFolder.EnumerateFileSystemInfos())

@@ -300,18 +300,26 @@ internal class FileSystem
         return (true, null);
     }
 
-    public void ReadAllFiles(DirectoryInfo destDirectory)
+    /// <summary>Read all the files from this file system to destDirectory.</summary>
+    public (bool ok, string? error) TryReadAllFiles(DirectoryInfo destDirectory)
     {
+        HashSet<string> allFilePaths = [];
         foreach (var directoryEntry in EnumerateDirectoryTable())
         {
-            if (directoryEntry.Type != FileType.None)
-            {
-                readFile(directoryEntry);
-            }
+            if (directoryEntry.Type == FileType.None)
+                continue;
+
+            // Note: we don't mind overwriting existing files on disk as part of this.
+            // We just don't want the VMU's own file system containing duplicates.
+            if (!allFilePaths.Add(directoryEntry.NameString))
+                return (false, $"VMU contains duplicate file: '{directoryEntry.NameString}'");
+
+            readFile(directoryEntry);
         }
 
         var rootBlock = GetBlock(RootBlockId);
         File.WriteAllBytes(Path.Combine(destDirectory.FullName, RootBlockFilename), rootBlock);
+        return (true, null);
 
         void readFile(DirectoryEntry directoryEntry)
         {
@@ -384,9 +392,21 @@ internal class FileSystem
         return (ok, error);
     }
 
+    private readonly struct VmiFileNameInfo(string vmuFileName, string onDiskFileName) : IEquatable<VmiFileNameInfo>
+    {
+        public readonly string VmuFileName = vmuFileName;
+        public readonly string OnDiskFileName = onDiskFileName;
+
+        public bool Equals(VmiFileNameInfo other) => VmuFileName == other.VmuFileName;
+        public override bool Equals(object? obj) => obj is VmiFileNameInfo info && Equals(info);
+        public override int GetHashCode() => VmuFileName.GetHashCode();
+    }
+
+    /// <summary>Write the files from sourceDirectory to this file system.</summary>
     public (bool ok, string? errorMessage) TryWriteAllFiles(DirectoryInfo sourceDirectory)
     {
         string? foundGameName = null;
+        HashSet<VmiFileNameInfo> allVmuFileNames = [];
 
         // Data (non-game) files are written from the end of the user region toward the start
         ushort currentDataBlockId = UserRegionLastBlockId;
@@ -403,6 +423,11 @@ internal class FileSystem
                 return (false, $"{vmiFileInfo.Name}: Bad format");
 
             var vmiInfo = new VmiInfo(File.ReadAllBytes(vmiFileInfo.FullName));
+            var vmiFileNameInfo = new VmiFileNameInfo(vmiInfo.VmuFileNameString, vmiFileInfo.Name);
+            if (allVmuFileNames.TryGetValue(vmiFileNameInfo, out var existingNameInfo))
+                return (false, $"VMU filename '{vmiFileNameInfo.VmuFileName}' is duplicated by '{existingNameInfo.OnDiskFileName}' and '{vmiFileNameInfo.OnDiskFileName}'.");
+
+            allVmuFileNames.Add(vmiFileNameInfo);
             using var vmsFile = vmsFileInfo.OpenRead();
             if (vmiInfo.FileMode.HasFlag(VmuFileMode.Game))
             {
@@ -747,12 +772,22 @@ internal class FileSystem
         }
 
         // Look at all the .vmi files in the host folder, to find which one has a matching VMU filesystem name.
+        //
         // Note: the filenames in the host file system, are not matched against the vms names.
         // The user can rename a .vmi+.vms pair to anything they want (as long as the names without extension match)
         // and we will continue to pick the right file up, update it when it changes, etc.
-        // TODO2: this crashes for duplicate VmuFileNameString
-        var vmiFilesByVmuFileName = vmsFolder.EnumerateFiles("*.vmi").ToDictionary(
-            info => new VmiInfo(File.ReadAllBytes(info.FullName)).VmuFileNameString);
+        //
+        // Note: VMU filenames can be duplicated (simply by copy+paste+renaming a vmi+vms pair, for example).
+        // If this happens, we will operate on the first one we found and ignore the others.
+        // This is thought to be preferable to canceling the flush (not saving user's changes to disk),
+        // or potentially overwriting all duplicates (unnecessary complexity for an error scenario).
+        // If user needs to figure out which of the duplicate files got updated, they can check timestamps.
+        var vmiFilesByVmuFileName = vmsFolder
+            .EnumerateFiles("*.vmi")
+            .GroupBy(info => new VmiInfo(File.ReadAllBytes(info.FullName)).VmuFileNameString)
+            .ToDictionary(
+                group => group.Key,
+                group => group.First());
 
         // Step 3: make host file system changes
         foreach (var vmuFileToDelete in toDelete)
