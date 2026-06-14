@@ -180,9 +180,7 @@ public class FileSystemTests : IDisposable
 
         var flash2 = new byte[Cpu.FlashSize];
         var fileSystem2 = new FileSystem(flash2);
-        fileSystem2.InitializeFileSystem(DateTime.Parse("08/18/2018 07:22:16"));
-
-        var (success, error) = fileSystem2.TryWriteAllFiles(vmsFolder);
+        var (success, error) = fileSystem2.TryInitializeFromFolder(vmsFolder, fallbackDate: DateTimeOffset.MaxValue);
         Assert.True(success, error);
 
         var expectedFatBlock = ((ReadOnlySpan<byte>)fileSystem2.GetBlock(FileSystem.FATBlockId)).AsHexBlock();
@@ -273,10 +271,6 @@ public class FileSystemTests : IDisposable
         // All files in 'vmsFolder2' have exactly the same content as corresponding file in 'vmsFolder'
         foreach (var info in vmsFolder2.EnumerateFileSystemInfos())
         {
-            // TODO2: use a consistent timestamp between the sample vmu file and the secondary FS
-            if (info.Name == FileSystem.RootBlockFilename)
-                continue;
-
             var expected = File.ReadAllBytes(Path.Combine(vmsFolder.FullName, info.Name));
             var actual = File.ReadAllBytes(info.FullName);
             Assert.Equal(expected, actual);

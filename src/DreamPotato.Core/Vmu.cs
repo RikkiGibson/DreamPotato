@@ -189,7 +189,7 @@ public class Vmu
         Reset(autoInitializeRtcDate ? date : null);
         _cpu.FileSystem.SetHostFileInfo(folderPath, vmuFileWriteStream: null);
         Array.Clear(_cpu.Flash);
-        if (FileSystem.TryInitializeFolder(sourceDirectory: folderInfo, fallbackDate: date) is (false, var error))
+        if (FileSystem.TryInitializeFromFolder(sourceDirectory: folderInfo, fallbackDate: date) is (false, var error))
             return (false, error);
 
         _cpu.LazyDebugInfo?.ClearFlash();

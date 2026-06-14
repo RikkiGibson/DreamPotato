@@ -728,7 +728,7 @@ partial class UserInterface
         {
             var vmuScreenData = new Color[Display.ScreenWidth * Display.ScreenHeight];
             Array.Fill(vmuScreenData, _game.ColorPalette.Screen0);
-            if (filePath is null || !File.Exists(filePath))
+            if (!File.Exists(filePath))
                 return vmuScreenData;
 
             try

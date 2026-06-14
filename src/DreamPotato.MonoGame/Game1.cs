@@ -160,7 +160,7 @@ public class Game1 : Game
                 vmu.InitializeRTCDate(date);
 
             vmu.LoadRom();
-            if (vmsOrVmuFilePath != null && File.Exists(vmsOrVmuFilePath))
+            if (Path.Exists(vmsOrVmuFilePath))
                 LoadAndStartVmsOrVmuFile(presenter, vmsOrVmuFilePath);
         }
     }
@@ -239,7 +239,7 @@ public class Game1 : Game
         var vmu = presenter.Vmu;
         var date = DateTimeOffset.Now;
         var extension = Path.GetExtension(filePath);
-        if (string.IsNullOrEmpty(extension))
+        if (Directory.Exists(filePath))
         {
             var (ok, error) = vmu.LoadVmsFolder(filePath, date, autoInitializeRtcDate: Configuration.AutoInitializeDate);
             if (!ok && error is { })

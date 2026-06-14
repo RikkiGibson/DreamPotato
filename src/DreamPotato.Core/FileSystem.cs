@@ -366,7 +366,7 @@ internal class FileSystem
         return vmiInfo;
     }
 
-    public (bool ok, string? errorMessage) TryInitializeFolder(DirectoryInfo sourceDirectory, DateTimeOffset fallbackDate)
+    public (bool ok, string? errorMessage) TryInitializeFromFolder(DirectoryInfo sourceDirectory, DateTimeOffset fallbackDate)
     {
         InitializeFileSystem(fallbackDate);
 
