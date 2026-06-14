@@ -2,6 +2,8 @@ using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Text;
 
+using Microsoft.Win32.SafeHandles;
+
 namespace DreamPotato.Core;
 
 /// <summary>
@@ -27,10 +29,45 @@ internal class FileSystem
     /// <summary>Records the time at which VMS folder I/O should be flushed.</summary>
     private DateTimeOffset _flushDeadline = DateTimeOffset.MaxValue;
 
+    internal event Action? UnsavedChangesDetected;
+    internal bool HasUnsavedChanges
+    {
+        get;
+        private set
+        {
+            var isNewUnsavedChanges = !field && value;
+            field = value;
+            if (isNewUnsavedChanges)
+                UnsavedChangesDetected?.Invoke();
+        }
+    }
+
+    public event Action<string>? OpenFileRequested;
+
+    public void RequestOpenFile(string path) => OpenFileRequested?.Invoke(path);
+
+    internal string? LoadedPath { get; private set; }
+
+    private FileStream? VmuFileWriteStream;
+
+    internal SafeFileHandle? VmuFileHandle => VmuFileWriteStream?.SafeFileHandle;
+
+    internal void SetHostFileInfo(string? loadedPath, FileStream? vmuFileWriteStream)
+    {
+        if (LoadedPath is not null && new DirectoryInfo(LoadedPath) is { Exists: true } directoryInfo)
+            FlushToFolder(directoryInfo);
+
+        ResetFlushData();
+        LoadedPath = loadedPath;
+        VmuFileWriteStream?.Dispose();
+        VmuFileWriteStream = vmuFileWriteStream;
+        HasUnsavedChanges = false;
+    }
+
     public FileSystem(byte[] flash)
     {
         this.flash = flash;
-        UpdateDirectoryMirror();
+        ResetFlushData();
     }
 
     private const int ShiftJisCodePage = 932;
@@ -80,8 +117,12 @@ internal class FileSystem
         }
     }
 
-    private void UpdateDirectoryMirror()
+    /// <summary>Reset data used for tracking folder changes to default state, i.e. no changes detected, no deadline, mirror up-to-date.</summary>
+    private void ResetFlushData()
     {
+        _changedBlockIds.Clear();
+        _flushDeadline = DateTimeOffset.MaxValue;
+
         var newTable = flash.AsSpan(DirectoryTableFirstBlockId * BlockSize, length: DirectoryTableSizeBlocks * BlockSize);
         Debug.Assert(newTable.Length == _directoryMirror.Length);
         newTable.CopyTo(_directoryMirror);
@@ -94,8 +135,8 @@ internal class FileSystem
         Array.Clear(flash);
 
         initializeRootBlock();
-        initializeFAT();
-        UpdateDirectoryMirror();
+        InitializeFAT();
+        ResetFlushData();
 
         void initializeRootBlock()
         {
@@ -160,33 +201,33 @@ internal class FileSystem
             // The rest of the root block is reserved
             rootBlock[0x58..^1].Clear();
         }
+    }
 
-        void initializeFAT()
+    private void InitializeFAT()
+    {
+        var fatBlock = GetFATBlock();
+
+        // mark all blocks unused to start
+        for (int i = 0; i < FATBlock.Length; i++)
         {
-            var fatBlock = GetFATBlock();
-
-            // mark all blocks unused to start
-            for (int i = 0; i < FATBlock.Length; i++)
-            {
-                fatBlock[i] = FAT_Unallocated;
-            }
-
-            // mark root block as last in its file
-            fatBlock[RootBlockId] = FAT_LastInFile;
-
-            // mark FAT itself as last in its file
-            fatBlock[FATBlockId] = FAT_LastInFile;
-
-            // directory: mark as growing from end toward start of the volume.
-            var directoryStartBlockId = DirectoryTableLastBlockId - DirectoryTableSizeBlocks + 1;
-            for (int i = DirectoryTableLastBlockId; i > directoryStartBlockId; i--)
-            {
-                // Point to the previous block.
-                fatBlock[i] = (ushort)(i - 1);
-            }
-
-            fatBlock[directoryStartBlockId] = FAT_LastInFile;
+            fatBlock[i] = FAT_Unallocated;
         }
+
+        // mark root block as last in its file
+        fatBlock[RootBlockId] = FAT_LastInFile;
+
+        // mark FAT itself as last in its file
+        fatBlock[FATBlockId] = FAT_LastInFile;
+
+        // directory: mark as growing from end toward start of the volume.
+        var directoryStartBlockId = DirectoryTableLastBlockId - DirectoryTableSizeBlocks + 1;
+        for (int i = DirectoryTableLastBlockId; i > directoryStartBlockId; i--)
+        {
+            // Point to the previous block.
+            fatBlock[i] = (ushort)(i - 1);
+        }
+
+        fatBlock[directoryStartBlockId] = FAT_LastInFile;
     }
 
     internal static DateTimeOffset ReadBcdDate(ReadOnlySpan<byte> source)
@@ -366,21 +407,19 @@ internal class FileSystem
 
     public (bool ok, string? errorMessage) TryInitializeFolder(DirectoryInfo sourceDirectory, DateTimeOffset fallbackDate)
     {
+        InitializeFileSystem(fallbackDate);
+
+        // Replace the root block contents if present.
+        // This will allow user VMU color, icon etc to be preserved
         var rootBlockPath = new FileInfo(Path.Combine(sourceDirectory.FullName, RootBlockFilename));
         if (rootBlockPath.Exists && rootBlockPath.Length == BlockSize)
         {
             using var rootBlockFile = rootBlockPath.OpenRead();
             rootBlockFile.ReadExactly(GetBlock(RootBlockId));
         }
-        else
-        {
-            // No problem if the fs_root file is missing. Just initialize it with defaults.
-            // The user selected VMU icon and color will be missing though.
-            InitializeFileSystem(fallbackDate);
-        }
 
         var (ok, error) = TryWriteAllFiles(sourceDirectory);
-        UpdateDirectoryMirror();
+        ResetFlushData();
         return (ok, error);
     }
 
@@ -550,27 +589,27 @@ internal class FileSystem
         return (byte)sum;
     }
 
-    internal void OnFlashModified(int offset, DateTimeOffset now)
+    internal void OnFlashBlockModified(int blockId, DateTimeOffset now)
     {
-        var blockId = offset / BlockSize;
         Debug.Assert((ushort)blockId == blockId);
-        _changedBlockIds.Add((ushort)blockId);
-        _flushDeadline = now.AddSeconds(1);
-    }
-
-    internal bool Poll(DirectoryInfo vmsFolder, DateTimeOffset now)
-    {
-        if (now >= _flushDeadline)
+        var usingFolder = Directory.Exists(LoadedPath);
+        if (usingFolder)
         {
-            Flush(vmsFolder);
-            return true;
+            // No point updating this info unless we are using a folder.
+            _changedBlockIds.Add((ushort)blockId);
+            _flushDeadline = now.AddMilliseconds(100);
         }
 
-        return false;
+        HasUnsavedChanges = VmuFileHandle is null && !usingFolder;
     }
 
-    internal void Flush(DirectoryInfo vmsFolder)
+    internal bool ShouldFlushToFolder(DateTimeOffset now) => now >= _flushDeadline && Directory.Exists(LoadedPath);
+
+    internal void FlushToFolder(DirectoryInfo vmsFolder)
     {
+        if (!vmsFolder.Exists)
+            throw new InvalidOperationException();
+
         // Step 1: detect deletions
         var newFiles = new HashSet<string>();
         foreach (var newEntry in EnumerateDirectoryTable())
@@ -656,9 +695,7 @@ internal class FileSystem
             File.WriteAllBytes(rootBlockPath, newRootBlock);
         }
 
-        _changedBlockIds.Clear();
-        _flushDeadline = DateTimeOffset.MaxValue;
-        UpdateDirectoryMirror();
+        ResetFlushData();
     }
 
     private IEnumerable<DirectoryEntry> EnumerateDirectoryTable()

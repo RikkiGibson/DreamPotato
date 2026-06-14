@@ -15,14 +15,20 @@ public class Vmu
     private FileSystem FileSystem => _cpu.FileSystem;
     public Audio Audio => _cpu.Audio;
     public Display Display => _cpu.Display;
-    public string? LoadedPath { get; private set; }
+    public string? LoadedPath => _cpu.FileSystem.LoadedPath;
     public (byte a, byte r, byte g, byte b) Color => FileSystem.VmuColor;
 
-    public bool HasUnsavedChanges => _cpu.HasUnsavedChanges;
+    public bool HasUnsavedChanges => _cpu.FileSystem.HasUnsavedChanges;
     public event Action UnsavedChangesDetected
     {
-        add => _cpu.UnsavedChangesDetected += value;
-        remove => _cpu.UnsavedChangesDetected -= value;
+        add => _cpu.FileSystem.UnsavedChangesDetected += value;
+        remove => _cpu.FileSystem.UnsavedChangesDetected -= value;
+    }
+
+    public event Action<string> OpenFileRequested
+    {
+        add => _cpu.FileSystem.OpenFileRequested += value;
+        remove => _cpu.FileSystem.OpenFileRequested += value;
     }
 
     public Vmu(MapleMessageBroker? mapleMessageBroker = null)
@@ -106,19 +112,17 @@ public class Vmu
 
     public void LoadNewVmu(DateTimeOffset date, bool autoInitializeRTCDate)
     {
-        LoadedPath = null;
         Reset(autoInitializeRTCDate ? date : null);
-        InitializeFlash(date);
 
-        LoadedPath = null;
-        _cpu.HasUnsavedChanges = false;
-        _cpu.VmuFileWriteStream = null;
+        FileSystem.SetHostFileInfo(loadedPath: null, vmuFileWriteStream: null);
+        FileSystem.InitializeFileSystem(date);
         _cpu.ResyncMapleOutbound();
         _cpu.LazyDebugInfo?.ClearFlash();
     }
 
     public void LoadGameVms(string filePath, DateTimeOffset date, bool autoInitializeRTCDate)
     {
+        // TODO2: use info from a valid companion vmi file if present
         if (!filePath.EndsWith(".vms", StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException($"VMS file '{filePath}' must have .vms extension.", nameof(filePath));
 
@@ -128,6 +132,7 @@ public class Vmu
 
         Reset(autoInitializeRTCDate ? date : null);
 
+        FileSystem.SetHostFileInfo(filePath, vmuFileWriteStream: null);
         FileSystem.InitializeFileSystem(date);
 
         var gameData = File.ReadAllBytes(filePath);
@@ -136,11 +141,8 @@ public class Vmu
         if (FileSystem.TryWriteGameFile(gameData, fileName, FileSystem.Encoding.GetBytes(fileName), date, FileCopyProtection.NotCopyProtected) is (false, var error))
             throw new InvalidOperationException(error);
 
-        LoadedPath = filePath;
-        _cpu.HasUnsavedChanges = false;
-        _cpu.VmuFileWriteStream = null;
         _cpu.LazyDebugInfo?.ClearFlash();
-        _cpu.LazyDebugInfo?.GetBankInfo(InstructionBank.FlashBank0).WaterbearInfo = GetWaterbearInfo(LoadedPath);
+        _cpu.LazyDebugInfo?.GetBankInfo(InstructionBank.FlashBank0).WaterbearInfo = GetWaterbearInfo(filePath);
 
         _cpu.ResyncMapleOutbound();
     }
@@ -160,11 +162,9 @@ public class Vmu
 
         Reset(rtcDate);
 
-        fileStream.ReadExactly(_cpu.Flash);
+        _cpu.FileSystem.SetHostFileInfo(filePath, fileStream);
         _cpu.LazyDebugInfo?.ClearFlash();
-        LoadedPath = filePath;
-        _cpu.HasUnsavedChanges = false;
-        _cpu.VmuFileWriteStream = fileStream;
+        fileStream.ReadExactly(_cpu.Flash);
         _cpu.ResyncMapleOutbound();
     }
 
@@ -175,14 +175,12 @@ public class Vmu
             throw new ArgumentException(null, nameof(folderPath));
 
         Reset(autoInitializeRtcDate ? date : null);
+        _cpu.FileSystem.SetHostFileInfo(folderPath, vmuFileWriteStream: null);
         Array.Clear(_cpu.Flash);
         if (FileSystem.TryInitializeFolder(sourceDirectory: folderInfo, fallbackDate: date) is (false, var error))
             return (false, error);
 
         _cpu.LazyDebugInfo?.ClearFlash();
-        LoadedPath = folderPath; // TODO2: verify use sites can handle a folder path being used here.
-        _cpu.HasUnsavedChanges = false;
-        _cpu.VmuFileWriteStream = null;
         _cpu.ResyncMapleOutbound();
 
         return (true, null);
@@ -194,10 +192,8 @@ public class Vmu
             _cpu.ResyncMapleInbound();
 
         var fileStream = File.Open(filePath, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite);
+        _cpu.FileSystem.SetHostFileInfo(filePath, fileStream);
         fileStream.Write(_cpu.Flash);
-        LoadedPath = filePath;
-        _cpu.HasUnsavedChanges = false;
-        _cpu.VmuFileWriteStream = fileStream;
         if (IsDockedToDreamcast)
             _cpu.ResyncMapleOutbound();
     }
@@ -212,11 +208,8 @@ public class Vmu
             return (false, $"The folder '{info.Name}' does not exist.");
 
         FileSystem.ReadAllFiles(destDirectory: info);
-        // TODO2: clear pending flush?
 
-        LoadedPath = folderPath;
-        _cpu.HasUnsavedChanges = false;
-        _cpu.VmuFileWriteStream = null;
+        _cpu.FileSystem.SetHostFileInfo(folderPath, vmuFileWriteStream: null);
         if (IsDockedToDreamcast)
             _cpu.ResyncMapleOutbound();
 
@@ -434,11 +427,16 @@ public class Vmu
             // Either a folder is not currently open (i.e. a file is open instead), or the folder was deleted/renamed.
             return false;
 
-        // TODO2: can we do this only when we are actually ready to flush?
-        if (IsDockedToDreamcast)
-            _cpu.ResyncMapleInbound();
+        if (FileSystem.ShouldFlushToFolder(now))
+        {
+            if (IsDockedToDreamcast)
+                _cpu.ResyncMapleInbound();
 
-        return FileSystem.Poll(vmsFolder, now);
+            FileSystem.FlushToFolder(vmsFolder);
+            return true;
+        }
+
+        return false;
     }
 
     public void FlushFileSystem()
@@ -454,6 +452,6 @@ public class Vmu
         if (IsDockedToDreamcast)
             _cpu.ResyncMapleInbound();
 
-        FileSystem.Flush(vmsFolder);
+        FileSystem.FlushToFolder(vmsFolder);
     }
 }
