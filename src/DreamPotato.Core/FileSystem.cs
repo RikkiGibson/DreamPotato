@@ -262,7 +262,6 @@ internal class FileSystem
         ArgumentOutOfRangeException.ThrowIfGreaterThan(vmsLength, Cpu.InstructionBankSize);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(onVmuFileName.Length, DirectoryEntry.FileNameLength);
 
-
         // Verify sufficient free space
         var fatBlock = GetFATBlock();
         var lastBlockId = (vmsLength + BlockSize - 1) / BlockSize - 1;
