@@ -750,6 +750,7 @@ internal class FileSystem
         // Note: the filenames in the host file system, are not matched against the vms names.
         // The user can rename a .vmi+.vms pair to anything they want (as long as the names without extension match)
         // and we will continue to pick the right file up, update it when it changes, etc.
+        // TODO2: this crashes for duplicate VmuFileNameString
         var vmiFilesByVmuFileName = vmsFolder.EnumerateFiles("*.vmi").ToDictionary(
             info => new VmiInfo(File.ReadAllBytes(info.FullName)).VmuFileNameString);
 
