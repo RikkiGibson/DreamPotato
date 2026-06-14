@@ -100,22 +100,7 @@ internal class FileSystem
 
     const ushort FAT_LastInFile = 0xfffa;
 
-    // offsets for color data within the root block
-    const int UsingCustomColor = 0x10;
-    const int ColorBlue = 0x11;
-    const int ColorGreen = 0x12;
-    const int ColorRed = 0x13;
-    const int ColorAlpha = 0x14;
-
-    public (byte a, byte r, byte g, byte b) VmuColor
-    {
-        get
-        {
-            var rootBlock = GetBlock(RootBlockId);
-            // TODO: what if UsingCustomColor != 1?
-            return (rootBlock[ColorAlpha], rootBlock[ColorRed], rootBlock[ColorGreen], rootBlock[ColorBlue]);
-        }
-    }
+    public (byte a, byte r, byte g, byte b)? VmuColor => GetRootBlock().VmuColor;
 
     /// <summary>Reset data used for tracking folder changes to default state, i.e. no changes detected, no deadline, mirror up-to-date.</summary>
     private void ResetFlushData()
@@ -140,66 +125,40 @@ internal class FileSystem
 
         void initializeRootBlock()
         {
-            var rootBlock = GetBlock(RootBlockId);
+            var rootBlock = GetRootBlock();
 
             // 0x00-0x10: Magic
-            for (int i = 0; i < 0x10; i++)
-                rootBlock[i] = Magic;
+            rootBlock.RawData.Span[0..0x10].Fill(Magic);
 
             // 0x10-0x30: Volume label (VMU stores the color here).
-            rootBlock[UsingCustomColor] = 0x01;
-            rootBlock[ColorBlue] = 0xff;
-            rootBlock[ColorGreen] = 0xff;
-            rootBlock[ColorRed] = 0xff;
-            rootBlock[ColorAlpha] = 0x64;
-            rootBlock[0x15..0x30].Clear();
+            rootBlock.RawData.Span[RootBlock.UsingCustomColor] = 0x01;
+            rootBlock.VmuColor = (a: 0x64, r: 0xff, g: 0xff, b: 0xff);
+            rootBlock.RawData.Span[0x15..0x30].Clear();
 
             // 0x30-0x38: Timestamp
-            WriteBcdDate(rootBlock.Slice(0x30, length: 8), date);
+            rootBlock.TimestampDateTimeOffset = date;
 
             // 0x38-0x40: Reserved
-            rootBlock[0x38..0x40].Clear();
+            rootBlock.RawData.Span[0x38..0x40].Clear();
 
             // 0x40: Important FAT stuff
-            rootBlock[0x40] = 0xff; // Volume Last
-            rootBlock[0x41] = 0;
-
-            rootBlock[0x42] = 0; // Partition
-            rootBlock[0x43] = 0;
-
-            rootBlock[0x44] = RootBlockId; // Root block ID. This is the last block in the storage device.
-            rootBlock[0x45] = 0;
-
-            rootBlock[0x46] = FATBlockId; // FAT First. First block containing the FAT data. i.e. indicating the sequences of blocks that comprise the contents of files.
-            rootBlock[0x47] = 0;
-
-            rootBlock[0x48] = 1; // FAT size. How many blocks does the FAT take up.
-            rootBlock[0x49] = 0;
-
-            rootBlock[0x4a] = DirectoryTableLastBlockId; // DIR last. Last block of the Directory table, which holds file metadata
-            rootBlock[0x4b] = 0;
-
+            rootBlock.VolumeLast = 0xff;
+            rootBlock.Partition = 0;
+            rootBlock.Root = RootBlockId; // Root block ID. This is the last block in the storage device.
+            rootBlock.FATFirst = FATBlockId; // FAT First. First block containing the FAT data. i.e. indicating the sequences of blocks that comprise the contents of files.
+            rootBlock.FATSize = 1; // FAT size. How many blocks does the FAT take up.
+            rootBlock.DirLast = DirectoryTableLastBlockId; // DIR last. Last block of the Directory table, which holds file metadata
             Debug.Assert(DirectoryTableSizeBlocks == Math.Ceiling((double)UserRegionSizeBlocks * DirectoryEntry.Size / BlockSize));
-            rootBlock[0x4c] = DirectoryTableSizeBlocks; // DIR size. How many blocks does the Directory table take up.
-            rootBlock[0x4d] = 0;
-
-            rootBlock[0x4e] = 0; // Icon (0-123). Used in the DC BIOS.
-            rootBlock[0x4f] = 0; // Sort. Unused.
-
-            rootBlock[0x50] = UserRegionSizeBlocks; // Hidden First: Block ID of the first hidden region block.
-            rootBlock[0x51] = 0;
-
-            rootBlock[0x52] = HiddenRegionSizeBlocks; // Hidden Size.
-            rootBlock[0x53] = 0;
-
-            rootBlock[0x54] = 0; // Game First: Block ID where a game file must start.
-            rootBlock[0x55] = 0;
-
-            rootBlock[0x56] = Cpu.InstructionBankSize / BlockSize; // Game Size: Largest size in blocks of a game file.
-            rootBlock[0x57] = 0;
+            rootBlock.DirSize = DirectoryTableSizeBlocks; // DIR size. How many blocks does the Directory table take up.
+            rootBlock.Icon = 0; // Icon (0-123). Used in the DC BIOS.
+            rootBlock.Sort = 0; // Sort. Unused.
+            rootBlock.HiddenFirst = UserRegionSizeBlocks; // Hidden First: Block ID of the first hidden region block.
+            rootBlock.HiddenSize = HiddenRegionSizeBlocks; // Hidden Size.
+            rootBlock.GameFirst = 0; // Game First: Block ID where a game file must start.
+            rootBlock.GameSize = Cpu.InstructionBankSize / BlockSize; // Game Size: Largest size in blocks of a game file.
 
             // The rest of the root block is reserved
-            rootBlock[0x58..^1].Clear();
+            rootBlock.RawData.Span[0x58..].Clear();
         }
     }
 
@@ -546,6 +505,8 @@ internal class FileSystem
 
     private FATBlock GetFATBlock() => new FATBlock(GetBlockMemory(FATBlockId));
 
+    private RootBlock GetRootBlock() => new RootBlock(GetBlockMemory(RootBlockId));
+
     private readonly struct FATBlock
     {
         public const int Length = BlockSize / BlockIdSize;
@@ -568,6 +529,139 @@ internal class FileSystem
             {
                 BinaryPrimitives.WriteUInt16LittleEndian(_fatBlock.Span.Slice(blockId * BlockIdSize, length: BlockIdSize), value);
             }
+        }
+    }
+
+    /// <summary>https://vmu.falcogirgis.net/filesystem.html#fs_root</summary>
+    private readonly struct RootBlock
+    {
+        public Memory<byte> RawData { get; }
+
+        public RootBlock(Memory<byte> rootBlock)
+        {
+            Debug.Assert(rootBlock.Length == BlockSize);
+            RawData = rootBlock;
+        }
+
+        public Memory<byte> Magic => RawData[..0x10];
+
+        public Memory<byte> VolumeLabel => RawData.Slice(0x10, length: 0x20);
+
+        public const int UsingCustomColor = 0x10;
+        public const int ColorBlue = 0x11;
+        public const int ColorGreen = 0x12;
+        public const int ColorRed = 0x13;
+        public const int ColorAlpha = 0x14;
+     
+        public (byte a, byte r, byte g, byte b)? VmuColor
+        {
+            get
+            {
+                var rootBlock = RawData.Span;
+                if (rootBlock[UsingCustomColor] == 0)
+                    return null;
+
+                return (rootBlock[ColorAlpha], rootBlock[ColorRed], rootBlock[ColorGreen], rootBlock[ColorBlue]);
+            }
+            set
+            {
+                var rootBlock = RawData.Span;
+                if (value is not { } color)
+                {
+                    rootBlock[UsingCustomColor..(ColorAlpha+1)].Clear();
+                }
+                else
+                {
+                    rootBlock[UsingCustomColor] = 1;
+                    (rootBlock[ColorAlpha], rootBlock[ColorRed], rootBlock[ColorGreen], rootBlock[ColorBlue]) = color;
+                }
+            }
+        }
+
+        public Memory<byte> TimestampBinary => RawData.Slice(0x30, length: 8);
+
+        public DateTimeOffset TimestampDateTimeOffset
+        {
+            get => ReadBcdDate(TimestampBinary.Span);
+            set => WriteBcdDate(TimestampBinary.Span, value);
+        }
+
+        public ushort VolumeLast
+        {
+            get => BinaryPrimitives.ReadUInt16LittleEndian(RawData.Span.Slice(0x40, length: 2));
+            set => BinaryPrimitives.WriteUInt16LittleEndian(RawData.Span.Slice(0x40, length: 2), value);
+        }
+
+        public ushort Partition
+        {
+            get => BinaryPrimitives.ReadUInt16LittleEndian(RawData.Span.Slice(0x42, length: 2));
+            set => BinaryPrimitives.WriteUInt16LittleEndian(RawData.Span.Slice(0x42, length: 2), value);
+        }
+
+        public ushort Root
+        {
+            get => BinaryPrimitives.ReadUInt16LittleEndian(RawData.Span.Slice(0x44, length: 2));
+            set => BinaryPrimitives.WriteUInt16LittleEndian(RawData.Span.Slice(0x44, length: 2), value);
+        }
+
+        public ushort FATFirst
+        {
+            get => BinaryPrimitives.ReadUInt16LittleEndian(RawData.Span.Slice(0x46, length: 2));
+            set => BinaryPrimitives.WriteUInt16LittleEndian(RawData.Span.Slice(0x46, length: 2), value);
+        }
+
+        public ushort FATSize
+        {
+            get => BinaryPrimitives.ReadUInt16LittleEndian(RawData.Span.Slice(0x48, length: 2));
+            set => BinaryPrimitives.WriteUInt16LittleEndian(RawData.Span.Slice(0x48, length: 2), value);
+        }
+
+        public ushort DirLast
+        {
+            get => BinaryPrimitives.ReadUInt16LittleEndian(RawData.Span.Slice(0x4a, length: 2));
+            set => BinaryPrimitives.WriteUInt16LittleEndian(RawData.Span.Slice(0x4a, length: 2), value);
+        }
+
+        public ushort DirSize
+        {
+            get => BinaryPrimitives.ReadUInt16LittleEndian(RawData.Span.Slice(0x4c, length: 2));
+            set => BinaryPrimitives.WriteUInt16LittleEndian(RawData.Span.Slice(0x4c, length: 2), value);
+        }
+
+        public byte Icon
+        {
+            get => RawData.Span[0x4e];
+            set => RawData.Span[0x4e] = value;
+        }
+
+        public byte Sort
+        {
+            get => RawData.Span[0x4f];
+            set => RawData.Span[0x4f] = value;
+        }
+
+        public ushort HiddenFirst
+        {
+            get => BinaryPrimitives.ReadUInt16LittleEndian(RawData.Span.Slice(0x50, length: 2));
+            set => BinaryPrimitives.WriteUInt16LittleEndian(RawData.Span.Slice(0x50, length: 2), value);
+        }
+
+        public ushort HiddenSize
+        {
+            get => BinaryPrimitives.ReadUInt16LittleEndian(RawData.Span.Slice(0x52, length: 2));
+            set => BinaryPrimitives.WriteUInt16LittleEndian(RawData.Span.Slice(0x52, length: 2), value);
+        }
+
+        public ushort GameFirst
+        {
+            get => BinaryPrimitives.ReadUInt16LittleEndian(RawData.Span.Slice(0x54, length: 2));
+            set => BinaryPrimitives.WriteUInt16LittleEndian(RawData.Span.Slice(0x54, length: 2), value);
+        }
+
+        public ushort GameSize
+        {
+            get => BinaryPrimitives.ReadUInt16LittleEndian(RawData.Span.Slice(0x56, length: 2));
+            set => BinaryPrimitives.WriteUInt16LittleEndian(RawData.Span.Slice(0x56, length: 2), value);
         }
     }
 
