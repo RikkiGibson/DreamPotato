@@ -775,12 +775,6 @@ partial class UserInterface
             }
             else
             {
-                if (vmu.LoadedPath is not null)
-                {
-                    ImGui.TextUnformatted(Path.GetFileName(vmu.LoadedPath.AsSpan()));
-                    ImGui.Separator();
-                }
-
                 LayoutNewOpenSaveMenuItems(presenter);
                 ImGui.Separator();
                 if (ImGui.MenuItem("Close Slot 2 VMU"))
@@ -884,6 +878,15 @@ partial class UserInterface
     private void LayoutNewOpenSaveMenuItems(VmuPresenter presenter)
     {
         Debug.Assert(!_game.IsIntegratedMode && _game.RecentFilesInfo is { });
+        
+        var vmu = presenter.Vmu;
+        if (vmu.LoadedPath != null)
+        {
+            if (ImGui.MenuItem(Path.GetFileName(vmu.LoadedPath.AsSpan())))
+                RevealFileInExplorer(vmu.LoadedPath);
+
+            ImGui.Separator();
+        }
 
         if (ImGui.MenuItem("New VMU"))
             NewVmu(presenter);
