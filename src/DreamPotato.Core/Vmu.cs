@@ -135,10 +135,10 @@ public class Vmu
         FileSystem.SetHostFileInfo(filePath, vmuFileWriteStream: null);
         FileSystem.InitializeFileSystem(date);
 
-        var gameData = File.ReadAllBytes(filePath);
+        using var vmsFile = File.OpenRead(filePath);
         var fileName = Path.GetFileNameWithoutExtension(filePath);
         fileName = fileName.Substring(0, Math.Min(DirectoryEntry.FileNameLength, fileName.Length));
-        if (FileSystem.TryWriteGameFile(gameData, fileName, FileSystem.Encoding.GetBytes(fileName), date, FileCopyProtection.NotCopyProtected) is (false, var error))
+        if (FileSystem.TryWriteGameFile(vmsFile, fileName, FileSystem.Encoding.GetBytes(fileName), date, FileCopyProtection.NotCopyProtected) is (false, var error))
             throw new InvalidOperationException(error);
 
         _cpu.LazyDebugInfo?.ClearFlash();

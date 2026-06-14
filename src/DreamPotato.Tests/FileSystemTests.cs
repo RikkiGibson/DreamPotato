@@ -22,8 +22,8 @@ public class FileSystemTests : IDisposable
 
         verifyRootBlock();
         verifyFATBlock();
-
-        var (success, _) = fileSystem.TryWriteGameFile(File.ReadAllBytes("TestSource/helloworld.vms"), "HelloWorld", FileSystem.Encoding.GetBytes("HelloWorld"), date, FileCopyProtection.NotCopyProtected);
+        using var gameFile = File.OpenRead("TestSource/helloworld.vms");
+        var (success, _) = fileSystem.TryWriteGameFile(gameFile, "HelloWorld", FileSystem.Encoding.GetBytes("HelloWorld"), date, FileCopyProtection.NotCopyProtected);
         Assert.True(success);
 
         void verifyRootBlock()
@@ -94,7 +94,8 @@ public class FileSystemTests : IDisposable
         var flash = new byte[Cpu.FlashSize];
         var fileSystem = new FileSystem(flash);
         fileSystem.InitializeFileSystem(date);
-        var (success, _) = fileSystem.TryWriteGameFile(File.ReadAllBytes("TestSource/helloworld.vms"), "HelloWorld", FileSystem.Encoding.GetBytes("HelloWorld"), date, FileCopyProtection.NotCopyProtected);
+        using var gameFile = File.OpenRead("TestSource/helloworld.vms");
+        var (success, _) = fileSystem.TryWriteGameFile(gameFile, "HelloWorld", FileSystem.Encoding.GetBytes("HelloWorld"), date, FileCopyProtection.NotCopyProtected);
         Assert.True(success);
 
         var fatEntry = fileSystem.GetBlock(FileSystem.FATBlockId);

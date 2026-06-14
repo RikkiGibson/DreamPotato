@@ -290,20 +290,17 @@ internal class FileSystem
         dest[0x7] = (byte)date.DayOfWeek; // week_day: 0(Mon)-6(Sun)
     }
 
-    public (bool ok, string? errorMessage) TryWriteGameFile(ReadOnlySpan<byte> gameFileData, string onDiskFileName, Memory<byte> onVmuFileName, DateTimeOffset date, FileCopyProtection copyProtection)
+    public (bool ok, string? errorMessage) TryWriteGameFile(Stream vmsFile, string onDiskFileName, ReadOnlyMemory<byte> onVmuFileName, DateTimeOffset date, FileCopyProtection copyProtection)
     {
-        if (gameFileData.Length == 0)
-            throw new ArgumentException(null, paramName: nameof(gameFileData));
+        ArgumentOutOfRangeException.ThrowIfNegative(vmsFile.Length);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(vmsFile.Length, Cpu.InstructionBankSize);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(onVmuFileName.Length, DirectoryEntry.FileNameLength);
 
-        if (gameFileData.Length > Cpu.InstructionBankSize)
-            throw new ArgumentException(null, paramName: nameof(gameFileData));
-
-        if (onVmuFileName.Length > DirectoryEntry.FileNameLength)
-            throw new ArgumentException(null, paramName: nameof(onVmuFileName));
+        var vmsLength = (int)vmsFile.Length;
 
         // Verify sufficient free space
         var fatBlock = GetFATBlock();
-        var lastBlockId = (gameFileData.Length + BlockSize - 1) / BlockSize - 1;
+        var lastBlockId = (vmsLength + BlockSize - 1) / BlockSize - 1;
         for (int i = 0; i <= lastBlockId; i++)
         {
             if (fatBlock[i] != FAT_Unallocated)
@@ -321,7 +318,7 @@ internal class FileSystem
         fatBlock[lastBlockId] = FAT_LastInFile;
 
         // Game data itself must be written to start of bank 0
-        gameFileData.CopyTo(flash);
+        vmsFile.ReadExactly(flash.AsSpan(0, vmsLength));
 
         // Create a directory entry
         var directoryEntry = EnumerateDirectoryTable().FirstOrDefault(entry => entry.Type == FileType.None);
@@ -333,7 +330,7 @@ internal class FileSystem
         directoryEntry.StartFAT = 0;
         onVmuFileName.CopyTo(directoryEntry.Name);
         directoryEntry.DateTimeOffset = date;
-        directoryEntry.SizeInBlocks = (ushort)((gameFileData.Length + BlockSize - 1) / BlockSize);
+        directoryEntry.SizeInBlocks = (ushort)((vmsLength + BlockSize - 1) / BlockSize);
         directoryEntry.VmsHeaderBlockOffset = 1;
 
         return (true, null);
@@ -442,7 +439,7 @@ internal class FileSystem
                 return (false, $"{vmiFileInfo.Name}: Bad format");
 
             var vmiInfo = new VmiInfo(File.ReadAllBytes(vmiFileInfo.FullName));
-            var vmsFileBytes = File.ReadAllBytes(vmsFileInfo.FullName);
+            using var vmsFile = vmsFileInfo.OpenRead();
             if (vmiInfo.FileMode.HasFlag(VmuFileMode.Game))
             {
                 if (foundGameName != null)
@@ -450,7 +447,7 @@ internal class FileSystem
 
                 foundGameName = vmiFileInfo.Name;
                 var copyProtection = vmiInfo.FileMode.HasFlag(VmuFileMode.CopyProtected) ? FileCopyProtection.CopyProtected : FileCopyProtection.NotCopyProtected;
-                if (TryWriteGameFile(vmsFileBytes, onDiskFileName: vmsFileInfo.Name, onVmuFileName: vmiInfo.VmuFileName, vmiInfo.CreationDateTimeOffset, copyProtection) is (false, var error))
+                if (TryWriteGameFile(vmsFile, onDiskFileName: vmsFileInfo.Name, onVmuFileName: vmiInfo.VmuFileName, vmiInfo.CreationDateTimeOffset, copyProtection) is (false, var error))
                     return (false, error);
 
                 continue;
@@ -460,20 +457,20 @@ internal class FileSystem
             if (!directoryEntry.HasValue)
                 return (false, $"{vmsFileInfo.Name}: The file system directory is full.");
 
-            if (tryWriteDataFile(ref currentDataBlockId, directoryEntry, vmsFileInfo.Name, vmsFileBytes, vmiInfo) is (false, var error1))
+            if (tryWriteDataFile(ref currentDataBlockId, directoryEntry, vmsFileInfo.Name, vmsFile, vmiInfo) is (false, var error1))
                 return (false, error1);
         }
 
         return (true, null);
 
-        (bool ok, string? error) tryWriteDataFile(ref ushort currentDataBlockId, DirectoryEntry directoryEntry, string onDiskFileName, ReadOnlySpan<byte> vmsFileBytes, VmiInfo vmiInfo)
+        (bool ok, string? error) tryWriteDataFile(ref ushort currentDataBlockId, DirectoryEntry directoryEntry, string onDiskFileName, Stream vmsFile, VmiInfo vmiInfo)
         {
             Debug.Assert(!vmiInfo.FileMode.HasFlag(VmuFileMode.Game));
 
-            if (vmsFileBytes.Length != vmiInfo.VmsFileSize)
-                return (false, $"{vmiInfo.VmuFileName}: VMI expected the VMS file size to be {vmiInfo.VmsFileSize} but was actually {vmsFileBytes.Length}");
+            if (vmsFile.Length != vmiInfo.VmsFileSize)
+                return (false, $"{vmiInfo.VmuFileName}: VMI expected the VMS file size to be {vmiInfo.VmsFileSize} but was actually {vmsFile.Length}");
 
-            var sizeInBlocks = (ushort)((vmsFileBytes.Length + (BlockSize - 1)) / BlockSize);
+            var sizeInBlocks = (ushort)((vmsFile.Length + (BlockSize - 1)) / BlockSize);
             var fatBlock = GetFATBlock();
 
             // Scan to next free data block
@@ -489,7 +486,7 @@ internal class FileSystem
             for (var i = 0; i < sizeInBlocks; i++)
             {
                 var dataBlock = GetBlock(currentDataBlockId);
-                vmsFileBytes.Slice(i * BlockSize, length: BlockSize).CopyTo(dataBlock);
+                vmsFile.ReadExactly(dataBlock);
 
                 if (i == sizeInBlocks - 1)
                 {
