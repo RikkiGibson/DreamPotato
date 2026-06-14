@@ -140,6 +140,11 @@ public class Vmu
         if (File.Exists(vmiFilePath))
         {
             var vmiInfo = new VmiInfo(File.ReadAllBytes(vmiFilePath));
+            // TODO2: This method should return error instead of throwing
+            // And, it should "just work" when a non-game vmi+vms is used.
+            if (!vmiInfo.FileMode.HasFlag(VmuFileMode.Game))
+                throw new InvalidOperationException();
+
             if (FileSystem.TryWriteGameFileWithVmi(vmsFile, onDiskFileName: fileInfo.Name, vmiInfo) is (false, var error))
                 throw new InvalidOperationException(error);
         }
