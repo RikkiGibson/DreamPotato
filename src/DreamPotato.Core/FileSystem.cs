@@ -797,9 +797,9 @@ internal class FileSystem
 
     private IEnumerable<DirectoryEntry> EnumerateDirectoryTable()
     {
-        // TODO2: We should probably use the root block as source of truth as much as possible,
-        // and make it a precondition to initialize it before using this
-        // Similar with usages of other consts such as the sizes of various regions.
+        // Note: we probably should not hardcode the last/size of the directory table here,
+        // and should use the root block as a source of truth.
+        // However, dealing with the fallout of this, such as by dynamically sizing the directory mirror, doesn't feel worth it currently.
         for (var blockId = DirectoryTableLastBlockId; blockId >= DirectoryTableFirstBlockId; blockId--)
         {
             var directoryBlock = GetBlockMemory(blockId);
