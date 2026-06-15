@@ -77,7 +77,7 @@ internal class FileSystem
 
     // user region: where user visible files are stored.
     private const int UserRegionSizeBlocks = 200;
-    private const int UserRegionLastBlockId = UserRegionSizeBlocks - 1;
+    internal const ushort UserRegionLastBlockId = UserRegionSizeBlocks - 1;
 
     // hidden region: extra storage which is used on-demand to store user files when blocks in the user region being to malfunction.
     private const int HiddenRegionSizeBlocks = BlocksCount - UserRegionSizeBlocks - DirectoryTableSizeBlocks - 1 /*root block*/ - 1 /*FAT size*/; // 41
@@ -442,79 +442,79 @@ internal class FileSystem
                 continue;
             }
 
-            var directoryEntry = EnumerateDirectoryTable().FirstOrDefault(entry => entry.Type == FileType.None);
-            if (!directoryEntry.HasValue)
-                return (false, $"{vmsFileInfo.Name}: The file system directory is full.");
-
-            if (tryWriteDataFile(ref currentDataBlockId, directoryEntry, vmsFileInfo.Name, vmsFile, vmiInfo) is (false, var error1))
+            if (TryWriteDataFile(ref currentDataBlockId, vmsFile, vmiInfo) is (false, var error1))
                 return (false, error1);
         }
 
         return (true, null);
+    }
 
-        (bool ok, string? error) tryWriteDataFile(ref ushort currentDataBlockId, DirectoryEntry directoryEntry, string onDiskFileName, Stream vmsFile, VmiInfo vmiInfo)
+    public (bool ok, string? error) TryWriteDataFile(ref ushort currentDataBlockId, Stream vmsFile, VmiInfo vmiInfo)
+    {
+        Debug.Assert(!vmiInfo.FileMode.HasFlag(VmuFileMode.Game));
+
+        if (vmsFile.Length != vmiInfo.VmsFileSize)
+            return (false, $"{vmiInfo.VmuFileName}: VMI expected the VMS file size to be {vmiInfo.VmsFileSize} but was actually {vmsFile.Length}");
+
+        var directoryEntry = EnumerateDirectoryTable().FirstOrDefault(entry => entry.Type == FileType.None);
+        if (!directoryEntry.HasValue)
+            return (false, $"{vmiInfo.VmuFileName}: The file system directory is full.");
+
+        var sizeInBlocks = (ushort)((vmsFile.Length + (BlockSize - 1)) / BlockSize);
+        var fatBlock = GetFATBlock();
+
+        // Scan to next free data block
+        while (fatBlock[currentDataBlockId] != FAT_Unallocated)
         {
-            Debug.Assert(!vmiInfo.FileMode.HasFlag(VmuFileMode.Game));
+            if (currentDataBlockId == 0)
+                return (false, $"{vmiInfo.VmuFileName}: Insufficient space on VMU");
 
-            if (vmsFile.Length != vmiInfo.VmsFileSize)
-                return (false, $"{vmiInfo.VmuFileName}: VMI expected the VMS file size to be {vmiInfo.VmsFileSize} but was actually {vmsFile.Length}");
+            currentDataBlockId--;
+        }
 
-            var sizeInBlocks = (ushort)((vmsFile.Length + (BlockSize - 1)) / BlockSize);
-            var fatBlock = GetFATBlock();
+        ushort startFAT = currentDataBlockId;
+        for (var i = 0; i < sizeInBlocks; i++)
+        {
+            var dataBlock = GetBlock(currentDataBlockId);
+            vmsFile.ReadExactly(dataBlock);
+
+            if (i == sizeInBlocks - 1)
+            {
+                fatBlock[currentDataBlockId] = FAT_LastInFile;
+                break;
+            }
+
+            var prevDataBlockId = currentDataBlockId;
 
             // Scan to next free data block
-            while (fatBlock[currentDataBlockId] != FAT_Unallocated)
+            do
             {
+                // Note: strictly, we should not be marking any blocks as used if there wasn't enough space.
+                // However, this is a major failure condition (we couldn't write all the vms folder content to the VMU),
+                // so it doesn't feel super important to try to recover.
                 if (currentDataBlockId == 0)
-                    return (false, $"{onDiskFileName}: Insufficient space on VMU");
+                    return (false, $"{vmiInfo.VmuFileName}: Insufficient space on VMU");
 
                 currentDataBlockId--;
-            }
+            } while (fatBlock[currentDataBlockId] != FAT_Unallocated);
 
-            ushort startFAT = currentDataBlockId;
-            for (var i = 0; i < sizeInBlocks; i++)
-            {
-                var dataBlock = GetBlock(currentDataBlockId);
-                vmsFile.ReadExactly(dataBlock);
-
-                if (i == sizeInBlocks - 1)
-                {
-                    fatBlock[currentDataBlockId] = FAT_LastInFile;
-                    break;
-                }
-
-                var prevDataBlockId = currentDataBlockId;
-
-                // Scan to next free data block
-                do
-                {
-                    // Note: strictly, we should not be marking any blocks as used if there wasn't enough space.
-                    // However, this is a major failure condition (we couldn't write all the vms folder content to the VMU),
-                    // so it doesn't feel super important to try to recover.
-                    if (currentDataBlockId == 0)
-                        return (false, $"{onDiskFileName}: Insufficient space on VMU");
-
-                    currentDataBlockId--;
-                } while (fatBlock[currentDataBlockId] != FAT_Unallocated);
-
-                fatBlock[prevDataBlockId] = currentDataBlockId;
-            }
-
-            directoryEntry.Type = FileType.Data;
-            directoryEntry.CopyProtection = vmiInfo.FileMode.HasFlag(VmuFileMode.CopyProtected) ? FileCopyProtection.CopyProtected : FileCopyProtection.NotCopyProtected;
-            directoryEntry.StartFAT = startFAT;
-
-            Debug.Assert(vmiInfo.VmuFileName.Length == directoryEntry.Name.Length);
-            vmiInfo.VmuFileName.CopyTo(directoryEntry.Name);
-
-            directoryEntry.DateTimeOffset = vmiInfo.CreationDateTimeOffset;
-            directoryEntry.SizeInBlocks = sizeInBlocks;
-
-            // Note: if the vms doesn't match this convention, then we have no way of really knowing where its header is.
-            // We might want to verify the header is in the expected location in 'ReadAllFiles'.
-            directoryEntry.VmsHeaderBlockOffset = 0;
-            return (true, null);
+            fatBlock[prevDataBlockId] = currentDataBlockId;
         }
+
+        directoryEntry.Type = FileType.Data;
+        directoryEntry.CopyProtection = vmiInfo.FileMode.HasFlag(VmuFileMode.CopyProtected) ? FileCopyProtection.CopyProtected : FileCopyProtection.NotCopyProtected;
+        directoryEntry.StartFAT = startFAT;
+
+        Debug.Assert(vmiInfo.VmuFileName.Length == directoryEntry.Name.Length);
+        vmiInfo.VmuFileName.CopyTo(directoryEntry.Name);
+
+        directoryEntry.DateTimeOffset = vmiInfo.CreationDateTimeOffset;
+        directoryEntry.SizeInBlocks = sizeInBlocks;
+
+        // Note: if the vms doesn't match this convention, then we have no way of really knowing where its header is.
+        // We might want to verify the header is in the expected location in 'ReadAllFiles'.
+        directoryEntry.VmsHeaderBlockOffset = 0;
+        return (true, null);
     }
 
     internal Span<byte> GetBlock(int blockId)

@@ -120,14 +120,14 @@ public class Vmu
         _cpu.LazyDebugInfo?.ClearFlash();
     }
 
-    public void LoadGameVms(string filePath, DateTimeOffset date, bool autoInitializeRTCDate)
+    public (bool ok, string? error) LoadVms(string filePath, DateTimeOffset date, bool autoInitializeRTCDate)
     {
         if (!filePath.EndsWith(".vms", StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException($"VMS file '{filePath}' must have .vms extension.", nameof(filePath));
+            return (false, $"VMS file '{filePath}' must have .vms extension.");
 
         var fileInfo = new FileInfo(filePath);
         if (fileInfo.Length > Cpu.InstructionBankSize)
-            throw new ArgumentException($"VMS file '{filePath}' must be 64KB or smaller to be loaded.", nameof(filePath));
+            return (false, $"VMS file '{filePath}' must be 64KB or smaller to be loaded.");
 
         Reset(autoInitializeRTCDate ? date : null);
 
@@ -140,28 +140,34 @@ public class Vmu
         if (File.Exists(vmiFilePath))
         {
             var vmiInfo = new VmiInfo(File.ReadAllBytes(vmiFilePath));
-            // TODO2: This method should return error instead of throwing
-            // And, it should "just work" when a non-game vmi+vms is used.
             if (!vmiInfo.FileMode.HasFlag(VmuFileMode.Game))
-                throw new InvalidOperationException();
-
-            if (FileSystem.TryWriteGameFileWithVmi(vmsFile, onDiskFileName: fileInfo.Name, vmiInfo) is (false, var error))
-                throw new InvalidOperationException(error);
+            {
+                // Note: this will search from the end of the volume toward the start for a free block
+                var currentBlock = FileSystem.UserRegionLastBlockId;
+                if (FileSystem.TryWriteDataFile(ref currentBlock, vmsFile, vmiInfo) is (false, var error))
+                    return (false, error);
+            }
+            else
+            {
+                if (FileSystem.TryWriteGameFileWithVmi(vmsFile, onDiskFileName: fileInfo.Name, vmiInfo) is (false, var error))
+                    return (false, error);
+            }
         }
         else
         {
-            // No .vmi file. Choose some defaults automatically for the directory entry.
+            // No .vmi file. Assume it is a game file and invent some defaults for the directory entry.
             var fileName = Path.GetFileNameWithoutExtension(filePath);
             fileName = fileName[..Math.Min(DirectoryEntry.FileNameLength, fileName.Length)];
             var onVmuFileName = FileSystem.Encoding.GetBytes(fileName);
             if (FileSystem.TryWriteGameFile(vmsFile, onDiskFileName: fileInfo.Name, onVmuFileName, date, FileCopyProtection.NotCopyProtected) is (false, var error))
-                throw new InvalidOperationException(error);
+                return (false, error);
         }
 
         _cpu.LazyDebugInfo?.ClearFlash();
         _cpu.LazyDebugInfo?.GetBankInfo(InstructionBank.FlashBank0).WaterbearInfo = GetWaterbearInfo(filePath);
 
         _cpu.ResyncMapleOutbound();
+        return (true, null);
     }
 
     public void LoadVmu(string filePath, DateTimeOffset? rtcDate)
