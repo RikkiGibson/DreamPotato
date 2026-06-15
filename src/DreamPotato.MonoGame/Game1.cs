@@ -244,6 +244,8 @@ public class Game1 : Game
             var (ok, error) = vmu.LoadVmsFolder(filePath, date, autoInitializeRtcDate: Configuration.AutoInitializeDate);
             if (!ok)
             {
+                // TODO: right now this can put things in an intermediate state where user needs to manually open another file to fix it.
+                // Ideally a call like 'LoadVmsFolder' failing, would result in no apparent effects on the VMU filesystem.
                 _userInterface.ShowToast(presenter, error ?? "Unknown error");
                 return;
             }
