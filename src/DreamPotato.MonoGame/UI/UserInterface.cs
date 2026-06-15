@@ -882,7 +882,7 @@ partial class UserInterface
         var vmu = presenter.Vmu;
         if (vmu.LoadedPath != null)
         {
-            if (ImGui.MenuItem(BreakLines(Path.GetFileName(vmu.LoadedPath.AsSpan()), maxLineLength: 16, maxLineCount: 2)))
+            if (ImGui.MenuItem(BreakLines(Path.GetFileName(vmu.LoadedPath.AsSpan()), MaxFileNameLength, maxLineCount: 2)))
                 RevealFileInExplorer(vmu.LoadedPath);
 
             ImGui.Separator();
@@ -940,19 +940,19 @@ partial class UserInterface
         (string[] displayFileNames, ImmutableArray<string> recentFiles) calcRecentFilesInfo()
         {
             var recentFiles = _game.RecentFilesInfo.RecentFiles;
-            const int maxFileNameLength = 18;
             string[] displayFileNames = new string[recentFiles.Length];
             for (var i = 0; i < recentFiles.Length; i++)
             {
                 var fileName = Path.GetFileName(recentFiles[i]);
-                var oversize = fileName.Length > maxFileNameLength;
-                displayFileNames[i] = oversize ? BreakLines(fileName, maxFileNameLength) : fileName;
+                var oversize = fileName.Length > MaxFileNameLength;
+                displayFileNames[i] = oversize ? BreakLines(fileName, MaxFileNameLength) : fileName;
             }
 
             return (displayFileNames, recentFiles);
         }
     }
 
+    private const int MaxFileNameLength = 18;
     private static string BreakLines(ReadOnlySpan<char> span, int maxLineLength, int maxLineCount = int.MaxValue)
     {
         var builder = new StringBuilder();
