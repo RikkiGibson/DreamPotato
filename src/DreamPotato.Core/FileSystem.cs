@@ -120,7 +120,7 @@ internal class FileSystem
         Array.Clear(flash);
 
         initializeRootBlock();
-        InitializeFAT();
+        initializeFAT();
         ResetFlushData();
 
         void initializeRootBlock()
@@ -160,33 +160,33 @@ internal class FileSystem
             // The rest of the root block is reserved
             rootBlock.RawData.Span[0x58..].Clear();
         }
-    }
 
-    private void InitializeFAT()
-    {
-        var fatBlock = GetFATBlock();
-
-        // mark all blocks unused to start
-        for (int i = 0; i < FATBlock.Length; i++)
+        void initializeFAT()
         {
-            fatBlock[i] = FAT_Unallocated;
+            var fatBlock = GetFATBlock();
+
+            // mark all blocks unused to start
+            for (int i = 0; i < FATBlock.Length; i++)
+            {
+                fatBlock[i] = FAT_Unallocated;
+            }
+
+            // mark root block as last in its file
+            fatBlock[RootBlockId] = FAT_LastInFile;
+
+            // mark FAT itself as last in its file
+            fatBlock[FATBlockId] = FAT_LastInFile;
+
+            // directory: mark as growing from end toward start of the volume.
+            var directoryStartBlockId = DirectoryTableLastBlockId - DirectoryTableSizeBlocks + 1;
+            for (int i = DirectoryTableLastBlockId; i > directoryStartBlockId; i--)
+            {
+                // Point to the previous block.
+                fatBlock[i] = (ushort)(i - 1);
+            }
+
+            fatBlock[directoryStartBlockId] = FAT_LastInFile;
         }
-
-        // mark root block as last in its file
-        fatBlock[RootBlockId] = FAT_LastInFile;
-
-        // mark FAT itself as last in its file
-        fatBlock[FATBlockId] = FAT_LastInFile;
-
-        // directory: mark as growing from end toward start of the volume.
-        var directoryStartBlockId = DirectoryTableLastBlockId - DirectoryTableSizeBlocks + 1;
-        for (int i = DirectoryTableLastBlockId; i > directoryStartBlockId; i--)
-        {
-            // Point to the previous block.
-            fatBlock[i] = (ushort)(i - 1);
-        }
-
-        fatBlock[directoryStartBlockId] = FAT_LastInFile;
     }
 
     internal static DateTimeOffset ReadBcdDate(ReadOnlySpan<byte> source)
