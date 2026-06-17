@@ -193,13 +193,18 @@ public class Vmu
 
     public (bool ok, string? error) LoadVmsFolder(string folderPath, DateTimeOffset date, bool autoInitializeRtcDate)
     {
+        // TODO2: The LoadVmsFolder, LoadVms and similar methods
+        // should all be "transactional". i.e. if they return an error,
+        // they should have made no side effects on the vmu state if at all possible.
+        // 
+        // If we have made side effects that are impractical to "undo", but we couldn't complete the operation,
+        // then we should probably just crash. We should avoid this by doing checks upfront before side effects.
         var folderInfo = new DirectoryInfo(folderPath);
         if (!folderInfo.Exists)
             throw new ArgumentException(null, nameof(folderPath));
 
         Reset(autoInitializeRtcDate ? date : null);
         _cpu.FileSystem.SetHostFileInfo(folderPath, vmuFileWriteStream: null);
-        Array.Clear(_cpu.Flash);
         if (FileSystem.TryInitializeFromFolder(sourceDirectory: folderInfo, fallbackDate: date) is (false, var error))
             return (false, error);
 
