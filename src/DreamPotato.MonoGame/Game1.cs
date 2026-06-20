@@ -241,6 +241,9 @@ public class Game1 : Game
         var extension = Path.GetExtension(filePath);
         if (Directory.Exists(filePath))
         {
+            if (!checkDistinctPath())
+                return;
+
             var (ok, error) = vmu.LoadVmsFolder(filePath, date, autoInitializeRtcDate: Configuration.AutoInitializeDate);
             if (!ok)
             {
@@ -261,17 +264,8 @@ public class Game1 : Game
         else if (extension.Equals(".vmu", StringComparison.OrdinalIgnoreCase)
             || extension.Equals(".bin", StringComparison.OrdinalIgnoreCase))
         {
-            // We need to enforce that the same VMU file is not opened by both VMUs.
-            // Otherwise they could stomp on each others' on-disk content.
-            // (Opening the same .vms file is fine.)
-            // TODO2: this check needs to be done for folders also, and, should probably be more robust to SecondaryVmu being closed and reopened
-            var otherVmu = vmu == PrimaryVmu ? SecondaryVmu : PrimaryVmu;
-            if (otherVmu?.LoadedPath == filePath)
-            {
-                _userInterface.ShowToast(presenter, $"Cannot open {Path.GetFileName(filePath)} because it is already open on the other VMU.");
-                dropRecentIfNotExists();
+            if (!checkDistinctPath())
                 return;
-            }
 
             if (vmu.LoadVmu(filePath, rtcDate: Configuration.AutoInitializeDate ? date : null) is (false, var error))
             {
@@ -293,6 +287,21 @@ public class Game1 : Game
         {
             RecentFilesInfo = RecentFilesInfo.AddRecentFile(forPrimary: vmu == PrimaryVmu, filePath);
             RecentFilesInfo.Save();
+        }
+
+        // Returns true if the paths are distinct.
+        // Ensures the same file is not loaded on multiple VMUs
+        // causing them to stomp on each others changes.
+        bool checkDistinctPath()
+        {
+            var otherVmu = vmu == PrimaryVmu ? SecondaryVmu : PrimaryVmu;
+            if (otherVmu?.LoadedPath == filePath)
+            {
+                _userInterface.ShowToast(presenter, $"Cannot open {Path.GetFileName(filePath)} because it is already open on the other VMU.");
+                return false;
+            }
+
+            return true;
         }
 
         void dropRecentIfNotExists()
