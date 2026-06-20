@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <None Update="TestSource/*.vms" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="TestSource/*.vmu" CopyToOutputDirectory="PreserveNewest" />
     <None Update="TestSource/*.debug.json" CopyToOutputDirectory="PreserveNewest" />
 
     <Content Include="Data/*.bin">

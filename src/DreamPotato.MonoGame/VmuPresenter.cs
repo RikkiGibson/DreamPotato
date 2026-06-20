@@ -103,7 +103,7 @@ class VmuPresenter
         _dynamicSound = new DynamicSoundEffectInstance(Audio.SampleRate, AudioChannels.Mono);
         _dynamicSound.Play();
         vmu.Audio.AudioBufferReady += Audio_BufferReady;
-        vmu._cpu.OpenFileRequested += path => _game1.LoadAndStartVmsOrVmuFile(this, path);
+        vmu.OpenFileRequested += path => _game1.LoadAndStartVmsOrVmuFile(this, path);
     }
 
     [MemberNotNull(nameof(MonoGame.ButtonChecker))]
@@ -177,6 +177,8 @@ class VmuPresenter
 
         Vmu._cpu.SFRs.P3 = newP3;
         PreviousGamepad = gamepad;
+
+        Vmu.PollFileSystem(now: DateTime.Now);
     }
 
     internal void UpdateAndRun(GameTime gameTime, KeyboardState previousKeys, KeyboardState keyboard)
@@ -361,7 +363,7 @@ class VmuPresenter
     {
         var now = DateTimeOffset.Now;
         var timeDescription = now.ToString($"yyyy-MM-dd_HH-mm-ss");
-        var baseName = Path.GetFileNameWithoutExtension(Vmu.LoadedFilePath) ?? "DreamPotato";
+        var baseName = Path.GetFileNameWithoutExtension(Vmu.LoadedPath) ?? "DreamPotato";
 
         var screenshotsFolder = Path.Combine(Vmu.UserDataFolder, "Screenshots");
         Directory.CreateDirectory(screenshotsFolder);

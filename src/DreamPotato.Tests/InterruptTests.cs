@@ -276,7 +276,8 @@ public class InterruptTests
         var cpu = vmu._cpu;
         cpu.DreamcastSlot = DreamcastSlot.Slot1;
         vmu.LoadRom();
-        vmu.LoadGameVms("TestSource/IntDelays.vms", date: DateTimeOffset.Parse("09/09/1999"), autoInitializeRTCDate: true);
+        var (ok, error) = vmu.LoadVms("TestSource/IntDelays.vms", date: DateTimeOffset.Parse("09/09/1999"), autoInitializeRTCDate: true);
+        Assert.True(ok, error);
 
         cpu.Run(TimeSpan.TicksPerSecond);
         pressButtonAndWait(cpu, new P3(0xff) { ButtonMode = false });
@@ -333,7 +334,8 @@ public class InterruptTests
         var cpu = vmu._cpu;
         cpu.DreamcastSlot = DreamcastSlot.Slot1;
         vmu.LoadRom();
-        vmu.LoadGameVms("TestSource/TimerIntSeq1.vms", date: DateTimeOffset.Parse("09/09/1999"), autoInitializeRTCDate: true);
+        var (ok, error) = vmu.LoadVms("TestSource/TimerIntSeq1.vms", date: DateTimeOffset.Parse("09/09/1999"), autoInitializeRTCDate: true);
+        Assert.True(ok, error);
 
         cpu.Run(TimeSpan.TicksPerSecond);
         pressButtonAndWait(cpu, new P3(0xff) { ButtonMode = false });
@@ -390,7 +392,8 @@ public class InterruptTests
         var cpu = vmu._cpu;
         cpu.DreamcastSlot = DreamcastSlot.Slot1;
         vmu.LoadRom();
-        vmu.LoadGameVms("TestSource/TimerPreemption.vms", date: DateTimeOffset.Parse("09/09/1999"), autoInitializeRTCDate: true);
+        var (ok, error) = vmu.LoadVms("TestSource/TimerPreemption.vms", date: DateTimeOffset.Parse("09/09/1999"), autoInitializeRTCDate: true);
+        Assert.True(ok, error);
 
         cpu.Run(TimeSpan.TicksPerSecond);
         pressButtonAndWait(cpu, new P3(0xff) { ButtonMode = false });
@@ -448,7 +451,8 @@ public class InterruptTests
         var cpu = vmu._cpu;
         cpu.DreamcastSlot = DreamcastSlot.Slot1;
         vmu.LoadRom();
-        vmu.LoadGameVms("TestSource/IntServicingAndHaltDelays.vms", date: DateTimeOffset.Parse("09/09/1999"), autoInitializeRTCDate: true);
+        var (ok, error) = vmu.LoadVms("TestSource/IntServicingAndHaltDelays.vms", date: DateTimeOffset.Parse("09/09/1999"), autoInitializeRTCDate: true);
+        Assert.True(ok, error);
 
         cpu.Run(TimeSpan.TicksPerSecond);
         pressButtonAndWait(cpu, new P3(0xff) { ButtonMode = false });

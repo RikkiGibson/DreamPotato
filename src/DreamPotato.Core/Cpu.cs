@@ -49,36 +49,11 @@ public class Cpu
         return LazyDebugInfo;
     }
 
-    internal event Action? UnsavedChangesDetected;
-    internal bool HasUnsavedChanges
-    {
-        get;
-        set
-        {
-            var isNewUnsavedChanges = !field && value;
-            field = value;
-            if (isNewUnsavedChanges)
-                UnsavedChangesDetected?.Invoke();
-        }
-    }
-
-    public event Action<string>? OpenFileRequested;
-
-    internal FileStream? VmuFileWriteStream
-    {
-        private get;
-        set
-        {
-            field?.Dispose();
-            field = value;
-        }
-    }
-
     /// <summary>
     /// Allows reading/writing to the VMU file in a thread-safe manner.
     /// </summary>
     internal SafeFileHandle? VmuFileHandle
-        => VmuFileWriteStream?.SafeFileHandle;
+        => FileSystem.VmuFileHandle;
 
     /// <summary>
     /// May point to either ROM (BIOS), flash memory bank 0 or bank 1.
@@ -103,6 +78,7 @@ public class Cpu
     public readonly Memory Memory;
     public readonly Audio Audio;
     public readonly Display Display;
+    internal readonly FileSystem FileSystem;
 
     /// <summary>NOTE: only 'TryReceiveMessage' and 'SendMessage' methods are safe to call from here.</summary>
     public readonly MapleMessageBroker MapleMessageBroker;
@@ -207,6 +183,7 @@ public class Cpu
         Memory = new Memory(this, Logger);
         Audio = new Audio(this, Logger);
         Display = new Display(this);
+        FileSystem = new FileSystem(Flash);
         MapleMessageBroker = mapleMessageBroker ?? new MapleMessageBroker(integratedModePort: null, LogLevel.Default);
         SetInstructionBank(InstructionBank.ROM);
     }
@@ -558,15 +535,16 @@ public class Cpu
                     // Indicate flash write
                     MapleIOIconTimeout = 5;
                     Memory.Direct_AccessXram2()[Display.FlashIconOffset] = (byte)Icons.Flash;
-                    if (VmuFileHandle is null)
-                        HasUnsavedChanges = true;
+
+                    var blockNumber = (message.AdditionalWords[1] >> 24) & 0xff;
+                    FileSystem.OnFlashBlockModified(blockNumber, DateTimeOffset.Now);
 
                     break;
                 case (MapleMessageType.CompleteWrite, MapleFunction.Storage):
                     // Do nothing, allow timeout counter to turn off flash icon.
                     break;
                 case (MapleMessageType.DPOpenFile, MapleFunction.Storage):
-                    OpenFileRequested?.Invoke(message.ReadContentString());
+                    FileSystem.RequestOpenFile(message.ReadContentString());
                     break;
                 default:
                     Debug.Fail($"Unhandled Maple message '({message.Type}, {message.Function})'");
@@ -2086,14 +2064,11 @@ public class Cpu
             var a17 = a16 | (SFRs.FPR.FlashAddressBank ? InstructionBankSize : 0);
             Flash[a17] = value;
             LazyDebugInfo?.CurrentBankInfo.ClearInstruction(a16);
+
+            FileSystem.OnFlashBlockModified(a17 / FileSystem.BlockSize, DateTime.Now);
             if (VmuFileHandle is not null)
             {
-                var absoluteAddress = (SFRs.FPR.FlashAddressBank ? (1 << 16) : 0) | a16;
-                RandomAccess.Write(VmuFileHandle, [value], absoluteAddress);
-            }
-            else
-            {
-                HasUnsavedChanges = true;
+                RandomAccess.Write(VmuFileHandle, [value], a17);
             }
 
             _flashWriteUnlockSequence++;

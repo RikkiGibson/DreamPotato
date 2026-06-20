@@ -160,7 +160,7 @@ public class Game1 : Game
                 vmu.InitializeRTCDate(date);
 
             vmu.LoadRom();
-            if (vmsOrVmuFilePath != null && File.Exists(vmsOrVmuFilePath))
+            if (Path.Exists(vmsOrVmuFilePath))
                 LoadAndStartVmsOrVmuFile(presenter, vmsOrVmuFilePath);
         }
     }
@@ -172,7 +172,11 @@ public class Game1 : Game
         {
             args.Cancel = true;
             _userInterface.ShowConfirmCommandDialog(PendingCommandKind.Exit, vmuPresenter: null);
+            return;
         }
+
+        PrimaryVmu.FlushFileSystem();
+        SecondaryVmu?.FlushFileSystem();
 
         // Save window size and position on exit
         var viewport = _graphics.GraphicsDevice.Viewport;
@@ -212,9 +216,9 @@ public class Game1 : Game
             ? "* "
             : "";
 
-        var fileDesc = PrimaryVmu.LoadedFilePath is null
+        var fileDesc = PrimaryVmu.LoadedPath is null
             ? ""
-            : $"{Path.GetFileName(PrimaryVmu.LoadedFilePath)} - ";
+            : $"{Path.GetFileName(PrimaryVmu.LoadedPath)} - ";
 
         Window.Title = $"{star}{fileDesc}DreamPotato";
     }
@@ -235,19 +239,46 @@ public class Game1 : Game
         var vmu = presenter.Vmu;
         var date = DateTimeOffset.Now;
         var extension = Path.GetExtension(filePath);
-        if (extension.Equals(".vms", StringComparison.OrdinalIgnoreCase))
+        if (Directory.Exists(filePath))
         {
-            vmu.LoadGameVms(filePath, date, autoInitializeRTCDate: Configuration.AutoInitializeDate);
+            if (!checkDistinctPath())
+                return;
+
+            var (ok, error) = vmu.LoadVmsFolder(filePath, date, autoInitializeRtcDate: Configuration.AutoInitializeDate);
+            if (!ok)
+            {
+                _userInterface.ShowToast(presenter, error ?? "Unknown error");
+                dropRecentIfNotExists();
+                return;
+            }
+        }
+        else if (extension.Equals(".vms", StringComparison.OrdinalIgnoreCase))
+        {
+            if (vmu.LoadVms(filePath, date, autoInitializeRTCDate: Configuration.AutoInitializeDate) is (false, var error))
+            {
+                _userInterface.ShowToast(presenter, error ?? "Unknown error");
+                dropRecentIfNotExists();
+                return;
+            }
         }
         else if (extension.Equals(".vmu", StringComparison.OrdinalIgnoreCase)
             || extension.Equals(".bin", StringComparison.OrdinalIgnoreCase))
         {
-            if (!tryLoadVmuFile())
+            if (!checkDistinctPath())
                 return;
+
+            if (vmu.LoadVmu(filePath, rtcDate: Configuration.AutoInitializeDate ? date : null) is (false, var error))
+            {
+                _userInterface.ShowToast(presenter, error ?? "Unknown error");
+                dropRecentIfNotExists();
+                return;
+            }
         }
         else
         {
-            throw new ArgumentException($"Cannot load '{filePath}' because it is not a '.vms', '.vmu', or '.bin' file.");
+            _userInterface.ShowToast(presenter, $"Cannot load '{filePath}' because it is not in a supported format.");
+            dropRecentIfNotExists();
+            return;
         }
 
         presenter.LocalPaused = false;
@@ -258,31 +289,32 @@ public class Game1 : Game
             RecentFilesInfo.Save();
         }
 
-        bool tryLoadVmuFile()
+        // Returns true if the paths are distinct.
+        // Ensures the same file is not loaded on multiple VMUs
+        // causing them to stomp on each others changes.
+        bool checkDistinctPath()
         {
-            // We need to enforce that the same VMU file is not opened by both VMUs.
-            // Otherwise they could stomp on each others' on-disk content.
-            // (Opening the same .vms file is fine.)
             var otherVmu = vmu == PrimaryVmu ? SecondaryVmu : PrimaryVmu;
-            if (otherVmu?.LoadedFilePath == filePath)
+            if (otherVmu?.LoadedPath == filePath)
             {
                 _userInterface.ShowToast(presenter, $"Cannot open {Path.GetFileName(filePath)} because it is already open on the other VMU.");
                 return false;
             }
 
-            if (!File.Exists(filePath))
-            {
-                _userInterface.ShowToast(presenter, $"File not found: {Path.GetFileName(filePath)}");
-                if (RecentFilesInfo is { })
-                {
-                    RecentFilesInfo = RecentFilesInfo with { RecentFiles = [..RecentFilesInfo.RecentFiles.Where(path => path != filePath)] };
-                    RecentFilesInfo.Save();
-                }
-                return false;
-            }
-
-            vmu.LoadVmu(filePath, rtcDate: Configuration.AutoInitializeDate ? date : null);
             return true;
+        }
+
+        void dropRecentIfNotExists()
+        {
+            // Existing either as a file or folder makes it valid to keep as a recents item
+            if (Path.Exists(filePath))
+                return;
+
+            if (RecentFilesInfo is { })
+            {
+                RecentFilesInfo = RecentFilesInfo with { RecentFiles = RecentFilesInfo.RecentFiles.Remove(filePath) };
+                RecentFilesInfo.Save();
+            }
         }
     }
 
@@ -296,10 +328,22 @@ public class Game1 : Game
             vmuFilePath = Path.ChangeExtension(vmuFilePath, ".vmu");
         }
 
-        vmu.SaveVmuAs(vmuFilePath);
+        vmu.SaveVmuAsFile(vmuFilePath);
         UpdateWindowTitle();
         RecentFilesInfo = RecentFilesInfo.AddRecentFile(forPrimary: vmu == PrimaryVmu, vmuFilePath);
         RecentFilesInfo.Save();
+    }
+
+    internal (bool ok, string? error) SaveVmuAsFolder(Vmu vmu, string folderPath)
+    {
+        Debug.Assert(!IsIntegratedMode && RecentFilesInfo is { });
+        if (vmu.SaveVmuAsFolder(folderPath) is (false, var error))
+            return (false, error);
+
+        UpdateWindowTitle();
+        RecentFilesInfo = RecentFilesInfo.AddRecentFile(forPrimary: vmu == PrimaryVmu, folderPath);
+        RecentFilesInfo.Save();
+        return (true, null);
     }
 
     internal void Configuration_AutoInitializeDateChanged(bool newValue)
