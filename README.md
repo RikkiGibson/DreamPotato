@@ -66,9 +66,10 @@ DreamPotato has "Open Folder" and "Save As Folder" commands inspired by the "GCI
 Notes:
 - "Save As Folder" is a convenient way to extract individual `.vmi`/`.vms` saves from your `.vmu`/`.bin` memory card file.
 - You can rename the `.vmi`/`.vms` file pairs whatever you want, as long as the filenames match. DreamPotato will continue to pick them up and the on-VMU filenames will be preserved.
-    - For example, if I have `S.ARCADIA001.vms` and `S.ARCADIA001.vmi` files, I could rename them to `My file.vms` and `My file.vmi`, and the game will continue to recognize those files.
+    - For example, if I have `S.ARCADIA001.vms` and `S.ARCADIA001.vmi` files for Skies of Arcadia, I could rename them to `My file.vms` and `My file.vmi`, and the game will continue to recognize them as an `S.ARCADIA001` file on the VMU.
 - You can put any non-`.vmi`/`.vms` items in the folder you want and DreamPotato will ignore them.
 - DreamPotato doesn't watch the opened folder, so if you manually make changes in it, you need to reopen the folder in DreamPotato for the changes to get picked up.
+- It's recommended to "Save As Folder" to a folder which doesn't already contain any `.vmi`/`.vms` files in it. If you do, files might get overwritten, or other conflicts could occur in the folder, which you'll have to clean up manually.
 - `fs_root.bin` contains file system metadata as well as the VMU's color and icon (for display in the Dreamcast BIOS). If you delete it, it will be re-created with default settings.
 
 ### Configuration
