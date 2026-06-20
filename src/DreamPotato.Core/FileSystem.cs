@@ -498,14 +498,22 @@ internal class FileSystem
         for (var i = 0; i < sizeInBlocks; i++)
         {
             var dataBlock = GetBlock(currentDataBlockId);
-            vmsFile.ReadExactly(dataBlock);
-
             if (i == sizeInBlocks - 1)
             {
+                // Last block
+                var remaining = (int)vmsFile.Length;
+                while (remaining > BlockSize)
+                    remaining -= BlockSize;
+
+                vmsFile.ReadExactly(dataBlock[..remaining]);
+                // Special case for a file not evenly divisible by BlockSize.
+                // Unsure if this ever occurs in the real world, but, want to be cautious in case it does.
+                dataBlock[remaining..].Clear();
                 fatBlock[currentDataBlockId] = FAT_LastInFile;
                 break;
             }
 
+            vmsFile.ReadExactly(dataBlock);
             var prevDataBlockId = currentDataBlockId;
 
             // Scan to next free data block
