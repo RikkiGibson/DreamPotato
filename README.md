@@ -59,9 +59,9 @@ Download the latest bits from the [Releases](https://github.com/RikkiGibson/Drea
 - F10 - Pause/Resume
 - Tab (hold) - Fast Forward
 
-## Open Folder
+### Open Folder
 
-DreamPotato has "Open Folder" and "Save As Folder" commands inspired by the "GCI Folder" support in Dolphin. When a folder is opened, DreamPotato loads all the `.vmi`/`.vms` files found in it. When the VMU's file contents change during gameplay, DreamPotato will automatically update the corresponding files in the folder.
+DreamPotato [dev build](https://github.com/RikkiGibson/DreamPotato/actions/runs/27885462097) has "Open Folder" and "Save As Folder" commands inspired by the "GCI Folder" support in Dolphin. When a folder is opened, DreamPotato loads all the `.vmi`/`.vms` files found in it. When the VMU's file contents change during gameplay, DreamPotato will automatically update the corresponding files in the folder.
 
 Notes:
 - "Save As Folder" is a convenient way to extract individual `.vmi`/`.vms` saves from your `.vmu`/`.bin` memory card file.
