@@ -402,8 +402,76 @@ internal class FileSystem
         public override int GetHashCode() => VmuFileName.GetHashCode();
     }
 
-    /// <summary>Write the files from sourceDirectory to this file system.</summary>
     public (bool ok, string? errorMessage) TryWriteAllFiles(DirectoryInfo sourceDirectory)
+    {
+        if (TryWriteAllFilesCheckPreconditions(sourceDirectory) is (false, var error))
+            return (false, error);
+
+        // It's unlikely but still possible that the below call can fail, e.g. if we are racing with other stuff happening on the file system.
+    }
+
+    private (bool ok, string? errorMessage) TryWriteAllFilesCheckPreconditions(DirectoryInfo sourceDirectory)
+    {
+        var fatBlock = GetFATBlock();
+
+        int freeBlocks = 0;
+        for (var i = 0; i <= UserRegionLastBlockId; i++)
+        {
+            if (fatBlock[i] == FAT_Unallocated)
+                freeBlocks++;
+        }
+
+        // A game can only be stored contiguously at the start of the volume
+        int gameBlocks = 0;
+        const int maxGameBlockSize = Cpu.InstructionBankSize / BlockSize; // 128
+        for (var i = 0; i < maxGameBlockSize && fatBlock[i] == FAT_Unallocated; i++)
+            gameBlocks++;
+
+        int neededBlocks = 0;
+        string? foundGameName = null;
+        HashSet<VmiFileNameInfo> allVmuFileNames = [];
+        foreach (var vmsFileInfo in sourceDirectory.EnumerateFiles("*.vms").OrderBy(f => f.Name))
+        {
+            if (vmsFileInfo.Length == 0)
+                return (false, $"{vmsFileInfo.Name}: Cannot write an empty file");
+
+            var vmiFileInfo = new FileInfo(Path.ChangeExtension(vmsFileInfo.FullName, ".vmi"));
+            if (!vmiFileInfo.Exists)
+                return (false, $"{vmsFileInfo.Name}: No matching .vmi found");
+
+            if (vmiFileInfo.Length != VmiInfo.Size)
+                return (false, $"{vmiFileInfo.Name}: Bad format");
+
+            var vmiInfo = new VmiInfo(File.ReadAllBytes(vmiFileInfo.FullName));
+            var vmiFileNameInfo = new VmiFileNameInfo(vmiInfo.VmuFileNameString, vmiFileInfo.Name);
+            if (allVmuFileNames.TryGetValue(vmiFileNameInfo, out var existingNameInfo))
+                return (false, $"VMU filename '{vmiFileNameInfo.VmuFileName}' is duplicated by '{existingNameInfo.OnDiskFileName}' and '{vmiFileNameInfo.OnDiskFileName}'.");
+
+            allVmuFileNames.Add(vmiFileNameInfo);
+
+            var sizeInBlocks = checked((int)vmsFileInfo.Length + BlockSize - 1) / BlockSize;
+            neededBlocks += sizeInBlocks;
+
+            if (vmiInfo.FileMode.HasFlag(VmuFileMode.Game))
+            {
+                if (foundGameName != null)
+                    return (false, $"Cannot use multiple games in VMS folder: '{foundGameName}', '{vmiFileInfo.Name}'");
+
+                foundGameName = vmiFileInfo.Name;
+                var neededGameBlocks = (vmsFileInfo.Length + BlockSize - 1) / BlockSize;
+                if (neededGameBlocks > gameBlocks)
+                    return (false, $"Not enough space to store game {foundGameName}. {neededGameBlocks} are required but only {gameBlocks} blocks are available.");
+            }
+        }
+
+        if (neededBlocks > freeBlocks)
+            return (false, $"Not enough space to open {sourceDirectory.Name}. {neededBlocks} blocks are required but only {freeBlocks} blocks are available.");
+
+        return (true, null);
+    }
+
+    /// <summary>Write the files from sourceDirectory to this file system.</summary>
+    private (bool ok, string? errorMessage) TryWriteAllFilesCore(DirectoryInfo sourceDirectory)
     {
         string? foundGameName = null;
         HashSet<VmiFileNameInfo> allVmuFileNames = [];
@@ -489,9 +557,6 @@ internal class FileSystem
             // Scan to next free data block
             do
             {
-                // Note: strictly, we should not be marking any blocks as used if there wasn't enough space.
-                // However, this is a major failure condition (we couldn't write all the vms folder content to the VMU),
-                // so it doesn't feel super important to try to recover.
                 if (currentDataBlockId == 0)
                     return (false, $"{vmiInfo.VmuFileName}: Insufficient space on VMU");
 
@@ -944,4 +1009,12 @@ internal enum FileType : byte
     None = 0,
     Data = 0x33,
     Game = 0xcc,
+}
+
+public static class MyCrazyExtensions
+{
+    extension(int value)
+    {
+        public int KB => value * 1024;
+    }
 }
