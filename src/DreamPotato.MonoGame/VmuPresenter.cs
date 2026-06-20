@@ -178,8 +178,7 @@ class VmuPresenter
         Vmu._cpu.SFRs.P3 = newP3;
         PreviousGamepad = gamepad;
 
-        if (Vmu.PollFileSystem(now: DateTime.Now))
-            _game1.UserInterface.ShowToast(this, $"Saved folder '{Path.GetFileName(Vmu.LoadedPath)}'");
+        Vmu.PollFileSystem(now: DateTime.Now);
     }
 
     internal void UpdateAndRun(GameTime gameTime, KeyboardState previousKeys, KeyboardState keyboard)

@@ -8,7 +8,7 @@ namespace DreamPotato.Core;
 
 /// <summary>
 /// Performs file system operations on flash memory.
-/// NOTE: does not own its state. The same flash memory buffers used by <see cref="Cpu"/> are shared here.
+/// NOTE: <see cref="flash"/> is the same instance as in the associated <see cref="Cpu.Flash"/>.
 /// </summary>
 internal class FileSystem
 {
@@ -336,7 +336,7 @@ internal class FileSystem
             var outFileName = directoryEntry.NameString;
             var fatBlock = GetFATBlock();
 
-            using var vmsFile = File.Open(Path.Combine(destDirectory.FullName, $"{outFileName}.vms"), FileMode.CreateNew);
+            using var vmsFile = File.Create(Path.Combine(destDirectory.FullName, $"{outFileName}.vms"));
 
             for (var blockId = directoryEntry.StartFAT;
                 blockId != FAT_LastInFile;
@@ -346,7 +346,7 @@ internal class FileSystem
                 vmsFile.Write(block);
             }
 
-            using var vmiFile = File.Open(Path.Combine(destDirectory.FullName, $"{outFileName}.vmi"), FileMode.CreateNew);
+            using var vmiFile = File.Create(Path.Combine(destDirectory.FullName, $"{outFileName}.vmi"));
             var vmiInfo = CreateVmiInfo(directoryEntry);
             vmiFile.Write(vmiInfo.RawData.Span);
         }
@@ -482,7 +482,7 @@ internal class FileSystem
         if (!directoryEntry.HasValue)
             return (false, $"{vmiInfo.VmuFileName}: The file system directory is full.");
 
-        var sizeInBlocks = (ushort)((vmsFile.Length + (BlockSize - 1)) / BlockSize);
+        var sizeInBlocks = (ushort)((vmsFile.Length + BlockSize - 1) / BlockSize);
         var fatBlock = GetFATBlock();
 
         // Scan to next free data block
@@ -564,14 +564,8 @@ internal class FileSystem
         /// <summary>Gets or sets the successor block ID for a given <paramref name="blockId"/>.</summary>
         public ushort this[int blockId]
         {
-            get
-            {
-                return BinaryPrimitives.ReadUInt16LittleEndian(_fatBlock.Span.Slice(blockId * BlockIdSize, length: BlockIdSize));
-            }
-            set
-            {
-                BinaryPrimitives.WriteUInt16LittleEndian(_fatBlock.Span.Slice(blockId * BlockIdSize, length: BlockIdSize), value);
-            }
+            get => BinaryPrimitives.ReadUInt16LittleEndian(_fatBlock.Span.Slice(blockId * BlockIdSize, length: BlockIdSize));
+            set => BinaryPrimitives.WriteUInt16LittleEndian(_fatBlock.Span.Slice(blockId * BlockIdSize, length: BlockIdSize), value);
         }
     }
 
@@ -963,12 +957,4 @@ internal enum FileType : byte
     None = 0,
     Data = 0x33,
     Game = 0xcc,
-}
-
-public static class MyCrazyExtensions
-{
-    extension(int value)
-    {
-        public int KB => value * 1024;
-    }
 }

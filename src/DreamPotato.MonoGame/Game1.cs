@@ -276,7 +276,7 @@ public class Game1 : Game
         }
         else
         {
-            _userInterface.ShowToast(presenter, $"Cannot load '{filePath}' because it is not a '.vms', '.vmu', or '.bin' file, and is not a folder.");
+            _userInterface.ShowToast(presenter, $"Cannot load '{filePath}' because it is not in a supported format.");
             dropRecentIfNotExists();
             return;
         }
