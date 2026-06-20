@@ -476,11 +476,11 @@ internal class FileSystem
         Debug.Assert(!vmiInfo.FileMode.HasFlag(VmuFileMode.Game));
 
         if (vmsFile.Length != vmiInfo.VmsFileSize)
-            return (false, $"{vmiInfo.VmuFileName}: VMI expected the VMS file size to be {vmiInfo.VmsFileSize} but was actually {vmsFile.Length}");
+            return (false, $"{vmiInfo.VmuFileNameString}: VMI expected the VMS file size to be {vmiInfo.VmsFileSize} but was actually {vmsFile.Length}");
 
         var directoryEntry = EnumerateDirectoryTable().FirstOrDefault(entry => entry.Type == FileType.None);
         if (!directoryEntry.HasValue)
-            return (false, $"{vmiInfo.VmuFileName}: The file system directory is full.");
+            return (false, $"{vmiInfo.VmuFileNameString}: The file system directory is full.");
 
         var sizeInBlocks = (ushort)((vmsFile.Length + BlockSize - 1) / BlockSize);
         var fatBlock = GetFATBlock();
@@ -489,7 +489,7 @@ internal class FileSystem
         while (fatBlock[currentDataBlockId] != FAT_Unallocated)
         {
             if (currentDataBlockId == 0)
-                return (false, $"{vmiInfo.VmuFileName}: Insufficient space on VMU");
+                return (false, $"{vmiInfo.VmuFileNameString}: Insufficient space on VMU");
 
             currentDataBlockId--;
         }
@@ -512,7 +512,7 @@ internal class FileSystem
             do
             {
                 if (currentDataBlockId == 0)
-                    return (false, $"{vmiInfo.VmuFileName}: Insufficient space on VMU");
+                    return (false, $"{vmiInfo.VmuFileNameString}: Insufficient space on VMU");
 
                 currentDataBlockId--;
             } while (fatBlock[currentDataBlockId] != FAT_Unallocated);
