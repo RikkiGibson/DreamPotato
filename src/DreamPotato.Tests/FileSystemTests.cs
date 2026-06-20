@@ -138,8 +138,8 @@ public class FileSystemTests : IDisposable
             fs_root.bin
             ICONDATA_VMS.vmi
             ICONDATA_VMS.vms
-            S.ARCADIA_VM.vmi
-            S.ARCADIA_VM.vms
+            Pacman.vmi
+            Pacman.vms
             S.ARCADIA001.vmi
             S.ARCADIA001.vms
             S.ARCADIA002.vmi
@@ -196,9 +196,9 @@ public class FileSystemTests : IDisposable
             05 | 29 00 2A 00 2B 00 2C 00 2D 00 2E 00 2F 00 30 00 
             06 | 31 00 32 00 33 00 34 00 35 00 36 00 37 00 38 00 
             07 | 39 00 3A 00 3B 00 3C 00 3D 00 3E 00 3F 00 40 00 
-            08 | 41 00 42 00 43 00 44 00 45 00 46 00 47 00 48 00 
-            09 | 49 00 4A 00 4B 00 4C 00 4D 00 4E 00 4F 00 50 00 
-            0A | 51 00 52 00 FA FF FC FF FC FF FC FF FC FF FC FF 
+            08 | 41 00 42 00 FA FF FC FF FC FF FC FF FC FF FC FF 
+            09 | FC FF FC FF FC FF FC FF FC FF FC FF FC FF FC FF 
+            0A | FC FF FC FF FC FF FC FF FC FF FC FF FC FF FC FF 
             0B | FC FF FC FF FC FF FC FF FC FF FC FF FC FF FC FF 
             0C | FC FF FC FF FC FF FC FF FC FF FC FF FC FF FC FF 
             0D | FC FF FA FF 69 00 6A 00 6B 00 FA FF 6D 00 6E 00 
@@ -227,8 +227,8 @@ public class FileSystemTests : IDisposable
                | 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F 
             00 | 33 80 C7 00 49 43 4F 4E 44 41 54 41 5F 56 4D 53 
             01 | 20 23 06 10 21 25 03 06 02 00 00 00 00 00 00 00 
-            02 | CC FF 00 00 53 2E 41 52 43 41 44 49 41 5F 56 4D 
-            03 | 20 25 09 29 18 32 18 01 53 00 01 00 00 00 00 00 
+            02 | CC 80 00 00 50 61 63 6D 61 6E 00 00 00 00 00 00 
+            03 | 20 26 06 20 14 36 51 06 43 00 01 00 00 00 00 00 
             04 | 33 80 C5 00 53 2E 41 52 43 41 44 49 41 30 30 31 
             05 | 20 23 07 19 22 47 30 03 1B 00 00 00 00 00 00 00 
             06 | 33 80 AA 00 53 2E 41 52 43 41 44 49 41 30 30 32 
