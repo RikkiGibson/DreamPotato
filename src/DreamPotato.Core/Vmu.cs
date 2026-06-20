@@ -114,7 +114,7 @@ public class Vmu
     {
         Reset(autoInitializeRTCDate ? date : null);
 
-        FileSystem.SetHostFileInfo(loadedPath: null, vmuFileWriteStream: null);
+        FileSystem.FlushAndSetHostFileInfo(loadedPath: null, vmuFileWriteStream: null);
         FileSystem.InitializeFileSystem(date);
         _cpu.ResyncMapleOutbound();
         _cpu.LazyDebugInfo?.ClearFlash();
@@ -131,7 +131,7 @@ public class Vmu
 
         Reset(autoInitializeRTCDate ? date : null);
 
-        FileSystem.SetHostFileInfo(filePath, vmuFileWriteStream: null);
+        FileSystem.FlushAndSetHostFileInfo(filePath, vmuFileWriteStream: null);
         FileSystem.InitializeFileSystem(date);
 
         using var vmsFile = File.OpenRead(filePath);
@@ -170,44 +170,40 @@ public class Vmu
         return (true, null);
     }
 
-    public void LoadVmu(string filePath, DateTimeOffset? rtcDate)
+    public (bool ok, string? error) LoadVmu(string filePath, DateTimeOffset? rtcDate)
     {
-        // TODO: loading a wrong file type should just show a toast or something, not crash the emu.
         if (!filePath.EndsWith(".vmu", StringComparison.OrdinalIgnoreCase) && !filePath.EndsWith(".bin", StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException($"VMU file '{filePath}' must have .vmu or .bin extension.", nameof(filePath));
+            return (false, $"VMU file '{filePath}' must have .vmu or .bin extension.");
 
         var fileInfo = new FileInfo(filePath);
         if (fileInfo.Length != Cpu.InstructionBankSize * 2)
-            throw new ArgumentException($"VMU file '{filePath}' needs to be exactly 128KB in size.", nameof(filePath));
+            return (false, $"VMU file '{filePath}' needs to be exactly 128KB in size.");
 
         // NB: lifetime of the VMU file stream is managed by _cpu.
         var fileStream = fileInfo.Open(FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
 
         Reset(rtcDate);
 
-        _cpu.FileSystem.SetHostFileInfo(filePath, fileStream);
+        _cpu.FileSystem.FlushAndSetHostFileInfo(filePath, fileStream);
         _cpu.LazyDebugInfo?.ClearFlash();
         fileStream.ReadExactly(_cpu.Flash);
         _cpu.ResyncMapleOutbound();
+        return (true, null);
     }
 
+    /// <summary>Note: this call is transactional for flash and cpu state.</summary>
     public (bool ok, string? error) LoadVmsFolder(string folderPath, DateTimeOffset date, bool autoInitializeRtcDate)
     {
-        // TODO2: The LoadVmsFolder, LoadVms and similar methods
-        // should all be "transactional". i.e. if they return an error,
-        // they should have made no side effects on the vmu state if at all possible.
-        // 
-        // If we have made side effects that are impractical to "undo", but we couldn't complete the operation,
-        // then we should probably just crash. We should avoid this by doing checks upfront before side effects.
         var folderInfo = new DirectoryInfo(folderPath);
         if (!folderInfo.Exists)
-            throw new ArgumentException(null, nameof(folderPath));
+            return (false, $"Folder '{folderInfo.Name}' does not exist.");
 
-        Reset(autoInitializeRtcDate ? date : null);
-        _cpu.FileSystem.SetHostFileInfo(folderPath, vmuFileWriteStream: null);
+        FileSystem.FlushIfNeeded();
         if (FileSystem.TryInitializeFromFolder(sourceDirectory: folderInfo, fallbackDate: date) is (false, var error))
             return (false, error);
 
+        _cpu.FileSystem.SetHostFileInfo(folderPath, vmuFileWriteStream: null);
+        Reset(autoInitializeRtcDate ? date : null);
         _cpu.LazyDebugInfo?.ClearFlash();
         _cpu.ResyncMapleOutbound();
 
@@ -220,7 +216,7 @@ public class Vmu
             _cpu.ResyncMapleInbound();
 
         var fileStream = File.Open(filePath, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite);
-        _cpu.FileSystem.SetHostFileInfo(filePath, fileStream);
+        _cpu.FileSystem.FlushAndSetHostFileInfo(filePath, fileStream);
         fileStream.Write(_cpu.Flash);
         if (IsDockedToDreamcast)
             _cpu.ResyncMapleOutbound();
@@ -238,7 +234,7 @@ public class Vmu
         if (FileSystem.TryReadAllFiles(destDirectory: info) is (false, var error))
             return (false, error);
 
-        _cpu.FileSystem.SetHostFileInfo(folderPath, vmuFileWriteStream: null);
+        _cpu.FileSystem.FlushAndSetHostFileInfo(folderPath, vmuFileWriteStream: null);
         if (IsDockedToDreamcast)
             _cpu.ResyncMapleOutbound();
 

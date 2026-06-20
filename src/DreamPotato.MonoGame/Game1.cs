@@ -244,9 +244,8 @@ public class Game1 : Game
             var (ok, error) = vmu.LoadVmsFolder(filePath, date, autoInitializeRtcDate: Configuration.AutoInitializeDate);
             if (!ok)
             {
-                // TODO: right now this can put things in an intermediate state where user needs to manually open another file to fix it.
-                // Ideally a call like 'LoadVmsFolder' failing, would result in no apparent effects on the VMU filesystem.
                 _userInterface.ShowToast(presenter, error ?? "Unknown error");
+                dropRecentIfNotExists();
                 return;
             }
         }
@@ -255,18 +254,37 @@ public class Game1 : Game
             if (vmu.LoadVms(filePath, date, autoInitializeRTCDate: Configuration.AutoInitializeDate) is (false, var error))
             {
                 _userInterface.ShowToast(presenter, error ?? "Unknown error");
+                dropRecentIfNotExists();
                 return;
             }
         }
         else if (extension.Equals(".vmu", StringComparison.OrdinalIgnoreCase)
             || extension.Equals(".bin", StringComparison.OrdinalIgnoreCase))
         {
-            if (!tryLoadVmuFile())
+            // We need to enforce that the same VMU file is not opened by both VMUs.
+            // Otherwise they could stomp on each others' on-disk content.
+            // (Opening the same .vms file is fine.)
+            // TODO2: this check needs to be done for folders also, and, should probably be more robust to SecondaryVmu being closed and reopened
+            var otherVmu = vmu == PrimaryVmu ? SecondaryVmu : PrimaryVmu;
+            if (otherVmu?.LoadedPath == filePath)
+            {
+                _userInterface.ShowToast(presenter, $"Cannot open {Path.GetFileName(filePath)} because it is already open on the other VMU.");
+                dropRecentIfNotExists();
                 return;
+            }
+
+            if (vmu.LoadVmu(filePath, rtcDate: Configuration.AutoInitializeDate ? date : null) is (false, var error))
+            {
+                _userInterface.ShowToast(presenter, error ?? "Unknown error");
+                dropRecentIfNotExists();
+                return;
+            }
         }
         else
         {
-            throw new ArgumentException($"Cannot load '{filePath}' because it is not a '.vms', '.vmu', or '.bin' file.");
+            _userInterface.ShowToast(presenter, $"Cannot load '{filePath}' because it is not a '.vms', '.vmu', or '.bin' file, and is not a folder.");
+            dropRecentIfNotExists();
+            return;
         }
 
         presenter.LocalPaused = false;
@@ -277,31 +295,17 @@ public class Game1 : Game
             RecentFilesInfo.Save();
         }
 
-        bool tryLoadVmuFile()
+        void dropRecentIfNotExists()
         {
-            // We need to enforce that the same VMU file is not opened by both VMUs.
-            // Otherwise they could stomp on each others' on-disk content.
-            // (Opening the same .vms file is fine.)
-            var otherVmu = vmu == PrimaryVmu ? SecondaryVmu : PrimaryVmu;
-            if (otherVmu?.LoadedPath == filePath)
-            {
-                _userInterface.ShowToast(presenter, $"Cannot open {Path.GetFileName(filePath)} because it is already open on the other VMU.");
-                return false;
-            }
+            // Existing either as a file or folder makes it valid to keep as a recents item
+            if (Path.Exists(filePath))
+                return;
 
-            if (!File.Exists(filePath))
+            if (RecentFilesInfo is { })
             {
-                _userInterface.ShowToast(presenter, $"File not found: {Path.GetFileName(filePath)}");
-                if (RecentFilesInfo is { })
-                {
-                    RecentFilesInfo = RecentFilesInfo with { RecentFiles = [..RecentFilesInfo.RecentFiles.Where(path => path != filePath)] };
-                    RecentFilesInfo.Save();
-                }
-                return false;
+                RecentFilesInfo = RecentFilesInfo with { RecentFiles = RecentFilesInfo.RecentFiles.Remove(filePath) };
+                RecentFilesInfo.Save();
             }
-
-            vmu.LoadVmu(filePath, rtcDate: Configuration.AutoInitializeDate ? date : null);
-            return true;
         }
     }
 
