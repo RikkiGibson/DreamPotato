@@ -817,7 +817,15 @@ partial class UserInterface
 
     private static void RevealFileInExplorer(string filePath)
     {
-        // TODO2: test non-Windows
+        if (Directory.Exists(filePath))
+        {
+            // Open the directory itself in platform-specific file browser
+            Process.Start(new ProcessStartInfo(filePath) { UseShellExecute = true });
+            return;
+        }
+
+        // Open containing directory with the file highlighted
+        // TODO: test Linux
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             Process.Start("explorer.exe", $"/select,\"{filePath}\"");
