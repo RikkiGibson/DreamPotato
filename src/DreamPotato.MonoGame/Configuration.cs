@@ -26,6 +26,7 @@ public record Configuration(
     int Volume = Audio.DefaultVolume,
     bool MuteSecondaryVmuAudio = true,
     string? ColorPaletteName = null,
+    FileFormat PreferredFileFormat = FileFormat.VmiVms,
     InputMappings? PrimaryInput = null,
     InputMappings? SecondaryInput = null,
     ViewportSize? ViewportSize = null,

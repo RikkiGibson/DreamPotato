@@ -387,6 +387,11 @@ public class Game1 : Game
         ColorPalette = palette;
     }
 
+    internal void Configuration_PreferredFileFormatChanged(FileFormat format)
+    {
+        Configuration = Configuration with { PreferredFileFormat = format };
+    }
+
     internal void Configuration_DreamcastPortChanged(DreamcastPort dreamcastPort)
     {
         Debug.Assert(!IsIntegratedMode);
