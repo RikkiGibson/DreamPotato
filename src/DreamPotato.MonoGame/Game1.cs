@@ -276,7 +276,9 @@ public class Game1 : Game
         }
         else
         {
-            _userInterface.ShowToast(presenter, $"Cannot load '{filePath}' because it is not in a supported format.");
+            _userInterface.ShowToast(presenter, Path.Exists(filePath)
+                ? $"'{filePath}': Unsupported format"
+                : $"'{filePath}': Not found");
             dropRecentIfNotExists();
             return;
         }
