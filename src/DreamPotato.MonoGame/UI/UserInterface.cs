@@ -1065,21 +1065,26 @@ partial class UserInterface
                 ImGui.Text("Preferred File Format");
                 ImGui.SameLine();
 
-                var fileFormats = Enum.GetNames<FileFormat>();
-                var fileFormat = configuration.PreferredFileFormat;
-                var selectedIndex = (int)fileFormat;
-                ImGui.PushID("PreferredFileFormatCombo");
-                ImGui.Combo("", ref selectedIndex, fileFormats, fileFormats.Length);
-                ImGui.PopID();
-                if ((int)fileFormat != selectedIndex)
-                    _game.Configuration_PreferredFileFormatChanged((FileFormat)selectedIndex);
-
                 ImGui.SameLine();
                 ImGui.Text("(?)");
                 if (ImGui.IsItemHovered())
                 {
-                    // TODO2: tooltip for what this setting means
+                    ImGui.BeginTooltip();
+                    ImGui.Text("""
+                        Sets the file format used for
+                        "Save As Folder" and similar commands.
+                        """);
+                    ImGui.EndTooltip();
                 }
+
+                var fileFormat = configuration.PreferredFileFormat;
+                var selectedIndex = (int)fileFormat;
+                ImGui.SetNextItemWidth(CalcComboWidth(longestItem: FileFormatExtensions.Names[0]));
+                ImGui.PushID("PreferredFileFormatCombo");
+                ImGui.Combo("", ref selectedIndex, FileFormatExtensions.Names, FileFormatExtensions.Names.Length);
+                ImGui.PopID();
+                if ((int)fileFormat != selectedIndex)
+                    _game.Configuration_PreferredFileFormatChanged((FileFormat)selectedIndex);
             }
 
             // Dreamcast Port

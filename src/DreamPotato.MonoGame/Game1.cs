@@ -244,7 +244,7 @@ public class Game1 : Game
             if (!checkDistinctPath())
                 return;
 
-            var (ok, error) = vmu.LoadVmsFolder(filePath, date, autoInitializeRtcDate: Configuration.AutoInitializeDate);
+            var (ok, error) = vmu.LoadFolder(filePath, date, autoInitializeRtcDate: Configuration.AutoInitializeDate);
             if (!ok)
             {
                 _userInterface.ShowToast(presenter, error ?? "Unknown error");
@@ -339,7 +339,7 @@ public class Game1 : Game
     internal (bool ok, string? error) SaveVmuAsFolder(Vmu vmu, string folderPath)
     {
         Debug.Assert(!IsIntegratedMode && RecentFilesInfo is { });
-        if (vmu.SaveVmuAsFolder(folderPath) is (false, var error))
+        if (vmu.SaveVmuAsFolder(folderPath, Configuration.PreferredFileFormat) is (false, var error))
             return (false, error);
 
         UpdateWindowTitle();

@@ -13,3 +13,8 @@ public enum FileFormat
     /// <summary>https://vmu.falcogirgis.net/formats.html#formats_dci</summary>
     Dci,
 }
+
+public static class FileFormatExtensions
+{
+    public static string[] Names { get; } = ["vmi/vms", "dci"];
+}

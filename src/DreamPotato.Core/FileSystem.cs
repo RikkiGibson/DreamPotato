@@ -310,7 +310,7 @@ internal class FileSystem
     }
 
     /// <summary>Read all the files from this file system to destDirectory.</summary>
-    public (bool ok, string? error) TryReadAllFiles(DirectoryInfo destDirectory)
+    public (bool ok, string? error) TryReadAllFiles(DirectoryInfo destDirectory, FileFormat fileFormat)
     {
         HashSet<string> allFilePaths = [];
         foreach (var directoryEntry in EnumerateDirectoryTable())
@@ -335,6 +335,27 @@ internal class FileSystem
         {
             var outFileName = directoryEntry.NameString;
             var fatBlock = GetFATBlock();
+
+            if (fileFormat == FileFormat.Dci)
+            {
+                // dci format consists of the directory entry content, followed by the vms data.
+                using var dciFile = File.Create(Path.Combine(destDirectory.FullName, $"{outFileName}.dci"));
+
+                var outEntry = new DirectoryEntry(new byte[DirectoryEntry.Size]);
+                directoryEntry.RawData.CopyTo(outEntry.RawData);
+                outEntry.StartFAT = 0; // forced to 0 on-disk since its value depends on the destination file system.
+                dciFile.Write(outEntry.RawData.Span);
+
+                for (var blockId = directoryEntry.StartFAT;
+                    blockId != FAT_LastInFile;
+                    blockId = fatBlock[blockId])
+                {
+                    var block = this.GetBlock(blockId);
+                    dciFile.Write(block);
+                }
+
+                return;
+            }
 
             using var vmsFile = File.Create(Path.Combine(destDirectory.FullName, $"{outFileName}.vms"));
 
@@ -457,24 +478,52 @@ internal class FileSystem
                     return (false, $"Cannot use multiple games in VMS folder: '{foundGameName}', '{vmiFileInfo.Name}'");
 
                 foundGameName = vmiFileInfo.Name;
-                var copyProtection = vmiInfo.FileMode.HasFlag(VmuFileMode.CopyProtected) ? FileCopyProtection.CopyProtected : FileCopyProtection.NotCopyProtected;
-                if (TryWriteGameFile(vmsFile, onDiskFileName: vmsFileInfo.Name, onVmuFileName: vmiInfo.VmuFileName, vmiInfo.CreationDateTimeOffset, copyProtection) is (false, var error))
+
+                if (TryWriteGameFileWithVmi(vmsFile, onDiskFileName: vmsFileInfo.Name, vmiInfo) is (false, var error))
                     return (false, error);
 
                 continue;
             }
 
-            if (TryWriteDataFile(ref currentDataBlockId, vmsFile, vmiInfo) is (false, var error1))
+            if (TryWriteDataFileWithVmi(ref currentDataBlockId, vmsFile, vmiInfo) is (false, var error1))
+                return (false, error1);
+        }
+
+        foreach (var dciFileInfo in sourceDirectory.EnumerateFiles("*.dci").OrderBy(f => f.Name))
+        {
+            if (dciFileInfo.Length == 0)
+                return (false, $"{dciFileInfo.Name}: Cannot write an empty file");
+
+            var directoryEntry = EnumerateDirectoryTable().FirstOrDefault(entry => entry.Type == FileType.None);
+            if (!directoryEntry.HasValue)
+                return (false, $"{dciFileInfo.Name}: The VMU file system directory is full.");
+
+            var dciFile = dciFileInfo.OpenRead();
+            dciFile.ReadExactly(directoryEntry.RawData.Span);
+            if (directoryEntry.Type is not (FileType.Game or FileType.Data))
+                return (false, $"{dciFileInfo.Name}: Invalid format");
+
+            if (directoryEntry.Type == FileType.Game)
+            {
+                if (foundGameName != null)
+                    return (false, $"Cannot use multiple games in VMS folder: '{foundGameName}', '{directoryEntry.Name}'");
+
+                foundGameName = directoryEntry.NameString;
+                if (TryWriteGameFile(dciFile, onDiskFileName: dciFileInfo.Name, onVmuFileName: directoryEntry.Name, directoryEntry.DateTimeOffset, directoryEntry.CopyProtection) is (false, var error))
+                    return (false, error);
+
+                continue;
+            }
+
+            if (TryWriteDataFile(ref currentDataBlockId, dciFile, directoryEntry) is (false, var error1))
                 return (false, error1);
         }
 
         return (true, null);
     }
 
-    public (bool ok, string? error) TryWriteDataFile(ref ushort currentDataBlockId, Stream vmsFile, VmiInfo vmiInfo)
+    public (bool ok, string? error) TryWriteDataFileWithVmi(ref ushort currentDataBlockId, Stream vmsFile, VmiInfo vmiInfo)
     {
-        Debug.Assert(!vmiInfo.FileMode.HasFlag(VmuFileMode.Game));
-
         if (vmsFile.Length != vmiInfo.VmsFileSize)
             return (false, $"{vmiInfo.VmuFileNameString}: VMI expected the VMS file size to be {vmiInfo.VmsFileSize} but was actually {vmsFile.Length}");
 
@@ -482,19 +531,41 @@ internal class FileSystem
         if (!directoryEntry.HasValue)
             return (false, $"{vmiInfo.VmuFileNameString}: The file system directory is full.");
 
-        var sizeInBlocks = (ushort)((vmsFile.Length + BlockSize - 1) / BlockSize);
+
+        directoryEntry.Type = FileType.Data;
+        directoryEntry.CopyProtection = vmiInfo.FileMode.HasFlag(VmuFileMode.CopyProtected) ? FileCopyProtection.CopyProtected : FileCopyProtection.NotCopyProtected;
+
+        Debug.Assert(vmiInfo.VmuFileName.Length == directoryEntry.Name.Length);
+        vmiInfo.VmuFileName.CopyTo(directoryEntry.Name);
+
+        directoryEntry.DateTimeOffset = vmiInfo.CreationDateTimeOffset;
+        directoryEntry.SizeInBlocks = (ushort)((vmsFile.Length + BlockSize - 1) / BlockSize);
+
+        // Note: if the vms doesn't match this convention, then we have no way of really knowing where its header is.
+        // We might want to verify the header is in the expected location in 'ReadAllFiles'.
+        directoryEntry.VmsHeaderBlockOffset = 0;
+
+        // Note: directoryEntry.StartFAT is deliberately only set by the inner helper method
+        return TryWriteDataFile(ref currentDataBlockId, vmsFile, directoryEntry);
+    }
+
+    public (bool ok, string? error) TryWriteDataFile(ref ushort currentDataBlockId, Stream vmsFile, DirectoryEntry directoryEntry)
+    {
+        Debug.Assert(directoryEntry.Type == FileType.Data);
+
         var fatBlock = GetFATBlock();
 
         // Scan to next free data block
         while (fatBlock[currentDataBlockId] != FAT_Unallocated)
         {
             if (currentDataBlockId == 0)
-                return (false, $"{vmiInfo.VmuFileNameString}: Insufficient space on VMU");
+                return (false, $"{directoryEntry.NameString}: Insufficient space on VMU");
 
             currentDataBlockId--;
         }
 
-        ushort startFAT = currentDataBlockId;
+        directoryEntry.StartFAT = currentDataBlockId;
+        var sizeInBlocks = directoryEntry.SizeInBlocks;
         for (var i = 0; i < sizeInBlocks; i++)
         {
             var dataBlock = GetBlock(currentDataBlockId);
@@ -520,7 +591,7 @@ internal class FileSystem
             do
             {
                 if (currentDataBlockId == 0)
-                    return (false, $"{vmiInfo.VmuFileNameString}: Insufficient space on VMU");
+                    return (false, $"{directoryEntry.NameString}: Insufficient space on VMU");
 
                 currentDataBlockId--;
             } while (fatBlock[currentDataBlockId] != FAT_Unallocated);
@@ -528,19 +599,6 @@ internal class FileSystem
             fatBlock[prevDataBlockId] = currentDataBlockId;
         }
 
-        directoryEntry.Type = FileType.Data;
-        directoryEntry.CopyProtection = vmiInfo.FileMode.HasFlag(VmuFileMode.CopyProtected) ? FileCopyProtection.CopyProtected : FileCopyProtection.NotCopyProtected;
-        directoryEntry.StartFAT = startFAT;
-
-        Debug.Assert(vmiInfo.VmuFileName.Length == directoryEntry.Name.Length);
-        vmiInfo.VmuFileName.CopyTo(directoryEntry.Name);
-
-        directoryEntry.DateTimeOffset = vmiInfo.CreationDateTimeOffset;
-        directoryEntry.SizeInBlocks = sizeInBlocks;
-
-        // Note: if the vms doesn't match this convention, then we have no way of really knowing where its header is.
-        // We might want to verify the header is in the expected location in 'ReadAllFiles'.
-        directoryEntry.VmsHeaderBlockOffset = 0;
         return (true, null);
     }
 
@@ -749,6 +807,10 @@ internal class FileSystem
 
     internal void FlushToFolder(DirectoryInfo vmsFolder)
     {
+        // TODO2: need to propagate this value in.
+        // Passing a param thru all the layers is not scaling, I think we just need a settable property on this.
+        FileFormat preferredFileFormat = FileFormat.Dci;
+
         if (!vmsFolder.Exists)
             throw new InvalidOperationException();
 
@@ -792,10 +854,10 @@ internal class FileSystem
             }
         }
 
-        // Look at all the .vmi files in the host folder, to find which one has a matching VMU filesystem name.
+        // Look at all the .vmi/.dci files in the host folder, to find which one has a matching VMU filesystem name.
         //
         // Note: the filenames in the host file system, are not matched against the vms names.
-        // The user can rename a .vmi+.vms pair to anything they want (as long as the names without extension match)
+        // The user can rename a .dci, or a .vmi+.vms pair to anything they want (as long as the names without extension match)
         // and we will continue to pick the right file up, update it when it changes, etc.
         //
         // Note: VMU filenames can be duplicated (simply by copy+paste+renaming a vmi+vms pair, for example).
@@ -803,40 +865,97 @@ internal class FileSystem
         // This is thought to be preferable to canceling the flush (not saving user's changes to disk),
         // or potentially overwriting all duplicates (unnecessary complexity for an error scenario).
         // If user needs to figure out which of the duplicate files got updated, they can check timestamps.
-        var vmiFilesByVmuFileName = vmsFolder
+        var vmisByName = vmsFolder
             .EnumerateFiles("*.vmi")
-            .GroupBy(info => new VmiInfo(File.ReadAllBytes(info.FullName)).VmuFileNameString)
+            .Where(info => info.Length == VmiInfo.Size)
+            .GroupBy(info => new VmiInfo(File.ReadAllBytes(info.FullName)).VmuFileNameString);
+
+        var dcisByName = vmsFolder
+                .EnumerateFiles("*.dci")
+                .Where(info => info.Length >= DirectoryEntry.Size)
+                .GroupBy(info => readDciDirectoryEntry(info).NameString);
+
+        var hostFilesByVmuFileName = vmisByName
+            .Concat(dcisByName)
             .ToDictionary(
                 group => group.Key,
                 group => group.First());
 
+        DirectoryEntry readDciDirectoryEntry(FileInfo dciFileInfo)
+        {
+            using var file = dciFileInfo.OpenRead();
+            var entry = new DirectoryEntry(new byte[DirectoryEntry.Size]);
+            file.ReadExactly(entry.RawData.Span);
+            return entry;
+        }
+
         // Step 3: make host file system changes
         foreach (var vmuFileToDelete in toDelete)
         {
-            if (!vmiFilesByVmuFileName.TryGetValue(vmuFileToDelete, out var vmiInfo))
+            if (!hostFilesByVmuFileName.TryGetValue(vmuFileToDelete, out var hostFileInfo))
                 // Didn't find the corresponding .vmi file in the host system. Nothing to delete.
                 continue;
 
-            vmiInfo.Delete();
-            File.Delete(Path.ChangeExtension(vmiInfo.FullName, ".vms"));
+            hostFileInfo.Delete();
+            if (hostFileInfo.Name.EndsWith(".vmi"))
+                File.Delete(Path.ChangeExtension(hostFileInfo.FullName, ".vms"));
         }
 
         foreach (var entryToWrite in toWrite)
         {
             var onVmuFileName = entryToWrite.NameString;
-            var vmiFileInfo = vmiFilesByVmuFileName.TryGetValue(entryToWrite.NameString, out var existingInfo)
-                ? existingInfo
-                : new FileInfo(Path.Combine(vmsFolder.FullName, $"{onVmuFileName}.vmi")); // new file
-
-            var vmiInfo = CreateVmiInfo(entryToWrite);
-            using var vmiFileStream = vmiFileInfo.Create();
-            vmiFileStream.Write(vmiInfo.RawData.Span);
-
-            using var vmsFile = File.Create(Path.ChangeExtension(vmiFileInfo.FullName, ".vms"));
-            var fatBlock = GetFATBlock();
-            for (var blockId = entryToWrite.StartFAT; blockId != FAT_LastInFile; blockId = fatBlock[blockId])
+            if (hostFilesByVmuFileName.TryGetValue(entryToWrite.NameString, out var existingInfo))
             {
-                vmsFile.Write(GetBlock(blockId));
+                if (existingInfo.Name.EndsWith(".vmi"))
+                    writeVmiVms(existingInfo);
+                else if (existingInfo.Name.EndsWith(".dci"))
+                    writeDci(existingInfo);
+                else
+                    throw new InvalidOperationException();
+
+                continue;
+            }
+
+            // new file
+            if (preferredFileFormat == FileFormat.VmiVms)
+                writeVmiVms(new FileInfo(Path.Combine(vmsFolder.FullName, $"{onVmuFileName}.vmi")));
+            else if (preferredFileFormat == FileFormat.Dci)
+                writeDci(new FileInfo(Path.Combine(vmsFolder.FullName, $"{onVmuFileName}.dci")));
+            else
+                throw new InvalidOperationException();
+
+            void writeVmiVms(FileInfo vmiFileInfo)
+            {
+                var vmiInfo = CreateVmiInfo(entryToWrite);
+                using var vmiFileStream = vmiFileInfo.Create();
+                vmiFileStream.Write(vmiInfo.RawData.Span);
+
+                using var vmsFile = File.Create(Path.ChangeExtension(vmiFileInfo.FullName, ".vms"));
+                var fatBlock = GetFATBlock();
+                for (var blockId = entryToWrite.StartFAT; blockId != FAT_LastInFile; blockId = fatBlock[blockId])
+                {
+                    vmsFile.Write(GetBlock(blockId));
+                }
+            }
+
+            void writeDci(FileInfo dciFileInfo)
+            {
+                // dci format consists of the directory entry content, followed by the vms data.
+                using var dciFile = dciFileInfo.Create();
+
+                var outEntry = new DirectoryEntry(new byte[DirectoryEntry.Size]);
+                entryToWrite.RawData.CopyTo(outEntry.RawData);
+                outEntry.StartFAT = 0; // forced to 0 on-disk since its value depends on the destination file system.
+                dciFile.Write(outEntry.RawData.Span);
+
+                var fatBlock = GetFATBlock();
+                for (var blockId = outEntry.StartFAT;blockId != FAT_LastInFile; blockId = fatBlock[blockId])
+                {
+                    var block = this.GetBlock(blockId);
+                    dciFile.Write(block);
+                }
+
+                return;
             }
         }
 
@@ -895,6 +1014,7 @@ internal readonly struct DirectoryEntry
     }
 
     private readonly Memory<byte> _data;
+    internal Memory<byte> RawData => _data;
 
     internal bool HasValue => _data.Length == Size;
 
