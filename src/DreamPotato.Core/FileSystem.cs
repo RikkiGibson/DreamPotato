@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text;
 
 using Microsoft.Win32.SafeHandles;
@@ -260,26 +261,47 @@ internal class FileSystem
 
     public (bool ok, string? errorMessage) TryWriteGameFileWithVmi(Stream vmsFile, string onDiskFileName, VmiInfo vmiInfo)
     {
-        var copyProtection = vmiInfo.FileMode.HasFlag(VmuFileMode.CopyProtected) ? FileCopyProtection.CopyProtected : FileCopyProtection.NotCopyProtected;
-        return TryWriteGameFile(vmsFile, onDiskFileName, onVmuFileName: vmiInfo.VmuFileName, vmiInfo.CreationDateTimeOffset, copyProtection);
+        // Create a directory entry
+        var directoryEntry = CreateDirectoryEntry(vmiInfo);
+        if (!directoryEntry.HasValue)
+            return (false, $"{onDiskFileName}: The file system directory is full.");
+
+        return TryWriteGameFile(vmsFile, directoryEntry);
     }
 
-    public (bool ok, string? errorMessage) TryWriteGameFile(Stream vmsFile, string onDiskFileName, ReadOnlyMemory<byte> onVmuFileName, DateTimeOffset date, FileCopyProtection copyProtection)
+    /// <summary>For use when loading a standalone '.vms' file which we assume is a game.</summary>
+    public (bool ok, string? errorMessage) TryWriteVmsOnlyGame(Stream vmsFile, string onDiskFileName, ReadOnlyMemory<byte> onVmuFileName, DateTimeOffset date, FileCopyProtection copyProtection)
+    {
+        // Create a directory entry
+        var directoryEntry = EnumerateDirectoryTable().FirstOrDefault(entry => entry.Type == FileType.None);
+        if (!directoryEntry.HasValue)
+            return (false, $"{onDiskFileName}: The file system directory is full.");
+
+        directoryEntry.Type = FileType.Game;
+        directoryEntry.CopyProtection = copyProtection;
+        onVmuFileName.CopyTo(directoryEntry.Name);
+        directoryEntry.Name.Span[onVmuFileName.Length..].Clear();
+        directoryEntry.DateTimeOffset = date;
+        directoryEntry.SizeInBlocks = (ushort)((vmsFile.Length + BlockSize - 1) / BlockSize);
+        directoryEntry.VmsHeaderBlockOffset = 1;
+
+        return TryWriteGameFile(vmsFile, directoryEntry);
+    }
+
+    public (bool ok, string? errorMessage) TryWriteGameFile(Stream vmsFile, DirectoryEntry directoryEntry)
     {
         var vmsLength = checked((int)(vmsFile.Length - vmsFile.Position));
         ArgumentOutOfRangeException.ThrowIfNegative(vmsLength);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(vmsLength, Cpu.InstructionBankSize);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(onVmuFileName.Length, DirectoryEntry.FileNameLength);
 
-        // Verify sufficient free space
+        // Game files must be written contiguously starting at block 0.
+        // Verify sufficient free space.
         var fatBlock = GetFATBlock();
         var lastBlockId = (vmsLength + BlockSize - 1) / BlockSize - 1;
         for (int i = 0; i <= lastBlockId; i++)
         {
             if (fatBlock[i] != FAT_Unallocated)
-            {
-                return (false, $"{onDiskFileName}: Insufficient space");
-            }
+                return (false, $"{directoryEntry.NameString}: Insufficient space");
         }
 
         // Update FAT table indicating the game data starts at block 0 and grows toward the end
@@ -290,21 +312,8 @@ internal class FileSystem
 
         fatBlock[lastBlockId] = FAT_LastInFile;
 
-        // Game data itself must be written to start of bank 0
         vmsFile.ReadExactly(flash.AsSpan(0, vmsLength));
-
-        // Create a directory entry
-        var directoryEntry = EnumerateDirectoryTable().FirstOrDefault(entry => entry.Type == FileType.None);
-        if (!directoryEntry.HasValue)
-            return (false, $"{onDiskFileName}: The file system directory is full.");
-
-        directoryEntry.Type = FileType.Game;
-        directoryEntry.CopyProtection = copyProtection;
         directoryEntry.StartFAT = 0;
-        onVmuFileName.CopyTo(directoryEntry.Name);
-        directoryEntry.DateTimeOffset = date;
-        directoryEntry.SizeInBlocks = (ushort)((vmsLength + BlockSize - 1) / BlockSize);
-        directoryEntry.VmsHeaderBlockOffset = 1;
 
         return (true, null);
     }
@@ -338,7 +347,7 @@ internal class FileSystem
 
             if (fileFormat == FileFormat.Dci)
             {
-                // dci format consists of the directory entry content, followed by the vms data.
+                // dci format consists of the directory entry content, followed by vms data as a sequence of big-endian ints.
                 using var dciFile = File.Create(Path.Combine(destDirectory.FullName, $"{outFileName}.dci"));
 
                 var outEntry = new DirectoryEntry(new byte[DirectoryEntry.Size]);
@@ -346,12 +355,16 @@ internal class FileSystem
                 outEntry.StartFAT = 0; // forced to 0 on-disk since its value depends on the destination file system.
                 dciFile.Write(outEntry.RawData.Span);
 
+                Span<byte> swappedBlock = new byte[BlockSize];
                 for (var blockId = directoryEntry.StartFAT;
                     blockId != FAT_LastInFile;
                     blockId = fatBlock[blockId])
                 {
                     var block = this.GetBlock(blockId);
-                    dciFile.Write(block);
+                    BinaryPrimitives.ReverseEndianness(
+                        source: MemoryMarshal.Cast<byte, int>(block),
+                        destination: MemoryMarshal.Cast<byte, int>(swappedBlock));
+                    dciFile.Write(swappedBlock);
                 }
 
                 return;
@@ -475,7 +488,7 @@ internal class FileSystem
             if (vmiInfo.FileMode.HasFlag(VmuFileMode.Game))
             {
                 if (foundGameName != null)
-                    return (false, $"Cannot use multiple games in VMS folder: '{foundGameName}', '{vmiFileInfo.Name}'");
+                    return (false, $"Cannot load multiple games: '{foundGameName}', '{vmiFileInfo.Name}'");
 
                 foundGameName = vmiFileInfo.Name;
 
@@ -494,6 +507,10 @@ internal class FileSystem
             if (dciFileInfo.Length == 0)
                 return (false, $"{dciFileInfo.Name}: Cannot write an empty file");
 
+            var vmsContentLength = dciFileInfo.Length - DirectoryEntry.Size;
+            if (vmsContentLength % BlockSize != 0)
+                return (false, $"{dciFileInfo.Name}: Invalid format");
+
             var directoryEntry = EnumerateDirectoryTable().FirstOrDefault(entry => entry.Type == FileType.None);
             if (!directoryEntry.HasValue)
                 return (false, $"{dciFileInfo.Name}: The VMU file system directory is full.");
@@ -506,19 +523,24 @@ internal class FileSystem
             if (directoryEntry.Type == FileType.Game)
             {
                 if (foundGameName != null)
-                    return (false, $"Cannot use multiple games in VMS folder: '{foundGameName}', '{directoryEntry.Name}'");
+                    return (false, $"Cannot load multiple games: '{foundGameName}', '{directoryEntry.Name}'");
 
                 foundGameName = directoryEntry.NameString;
-                if (TryWriteGameFile(dciFile, onDiskFileName: dciFileInfo.Name, onVmuFileName: directoryEntry.Name, directoryEntry.DateTimeOffset, directoryEntry.CopyProtection) is (false, var error))
+                if (TryWriteGameFile(dciFile, directoryEntry) is (false, var error))
                     return (false, error);
-
-                continue;
             }
-
-            if (TryWriteDataFile(ref currentDataBlockId, dciFile, directoryEntry) is (false, var error1))
+            else if (TryWriteDataFile(ref currentDataBlockId, dciFile, directoryEntry) is (false, var error1))
                 return (false, error1);
-        }
 
+            // Above TryWrite.. call read the dci file straight from disk into flash.
+            // Now we need to reverse the 32-bit big-endian encoding in-place to get the proper vms content.
+            var fatBlock = GetFATBlock();
+            for (var blockId = directoryEntry.StartFAT; blockId != FAT_LastInFile; blockId = fatBlock[blockId])
+            {
+                var block = MemoryMarshal.Cast<byte, int>(GetBlock(blockId));
+                BinaryPrimitives.ReverseEndianness(source: block, destination: block);
+            }
+        }
         return (true, null);
     }
 
@@ -527,26 +549,36 @@ internal class FileSystem
         if (vmsFile.Length != vmiInfo.VmsFileSize)
             return (false, $"{vmiInfo.VmuFileNameString}: VMI expected the VMS file size to be {vmiInfo.VmsFileSize} but was actually {vmsFile.Length}");
 
-        var directoryEntry = EnumerateDirectoryTable().FirstOrDefault(entry => entry.Type == FileType.None);
+        var directoryEntry = CreateDirectoryEntry(vmiInfo);
         if (!directoryEntry.HasValue)
             return (false, $"{vmiInfo.VmuFileNameString}: The file system directory is full.");
 
+        // Note: directoryEntry.StartFAT is deliberately only set by the inner helper method
+        return TryWriteDataFile(ref currentDataBlockId, vmsFile, directoryEntry);
+    }
 
-        directoryEntry.Type = FileType.Data;
+    /// <summary>NOTE: does not populate <see cref="DirectoryEntry.StartFAT"/>.</summary>
+    public DirectoryEntry CreateDirectoryEntry(VmiInfo vmiInfo)
+    {
+        var directoryEntry = EnumerateDirectoryTable().FirstOrDefault(entry => entry.Type == FileType.None);
+        if (!directoryEntry.HasValue)
+            return directoryEntry;
+
+        var isGame = vmiInfo.FileMode.HasFlag(VmuFileMode.Game);
+        directoryEntry.Type = isGame ? FileType.Game : FileType.Data;
         directoryEntry.CopyProtection = vmiInfo.FileMode.HasFlag(VmuFileMode.CopyProtected) ? FileCopyProtection.CopyProtected : FileCopyProtection.NotCopyProtected;
 
         Debug.Assert(vmiInfo.VmuFileName.Length == directoryEntry.Name.Length);
         vmiInfo.VmuFileName.CopyTo(directoryEntry.Name);
 
         directoryEntry.DateTimeOffset = vmiInfo.CreationDateTimeOffset;
-        directoryEntry.SizeInBlocks = (ushort)((vmsFile.Length + BlockSize - 1) / BlockSize);
+        directoryEntry.SizeInBlocks = (ushort)((vmiInfo.VmsFileSize + BlockSize - 1) / BlockSize);
 
         // Note: if the vms doesn't match this convention, then we have no way of really knowing where its header is.
         // We might want to verify the header is in the expected location in 'ReadAllFiles'.
-        directoryEntry.VmsHeaderBlockOffset = 0;
+        directoryEntry.VmsHeaderBlockOffset = (ushort)(isGame ? 1 : 0);
 
-        // Note: directoryEntry.StartFAT is deliberately only set by the inner helper method
-        return TryWriteDataFile(ref currentDataBlockId, vmsFile, directoryEntry);
+        return directoryEntry;
     }
 
     public (bool ok, string? error) TryWriteDataFile(ref ushort currentDataBlockId, Stream vmsFile, DirectoryEntry directoryEntry)
@@ -949,10 +981,14 @@ internal class FileSystem
                 dciFile.Write(outEntry.RawData.Span);
 
                 var fatBlock = GetFATBlock();
-                for (var blockId = outEntry.StartFAT;blockId != FAT_LastInFile; blockId = fatBlock[blockId])
+                Span<byte> swappedBlock = new byte[BlockSize];
+                for (var blockId = outEntry.StartFAT; blockId != FAT_LastInFile; blockId = fatBlock[blockId])
                 {
-                    var block = this.GetBlock(blockId);
-                    dciFile.Write(block);
+                    var block = GetBlock(blockId);
+                    BinaryPrimitives.ReverseEndianness(
+                        source: MemoryMarshal.Cast<byte, int>(block),
+                        destination: MemoryMarshal.Cast<byte, int>(swappedBlock));
+                    dciFile.Write(swappedBlock);
                 }
 
                 return;

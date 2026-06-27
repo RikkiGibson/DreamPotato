@@ -162,7 +162,7 @@ public class Vmu
             var fileName = Path.GetFileNameWithoutExtension(filePath);
             fileName = fileName[..Math.Min(DirectoryEntry.FileNameLength, fileName.Length)];
             var onVmuFileName = FileSystem.Encoding.GetBytes(fileName);
-            if (FileSystem.TryWriteGameFile(vmsFile, onDiskFileName: fileInfo.Name, onVmuFileName, date, FileCopyProtection.NotCopyProtected) is (false, var error))
+            if (FileSystem.TryWriteVmsOnlyGame(vmsFile, onDiskFileName: fileInfo.Name, onVmuFileName, date, FileCopyProtection.NotCopyProtected) is (false, var error))
                 return (false, error);
         }
 

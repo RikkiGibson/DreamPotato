@@ -1076,6 +1076,7 @@ partial class UserInterface
                         """);
                     ImGui.EndTooltip();
                 }
+                ImGui.SameLine();
 
                 var fileFormat = configuration.PreferredFileFormat;
                 var selectedIndex = (int)fileFormat;
