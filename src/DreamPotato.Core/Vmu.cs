@@ -120,6 +120,31 @@ public class Vmu
         _cpu.LazyDebugInfo?.ClearFlash();
     }
 
+    public (bool ok, string? error) LoadDci(string filePath, DateTimeOffset date, bool autoInitializeRTCDate)
+    {
+        if (!filePath.EndsWith(".dci", StringComparison.OrdinalIgnoreCase))
+            return (false, $"DCI file '{filePath}' must have .dci extension.");
+
+        var fileInfo = new FileInfo(filePath);
+        if (!fileInfo.Exists)
+            return (false, $"'{filePath}' does not exist.");
+
+        if (fileInfo.Length > Cpu.InstructionBankSize + DirectoryEntry.Size)
+            return (false, $"'{filePath}': Invalid format");
+
+        Reset(autoInitializeRTCDate ? date : null);
+
+        FileSystem.FlushAndSetHostFileInfo(filePath, vmuFileWriteStream: null);
+        FileSystem.InitializeFileSystem(date);
+        FileSystem.TryWriteDciFile(fileInfo);
+
+        _cpu.LazyDebugInfo?.ClearFlash();
+        _cpu.LazyDebugInfo?.GetBankInfo(InstructionBank.FlashBank0).WaterbearInfo = GetWaterbearInfo(filePath);
+
+        _cpu.ResyncMapleOutbound();
+        return (true, null);
+    }
+
     public (bool ok, string? error) LoadVms(string filePath, DateTimeOffset date, bool autoInitializeRTCDate)
     {
         if (!filePath.EndsWith(".vms", StringComparison.OrdinalIgnoreCase))
@@ -228,7 +253,7 @@ public class Vmu
             _cpu.ResyncMapleOutbound();
     }
 
-    public (bool ok, string? error) SaveVmuAsFolder(string folderPath, FileFormat fileFormat)
+    public (bool ok, string? error) SaveVmuAsFolder(string folderPath, FileFormat preferredFileFormat)
     {
         if (IsDockedToDreamcast)
             _cpu.ResyncMapleInbound();
@@ -237,7 +262,7 @@ public class Vmu
         if (!info.Exists)
             return (false, $"The folder '{info.Name}' does not exist.");
 
-        if (FileSystem.TryReadAllFiles(destDirectory: info, fileFormat) is (false, var error))
+        if (FileSystem.TryReadAllFiles(destDirectory: info, preferredFileFormat) is (false, var error))
             return (false, error);
 
         _cpu.FileSystem.FlushAndSetHostFileInfo(folderPath, vmuFileWriteStream: null);

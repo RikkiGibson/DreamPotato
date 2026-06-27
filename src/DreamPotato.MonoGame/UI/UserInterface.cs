@@ -300,7 +300,7 @@ partial class UserInterface
             return;
         }
 
-        var result = Dialog.FileOpen("vmu,bin,vms", defaultPath: null);
+        var result = Dialog.FileOpen("vmu,bin,vms,dci", defaultPath: null);
         if (result.IsOk)
         {
             _game.LoadAndStartVmsOrVmuFile(presenter, result.Path);

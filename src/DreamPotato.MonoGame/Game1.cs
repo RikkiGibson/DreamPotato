@@ -261,6 +261,15 @@ public class Game1 : Game
                 return;
             }
         }
+        else if (extension.Equals(".dci", StringComparison.OrdinalIgnoreCase))
+        {
+            if (vmu.LoadDci(filePath, date, autoInitializeRTCDate: Configuration.AutoInitializeDate) is (false, var error))
+            {
+                _userInterface.ShowToast(presenter, error ?? "Unknown error");
+                dropRecentIfNotExists();
+                return;
+            }
+        }
         else if (extension.Equals(".vmu", StringComparison.OrdinalIgnoreCase)
             || extension.Equals(".bin", StringComparison.OrdinalIgnoreCase))
         {
