@@ -502,6 +502,8 @@ internal class FileSystem
                 return (false, error1);
         }
 
+        // TODO2: When DC reads the files added this way, it reports they are corrupted.
+        // Probably need to write some actual tests to figure out what's wrong here.
         foreach (var dciFileInfo in sourceDirectory.EnumerateFiles("*.dci").OrderBy(f => f.Name))
         {
             if (dciFileInfo.Length == 0)
