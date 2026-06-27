@@ -282,7 +282,7 @@ internal class FileSystem
         onVmuFileName.CopyTo(directoryEntry.Name);
         directoryEntry.Name.Span[onVmuFileName.Length..].Clear();
         directoryEntry.DateTimeOffset = date;
-        directoryEntry.SizeInBlocks = (ushort)((vmsFile.Length + BlockSize - 1) / BlockSize);
+        directoryEntry.SizeInBlocks = (ushort)((vmsFile.RemainingLength() + BlockSize - 1) / BlockSize);
         directoryEntry.VmsHeaderBlockOffset = 1;
 
         return TryWriteGameFile(vmsFile, directoryEntry);
@@ -290,7 +290,7 @@ internal class FileSystem
 
     public (bool ok, string? errorMessage) TryWriteGameFile(Stream vmsFile, DirectoryEntry directoryEntry)
     {
-        var vmsLength = checked((int)(vmsFile.Length - vmsFile.Position));
+        var vmsLength = vmsFile.RemainingLength();
         ArgumentOutOfRangeException.ThrowIfNegative(vmsLength);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(vmsLength, Cpu.InstructionBankSize);
 
@@ -548,8 +548,8 @@ internal class FileSystem
 
     public (bool ok, string? error) TryWriteDataFileWithVmi(ref ushort currentDataBlockId, Stream vmsFile, VmiInfo vmiInfo)
     {
-        if (vmsFile.Length != vmiInfo.VmsFileSize)
-            return (false, $"{vmiInfo.VmuFileNameString}: VMI expected the VMS file size to be {vmiInfo.VmsFileSize} but was actually {vmsFile.Length}");
+        if (vmsFile.RemainingLength() != vmiInfo.VmsFileSize)
+            return (false, $"{vmiInfo.VmuFileNameString}: VMI expected the VMS file size to be {vmiInfo.VmsFileSize} but was actually {vmsFile.RemainingLength()}");
 
         var directoryEntry = CreateDirectoryEntry(vmiInfo);
         if (!directoryEntry.HasValue)
@@ -606,7 +606,7 @@ internal class FileSystem
             if (i == sizeInBlocks - 1)
             {
                 // Last block
-                var remaining = (int)vmsFile.Length;
+                var remaining = vmsFile.RemainingLength();
                 while (remaining > BlockSize)
                     remaining -= BlockSize;
 
@@ -1038,6 +1038,12 @@ internal class FileSystem
             }
         }
     }
+}
+
+internal static class StreamExtensions
+{
+    public static int RemainingLength(this Stream stream)
+        => checked((int)(stream.Length - stream.Position));
 }
 
 /// <summary>https://vmu.falcogirgis.net/filesystem.html#fs_dir</summary>
