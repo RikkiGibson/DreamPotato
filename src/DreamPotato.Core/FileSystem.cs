@@ -112,6 +112,8 @@ internal class FileSystem
 
     public (byte a, byte r, byte g, byte b)? VmuColor => GetRootBlock().VmuColor;
 
+    internal FileFormat PreferredFileFormat { get; set; }
+
     /// <summary>Reset data used for tracking folder changes to default state, i.e. no changes detected, no deadline, mirror up-to-date.</summary>
     private void ResetFlushData()
     {
@@ -318,7 +320,7 @@ internal class FileSystem
     }
 
     /// <summary>Read all the files from this file system to destDirectory.</summary>
-    public (bool ok, string? error) TryReadAllFiles(DirectoryInfo destDirectory, FileFormat preferredFileFormat)
+    public (bool ok, string? error) TryReadAllFiles(DirectoryInfo destDirectory)
     {
         HashSet<string> allFilePaths = [];
         foreach (var directoryEntry in EnumerateDirectoryTable())
@@ -344,7 +346,7 @@ internal class FileSystem
             var outFileName = directoryEntry.NameString;
             var fatBlock = GetFATBlock();
 
-            if (preferredFileFormat == FileFormat.Dci)
+            if (PreferredFileFormat == FileFormat.Dci)
             {
                 // dci format consists of the directory entry content, followed by vms data as a sequence of big-endian ints.
                 using var dciFile = File.Create(Path.Combine(destDirectory.FullName, $"{outFileName}.dci"));
@@ -369,7 +371,7 @@ internal class FileSystem
                 return;
             }
 
-            Debug.Assert(preferredFileFormat == FileFormat.VmiVms);
+            Debug.Assert(PreferredFileFormat == FileFormat.VmiVms);
             using var vmsFile = File.Create(Path.Combine(destDirectory.FullName, $"{outFileName}.vms"));
 
             for (var blockId = directoryEntry.StartFAT;
@@ -887,10 +889,6 @@ internal class FileSystem
 
     internal void FlushToFolder(DirectoryInfo vmsFolder)
     {
-        // TODO2: need to propagate this value in.
-        // Passing a param thru all the layers is not scaling, I think we just need a settable property on this.
-        FileFormat preferredFileFormat = FileFormat.Dci;
-
         if (!vmsFolder.Exists)
             throw new InvalidOperationException();
 
@@ -947,19 +945,20 @@ internal class FileSystem
         // If user needs to figure out which of the duplicate files got updated, they can check timestamps.
         var vmisByName = vmsFolder
             .EnumerateFiles("*.vmi")
-            .Where(info => info.Length == VmiInfo.Size)
-            .GroupBy(info => new VmiInfo(File.ReadAllBytes(info.FullName)).VmuFileNameString);
+            .Where(fileInfo => fileInfo.Length == VmiInfo.Size)
+            .Select(fileInfo => (fileInfo, vmuFileName: new VmiInfo(File.ReadAllBytes(fileInfo.FullName)).VmuFileNameString));
 
         var dcisByName = vmsFolder
-                .EnumerateFiles("*.dci")
-                .Where(info => info.Length >= DirectoryEntry.Size)
-                .GroupBy(info => readDciDirectoryEntry(info).NameString);
+            .EnumerateFiles("*.dci")
+            .Where(fileInfo => fileInfo.Length >= DirectoryEntry.Size)
+            .Select(fileInfo => (fileInfo, vmuFileName: readDciDirectoryEntry(fileInfo).NameString));
 
         var hostFilesByVmuFileName = vmisByName
             .Concat(dcisByName)
+            .GroupBy(pair => pair.vmuFileName)
             .ToDictionary(
                 group => group.Key,
-                group => group.First());
+                group => group.First().fileInfo);
 
         DirectoryEntry readDciDirectoryEntry(FileInfo dciFileInfo)
         {
@@ -997,9 +996,9 @@ internal class FileSystem
             }
 
             // new file
-            if (preferredFileFormat == FileFormat.VmiVms)
+            if (PreferredFileFormat == FileFormat.VmiVms)
                 writeVmiVms(new FileInfo(Path.Combine(vmsFolder.FullName, $"{onVmuFileName}.vmi")));
-            else if (preferredFileFormat == FileFormat.Dci)
+            else if (PreferredFileFormat == FileFormat.Dci)
                 writeDci(new FileInfo(Path.Combine(vmsFolder.FullName, $"{onVmuFileName}.dci")));
             else
                 throw new InvalidOperationException();

@@ -126,7 +126,7 @@ public class FileSystemTests : IDisposable
         var fileSystem = new FileSystem(flash);
 
         var outDir = _tempRoot.CreateSubdirectory("ReadFiles_01");
-        var (ok, error) = fileSystem.TryReadAllFiles(outDir, FileFormat.VmiVms);
+        var (ok, error) = fileSystem.TryReadAllFiles(outDir);
         Assert.True(ok, error);
 
         var fileNames = string.Join(Environment.NewLine,
@@ -177,7 +177,7 @@ public class FileSystemTests : IDisposable
         var fileSystem1 = new FileSystem(flash1);
 
         var vmsFolder = _tempRoot.CreateSubdirectory("ReadFiles_01");
-        var (ok, error) = fileSystem1.TryReadAllFiles(vmsFolder, FileFormat.VmiVms);
+        var (ok, error) = fileSystem1.TryReadAllFiles(vmsFolder);
         Assert.True(ok, error);
 
         var flash2 = new byte[Cpu.FlashSize];
@@ -262,7 +262,7 @@ public class FileSystemTests : IDisposable
 
         // Round trip from flash back to VMS folder
         var vmsFolder2 = _tempRoot.CreateSubdirectory("ReadFiles_02");
-        (ok, error) = fileSystem2.TryReadAllFiles(vmsFolder2, FileFormat.VmiVms);
+        (ok, error) = fileSystem2.TryReadAllFiles(vmsFolder2);
         Assert.True(ok, error);
 
         // All files in 'vmsFolder' are present in 'vmsFolder2'

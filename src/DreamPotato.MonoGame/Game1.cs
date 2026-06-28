@@ -156,6 +156,7 @@ public class Game1 : Game
         {
             var vmu = presenter.Vmu;
             vmu.InitializeFlash(date);
+            vmu.SetPreferredFileFormat(Configuration.PreferredFileFormat);
             if (Configuration.AutoInitializeDate)
                 vmu.InitializeRTCDate(date);
 
@@ -348,7 +349,7 @@ public class Game1 : Game
     internal (bool ok, string? error) SaveVmuAsFolder(Vmu vmu, string folderPath)
     {
         Debug.Assert(!IsIntegratedMode && RecentFilesInfo is { });
-        if (vmu.SaveVmuAsFolder(folderPath, Configuration.PreferredFileFormat) is (false, var error))
+        if (vmu.SaveVmuAsFolder(folderPath) is (false, var error))
             return (false, error);
 
         UpdateWindowTitle();
@@ -399,6 +400,8 @@ public class Game1 : Game
     internal void Configuration_PreferredFileFormatChanged(FileFormat format)
     {
         Configuration = Configuration with { PreferredFileFormat = format };
+        PrimaryVmu.SetPreferredFileFormat(Configuration.PreferredFileFormat);
+        _secondaryVmuPresenter.Vmu.SetPreferredFileFormat(Configuration.PreferredFileFormat);
     }
 
     internal void Configuration_DreamcastPortChanged(DreamcastPort dreamcastPort)

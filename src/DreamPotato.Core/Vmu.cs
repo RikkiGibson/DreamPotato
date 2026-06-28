@@ -42,6 +42,11 @@ public class Vmu
         FileSystem.InitializeFileSystem(date);
     }
 
+    public void SetPreferredFileFormat(FileFormat preferredFileFormat)
+    {
+        FileSystem.PreferredFileFormat = preferredFileFormat;
+    }
+
     public void InitializeRTCDate(DateTimeOffset date)
     {
         if (_cpu.Pc != 0 || _cpu.CurrentInstructionBankId != InstructionBank.ROM)
@@ -253,7 +258,7 @@ public class Vmu
             _cpu.ResyncMapleOutbound();
     }
 
-    public (bool ok, string? error) SaveVmuAsFolder(string folderPath, FileFormat preferredFileFormat)
+    public (bool ok, string? error) SaveVmuAsFolder(string folderPath)
     {
         if (IsDockedToDreamcast)
             _cpu.ResyncMapleInbound();
@@ -262,7 +267,7 @@ public class Vmu
         if (!info.Exists)
             return (false, $"The folder '{info.Name}' does not exist.");
 
-        if (FileSystem.TryReadAllFiles(destDirectory: info, preferredFileFormat) is (false, var error))
+        if (FileSystem.TryReadAllFiles(destDirectory: info) is (false, var error))
             return (false, error);
 
         _cpu.FileSystem.FlushAndSetHostFileInfo(folderPath, vmuFileWriteStream: null);
