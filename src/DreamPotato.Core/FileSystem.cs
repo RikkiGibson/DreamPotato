@@ -357,9 +357,7 @@ internal class FileSystem
                 }
 
                 Span<byte> swappedBlock = new byte[BlockSize];
-                for (var blockId = directoryEntry.StartFAT;
-                    blockId != FAT_LastInFile;
-                    blockId = fatBlock[blockId])
+                for (var blockId = directoryEntry.StartFAT; blockId != FAT_LastInFile; blockId = fatBlock[blockId])
                 {
                     var block = this.GetBlock(blockId);
                     BinaryPrimitives.ReverseEndianness(
