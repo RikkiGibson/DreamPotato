@@ -518,6 +518,13 @@ public class Cpu
 
         while (MapleMessageBroker.TryReceiveCpuMessage(DreamcastSlot, out var message))
         {
+            if (message.Type == MapleMessageType.DPOpenFile && message.Function == MapleFunction.Storage)
+            {
+                // Open file messages are handled even while ejected
+                FileSystem.RequestOpenFile(message.ReadContentString());
+                continue;
+            }
+
             if (!SFRs.P7.DreamcastConnected)
             {
                 Logger.LogWarning($"Ignoring Maple message while undocked: '({message.Type}, {message.Function})'", category: LogCategories.Maple);
@@ -542,9 +549,6 @@ public class Cpu
                     break;
                 case (MapleMessageType.CompleteWrite, MapleFunction.Storage):
                     // Do nothing, allow timeout counter to turn off flash icon.
-                    break;
-                case (MapleMessageType.DPOpenFile, MapleFunction.Storage):
-                    FileSystem.RequestOpenFile(message.ReadContentString());
                     break;
                 default:
                     Debug.Fail($"Unhandled Maple message '({message.Type}, {message.Function})'");
