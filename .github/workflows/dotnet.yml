@@ -12,7 +12,6 @@ on:
 
 jobs:
   Test:
-    condition: false
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v6
@@ -45,7 +44,6 @@ jobs:
   PublishLinux:
     # Use ubuntu-22.04 (Jammy) to build with glibc 2.35
     # See https://www.ubuntuupdates.org/pm/glibc
-    condition: false
     runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v6
