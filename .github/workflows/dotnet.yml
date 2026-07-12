@@ -63,6 +63,8 @@ jobs:
         path: artifacts/DreamPotato-linux-x64.AppImage
 
   PublishWindows:
+    permissions:
+      id-token: write
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v6
