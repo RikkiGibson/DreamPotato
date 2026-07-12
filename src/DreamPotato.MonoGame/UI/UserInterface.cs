@@ -300,7 +300,7 @@ partial class UserInterface
             return;
         }
 
-        var result = Dialog.FileOpen("vmu,bin,vms", defaultPath: null);
+        var result = Dialog.FileOpen("vmu,bin,vms,dci", defaultPath: null);
         if (result.IsOk)
         {
             _game.LoadAndStartVmsOrVmuFile(presenter, result.Path);
@@ -1058,6 +1058,34 @@ partial class UserInterface
                     _primarySaveStateInfo.InvalidateThumbnail();
                     _secondarySaveStateInfo.InvalidateThumbnail();
                 }
+            }
+
+            // File Format
+            {
+                ImGui.Text("Preferred File Format");
+                ImGui.SameLine();
+
+                ImGui.SameLine();
+                ImGui.Text("(?)");
+                if (ImGui.IsItemHovered())
+                {
+                    ImGui.BeginTooltip();
+                    ImGui.Text("""
+                        Sets the file format used for
+                        "Save As Folder" and similar commands.
+                        """);
+                    ImGui.EndTooltip();
+                }
+                ImGui.SameLine();
+
+                var fileFormat = configuration.PreferredFileFormat;
+                var selectedIndex = (int)fileFormat;
+                ImGui.SetNextItemWidth(CalcComboWidth(longestItem: FileFormatExtensions.Names[0]));
+                ImGui.PushID("PreferredFileFormatCombo");
+                ImGui.Combo("", ref selectedIndex, FileFormatExtensions.Names, FileFormatExtensions.Names.Length);
+                ImGui.PopID();
+                if ((int)fileFormat != selectedIndex)
+                    _game.Configuration_PreferredFileFormatChanged((FileFormat)selectedIndex);
             }
 
             // Dreamcast Port

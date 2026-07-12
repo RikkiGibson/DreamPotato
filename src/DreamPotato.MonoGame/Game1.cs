@@ -156,6 +156,7 @@ public class Game1 : Game
         {
             var vmu = presenter.Vmu;
             vmu.InitializeFlash(date);
+            vmu.SetPreferredFileFormat(Configuration.PreferredFileFormat);
             if (Configuration.AutoInitializeDate)
                 vmu.InitializeRTCDate(date);
 
@@ -244,7 +245,7 @@ public class Game1 : Game
             if (!checkDistinctPath())
                 return;
 
-            var (ok, error) = vmu.LoadVmsFolder(filePath, date, autoInitializeRtcDate: Configuration.AutoInitializeDate);
+            var (ok, error) = vmu.LoadFolder(filePath, date, autoInitializeRtcDate: Configuration.AutoInitializeDate);
             if (!ok)
             {
                 _userInterface.ShowToast(presenter, error ?? "Unknown error");
@@ -255,6 +256,15 @@ public class Game1 : Game
         else if (extension.Equals(".vms", StringComparison.OrdinalIgnoreCase))
         {
             if (vmu.LoadVms(filePath, date, autoInitializeRTCDate: Configuration.AutoInitializeDate) is (false, var error))
+            {
+                _userInterface.ShowToast(presenter, error ?? "Unknown error");
+                dropRecentIfNotExists();
+                return;
+            }
+        }
+        else if (extension.Equals(".dci", StringComparison.OrdinalIgnoreCase))
+        {
+            if (vmu.LoadDci(filePath, date, autoInitializeRTCDate: Configuration.AutoInitializeDate) is (false, var error))
             {
                 _userInterface.ShowToast(presenter, error ?? "Unknown error");
                 dropRecentIfNotExists();
@@ -385,6 +395,13 @@ public class Game1 : Game
     {
         Configuration = Configuration with { ColorPaletteName = palette.Name };
         ColorPalette = palette;
+    }
+
+    internal void Configuration_PreferredFileFormatChanged(FileFormat format)
+    {
+        Configuration = Configuration with { PreferredFileFormat = format };
+        PrimaryVmu.SetPreferredFileFormat(Configuration.PreferredFileFormat);
+        _secondaryVmuPresenter.Vmu.SetPreferredFileFormat(Configuration.PreferredFileFormat);
     }
 
     internal void Configuration_DreamcastPortChanged(DreamcastPort dreamcastPort)

@@ -42,6 +42,11 @@ public class Vmu
         FileSystem.InitializeFileSystem(date);
     }
 
+    public void SetPreferredFileFormat(FileFormat preferredFileFormat)
+    {
+        FileSystem.PreferredFileFormat = preferredFileFormat;
+    }
+
     public void InitializeRTCDate(DateTimeOffset date)
     {
         if (_cpu.Pc != 0 || _cpu.CurrentInstructionBankId != InstructionBank.ROM)
@@ -120,12 +125,40 @@ public class Vmu
         _cpu.LazyDebugInfo?.ClearFlash();
     }
 
+    public (bool ok, string? error) LoadDci(string filePath, DateTimeOffset date, bool autoInitializeRTCDate)
+    {
+        if (!filePath.EndsWith(".dci", StringComparison.OrdinalIgnoreCase))
+            return (false, $"DCI file '{filePath}' must have .dci extension.");
+
+        var fileInfo = new FileInfo(filePath);
+        if (!fileInfo.Exists)
+            return (false, $"'{filePath}' does not exist.");
+
+        if (fileInfo.Length > Cpu.InstructionBankSize + DirectoryEntry.Size)
+            return (false, $"'{filePath}': Invalid format");
+
+        Reset(autoInitializeRTCDate ? date : null);
+
+        FileSystem.FlushAndSetHostFileInfo(filePath, vmuFileWriteStream: null);
+        FileSystem.InitializeFileSystem(date);
+        FileSystem.TryWriteDciFile(fileInfo);
+
+        _cpu.LazyDebugInfo?.ClearFlash();
+        _cpu.LazyDebugInfo?.GetBankInfo(InstructionBank.FlashBank0).WaterbearInfo = GetWaterbearInfo(filePath);
+
+        _cpu.ResyncMapleOutbound();
+        return (true, null);
+    }
+
     public (bool ok, string? error) LoadVms(string filePath, DateTimeOffset date, bool autoInitializeRTCDate)
     {
         if (!filePath.EndsWith(".vms", StringComparison.OrdinalIgnoreCase))
             return (false, $"VMS file '{filePath}' must have .vms extension.");
 
         var fileInfo = new FileInfo(filePath);
+        if (!fileInfo.Exists)
+            return (false, $"'{filePath}' does not exist.");
+
         if (fileInfo.Length > Cpu.InstructionBankSize)
             return (false, $"VMS file '{filePath}' must be 64KB or smaller to be loaded.");
 
@@ -144,7 +177,7 @@ public class Vmu
             {
                 // Note: this will search from the end of the volume toward the start for a free block
                 var currentBlock = FileSystem.UserRegionLastBlockId;
-                if (FileSystem.TryWriteDataFile(ref currentBlock, vmsFile, vmiInfo) is (false, var error))
+                if (FileSystem.TryWriteDataFileWithVmi(ref currentBlock, vmsFile, vmiInfo) is (false, var error))
                     return (false, error);
             }
             else
@@ -159,7 +192,7 @@ public class Vmu
             var fileName = Path.GetFileNameWithoutExtension(filePath);
             fileName = fileName[..Math.Min(DirectoryEntry.FileNameLength, fileName.Length)];
             var onVmuFileName = FileSystem.Encoding.GetBytes(fileName);
-            if (FileSystem.TryWriteGameFile(vmsFile, onDiskFileName: fileInfo.Name, onVmuFileName, date, FileCopyProtection.NotCopyProtected) is (false, var error))
+            if (FileSystem.TryWriteVmsOnlyGame(vmsFile, onDiskFileName: fileInfo.Name, onVmuFileName, date, FileCopyProtection.NotCopyProtected) is (false, var error))
                 return (false, error);
         }
 
@@ -176,6 +209,9 @@ public class Vmu
             return (false, $"VMU file '{filePath}' must have .vmu or .bin extension.");
 
         var fileInfo = new FileInfo(filePath);
+        if (!fileInfo.Exists)
+            return (false, $"'{filePath}' does not exist.");
+
         if (fileInfo.Length != Cpu.InstructionBankSize * 2)
             return (false, $"VMU file '{filePath}' needs to be exactly 128KB in size.");
 
@@ -192,7 +228,7 @@ public class Vmu
     }
 
     /// <summary>Note: this call is transactional for flash and cpu state.</summary>
-    public (bool ok, string? error) LoadVmsFolder(string folderPath, DateTimeOffset date, bool autoInitializeRtcDate)
+    public (bool ok, string? error) LoadFolder(string folderPath, DateTimeOffset date, bool autoInitializeRtcDate)
     {
         var folderInfo = new DirectoryInfo(folderPath);
         if (!folderInfo.Exists)
