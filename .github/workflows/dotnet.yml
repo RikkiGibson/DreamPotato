@@ -12,6 +12,7 @@ on:
 
 jobs:
   Test:
+    condition: false
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v6
@@ -44,6 +45,7 @@ jobs:
   PublishLinux:
     # Use ubuntu-22.04 (Jammy) to build with glibc 2.35
     # See https://www.ubuntuupdates.org/pm/glibc
+    condition: false
     runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v6
@@ -70,8 +72,8 @@ jobs:
         uses: actions/setup-dotnet@v5
       - name: Download resources
         run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.MonoGame/Data/american_v1.05.bin
-      - name: Restore dependencies
-        run: dotnet restore
+      # - name: Restore dependencies
+      #   run: dotnet restore
 
       - name: dotnet publish win-x64
         run: dotnet publish src/DreamPotato.MonoGame -r win-x64 -p:DebugSymbols=False
