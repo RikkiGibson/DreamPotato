@@ -55,7 +55,6 @@ public sealed class AndroidPlatformServices : IPlatformServices
             var intent = new Intent(Intent.ActionOpenDocument);
             intent.AddCategory(Intent.CategoryOpenable);
             intent.SetType("*/*");
-            intent.PutExtra(Intent.ExtraMimeTypes, new[] { "application/octet-stream" });
 
             var taskSource = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
             _openTaskSource = taskSource;

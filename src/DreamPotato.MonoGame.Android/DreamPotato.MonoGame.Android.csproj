@@ -18,6 +18,12 @@
     <MGCBCommand Condition="'$(OS)' == 'Windows_NT'">mgcb.exe</MGCBCommand>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <!--TODO2: this may not be suitable when android sdk was already installed at the system level.-->
+    <AndroidSdkDirectory>$(MSBuildThisFileDirectory)../../artifacts/tools/android-sdk</AndroidSdkDirectory>
+    <JavaSdkDirectory>$(MSBuildThisFileDirectory)../../artifacts/tools/jdk</JavaSdkDirectory>
+  </PropertyGroup>
+
   <ItemGroup>
     <Compile Include="..\DreamPotato.MonoGame\**\*.cs">
       <Link>Shared\%(RecursiveDir)%(Filename)%(Extension)</Link>

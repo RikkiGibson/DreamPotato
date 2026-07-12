@@ -17,7 +17,7 @@ using Microsoft.Xna.Framework.Input.Touch;
 namespace DreamPotato.MonoGame.UI
 {
     /// <summary>
-    /// ImGui renderer for use with XNA-likes (FNA & MonoGame)
+    /// ImGui renderer for use with XNA-likes (FNA and MonoGame)
     /// </summary>
     public class ImGuiRenderer
     {
