@@ -8,6 +8,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
+using System.Resources;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -163,6 +164,7 @@ partial class UserInterface
     private nint _rawDreamcastConnectedIconTexture;
     private nint _rawVmusConnectedIconTexture;
     private GCHandle _iniFilenameHandle;
+    private GCHandle _nanumGothicFontHandle;
     // ---
 
     private MappingEditState _mappingEditState;
@@ -220,6 +222,24 @@ partial class UserInterface
     internal void Initialize(Texture2D dreamcastConnectedIconTexture, Texture2D vmusConnectedIconTexture)
     {
         _imGuiRenderer = new ImGuiRenderer(_game);
+
+        var stream = typeof(UserInterface).Assembly.GetManifestResourceStream("Fonts/NanumGothic-Regular.ttf.zip") ?? throw new InvalidOperationException();
+        using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+
+        var entry = archive.Entries.Single();
+        var array = new byte[(int)entry.Length];
+        using var entryStream = archive.Entries.Single().Open();
+        entryStream.ReadExactly(array);
+        unsafe
+        {
+            _nanumGothicFontHandle = GCHandle.Alloc(array, GCHandleType.Pinned);
+            fixed (byte* ptr = array)
+            {
+                // Using the ptr where it will outlive the fixed block is only fine because we hold a GCHandle with type Pinned for it.
+                ImGui.GetIO().Fonts.AddFontFromMemoryTTF((nint)ptr, array.Length, size_pixels: 12);
+            }
+        }
+
         _imGuiRenderer.RebuildFontAtlas();
 
         unsafe

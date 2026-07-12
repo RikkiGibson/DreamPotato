@@ -26,6 +26,9 @@
     <EmbeddedResource Include="Icon.bmp">
       <LogicalName>Icon.bmp</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="Fonts/NanumGothic-Regular.ttf.zip">
+      <LogicalName>Fonts/NanumGothic-Regular.ttf.zip</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <Content Include="Data/*.bin">
