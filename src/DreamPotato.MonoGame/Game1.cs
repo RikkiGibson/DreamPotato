@@ -612,7 +612,7 @@ public class Game1 : Game
         return viewport.Width / VmuPresenter.TotalContentWidth;
     }
 
-    /// <summary>Sets a window size which is a multiple of <see cref="MinWidth"/>.</summary>
+    /// <summary>Sets a window size which is a multiple of <see cref="Display.ScreenWidth"/>.</summary>
     internal void SetWindowSizeMultiple(int multiple)
     {
 #if ANDROID
