@@ -19,9 +19,16 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <!--TODO2: this may not be suitable when android sdk was already installed at the system level.-->
-    <AndroidSdkDirectory>$(MSBuildThisFileDirectory)../../artifacts/tools/android-sdk</AndroidSdkDirectory>
-    <JavaSdkDirectory>$(MSBuildThisFileDirectory)../../artifacts/tools/jdk</JavaSdkDirectory>
+    <!--
+      TODO2: I cannot get debugging to work.
+      I suspect trying to "local install" everything is causing pain.
+      These env vars can work for CI to produce a build. Or for a local dev who only cares about getting a build.
+      But I think local dev needs to install on the system level and set the env vars.
+      Otherwise everything is just really painful.
+      https://dev.to/mhrastegari/develop-net-maui-apps-using-vs-code-without-traditional-ides-2l51
+    -->
+    <AndroidSdkDirectory>$(ArtifactsPath)/tools/android-sdk</AndroidSdkDirectory>
+    <JavaSdkDirectory>$(ArtifactsPath)/tools/jdk</JavaSdkDirectory>
   </PropertyGroup>
 
   <ItemGroup>

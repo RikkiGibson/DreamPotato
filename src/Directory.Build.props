@@ -6,7 +6,5 @@
   <PropertyGroup>
     <UseArtifactsOutput>true</UseArtifactsOutput>
     <ArtifactsPath>$(MSBuildThisFileDirectory)../artifacts</ArtifactsPath>
-    <AndroidSdkDirectory>$(ArtifactsPath)/tools/android-sdk</AndroidSdkDirectory>
-    <JavaSdkDirectory>$(ArtifactsPath)/tools/jdk</JavaSdkDirectory>
   </PropertyGroup>
 </Project>
