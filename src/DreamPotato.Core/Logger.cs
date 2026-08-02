@@ -38,12 +38,7 @@ public class Logger(LogLevel _minimumLogLevel, LogCategories _categories, Cpu? _
     private readonly Cpu? _cpu = _cpu;
 
     // Rolling buffer of log messages.
-    private readonly string?[] _messages
-#if DEBUG
-    = new string[50000];
-#else
-    = new string[1000];
-#endif
+    private readonly string?[] _messages = new string[1000];
     private int _nextMessageIndex = 0;
 
     // TODO: CallerFilePath, CallerLineNumber
@@ -84,7 +79,7 @@ public class Logger(LogLevel _minimumLogLevel, LogCategories _categories, Cpu? _
             return;
 
         var timestamp = DateTimeOffset.Now;
-        var cpuDescription = _cpu is null ? $"" : (DefaultInterpolatedStringHandler)$" {_cpu.DisplayName}.{_cpu.InstructionBank}@[{_cpu.Pc:X4}]";
+        var cpuDescription = _cpu is null ? $"" : (DefaultInterpolatedStringHandler)$" {_cpu.DisplayName}.{_cpu.CurrentInstructionBankId}@[{_cpu.Pc:X4}]";
         string message = $"{timestamp.TimeOfDay}{cpuDescription.ToStringAndClear()}: [{level}] {handler.ToStringAndClear()}";
         if (level is LogLevel.Debug or LogLevel.Warning)
             Console.WriteLine(message);

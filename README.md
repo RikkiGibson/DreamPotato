@@ -21,7 +21,9 @@ See [compatibility.md](compatibility.md) for the current compatibility status of
 
 [![DreamPotato Flycast Integration Demo](./docs/images/demo-video-thumbnail.png)](https://www.youtube.com/watch?v=EN8Y3UX_TDM)
 
-DreamPotato can connect to [Flycast](https://github.com/flyinghead/flycast) to support an experience similar to using a real Dreamcast and VMU together. This feature is now available in the **Flycast dev branch**. See [Flycast Builds](https://flyinghead.github.io/flycast-builds/) for the latest dev branch builds.
+DreamPotato can connect to [Flycast](https://github.com/flyinghead/flycast) to support an experience similar to using a real Dreamcast and VMU together.
+
+**NOTE**: The latest Flycast 2.6 stable release has a known issue with DreamPotato. Currently it's necessary to use a [master branch build](https://flyinghead.github.io/flycast-builds/) of Flycast. At time of writing, the build from 2026-01-28 (commit 21eb24f) is known to work.
 
 Instructions:
 1) Open the Flycast controller settings. Enable "**Use Physical VMU Memory**". Enable "**Use Network Expansion Devices**" for the controller port you want to use to connect.
@@ -57,17 +59,33 @@ Download the latest bits from the [Releases](https://github.com/RikkiGibson/Drea
 - F10 - Pause/Resume
 - Tab (hold) - Fast Forward
 
+### Open Folder
+
+DreamPotato [dev build](https://github.com/RikkiGibson/DreamPotato/actions/runs/27885462097) has "Open Folder" and "Save As Folder" commands inspired by the "GCI Folder" support in Dolphin. When a folder is opened, DreamPotato loads all the `.vmi`/`.vms` files found in it. When the VMU's file contents change during gameplay, DreamPotato will automatically update the corresponding files in the folder.
+
+Notes:
+- "Save As Folder" is a convenient way to extract individual `.vmi`/`.vms` saves from your `.vmu`/`.bin` memory card file.
+- You can rename the `.vmi`/`.vms` file pairs whatever you want, as long as the filenames match. DreamPotato will continue to pick them up and the on-VMU filenames will be preserved.
+    - For example, if I have `S.ARCADIA001.vms` and `S.ARCADIA001.vmi` files for Skies of Arcadia, I could rename them to `My file.vms` and `My file.vmi`, and the game will continue to recognize them as an `S.ARCADIA001` file on the VMU.
+- You can put any non-`.vmi`/`.vms` items in the folder you want and DreamPotato will ignore them.
+- DreamPotato doesn't watch the opened folder, so if you manually make changes in it, you need to reopen the folder in DreamPotato for the changes to get picked up.
+- It's recommended to "Save As Folder" to a folder which doesn't already contain any `.vmi`/`.vms` files in it. If you do, files might get overwritten, or other conflicts could occur in the folder, which you'll have to clean up manually.
+- `fs_root.bin` contains file system metadata as well as the VMU's color and icon (for display in the Dreamcast BIOS). If you delete it, it will be re-created with default settings.
+
 ### Configuration
 
 General configuration options include:
 - `AutoInitializeDate`: bool, default true. If true, skips the startup beep and date setup, and uses your computer's clock to initialize the VMU's clock. Specify false if you want to use the date setup sequence as you would when installing batteries with real hardware.
+- `AutoDockEject`: bool, default true. If true, automatically docks the VMU when Flycast is connected, and ejects it when Flycast is disconnected.
 - `AnyButtonWakesFromSleep`: bool, default true. If true, any button will wake the VMU from sleep. If false, only the sleep button will do that.
 
 Key and button mappings can be changed in Settings -> Keyboard Config / Gamepad Config.
 
 ## Building
 
-- You'll need a [.NET SDK](https://dotnet.microsoft.com/en-us/download/dotnet) matching the version in [global.json](./global.json) installed on your computer.
+- Install a .NET SDK matching the version in `global.json`.
+    - Easiest: install [`dotnetup`](https://github.com/dotnet/sdk/tree/release/dnup/documentation/general/dotnetup), then run `dotnetup` in this folder.
+    - Alternatively: [download](https://dotnet.microsoft.com/en-us/download/dotnet) and run .NET SDK from Microsoft's website.
 - Copy your `american_v1.05.bin` VMU ROM into `src/DreamPotato.MonoGame/Data/`.
 - Build everything: `dotnet build`.
 - Run the emulator: `dotnet run --project src/DreamPotato.MonoGame`.

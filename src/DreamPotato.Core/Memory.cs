@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics;
 
+using DreamPotato.Core.SFRs;
+
 namespace DreamPotato.Core;
 
 /// <summary>
@@ -106,7 +108,7 @@ public class Memory
         readStream.ReadExactly(_workRam);
     }
 
-    public byte Read(ushort address)
+    public byte Read(ushort address, bool doSideEffects = true)
     {
         Debug.Assert(address < 0x200);
         switch (address)
@@ -114,11 +116,13 @@ public class Memory
             case >= 0 and < 0x100:
                 return ReadMainMemory(address);
             case >= 0x100 and < 0x180:
-                return SFRs.Read((byte)(address - 0x100));
+                return SFRs.Read((byte)(address - 0x100), doSideEffects);
             case >= 0x180 and < 0x200:
-                return ReadXram((byte)(address - 0x180));
+                return ReadXram((byte)(address - 0x180), doSideEffects);
             default:
-                _logger.LogDebug($"Read out of range: 0x{address:X}");
+                if (doSideEffects)
+                    _logger.LogDebug($"Read out of range: 0x{address:X}");
+
                 return 0xff;
         }
     }
@@ -238,7 +242,7 @@ public class Memory
         return bank[address];
     }
 
-    private byte ReadXram(ushort address)
+    private byte ReadXram(ushort address, bool doSideEffects)
     {
         Debug.Assert(address < 0x100);
         switch (SFRs.Xbnk)
@@ -251,14 +255,18 @@ public class Memory
                 return readIconXram(_xram2, address);
         }
 
-        _logger.LogDebug($"Reading from nonexistent XRAM bank {SFRs.Xbnk}! Address: 0x{address:X}");
+        if (doSideEffects)
+            _logger.LogDebug($"Reading from nonexistent XRAM bank {SFRs.Xbnk}! Address: 0x{address:X}");
+
         return 0xff;
 
         byte readMainXram(byte[] bank, ushort address)
         {
             if ((address & 0xf) is >= 0xc and <= 0xf)
             {
-                _logger.LogDebug($"Reading skipped XRAM {SFRs.Xbnk} 0x{address:X}!");
+                if (doSideEffects)
+                    _logger.LogDebug($"Reading skipped XRAM {SFRs.Xbnk} 0x{address:X}!");
+
                 return 0xff;
             }
 
@@ -269,14 +277,17 @@ public class Memory
         {
             if (address > 0xf)
             {
-                _logger.LogDebug($"Read out of range of icon XRAM! Address: 0x{address:X}");
-                // TODO: There is weird undocumented behavior around what this range does.
+                if (doSideEffects)
+                    _logger.LogDebug($"Read out of range of icon XRAM! Address: 0x{address:X}");
+
                 return 0xff;
             }
 
-            if ((address & 0xf) is >= 0xc and <= 0xf)
+            if (address >= XramBank2Size)
             {
-                _logger.LogDebug($"Reading skipped XRAM 0x{address:X}!");
+                if (doSideEffects)
+                    _logger.LogDebug($"Reading skipped XRAM 2 0x{address:X}!");
+
                 return 0xff;
             }
 
@@ -333,5 +344,53 @@ public class Memory
 
             bank[address] = value;
         }
+    }
+}
+
+public enum StackValueKind : byte
+{
+    /// <summary>
+    /// TODO: Unsure what to do with this.
+    /// Probably reserved for when user manually messes with SP, directly writes values, etc.
+    /// </summary>
+    Unknown,
+
+    /// <summary>A value added using the PUSH instruction.</summary>
+    Push,
+
+    /// <summary>Return address of a CALL or similar instruction.</summary>
+    CallReturn,
+
+    /// <summary>Return address of an interrupt service routine call.</summary>
+    InterruptReturn,
+
+}
+
+/// <param name="Interrupt">
+/// Only meaningful for InterruptReturn. This is the interrupt currently being serviced.
+/// </param>
+/// <param name="Source">
+/// Meaning depends on the Kind.
+/// - Push: the operand of the 'PUSH d9' instruction.
+/// - CallReturn: the address of the associated CALL instruction
+/// - InterruptReturn: address of the instruction being executed when we were interrupted. Sometimes the same as 'Value'.
+/// </param>
+/// <param name="Value">
+/// The actual value stored on the VMU stack.
+/// For 'Push' this is 1 byte. For Returns, it is 2 bytes.
+/// </param>
+/// <param name="Offset">
+/// Address where the value is stored in the VMU stack.
+/// </param>
+/// <param name="BankId">
+/// The instruction bank we were in when the value was pushed.
+/// This is needed to resolve a memory address for a Return case
+/// </param>
+[DebuggerDisplay("{GetDebuggerDisplay(),nq}")]
+public record struct StackEntry(StackValueKind Kind, Interrupts Interrupt, ushort Source, ushort Value, ushort Offset, InstructionBank BankId)
+{
+    string GetDebuggerDisplay()
+    {
+        return $"{Kind} Offset = 0x{Offset:X4}, Source = 0x{Source:X4}, Value = 0x{Value:X4}";
     }
 }

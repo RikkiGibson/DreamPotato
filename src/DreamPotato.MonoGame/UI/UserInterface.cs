@@ -13,6 +13,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 
 using DreamPotato.Core;
+using DreamPotato.Core.SFRs;
 
 using Humanizer;
 
@@ -25,6 +26,7 @@ using Microsoft.Xna.Framework.Input;
 using NativeFileDialogSharp;
 
 using Numerics = System.Numerics;
+using WB = DreamPotato.Core.Waterbear;
 
 namespace DreamPotato.MonoGame.UI;
 
@@ -40,6 +42,7 @@ enum PendingCommandKind
     None,
     NewVmu,
     OpenVmu,
+    OpenFolder,
     OpenRecent,
     Reset,
     Exit
@@ -167,6 +170,28 @@ partial class UserInterface
     private readonly string _displayVersion;
     private readonly string _commitId;
 
+    // Debugger UI state
+
+    private static readonly uint Debug_ColorPc = ImGui.GetColorU32(new Numerics.Vector4(99.0f/255, 92.0f/255, 31.0f/255, 1));
+    private static readonly uint Debug_ColorStack = ImGui.GetColorU32(new Numerics.Vector4(53.0f/255, 50.0f/255, 18.0f/255, 1));
+    private static readonly Numerics.Vector4 Debug_ColorScrollHighlight = new Numerics.Vector4(58.0f/255, 103.0f/255, 160.0f/255, 1);
+
+    internal bool Debugger_Show = false;
+
+    /// <summary>Set to scroll to an instruction in a particular bank on the next frame.</summary>
+    // TODO: breakpoints list is flickering the frame after setting this
+    private (bool scroll, int fadeoutFrames, int index, InstructionBank bankId) _debugger_ScrollToDisasm;
+    private const int Debugger_HighlightDurationFrames = 60;
+    private const int Debugger_HighlightBeginFadeoutFrames = 30;
+    private void Debugger_ScrollToDisasm(int index, InstructionBank bankId)
+    {
+        // Index needed for two reasons
+        // 1: scroll to it
+        // 2: highlight/fade-out
+        _debugger_ScrollToDisasm = (scroll: true, fadeoutFrames: Debugger_HighlightDurationFrames, index, bankId);
+    }
+
+
     internal PendingCommand PendingCommand { get; private set; }
 
     public UserInterface(Game1 game)
@@ -200,7 +225,7 @@ partial class UserInterface
         unsafe
         {
             // Note: if we supported tearing down the UserInterface then we would want to take care to dispose of the handle.
-            var iniFilename = Encoding.UTF8.GetBytes($"{AppContext.BaseDirectory}/Data/imgui.ini\0");
+            var iniFilename = Encoding.UTF8.GetBytes($"{Vmu.UserDataFolder}/imgui.ini\0");
             _iniFilenameHandle = GCHandle.Alloc(iniFilename, GCHandleType.Pinned);
             fixed (byte* ptr = iniFilename)
             {
@@ -234,6 +259,7 @@ partial class UserInterface
     /// <summary>Show a modal asking user to confirm a "destructive" command</summary>
     internal void ShowConfirmCommandDialog(PendingCommandKind commandKind, VmuPresenter? vmuPresenter, string? filePath = null)
     {
+        Debug.Assert(commandKind is not PendingCommandKind.OpenRecent || filePath is { });
         Pause();
         PendingCommand = PendingCommand.ShowDialog(commandKind, vmuPresenter, filePath);
     }
@@ -258,7 +284,7 @@ partial class UserInterface
         var vmu = presenter.Vmu;
         if (vmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.OpenRecent, State: ConfirmationState.Confirmed })
         {
-            ShowConfirmCommandDialog(PendingCommandKind.OpenRecent, presenter);
+            ShowConfirmCommandDialog(PendingCommandKind.OpenRecent, presenter, filePath);
             return;
         }
 
@@ -274,7 +300,23 @@ partial class UserInterface
             return;
         }
 
-        var result = Dialog.FileOpen("vmu,bin,vms", defaultPath: null);
+        var result = Dialog.FileOpen("vmu,bin,vms,dci", defaultPath: null);
+        if (result.IsOk)
+        {
+            _game.LoadAndStartVmsOrVmuFile(presenter, result.Path);
+        }
+    }
+
+    internal void OpenFolderDialog(VmuPresenter presenter)
+    {
+        var vmu = presenter.Vmu;
+        if (vmu.HasUnsavedChanges && PendingCommand is not { Kind: PendingCommandKind.OpenFolder, State: ConfirmationState.Confirmed })
+        {
+            ShowConfirmCommandDialog(PendingCommandKind.OpenFolder, presenter);
+            return;
+        }
+
+        var result = Dialog.FolderPicker(defaultPath: null);
         if (result.IsOk)
         {
             _game.LoadAndStartVmsOrVmuFile(presenter, result.Path);
@@ -330,6 +372,7 @@ partial class UserInterface
         LayoutSecondaryMenuBar();
 
         LayoutSettings();
+        LayoutDebugger();
 
         LayoutKeyMapping();
         LayoutEditKey();
@@ -341,7 +384,8 @@ partial class UserInterface
 
         LayoutFastForwardOrPauseIndicators();
         LayoutToast();
-}
+    }
+
 
     private void LayoutFastForwardOrPauseIndicators()
     {
@@ -433,18 +477,30 @@ partial class UserInterface
         ImGui.BeginMenuBar();
         if (ImGui.BeginMenu("File"))
         {
-            LayoutNewOpenSaveMenuItems(presenter);
-            ImGui.Separator();
-            if (ImGui.MenuItem(_game.UseSecondaryVmu ? "Close Slot 2 VMU" : "Open Slot 2 VMU"))
+            if (_game.IsIntegratedMode)
             {
-                _game.Configuration_ExpansionSlotsChanged(
-                    _game.UseSecondaryVmu ? ExpansionSlots.Slot1 : ExpansionSlots.Slot1And2);
+                var vmu = presenter.Vmu;
+                ImGui.TextUnformatted("Integrated mode");
+                ImGui.Separator();
+
+                bool isFileLoaded = vmu.LoadedPath is { };
+                if (ImGui.MenuItem(isFileLoaded ? Path.GetFileName(vmu.LoadedPath.AsSpan()) : "No VMU file open", enabled: isFileLoaded))
+                    RevealFileInExplorer(vmu.LoadedPath!);
             }
+            else
+            {
+                LayoutNewOpenSaveMenuItems(presenter);
+                ImGui.Separator();
+                if (ImGui.MenuItem(_game.UseSecondaryVmu ? "Close Slot 2 VMU" : "Open Slot 2 VMU"))
+                {
+                    _game.Configuration_ExpansionSlotsChanged(
+                        _game.UseSecondaryVmu ? ExpansionSlots.Slot1 : ExpansionSlots.Slot1And2);
+                }
 
-            ImGui.Separator();
-            if (ImGui.MenuItem("Quit"))
-                _game.Exit();
-
+                ImGui.Separator();
+                if (ImGui.MenuItem("Quit"))
+                    _game.Exit();
+            }
             ImGui.EndMenu();
         }
 
@@ -474,13 +530,7 @@ partial class UserInterface
 
             if (ImGui.MenuItem("Open Data Folder"))
             {
-                new Process()
-                {
-                    StartInfo = new ProcessStartInfo(Vmu.DataFolder)
-                    {
-                        UseShellExecute = true,
-                    }
-                }.Start();
+                Process.Start(new ProcessStartInfo(Vmu.UserDataFolder) { UseShellExecute = true });
             }
 
             if (ImGui.BeginMenu("Set Window Size"))
@@ -587,7 +637,7 @@ partial class UserInterface
             }
 
             ImGui.Separator();
-            using (new DisabledScope(vmu.LoadedFilePath is null || vmu.IsOtherVmuConnected))
+            using (new DisabledScope(vmu.LoadedPath is null || vmu.IsOtherVmuConnected))
             {
                 if (ImGui.MenuItem("Save State"))
                     SaveStateWithThumbnail(presenter);
@@ -640,6 +690,15 @@ partial class UserInterface
             if (ImGui.MenuItem("Take Screenshot"))
                 presenter.TakeScreenshot();
 
+            if (ImGui.MenuItem(Debugger_Show ? "Close Debugger" : "Open Debugger"))
+            {
+                Debugger_Show = !Debugger_Show;
+                if (Debugger_Show)
+                    _game.InitializeDebugInfo();
+
+                _game.UpdateScaleMatrix();
+            }
+
             ImGui.EndMenu();
         }
     }
@@ -649,12 +708,12 @@ partial class UserInterface
         presenter.Vmu.SaveState(_game.Configuration.CurrentSaveStateSlot.ToString());
         var stateInfo = presenter == _game.PrimaryVmuPresenter ? _primarySaveStateInfo : _secondarySaveStateInfo;
         stateInfo.InvalidateThumbnail();
-        ShowScreenshotToast(presenter, $"Saved state to slot {_game.Configuration.CurrentSaveStateSlot+1}", durationFrames: 2 * 60);
+        ShowScreenshotToast(presenter, $"Saved state to slot {_game.Configuration.CurrentSaveStateSlot + 1}", durationFrames: 2 * 60);
     }
 
     private void UpdateThumbnail(Vmu vmu, SaveStateInfo stateInfo)
     {
-        var filePath = vmu.LoadedFilePath is null ? null : Vmu.GetSaveStatePath(vmu.LoadedFilePath, id: _game.Configuration.CurrentSaveStateSlot.ToString());
+        var filePath = vmu.LoadedPath is null ? null : Vmu.GetSaveStatePath(vmu.LoadedPath, id: _game.Configuration.CurrentSaveStateSlot.ToString());
 
         // thumbnail up to date
         if (stateInfo.StateFilePath == filePath)
@@ -669,7 +728,7 @@ partial class UserInterface
         {
             var vmuScreenData = new Color[Display.ScreenWidth * Display.ScreenHeight];
             Array.Fill(vmuScreenData, _game.ColorPalette.Screen0);
-            if (filePath is null || !File.Exists(filePath))
+            if (!File.Exists(filePath))
                 return vmuScreenData;
 
             try
@@ -706,16 +765,22 @@ partial class UserInterface
         ImGui.BeginMenuBar();
         if (ImGui.BeginMenu(vmu.HasUnsavedChanges ? "* File" : "File"))
         {
-            if (vmu.LoadedFilePath is not null)
+            if (_game.IsIntegratedMode)
             {
-                ImGui.TextUnformatted(Path.GetFileName(vmu.LoadedFilePath.AsSpan()));
+                ImGui.TextUnformatted($"Integrated mode");
                 ImGui.Separator();
+                bool isFileLoaded = vmu.LoadedPath is { };
+                if (ImGui.MenuItem(isFileLoaded ? Path.GetFileName(vmu.LoadedPath.AsSpan()) : "No VMU file open", enabled: isFileLoaded))
+                    RevealFileInExplorer(vmu.LoadedPath!);
             }
+            else
+            {
+                LayoutNewOpenSaveMenuItems(presenter);
+                ImGui.Separator();
+                if (ImGui.MenuItem("Close Slot 2 VMU"))
+                    _game.Configuration_ExpansionSlotsChanged(ExpansionSlots.Slot1);
 
-            LayoutNewOpenSaveMenuItems(presenter);
-            ImGui.Separator();
-            if (ImGui.MenuItem("Close Slot 2 VMU"))
-                _game.Configuration_ExpansionSlotsChanged(ExpansionSlots.Slot1);
+            }
 
             ImGui.EndMenu();
         }
@@ -750,6 +815,51 @@ partial class UserInterface
         ImGui.End();
     }
 
+    private static void RevealFileInExplorer(string filePath)
+    {
+        if (Directory.Exists(filePath))
+        {
+            // Open the directory itself in platform-specific file browser
+            Process.Start(new ProcessStartInfo(filePath) { UseShellExecute = true });
+            return;
+        }
+
+        // Open containing directory with the file highlighted
+        // TODO: test Linux
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            Process.Start("explorer.exe", $"/select,\"{filePath}\"");
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            Process.Start("open", $"-R \"{filePath}\"");
+        }
+        else
+        {
+            // Try D-Bus FileManager1 interface (works with most Linux file managers).
+            // Falls back to just opening the containing directory.
+            var uri = "file://" + Uri.EscapeDataString(filePath).Replace("%2F", "/");
+            var result = Process.Start(new ProcessStartInfo
+            {
+                FileName = "dbus-send",
+                Arguments = $"--session --dest=org.freedesktop.FileManager1 "
+                        + $"--type=method_call /org/freedesktop/FileManager1 "
+                        + $"org.freedesktop.FileManager1.ShowItems "
+                        + $"array:string:\"{uri}\" string:\"\"",
+                UseShellExecute = false,
+            });
+
+            // If dbus-send isn't available or fails, fall back to opening the folder
+            if (result is null || (result.WaitForExit(1000) && result.ExitCode != 0))
+            {
+                Process.Start(new ProcessStartInfo(Path.GetDirectoryName(filePath)!)
+                {
+                    UseShellExecute = true,
+                });
+            }
+        }
+    }
+
     private void LayoutVmusConnectedIcon()
     {
         if (_game.PrimaryVmu.IsOtherVmuConnected)
@@ -775,11 +885,27 @@ partial class UserInterface
 
     private void LayoutNewOpenSaveMenuItems(VmuPresenter presenter)
     {
+        Debug.Assert(!_game.IsIntegratedMode && _game.RecentFilesInfo is { });
+        
+        var vmu = presenter.Vmu;
+        if (vmu.LoadedPath != null)
+        {
+            if (ImGui.MenuItem(BreakLines(Path.GetFileName(vmu.LoadedPath.AsSpan()), MaxFileNameLength, maxLineCount: 2)))
+                RevealFileInExplorer(vmu.LoadedPath);
+
+            ImGui.Separator();
+        }
+
         if (ImGui.MenuItem("New VMU"))
             NewVmu(presenter);
 
+        ImGui.Separator();
+
         if (ImGui.MenuItem("Open"))
             OpenVmuDialog(presenter);
+
+        if (ImGui.MenuItem("Open Folder"))
+            OpenFolderDialog(presenter);
 
         var (displayFileNames, recentFilePaths) = calcRecentFilesInfo();
         if (ImGui.BeginMenu("Open Recent", enabled: recentFilePaths.Any()))
@@ -798,6 +924,8 @@ partial class UserInterface
             ImGui.EndMenu();
         }
 
+        ImGui.Separator();
+
         if (ImGui.MenuItem("Save As"))
         {
             var result = Dialog.FileSave(filterList: "vmu,bin", defaultPath: null);
@@ -807,27 +935,38 @@ partial class UserInterface
             }
         }
 
+        if (ImGui.MenuItem("Save As Folder"))
+        {
+            var result = Dialog.FolderPicker(defaultPath: null);
+            if (result.IsOk)
+            {
+                if (_game.SaveVmuAsFolder(presenter.Vmu, result.Path) is (false, var error))
+                    ShowToast(presenter, error ?? "Unknown error");
+            }
+        }
+
         (string[] displayFileNames, ImmutableArray<string> recentFiles) calcRecentFilesInfo()
         {
             var recentFiles = _game.RecentFilesInfo.RecentFiles;
-            const int maxFileNameLength = 18;
             string[] displayFileNames = new string[recentFiles.Length];
             for (var i = 0; i < recentFiles.Length; i++)
             {
                 var fileName = Path.GetFileName(recentFiles[i]);
-                var oversize = fileName.Length > maxFileNameLength;
-                displayFileNames[i] = oversize ? BreakLines(fileName, maxFileNameLength) : fileName;
+                var oversize = fileName.Length > MaxFileNameLength;
+                displayFileNames[i] = oversize ? BreakLines(fileName, MaxFileNameLength) : fileName;
             }
 
             return (displayFileNames, recentFiles);
         }
     }
 
-    private static string BreakLines(ReadOnlySpan<char> span, int maxLineLength)
+    private const int MaxFileNameLength = 18;
+    private static string BreakLines(ReadOnlySpan<char> span, int maxLineLength, int maxLineCount = int.MaxValue)
     {
         var builder = new StringBuilder();
         var i = 0;
         var previousMatchIndex = 0;
+        var lineCount = 0;
         var pattern = BreakLinesPattern();
         foreach (ValueMatch match in pattern.EnumerateMatches(span))
         {
@@ -839,8 +978,17 @@ partial class UserInterface
                 if (i != endIndex)
                     i = endIndex;
 
+                if (lineCount > maxLineCount)
+                {
+                    // cut off early
+                    return builder.ToString();
+                }
+
                 if (i != span.Length)
+                {
                     builder.AppendLine();
+                    lineCount++;
+                }
             }
 
             previousMatchIndex = match.Index;
@@ -869,15 +1017,17 @@ partial class UserInterface
             if (Checkbox("Auto-initialize date on startup", ref autoInitializeDate, paddingY: 1))
                 _game.Configuration_AutoInitializeDateChanged(autoInitializeDate);
 
-
             var anyButtonWakesFromSleep = configuration.AnyButtonWakesFromSleep;
             if (Checkbox("Any button wakes from sleep", ref anyButtonWakesFromSleep, paddingY: 1))
                 _game.Configuration_AnyButtonWakesFromSleepChanged(anyButtonWakesFromSleep);
 
-
             var preserveAspectRatio = configuration.PreserveAspectRatio;
             if (Checkbox("Preserve aspect ratio", ref preserveAspectRatio, paddingY: 1))
                 _game.Configuration_PreserveAspectRatioChanged(preserveAspectRatio);
+
+            var autoDockEject = configuration.AutoDockEject;
+            if (Checkbox("Dock/eject when Flycast connected", ref autoDockEject, paddingY: 1))
+                _game.Configuration_AutoDockEjectChanged(autoDockEject);
 
             // Volume
             ImGui.Text("Volume");
@@ -910,7 +1060,36 @@ partial class UserInterface
                 }
             }
 
+            // File Format
+            {
+                ImGui.Text("Preferred File Format");
+                ImGui.SameLine();
+
+                ImGui.SameLine();
+                ImGui.Text("(?)");
+                if (ImGui.IsItemHovered())
+                {
+                    ImGui.BeginTooltip();
+                    ImGui.Text("""
+                        Sets the file format used for
+                        "Save As Folder" and similar commands.
+                        """);
+                    ImGui.EndTooltip();
+                }
+                ImGui.SameLine();
+
+                var fileFormat = configuration.PreferredFileFormat;
+                var selectedIndex = (int)fileFormat;
+                ImGui.SetNextItemWidth(CalcComboWidth(longestItem: FileFormatExtensions.Names[0]));
+                ImGui.PushID("PreferredFileFormatCombo");
+                ImGui.Combo("", ref selectedIndex, FileFormatExtensions.Names, FileFormatExtensions.Names.Length);
+                ImGui.PopID();
+                if ((int)fileFormat != selectedIndex)
+                    _game.Configuration_PreferredFileFormatChanged((FileFormat)selectedIndex);
+            }
+
             // Dreamcast Port
+            if (!_game.IsIntegratedMode)
             {
                 ImGui.Text("Dreamcast controller port");
                 ImGui.SameLine();
@@ -933,6 +1112,505 @@ partial class UserInterface
             // text size + padding + arrow button size
             return ImGui.CalcTextSize(longestItem).X + ImGui.GetStyle().FramePadding.X * 2.0f + ImGui.GetFrameHeight();
         }
+    }
+
+    private void LayoutDebugger()
+    {
+        var localDebuggerShow = Debugger_Show;
+        if (!localDebuggerShow)
+            return;
+
+        var debugInfo = _game.PrimaryVmu.LazyDebugInfo;
+        Debug.Assert(debugInfo is not null);
+
+        if (ImGui.Begin("Debugger", ref Debugger_Show, ImGuiWindowFlags.NoScrollbar))
+        {
+            if (ImGui.BeginTabBar("InstructionBanks"))
+            {
+                // Note: We need to drop down into unsafe code, to pass `p_open: null`, and also pass `flags`.
+                // See https://github.com/ImGuiNET/ImGui.NET/issues/135
+                unsafe
+                {
+                    fixed (byte* label = "ROM"u8)
+                    {
+                        var flags = _debugger_ScrollToDisasm is { scroll: true, bankId: InstructionBank.ROM } ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
+                        if (ImGuiNative.igBeginTabItem(label, p_open: null, flags) != 0)
+                        {
+                            layoutTab(InstructionBank.ROM);
+                            ImGui.EndTabItem();
+                        }
+                    }
+
+                    fixed (byte* label = "FlashBank0"u8)
+                    {
+                        var flags = _debugger_ScrollToDisasm is { scroll: true, bankId: InstructionBank.FlashBank0 } ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
+                        if (ImGuiNative.igBeginTabItem(label, p_open: null, flags) != 0)
+                        {
+                            layoutTab(InstructionBank.FlashBank0);
+                            ImGui.EndTabItem();
+                        }
+                    }
+                }
+
+                ImGui.EndTabBar();
+            }
+        }
+
+        if (localDebuggerShow != Debugger_Show)
+            _game.UpdateScaleMatrix();
+
+        // Note: End() is called even when Begin() returned false to handle collapsed state
+        ImGui.End();
+
+        void layoutTab(InstructionBank bankId)
+        {
+            if (ImGui.BeginTable(bankId.ToString(), columns: 2, ImGuiTableFlags.Resizable))
+            {
+                ImGui.TableSetupColumn("Disassembly", ImGuiTableColumnFlags.WidthStretch);
+                ImGui.TableSetupColumn("Tools");
+                ImGui.TableHeadersRow();
+
+                ImGui.TableNextColumn();
+                layoutDisasm(bankId);
+
+                ImGui.TableNextColumn();
+                layoutControls();
+                ImGui.Separator();
+                layoutWatch(bankId);
+                layoutLabels(bankId);
+                layoutBreakpoints(bankId);
+                layoutStack();
+
+                ImGui.EndTable();
+            }
+        }
+
+        void layoutDisasm(InstructionBank bankId)
+        {
+            if (ImGui.BeginTable("disasm", columns: 1, flags: ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.ScrollY))
+            {
+                var cpu = _game.PrimaryVmu._cpu;
+                var executingInThisBank = bankId == cpu.CurrentInstructionBankId;
+                var bankInfo = debugInfo.GetBankInfo(bankId);
+                var waterbearInfo = bankInfo.WaterbearInfo;
+                var disasm = bankInfo.DisasmEntries;
+
+                // Render only the visible list items
+                var clipperData = new ImGuiListClipper();
+                ImGuiListClipperPtr clipper;
+                unsafe
+                {
+                    clipper = new ImGuiListClipperPtr(&clipperData);
+                }
+
+                clipper.Begin(disasm.Count);
+                if (_debugger_ScrollToDisasm.scroll)
+                    clipper.IncludeItemByIndex(_debugger_ScrollToDisasm.index);
+
+                while (clipper.Step())
+                {
+                    for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
+                    {
+                        ImGui.PushID(i);
+                        // We either have a label or an instruction
+                        var disasmEntry = disasm[i];
+                        if (disasmEntry.Label is { } label)
+                        {
+                            ImGui.TableNextColumn();
+                            if (ImGui.Selectable($"{label.DisplayLabel(bankInfo.WaterbearInfo)}:"))
+                                ImGui.OpenPopup("label_ReachableFrom");
+
+                            if (ImGui.BeginPopup("label_ReachableFrom"))
+                            {
+                                ImGui.Text("Reachable from:");
+                                ImGui.Separator();
+                                foreach (var reachableFrom in label.ReachableFrom)
+                                {
+                                    var reachableFromInst = bankInfo.GetInstruction(reachableFrom);
+                                    var instDisplay = reachableFromInst.DisplayInstruction(waterbearInfo);
+                                    if (ImGui.Selectable($"{reachableFrom:X4} {instDisplay}"))
+                                    {
+                                        var disasmIndex = bankInfo.BinarySearchDisasm(reachableFrom);
+                                        Debugger_ScrollToDisasm(disasmIndex, bankId);
+                                    }
+                                }
+                                ImGui.EndPopup();
+                            }
+
+                            ImGui.PopID();
+                            continue;
+                        }
+
+                        var inst = disasmEntry.Instruction;
+                        Debug.Assert(inst.HasInstruction);
+                        ImGui.TableNextColumn();
+
+                        // Set background color
+                        if (executingInThisBank && _game.PrimaryVmu._cpu.ProgramCounter == inst.Offset)
+                        {
+                            ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, Debug_ColorPc);
+                        }
+                        else if (shouldHighlightStackEntry())
+                        {
+                            ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, Debug_ColorStack);
+                        }
+                        else if (i == _debugger_ScrollToDisasm.index
+                            && _debugger_ScrollToDisasm.fadeoutFrames > 0)
+                        {
+                            var opacity = _debugger_ScrollToDisasm.fadeoutFrames < Debugger_HighlightBeginFadeoutFrames
+                                ? (float)_debugger_ScrollToDisasm.fadeoutFrames / Debugger_HighlightBeginFadeoutFrames
+                                : 1f;
+                            var color = ImGui.GetColorU32(Debug_ColorScrollHighlight with { W = opacity });
+                            ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, color);
+                            _debugger_ScrollToDisasm.fadeoutFrames--;
+                            if (_debugger_ScrollToDisasm.fadeoutFrames == 0)
+                                _debugger_ScrollToDisasm = default;
+                        }
+
+                        bool shouldHighlightStackEntry()
+                        {
+                            foreach (var entry in _game.PrimaryVmu._cpu.StackData)
+                            {
+                                if (entry.Kind == StackValueKind.Push)
+                                    continue;
+
+                                var callAddr = entry.Source;
+                                if (inst.Offset == callAddr && bankId == entry.BankId)
+                                {
+                                    return true;
+                                }
+                            }
+
+                            return false;
+                        }
+
+                        ImGui.PushID("breakpoint");
+
+                        var bpIndex = bankInfo.Breakpoints.FindIndex(bp => bp.Offset == inst.Offset);
+                        var breakpointExists = bpIndex != -1;
+                        if (ImGui.Checkbox("", ref breakpointExists))
+                        {
+                            if (breakpointExists) // Create new
+                            {
+                                bankInfo.Breakpoints.Add(new BreakpointInfo { Enabled = true, Offset = inst.Offset });
+                            }
+                            else if (bpIndex != -1) // Remove
+                            {
+                                bankInfo.Breakpoints.RemoveAt(bpIndex);
+                            }
+                        }
+
+                        ImGui.PopID();
+
+                        ImGui.SameLine();
+                        ImGui.Text(inst.Offset.ToString("X4"));
+
+                        ImGui.SameLine();
+
+                        if (inst.GetBranchAddress(bankInfo) is ushort destAddress)
+                        {
+                            if (ImGui.Selectable(inst.DisplayInstruction(waterbearInfo)))
+                            {
+                                var disasmIndex = bankInfo.BinarySearchDisasm(destAddress);
+                                Debugger_ScrollToDisasm(disasmIndex, bankId);
+                            }
+                        }
+                        else
+                        {
+                            ImGui.Text(inst.DisplayInstruction(waterbearInfo));
+                        }
+
+                        ImGui.PopID();
+
+                        if (_debugger_ScrollToDisasm.scroll && i == _debugger_ScrollToDisasm.index)
+                        {
+                            ImGui.SetScrollHereY();
+                            _debugger_ScrollToDisasm.scroll = false;
+                        }
+
+                        if (ImGui.IsItemHovered())
+                        {
+                            var argumentValues = inst.DisplayArgumentValues(_game.PrimaryVmu._cpu);
+                            if (argumentValues.Length != 0 && ImGui.BeginTooltip())
+                            {
+                                ImGui.Text(argumentValues);
+                                ImGui.EndTooltip();
+                            }
+                        }
+                    }
+                }
+
+                ImGui.EndTable();
+            }
+        }
+
+        void layoutControls()
+        {
+            var bankInfo = debugInfo.CurrentBankInfo;
+            var breakState = debugInfo.DebuggingState == DebuggingState.Break;
+            if (ImGui.Checkbox("Break", ref breakState))
+                debugInfo.ToggleDebugBreak();
+
+            if (ImGui.Button("Step In"))
+                debugInfo.StepIn();
+
+            if (ImGui.Button("Step Out"))
+                debugInfo.StepOut();
+        }
+
+        void layoutLabels(InstructionBank bankId)
+        {
+            var bankInfo = debugInfo.GetBankInfo(bankId);
+            if (!ImGui.CollapsingHeader("Labels", ImGuiTreeNodeFlags.DefaultOpen))
+                return;
+
+            if (!ImGui.BeginChild("Labels", size: new Numerics.Vector2(x: 0, y: 200), ImGuiChildFlags.ResizeY))
+                return;
+
+            if (ImGui.BeginTable("Labels", columns: 1, flags: ImGuiTableFlags.BordersInnerV))
+            {
+                var labels = bankInfo.Labels;
+                for (var i = 0; i < labels.Count; i++)
+                {
+                    var label = labels[i];
+                    ImGui.PushID(i);
+                    ImGui.TableNextColumn();
+
+                    var inst = bankInfo.GetInstruction(label.Offset);
+                    if (inst.HasInstruction)
+                    {
+                        if (ImGui.Selectable(label.DisplayLabel(bankInfo.WaterbearInfo)))
+                            Debugger_ScrollToDisasm(bankInfo.BinarySearchDisasm(inst.Offset), bankId);
+                    }
+                    else
+                    {
+                        ImGui.Text($"{label.DisplayLabel(bankInfo.WaterbearInfo)} (data)");
+                    }
+
+                    ImGui.PopID();
+                }
+
+                ImGui.EndTable();
+            }
+            ImGui.EndChild();
+        }
+
+        void layoutBreakpoints(InstructionBank bankId)
+        {
+            if (!ImGui.CollapsingHeader("Breakpoints", ImGuiTreeNodeFlags.DefaultOpen))
+                return;
+
+            if (ImGui.BeginTable("Breakpoints", columns: 3, flags: ImGuiTableFlags.BordersInnerV))
+            {
+                ImGui.TableSetupColumn("breakpoints", ImGuiTableColumnFlags.WidthFixed);
+                ImGui.TableSetupColumn("addresses", ImGuiTableColumnFlags.WidthFixed);
+                ImGui.TableSetupColumn("symbols", ImGuiTableColumnFlags.WidthStretch);
+
+                var bankInfo = debugInfo.GetBankInfo(bankId);
+                var breakpoints = bankInfo.Breakpoints;
+                for (var i = 0; i < breakpoints.Count; i++)
+                {
+                    ImGui.PushID(i);
+                    ImGui.TableNextColumn();
+
+                    bool enabled = breakpoints[i].Enabled;
+                    if (ImGui.Checkbox("", ref enabled))
+                        breakpoints[i].Enabled = enabled;
+
+                    ImGui.TableNextColumn();
+
+                    // If you place a breakpoint at an offset,
+                    // it means you think the offset has executable code in it
+                    var inst = bankInfo.GetOrLoadInstruction(breakpoints[i].Offset);
+                    if (ImGui.Selectable(inst.Offset.ToString("X4")))
+                    {
+                        Debugger_ScrollToDisasm(bankInfo.BinarySearchDisasm(inst.Offset), bankId);
+                    }
+
+                    ImGui.TableNextColumn();
+                    ImGui.Text(inst.DisplayInstruction(bankInfo.WaterbearInfo));
+                    ImGui.PopID();
+                }
+
+                ImGui.EndTable();
+            }
+        }
+
+        void layoutStack()
+        {
+            if (!ImGui.CollapsingHeader("Stack", ImGuiTreeNodeFlags.DefaultOpen))
+                return;
+
+            if (ImGui.BeginTable("stack", columns: 3, flags: ImGuiTableFlags.BordersInnerV))
+            {
+                ImGui.TableSetupColumn("breakpoints", ImGuiTableColumnFlags.WidthFixed);
+                ImGui.TableSetupColumn("addresses", ImGuiTableColumnFlags.WidthFixed);
+                ImGui.TableSetupColumn("instructions");
+
+                var cpu = _game.PrimaryVmu._cpu;
+                var stackData = cpu.StackData;
+                // always show a stack entry for "where we are right now"
+                layoutStackEntry(
+                    stackData.Count,
+                    new StackEntry(
+                        StackValueKind.CallReturn,
+                        Interrupt: 0,
+                        Source: cpu.ProgramCounter,
+                        Value: 0,
+                        Offset: 0,
+                        cpu.CurrentInstructionBankId));
+                for (var i = stackData.Count - 1; i >= 0; i--)
+                    layoutStackEntry(i, stackData[i]);
+
+                ImGui.EndTable();
+            }
+
+            void layoutStackEntry(int i, StackEntry entry)
+            {
+                if (entry.Kind == StackValueKind.Push)
+                    return; // TODO: display these
+
+                ImGui.PushID(i);
+                if (entry.Kind == StackValueKind.InterruptReturn)
+                {
+                    ImGui.TableNextColumn();
+                    ImGui.TableNextColumn();
+                    ImGui.Text($"INTERRUPT");
+                    ImGui.TableNextColumn();
+                    ImGui.Text(entry.Interrupt.ToString());
+                }
+
+                ImGui.TableNextColumn();
+                var bankInfo = debugInfo.GetBankInfo(entry.BankId);
+                var callAddr = entry.Source;
+                var bpIndex = bankInfo.Breakpoints.FindIndex(bp => bp.Offset == callAddr);
+                var breakpointExists = bpIndex != -1;
+
+                ImGui.PushID("breakpoint");
+                if (ImGui.Checkbox("", ref breakpointExists))
+                {
+                    if (breakpointExists) // Create new
+                    {
+                        bankInfo.Breakpoints.Add(new BreakpointInfo { Enabled = true, Offset = callAddr });
+                    }
+                    else if (bpIndex != -1) // Remove
+                    {
+                        bankInfo.Breakpoints.RemoveAt(bpIndex);
+                    }
+                }
+                ImGui.PopID();
+
+                ImGui.TableNextColumn();
+
+                var index = bankInfo.BinarySearchInstructions(callAddr);
+                if (index < 0)
+                {
+                    // If we got here, it means the code we were returning to,
+                    // was overwritten in flash, while we were still going to return to it.
+                    ImGui.Text("ERROR");
+                    ImGui.TableNextColumn();
+                    ImGui.Text("");
+                }
+                else
+                {
+                    var inst = bankInfo.Instructions[index];
+                    if (ImGui.Selectable(inst.Offset.ToString("X4")))
+                    {
+                        Debugger_ScrollToDisasm(bankInfo.BinarySearchDisasm(inst.Offset), entry.BankId);
+                    }
+                    ImGui.TableNextColumn();
+                    ImGui.Text(inst.DisplayInstruction(bankInfo.WaterbearInfo));
+                }
+
+                ImGui.PopID();
+            }
+        }
+
+        void layoutWatch(InstructionBank bankId)
+        {
+            if (!ImGui.CollapsingHeader("Watch", ImGuiTreeNodeFlags.DefaultOpen))
+                return;
+
+            if (!ImGui.BeginChild("Watch", size: new Numerics.Vector2(x: 0, y: 80), ImGuiChildFlags.ResizeY))
+                return;
+
+            var memory = _game.PrimaryVmu._cpu.Memory;
+            if (debugInfo.GetBankInfo(bankId).WaterbearInfo is { } waterbearInfo)
+            {
+                if (waterbearInfo.ConstantsBySource.Length == 1)
+                {
+                    layoutOneWaterbearSourceWatch(waterbearInfo.ConstantsBySource[0], memory);
+                }
+                else
+                {
+                    for (int i = 0; i < waterbearInfo.ConstantsBySource.Length; i++)
+                    {
+                        var sourceName = Path.GetFileName(waterbearInfo.Sources[i].Path.AsSpan());
+                        if (ImGui.TreeNode(sourceName))
+                        {
+                            layoutOneWaterbearSourceWatch(waterbearInfo.ConstantsBySource[i], memory);
+                            ImGui.TreePop();
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // TODO: it seems like it would be better to use one representation of the watch value and share the UI code
+                if (ImGui.BeginTable("watch", columns: 2, flags: ImGuiTableFlags.BordersInnerV))
+                {
+                    ImGui.TableSetupColumn("expression");
+                    ImGui.TableSetupColumn("value");
+
+                    var watches = debugInfo.Watches;
+                    for (int i = 0; i < watches.Count; i++)
+                    {
+                        var watch = watches[i];
+                        ImGui.TableNextColumn();
+                        ImGui.Text(watch.ToString());
+
+                        ImGui.TableNextColumn();
+                        ImGui.Text($"{memory.Read(watch.Offset, doSideEffects: false):X2}H");
+                    }
+
+                    ImGui.EndTable();
+                }
+            }
+
+            ImGui.EndChild();
+
+            void layoutOneWaterbearSourceWatch(ImmutableArray<WB.Constant> constants, Memory memory)
+            {
+                if (!ImGui.BeginTable("watch", columns: 2, flags: ImGuiTableFlags.BordersInnerV))
+                    return;
+
+                ImGui.TableSetupColumn("expression");
+                ImGui.TableSetupColumn("value");
+                for (int j = 0; j < constants.Length; j++)
+                {
+                    var constant = constants[j];
+                    if (constant.Value >= 0x200)
+                        continue;
+
+                    ImGui.TableNextColumn();
+                    ImGui.Text(constant.Name);
+
+                    ImGui.TableNextColumn();
+                    ImGui.Text($"{memory.Read((ushort)constant.Value, doSideEffects: false):X2}H");
+                }
+
+                ImGui.EndTable();
+            }
+        }
+    }
+
+    internal void OnDebugBreak(InstructionDebugInfo info)
+    {
+        var debugInfo = _game.PrimaryVmu.LazyDebugInfo;
+        Debug.Assert(debugInfo is not null);
+        var bankInfo = debugInfo.CurrentBankInfo;
+        var index = bankInfo.BinarySearchDisasm(info.Offset);
+        Debugger_ScrollToDisasm(index, bankInfo.BankId);
     }
 
     private void LayoutKeyMapping()
@@ -1081,7 +1759,7 @@ partial class UserInterface
             var previewValue = _mappingEditState.GamePadIndex switch
             {
                 InputMappings.GamePadIndex_None => "None",
-                var index => $"{_mappingEditState.GamePadIndex+1}: {GamePad.GetCapabilities(index).DisplayName ?? "<not found>"}"
+                var index => $"{_mappingEditState.GamePadIndex + 1}: {GamePad.GetCapabilities(index).DisplayName ?? "<not found>"}"
             };
             if (ImGui.BeginCombo(label: "", previewValue))
             {
@@ -1096,7 +1774,7 @@ partial class UserInterface
                     if (!capabilities.IsConnected)
                         continue;
 
-                    if (ImGui.Selectable($"{i+1}: {capabilities.DisplayName}"))
+                    if (ImGui.Selectable($"{i + 1}: {capabilities.DisplayName}"))
                         _mappingEditState.GamePadIndex = i;
                 }
 
@@ -1257,7 +1935,7 @@ partial class UserInterface
         var title = PendingCommand.Kind switch
         {
             PendingCommandKind.NewVmu => "Create new VMU without saving?",
-            PendingCommandKind.OpenVmu or PendingCommandKind.OpenRecent => "Open without saving?",
+            PendingCommandKind.OpenVmu or PendingCommandKind.OpenFolder or PendingCommandKind.OpenRecent => "Open without saving?",
             PendingCommandKind.Reset when !_game.UseSecondaryVmu => "Reset?",
             PendingCommandKind.Reset when PendingCommand.VmuPresenter == _game.PrimaryVmuPresenter => "Reset slot 1?",
             PendingCommandKind.Reset => "Reset slot 2?",
@@ -1276,7 +1954,7 @@ partial class UserInterface
             var confirmLabel = PendingCommand.Kind switch
             {
                 PendingCommandKind.NewVmu => "Create",
-                PendingCommandKind.OpenVmu => "Open",
+                PendingCommandKind.OpenVmu or PendingCommandKind.OpenFolder or PendingCommandKind.OpenRecent => "Open",
                 PendingCommandKind.Reset => "Reset",
                 PendingCommandKind.Exit => "Exit",
                 _ => throw new InvalidOperationException(),
@@ -1320,6 +1998,10 @@ partial class UserInterface
                     break;
                 case PendingCommandKind.OpenVmu:
                     OpenVmuDialog(PendingCommand.VmuPresenter ?? throw new InvalidOperationException());
+                    PendingCommand = default;
+                    break;
+                case PendingCommandKind.OpenFolder:
+                    OpenFolderDialog(PendingCommand.VmuPresenter ?? throw new InvalidOperationException());
                     PendingCommand = default;
                     break;
                 case PendingCommandKind.OpenRecent:

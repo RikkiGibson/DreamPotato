@@ -103,6 +103,7 @@ class VmuPresenter
         _dynamicSound = new DynamicSoundEffectInstance(Audio.SampleRate, AudioChannels.Mono);
         _dynamicSound.Play();
         vmu.Audio.AudioBufferReady += Audio_BufferReady;
+        vmu.OpenFileRequested += path => _game1.LoadAndStartVmsOrVmuFile(this, path);
     }
 
     [MemberNotNull(nameof(MonoGame.ButtonChecker))]
@@ -176,6 +177,8 @@ class VmuPresenter
 
         Vmu._cpu.SFRs.P3 = newP3;
         PreviousGamepad = gamepad;
+
+        Vmu.PollFileSystem(now: DateTime.Now);
     }
 
     internal void UpdateAndRun(GameTime gameTime, KeyboardState previousKeys, KeyboardState keyboard)
@@ -332,13 +335,18 @@ class VmuPresenter
         _dynamicSound.SubmitBuffer(args.Buffer, args.Start, args.Length);
     }
 
-    internal void UpdateVolume(int volume)
-        => Vmu.Audio.Volume = volume;
-
     internal void DockOrEject()
     {
         Vmu.DockOrEjectToDreamcast();
-        // Unpause when docking, so that we will be unpaused already when ejecting.
+        // Pausing is disallowed while docked
+        if (Vmu.IsDockedToDreamcast)
+            LocalPaused = false;
+    }
+
+    internal void DockOrEject(bool dock)
+    {
+        Vmu.DockOrEjectToDreamcast(dock);
+        // Pausing is disallowed while docked
         if (Vmu.IsDockedToDreamcast)
             LocalPaused = false;
     }
@@ -352,15 +360,15 @@ class VmuPresenter
     {
         var now = DateTimeOffset.Now;
         var timeDescription = now.ToString($"yyyy-MM-dd_HH-mm-ss");
-        var baseName = Path.GetFileNameWithoutExtension(Vmu.LoadedFilePath) ?? "DreamPotato";
+        var baseName = Path.GetFileNameWithoutExtension(Vmu.LoadedPath) ?? "DreamPotato";
 
-        var screenshotsFolder = Path.Combine(Vmu.DataFolder, "Screenshots");
+        var screenshotsFolder = Path.Combine(Vmu.UserDataFolder, "Screenshots");
         Directory.CreateDirectory(screenshotsFolder);
 
         var filePath = Path.Combine(screenshotsFolder, $"{baseName}_{timeDescription}.png");
-        using var outFile = File.Create(Path.Combine(Vmu.DataFolder, filePath));
+        using var outFile = File.Create(filePath);
         _vmuScreenTexture.SaveAsPng(outFile, _vmuScreenTexture.Width, _vmuScreenTexture.Height);
-        var displayPath = Path.GetRelativePath(AppContext.BaseDirectory, filePath);
+        var displayPath = Path.GetRelativePath(Vmu.UserDataRootFolder, filePath);
         _game1.UserInterface.ShowScreenshotToast(this, $"Screenshot saved to {displayPath}", durationFrames: 3 * 60);
     }
 }

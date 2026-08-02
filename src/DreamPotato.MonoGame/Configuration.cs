@@ -15,13 +15,18 @@ namespace DreamPotato.MonoGame;
 /// If true, skips the date initialization on startup.
 /// Specify false to get the real hardware behavior, like when batteries are first inserted in the VMU.
 /// </param>
+/// <param name="AutoDockEject">
+/// If true, automatically docks/ejects the VMU when a Dreamcast emulator is connected/disconnected.
+/// </param>
 public record Configuration(
     bool AutoInitializeDate = true,
     bool AnyButtonWakesFromSleep = true,
     bool PreserveAspectRatio = true,
+    bool AutoDockEject = true,
     int Volume = Audio.DefaultVolume,
     bool MuteSecondaryVmuAudio = true,
     string? ColorPaletteName = null,
+    FileFormat PreferredFileFormat = FileFormat.VmiVms,
     InputMappings? PrimaryInput = null,
     InputMappings? SecondaryInput = null,
     ViewportSize? ViewportSize = null,
@@ -31,7 +36,7 @@ public record Configuration(
     DreamcastPort DreamcastPort = DreamcastPort.A)
 {
     private const string FileName = "configuration.json";
-    private static string FilePath => Path.Combine(Vmu.DataFolder, FileName);
+    private static string FilePath => Path.Combine(Vmu.UserDataFolder, FileName);
 
     public string ColorPaletteName { get; init; } = ColorPaletteName ?? ColorPalette.White.Name;
     public InputMappings PrimaryInput { get; init; } = SetupPrimaryInput(PrimaryInput);
@@ -66,6 +71,7 @@ public record Configuration(
 
     public void Save()
     {
+        Directory.CreateDirectory(Vmu.UserDataFolder);
         using var fileStream = File.Open(FilePath, FileMode.Create);
         JsonSerializer.Serialize(fileStream, this, ConfigurationJsonSerializerContext.Default.Configuration);
     }
@@ -77,7 +83,17 @@ public record Configuration(
             return Default;
 
         using var fileStream = File.OpenRead(path);
-        return JsonSerializer.Deserialize(fileStream, ConfigurationJsonSerializerContext.Default.Configuration) ?? Default;
+        try
+        {
+            return JsonSerializer.Deserialize(fileStream, ConfigurationJsonSerializerContext.Default.Configuration) ?? Default;
+        }
+        catch (JsonException)
+        {
+            // Note: if the configuration is malformed, this means we will use a default configuration instead,
+            // and overwrite the malformed configuration on exit.
+            // We need to take care that we don't start viewing pre-existing config files as invalid in new versions.
+            return Default;
+        }
     }
 
     public static readonly ImmutableArray<KeyMapping> KeyPreset_WASD = [
@@ -121,7 +137,7 @@ public record Configuration(
     ];
 
     public static readonly ImmutableArray<KeyMapping> DefaultPrimaryKeyPreset = [.. KeyPreset_WASD, .. KeyPreset_MappedStateCommands];
-    public static readonly ImmutableArray<KeyMapping> DefaultSecondaryKeyPreset = [.. KeyPreset_WASD, .. KeyPreset_UnmappedStateCommands];
+    public static readonly ImmutableArray<KeyMapping> DefaultSecondaryKeyPreset = [.. KeyPreset_Arrows, .. KeyPreset_UnmappedStateCommands];
 
     public static readonly ImmutableArray<(string name, string description, ImmutableArray<KeyMapping> mappings)> AllPrimaryKeyPresets = [
         ("WASD", "Uses WASD for D-pad and IJKL for buttons", DefaultPrimaryKeyPreset),

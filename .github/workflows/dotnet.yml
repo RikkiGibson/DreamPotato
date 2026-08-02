@@ -14,9 +14,9 @@ jobs:
   Test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v5
     - name: Download resources
       run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.Tests/Data/american_v1.05.bin
     - name: Restore dependencies
@@ -25,14 +25,14 @@ jobs:
       run: dotnet build --no-restore -bl
     - name: Upload Binlog
       if: failure()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: msbuild.binlog
         path: msbuild.binlog
     - name: Test
       run: dotnet test --logger "trx;LogFileName=test-results.trx" --results-directory "artifacts/TestResults"
     - name: Publish Test Results
-      uses: dorny/test-reporter@v2
+      uses: dorny/test-reporter@v3
       if: ${{ !cancelled() }}
       with:
         name: dotnet test
@@ -42,47 +42,54 @@ jobs:
         list-tests: failed
 
   PublishLinux:
-    runs-on: ubuntu-latest
+    # Use ubuntu-22.04 (Jammy) to build with glibc 2.35
+    # See https://www.ubuntuupdates.org/pm/glibc
+    runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v5
     - name: Download resources
       run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.MonoGame/Data/american_v1.05.bin
     - name: Restore dependencies
       run: dotnet restore
 
-    - name: dotnet publish linux-x64
-      run: dotnet publish src/DreamPotato.MonoGame -r linux-x64
+    - name: Run pack-x64.sh
+      run: ./src/DreamPotato.MonoGame/Linux/pack-x64.sh
     - name: Upload Linux x64
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: DreamPotato-Linux-x64-dev
-        path: artifacts/publish/DreamPotato.MonoGame/release_linux-x64/
+        path: artifacts/DreamPotato-linux-x64.AppImage
 
   PublishWindows:
-    runs-on: windows-latest
+    permissions:
+      id-token: write
+    runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
       - name: Download resources
         run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.MonoGame/Data/american_v1.05.bin
-      - name: Restore dependencies
-        run: dotnet restore
 
       - name: dotnet publish win-x64
-        run: dotnet publish src/DreamPotato.MonoGame -r win-x64
+        run: dotnet publish src/DreamPotato.MonoGame -r win-x64 -p:DebugSymbols=False
+
+      - if: ${{ github.event_name != 'pull_request' }}
+        name: Azure login
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - if: ${{ github.event_name != 'pull_request' }}
         name: Sign files
-        uses: azure/trusted-signing-action@v0
+        uses: azure/artifact-signing-action@v2
         with:
-          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           endpoint: https://wus2.codesigning.azure.net
-          trusted-signing-account-name: DreamPotatoSigning
+          signing-account-name: DreamPotatoSigning
           certificate-profile-name: DreamPotatoPublicCert
           files-folder: artifacts/publish/DreamPotato.MonoGame/release_win-x64/
           files-folder-filter: exe,dll
@@ -91,7 +98,7 @@ jobs:
           timestamp-digest: SHA256
 
       - name: Upload win-x64
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: DreamPotato-Windows-x64-dev
           path: artifacts/publish/DreamPotato.MonoGame/release_win-x64/
@@ -99,15 +106,48 @@ jobs:
   PublishMac:
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v5
     - name: Download resources
       run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.MonoGame/Data/american_v1.05.bin
+
+    - if: ${{ github.event_name != 'pull_request' }}
+      name: Import signing certificate
+      env:
+        APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+        APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      run: |
+        CERTIFICATE_PATH=$RUNNER_TEMP/certificate.p12
+        KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+        KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+
+        echo -n "$APPLE_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+
+        security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+        security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+        security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+        security import $CERTIFICATE_PATH -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+        security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+        security list-keychain -d user -s $KEYCHAIN_PATH
+
+        # Extract the signing identity name
+        IDENTITY=$(security find-identity -v -p codesigning $KEYCHAIN_PATH | grep "Developer ID Application" | head -1 | awk -F'"' '{print $2}')
+        echo "CODESIGN_IDENTITY=$IDENTITY" >> $GITHUB_ENV
+
     - name: Run pack-arm64.sh
+      env:
+        APPLE_ID: ${{ github.event_name != 'pull_request' && secrets.APPLE_ID || '' }}
+        APPLE_ID_PASSWORD: ${{ github.event_name != 'pull_request' && secrets.APPLE_ID_PASSWORD || '' }}
+        APPLE_TEAM_ID: ${{ github.event_name != 'pull_request' && secrets.APPLE_TEAM_ID || '' }}
       run: ./src/DreamPotato.MonoGame/Mac/pack-arm64.sh
+
+    - name: Cleanup keychain
+      if: ${{ always() && github.event_name != 'pull_request' }}
+      run: security delete-keychain $RUNNER_TEMP/app-signing.keychain-db
+
     - name: Upload Mac arm64
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: DreamPotato-Mac-arm64-dev
         path: artifacts/DreamPotato-mac-arm64.zip

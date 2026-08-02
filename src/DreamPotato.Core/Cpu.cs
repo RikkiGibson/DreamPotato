@@ -39,38 +39,21 @@ public class Cpu
     internal Span<byte> FlashBank0 => Flash.AsSpan(0, FlashBankSize);
     internal Span<byte> FlashBank1 => Flash.AsSpan(FlashBankSize, FlashBankSize);
 
-#if DEBUG
-    internal readonly InstructionMap InstructionMap;
-#endif
-
-    internal event Action? UnsavedChangesDetected;
-    internal bool HasUnsavedChanges
+    internal DebugInfo? LazyDebugInfo { get; private set; }
+    internal DebugInfo InitializeDebugInfo()
     {
-        get;
-        set
-        {
-            var isNewUnsavedChanges = !field && value;
-            field = value;
-            if (isNewUnsavedChanges)
-                UnsavedChangesDetected?.Invoke();
-        }
-    }
+        if (LazyDebugInfo is { })
+            throw new InvalidOperationException();
 
-    internal FileStream? VmuFileWriteStream
-    {
-        private get;
-        set
-        {
-            field?.Dispose();
-            field = value;
-        }
+        LazyDebugInfo = new(this);
+        return LazyDebugInfo;
     }
 
     /// <summary>
     /// Allows reading/writing to the VMU file in a thread-safe manner.
     /// </summary>
     internal SafeFileHandle? VmuFileHandle
-        => VmuFileWriteStream?.SafeFileHandle;
+        => FileSystem.VmuFileHandle;
 
     /// <summary>
     /// May point to either ROM (BIOS), flash memory bank 0 or bank 1.
@@ -79,19 +62,23 @@ public class Cpu
     /// Note that we need an extra bit of state here. We can't just look at the value of <see cref="SpecialFunctionRegisters.Ext"/>.
     /// The bank is only actually switched when using a jmpf instruction.
     /// </remarks>
-    public Span<byte> CurrentROMBank => InstructionBank switch
-    {
-        InstructionBank.ROM => ROM,
-        InstructionBank.FlashBank0 => FlashBank0,
-        InstructionBank.FlashBank1 => FlashBank1,
-        _ => throw new InvalidOperationException()
-    };
+    public Span<byte> CurrentInstructionBank => GetRomBank(CurrentInstructionBankId);
 
-    internal InstructionBank InstructionBank { get; private set; }
+    public Span<byte> GetRomBank(InstructionBank bankId) =>
+        bankId switch
+        {
+            InstructionBank.ROM => ROM,
+            InstructionBank.FlashBank0 => FlashBank0,
+            InstructionBank.FlashBank1 => FlashBank1,
+            _ => throw new InvalidOperationException()
+        };
+
+    public InstructionBank CurrentInstructionBankId { get; private set; }
 
     public readonly Memory Memory;
     public readonly Audio Audio;
     public readonly Display Display;
+    internal readonly FileSystem FileSystem;
 
     /// <summary>NOTE: only 'TryReceiveMessage' and 'SendMessage' methods are safe to call from here.</summary>
     public readonly MapleMessageBroker MapleMessageBroker;
@@ -101,6 +88,7 @@ public class Cpu
     private int MapleIOIconTimeout;
 
     internal ushort Pc;
+    public ushort ProgramCounter => Pc;
 
     /// <summary>
     /// After <see cref="Run(long)"/> is called, stores how many more ticks were run than requested,
@@ -142,7 +130,6 @@ public class Cpu
     /// </summary>
     internal byte SerialTransferTimer;
 
-    internal Interrupts RequestedInterrupts;
     private InterruptServicingState _interruptServicingState;
 
     /// <summary>
@@ -150,7 +137,7 @@ public class Cpu
     /// When this limit is reached, further interrupts are not serviced
     /// until returning from the current interrupt service routine.
     /// </summary>
-    private const int InterruptsCountMax = 3;
+    private const int InterruptsCountMax = 1;
 
     // Note that even though Interrupts is a flags enum, we keep this as an array
     // because priority settings can make picking out the most/least recently serviced interrupt tricky
@@ -159,11 +146,21 @@ public class Cpu
 
     internal int _flashWriteUnlockSequence;
 
+    /// <summary>
+    /// Note: this is used for debugging, but, not stored on DebugInfo,
+    /// because it must always be calc'd/managed, and not created on demand.
+    /// </summary>
+    public List<StackEntry> StackData { get; private set; } = [];
+
+    public StackEntry MakeStackEntry(StackValueKind kind, ushort source, ushort value, Interrupts interrupt = 0)
+        => new StackEntry(kind, interrupt, source, value, SFRs.Sp, CurrentInstructionBankId);
+
     /// <summary>The CPU of another VMU, connected for serial I/O.</summary>
+    /// <remarks>Not tracked in save states.</remarks>
     private Cpu? _otherCpu;
 
-    // TODO: update save state format
-    // Now, loading state can change the used expansion slots, in addition to changing whether we are docked.
+    /// <summary>The associated Dreamcast controller expansion slot for this VMU.</summary>
+    /// <remarks>Not tracked in save states.</remarks>
     internal DreamcastSlot DreamcastSlot
     {
         get;
@@ -186,21 +183,19 @@ public class Cpu
         Memory = new Memory(this, Logger);
         Audio = new Audio(this, Logger);
         Display = new Display(this);
-#if DEBUG
-        InstructionMap = new InstructionMap(Logger);
-#endif
-        MapleMessageBroker = mapleMessageBroker ?? new MapleMessageBroker(LogLevel.Default);
+        FileSystem = new FileSystem(Flash);
+        MapleMessageBroker = mapleMessageBroker ?? new MapleMessageBroker(integratedModePort: null, LogLevel.Default);
         SetInstructionBank(InstructionBank.ROM);
     }
 
-    string GetDebuggerDisplay()
+    internal string GetDebuggerDisplay()
     {
         var nameLabel = DisplayName is { } ? $"{DisplayName}: "
             : DreamcastSlot != DreamcastSlot.Dreamcast ? $"{DreamcastSlot}: "
             : "";
         var halt = SFRs.Pcon.HaltMode ? "HALT " : "";
-        var currentInstruction = InstructionDecoder.Decode(CurrentROMBank, Pc);
-        return $"{nameLabel}{InstructionBank}@[{Pc:X4}] {halt}{currentInstruction}";
+        var currentInstruction = InstructionDecoder.Decode(CurrentInstructionBank, Pc);
+        return $"{nameLabel}{CurrentInstructionBankId}@[{Pc:X4}] {halt}{currentInstruction}";
     }
 
     public void Reset()
@@ -210,15 +205,12 @@ public class Cpu
         StepCycleTicksPerSecondRemainder = 0;
         BaseTimer = 0;
         BaseTimerTicksRemaining = 0;
-        RequestedInterrupts = Interrupts.None;
         Array.Clear(_servicingInterrupts);
         _interruptsCount = 0;
         _interruptServicingState = InterruptServicingState.Ready;
         _flashWriteUnlockSequence = 0;
         Memory.Reset();
-#if DEBUG
-        InstructionMap.Clear();
-#endif
+        StackData.Clear();
         SyncInstructionBank();
     }
 
@@ -230,7 +222,7 @@ public class Cpu
         // NOTE: both save and load operations should write/read the fields in declaration order.
         writeStream.Write(ROM);
         writeStream.Write(Flash);
-        writeStream.WriteByte((byte)InstructionBank);
+        writeStream.WriteByte((byte)CurrentInstructionBankId);
         Memory.SaveState(writeStream);
 
         Span<byte> buffer = [0, 0, 0, 0, 0, 0, 0, 0];
@@ -242,7 +234,6 @@ public class Cpu
         writeStream.WriteByte(T0Scale);
         writeStream.WriteByte(SerialBitCount);
         writeStream.WriteByte(SerialTransferTimer);
-        writeUInt16(buffer, (ushort)RequestedInterrupts);
         writeStream.WriteByte((byte)_interruptServicingState);
         for (int i = 0; i < _servicingInterrupts.Length; i++)
         {
@@ -250,6 +241,17 @@ public class Cpu
         }
         writeInt32(buffer, _interruptsCount);
         writeInt32(buffer, _flashWriteUnlockSequence);
+
+        writeInt32(buffer, StackData.Count);
+        foreach (var entry in StackData)
+        {
+            writeStream.WriteByte((byte)entry.Kind);
+            writeUInt16(buffer, (ushort)entry.Interrupt);
+            writeUInt16(buffer, entry.Source);
+            writeUInt16(buffer, entry.Value);
+            writeUInt16(buffer, entry.Offset);
+            writeStream.WriteByte((byte)entry.BankId);
+        }
 
         void writeUInt16(Span<byte> bytes, ushort value)
         {
@@ -276,11 +278,35 @@ public class Cpu
         // to remove instructions which are no longer present in the binary?
 
         readStream.ReadExactly(ROM);
-        readStream.ReadExactly(Flash);
+
+        if (LazyDebugInfo is null)
+        {
+            readStream.ReadExactly(Flash);
+        }
+        else
+        {
+            // Drop any executable instructions that might have changed
+            var bankInfo = LazyDebugInfo.GetBankInfo(InstructionBank.FlashBank0);
+            var newFlash0 = new byte[FlashBankSize];
+            readStream.ReadExactly(newFlash0);
+            Debug.Assert(FlashBankSize - 1 == ushort.MaxValue);
+            for (ushort offset = 0; ; offset++)
+            {
+                if (newFlash0[offset] != FlashBank0[offset])
+                    bankInfo.ClearInstruction(offset);
+
+                if (offset == ushort.MaxValue)
+                    break;
+            }
+
+            newFlash0.CopyTo(FlashBank0);
+            readStream.ReadExactly(FlashBank1);
+        }
+
         if (VmuFileHandle is not null)
             RandomAccess.Write(VmuFileHandle, Flash, fileOffset: 0);
 
-        InstructionBank = (InstructionBank)readStream.ReadByte();
+        CurrentInstructionBankId = (InstructionBank)readStream.ReadByte();
         Memory.LoadState(readStream);
 
         Span<byte> buffer = [0, 0, 0, 0, 0, 0, 0, 0];
@@ -292,7 +318,6 @@ public class Cpu
         T0Scale = (byte)readStream.ReadByte();
         SerialBitCount = (byte)readStream.ReadByte();
         SerialTransferTimer = (byte)readStream.ReadByte();
-        RequestedInterrupts = (Interrupts)readUInt16(buffer);
         _interruptServicingState = (InterruptServicingState)readStream.ReadByte();
         for (int i = 0; i < _servicingInterrupts.Length; i++)
         {
@@ -300,6 +325,20 @@ public class Cpu
         }
         _interruptsCount = readInt32(buffer);
         _flashWriteUnlockSequence = readInt32(buffer);
+
+        StackData.Clear();
+        var stackCount = readInt32(buffer);
+        for (var i = 0; i < stackCount; i++)
+        {
+            StackData.Add(new StackEntry(
+                Kind: (StackValueKind)readStream.ReadByte(),
+                Interrupt: (Interrupts)readUInt16(buffer),
+                Source: readUInt16(buffer),
+                Value: readUInt16(buffer),
+                Offset: readUInt16(buffer),
+                BankId: (InstructionBank)readStream.ReadByte()
+            ));
+        }
 
         ResyncMapleOutbound();
 
@@ -323,7 +362,7 @@ public class Cpu
     }
 
     /// <summary>
-    /// Updates <see cref="InstructionBank"/> to match <see cref="Ext.InstructionBank"/>.
+    /// Updates <see cref="CurrentInstructionBankId"/> to match <see cref="Ext.InstructionBank"/>.
     /// </summary>
     private void SyncInstructionBank()
     {
@@ -336,7 +375,7 @@ public class Cpu
             }
         }
 
-        InstructionBank = newBank;
+        CurrentInstructionBankId = newBank;
     }
 
     /// <summary>
@@ -346,7 +385,7 @@ public class Cpu
     public void SetInstructionBank(InstructionBank bank)
     {
         SFRs.Ext = SFRs.Ext with { InstructionBank = bank };
-        InstructionBank = bank;
+        CurrentInstructionBankId = bank;
     }
 
     public byte ReadRam(int address)
@@ -365,6 +404,11 @@ public class Cpu
 
     public long Run(long ticksToRun)
     {
+        if (LazyDebugInfo?.DebuggingState == DebuggingState.Break)
+        {
+            return ticksToRun;
+        }
+
         if (SFRs.P7.VmuConnected && _otherCpu is null)
         {
             // If this errors when there isn't a real connection scenario taking place, then, there might be a need to distinguish
@@ -391,7 +435,7 @@ public class Cpu
         ticksToRun -= TicksOverrun;
 
         long ticksSoFar = 0;
-        while (ticksSoFar < ticksToRun)
+        while (LazyDebugInfo?.DebuggingState != DebuggingState.Break && ticksSoFar < ticksToRun)
         {
             ticksSoFar += StepTicks();
         }
@@ -403,7 +447,9 @@ public class Cpu
         {
             var thisTicksToRun = inputTicksToRun - @this.TicksOverrun;
             var otherTicksToRun = inputTicksToRun - other.TicksOverrun;
-            while (thisTicksToRun > 0 || otherTicksToRun > 0)
+            while (@this.LazyDebugInfo?.DebuggingState != DebuggingState.Break
+                && other.LazyDebugInfo?.DebuggingState != DebuggingState.Break
+                && (thisTicksToRun > 0 || otherTicksToRun > 0))
             {
                 // Execute one instruction for whichever VMU is further behind in time.
                 if (thisTicksToRun > otherTicksToRun)
@@ -434,6 +480,12 @@ public class Cpu
             // 2) puts the BIOS into a state where it is able to detect the docked to non-docked transition later on.
             // Alternatively we could just let the CPU continue to run while docked,
             // but that has significant negative impact on host CPU utilization.
+            //
+            // https://github.com/RikkiGibson/DreamPotato/issues/29
+            // this is buggy when AutoInitializeDate is disabled.
+            // This doesn't give the VMU enough time to set everything up. Instead it is interrupted partway thru clearing the screen and plays part of the startup beep.
+            // Similar problems would exist if the VMU were running software that ignores the INT0 (dreamcast connected) interrupt.
+            // We might want to instead allow the VMU to run while connected, in the ordinary loop, until we detect a condition that indicates it's OK to stop running.
             for (long ticks = 0; ticks < TimeSpan.TicksPerSecond;)
                 ticks += StepTicks();
         }
@@ -466,6 +518,13 @@ public class Cpu
 
         while (MapleMessageBroker.TryReceiveCpuMessage(DreamcastSlot, out var message))
         {
+            if (message.Type == MapleMessageType.DPOpenFile && message.Function == MapleFunction.Storage)
+            {
+                // Open file messages are handled even while ejected
+                FileSystem.RequestOpenFile(message.ReadContentString());
+                continue;
+            }
+
             if (!SFRs.P7.DreamcastConnected)
             {
                 Logger.LogWarning($"Ignoring Maple message while undocked: '({message.Type}, {message.Function})'", category: LogCategories.Maple);
@@ -483,8 +542,9 @@ public class Cpu
                     // Indicate flash write
                     MapleIOIconTimeout = 5;
                     Memory.Direct_AccessXram2()[Display.FlashIconOffset] = (byte)Icons.Flash;
-                    if (VmuFileHandle is null)
-                        HasUnsavedChanges = true;
+
+                    var blockNumber = (message.AdditionalWords[1] >> 24) & 0xff;
+                    FileSystem.OnFlashBlockModified(blockNumber, DateTimeOffset.Now);
 
                     break;
                 case (MapleMessageType.CompleteWrite, MapleFunction.Storage):
@@ -548,19 +608,11 @@ public class Cpu
 
         // level trigger: just need to be at the right level to trigger it
         if (isLevelTriggered && (isHighTriggered == connect))
-        {
             i01cr.Int0Source = true;
-            if (i01cr.Int0Enable)
-                RequestedInterrupts |= Interrupts.INT0;
-        }
 
         // edge trigger: need to transition to the desired level to trigger it
         if (!isLevelTriggered && (oldP7.DreamcastConnected != connect) && (isHighTriggered == connect))
-        {
             i01cr.Int0Source = true;
-            if (i01cr.Int0Enable)
-                RequestedInterrupts |= Interrupts.INT0;
-        }
 
         SFRs.I01Cr = i01cr;
     }
@@ -587,8 +639,11 @@ public class Cpu
 
         static void raiseInt3IfNeeded(Cpu cpu)
         {
-            if (cpu.SFRs.I23Cr is { Int3Enable: true, Int3RisingEdgeDetection: true })
-                cpu.RequestedInterrupts |= Interrupts.INT3_BT;
+            if (cpu.SFRs.I23Cr is { Int3Enable: true, Int3RisingEdgeDetection: true } i23cr)
+            {
+                i23cr.Int3Source = true;
+                cpu.SFRs.I23Cr = i23cr;
+            }
         }
     }
 
@@ -609,8 +664,11 @@ public class Cpu
 
         static void raiseInt3IfNeeded(Cpu cpu)
         {
-            if (cpu.SFRs.I23Cr is { Int3Enable: true, Int3FallingEdgeDetection: true })
-                cpu.RequestedInterrupts |= Interrupts.INT3_BT;
+            if (cpu.SFRs.I23Cr is { Int3Enable: true, Int3FallingEdgeDetection: true } i23cr)
+            {
+                i23cr.Int3Source = true;
+                cpu.SFRs.I23Cr = i23cr;
+            }
         }
     }
 
@@ -627,155 +685,138 @@ public class Cpu
         var isLevelTriggered = i01cr.Int1LevelTriggered;
         var isHighTriggered = i01cr.Int1HighTriggered;
 
-        // level trigger: just need to be at the right level to trigger it
-        if (isLevelTriggered && (isHighTriggered == voltageLevel))
-        {
-            i01cr.Int1Source = true;
-            if (i01cr.Int1Enable)
-                RequestedInterrupts |= Interrupts.INT1;
-        }
-
+        // level trigger is handled in 'requestLevelDrivenInterrupts'
         // edge trigger: need to transition to the desired level to trigger it
         if (!isLevelTriggered && (oldP7.LowVoltage != voltageLevel) && (isHighTriggered == voltageLevel))
         {
             i01cr.Int1Source = true;
-            if (i01cr.Int1Enable)
-                RequestedInterrupts |= Interrupts.INT1;
+            SFRs.I01Cr = i01cr;
         }
     }
     #endregion
 
-    private void ServiceInterruptIfNeeded()
+    private Interrupts CheckForInterrupt()
     {
-        if (RequestedInterrupts == Interrupts.None)
-            return;
+        // Highest Priority are serviced even if master interrupt enable bit is cleared.
+        var ie = SFRs.Ie;
+        if (ie.Int0Priority
+            && SFRs.I01Cr is { Int0Enable: true, Int0Source: true })
+        {
+            return Interrupts.INT0;
+        }
+        if (ie.Int1Priority
+            && SFRs.I01Cr is { Int1Enable: true, Int1Source: true })
+        {
+            return Interrupts.INT1;
+        }
+
+        if (!ie.MasterInterruptEnable)
+            return Interrupts.None;
+
+        var interruptPriority = SFRs.Ip;
+        var foundInterrupt = checkForOneInterrupt(highPriorityOnly: true);
+        if (foundInterrupt == Interrupts.None)
+            foundInterrupt = checkForOneInterrupt(highPriorityOnly: false);
+
+        if (foundInterrupt != Interrupts.None)
+            HandleBreakpoints();
+
+        return foundInterrupt;
+
+        Interrupts checkForOneInterrupt(bool highPriorityOnly)
+        {
+            if ((!highPriorityOnly || interruptPriority.Int2_T0L)
+                && (SFRs.T0Cnt is { T0lIe: true, T0lOvf: true } || SFRs.I23Cr is { Int2Enable: true, Int2Source: true }))
+            {
+                return Interrupts.INT2_T0L;
+            }
+
+            if ((!highPriorityOnly || interruptPriority.Int3_BaseTimer)
+                && SFRs.Btcr is { Int0Enable: true, Int0Source: true } or { Int1Enable: true, Int1Source: true })
+            {
+                return Interrupts.INT3_BT;
+            }
+
+            if ((!highPriorityOnly || interruptPriority.T0H) && SFRs.T0Cnt is { T0hIe: true, T0hOvf: true })
+            {
+                return Interrupts.T0H;
+            }
+
+            if ((!highPriorityOnly || interruptPriority.T1) && SFRs.T1Cnt is { T1lIe: true, T1lOvf: true } or { T1hIe: true, T1hOvf: true })
+            {
+                return Interrupts.T1;
+            }
+
+            if ((!highPriorityOnly || interruptPriority.Sio0) && SFRs.Scon0 is { InterruptEnable: true, TransferEndFlag: true })
+            {
+                return Interrupts.SIO0;
+            }
+
+            if ((!highPriorityOnly || interruptPriority.Sio1) && SFRs.Scon1 is { InterruptEnable: true, TransferEndFlag: true })
+            {
+                return Interrupts.SIO1;
+            }
+
+            // NOTE: We do not actually generate a Maple interrupt ever.
+            // In practice we handle maple transfers using a "high level emulation".
+            // Leaving the stub here in case we ever wanted to recognize the enable/source bits for this interrupt.
+            if ((!highPriorityOnly || interruptPriority.Maple) && false)
+            {
+                return Interrupts.Maple;
+            }
+
+            if ((!highPriorityOnly || interruptPriority.Port3) && SFRs.P3Int is { Enable: true, Source: true })
+            {
+                return Interrupts.P3;
+            }
+
+            return Interrupts.None;
+        }
+    }
+
+    private bool ServiceInterruptRequestIfNeeded(Interrupts interrupt)
+    {
+        Debug.Assert(BitHelpers.IsPowerOfTwo((int)interrupt));
 
         if (_interruptServicingState != InterruptServicingState.Ready)
-            return;
-
-        if (_interruptsCount >= InterruptsCountMax)
-            return;
-
-        var ie = SFRs.Ie;
-        if (!ie.MasterInterruptEnable)
-            return;
-
-        var currentInterrupt = _interruptsCount == 0 ? Interrupts.None : _servicingInterrupts[_interruptsCount - 1];
-        Debug.Assert(BitHelpers.IsPowerOfTwo((int)currentInterrupt));
-
-        // Highest Priority
-        if (ie.Int0Priority && shouldServiceInterrupt(Interrupts.INT0))
         {
-            serviceInterrupt(Interrupts.INT0, InterruptVectors.INT0);
-            return;
-        }
-        if (ie.Int1Priority && shouldServiceInterrupt(Interrupts.INT1))
-        {
-            serviceInterrupt(Interrupts.INT1, InterruptVectors.INT1);
-            return;
-        }
-
-        // High Priority
-        var interruptPriority = SFRs.Ip;
-        if (tryServiceOneInterrupt(highPriority: true))
-            return;
-
-        tryServiceOneInterrupt(highPriority: false);
-
-        bool tryServiceOneInterrupt(bool highPriority)
-        {
-            if ((!highPriority || interruptPriority.Int2_T0L) && shouldServiceInterrupt(Interrupts.INT2_T0L))
-            {
-                serviceInterrupt(Interrupts.INT2_T0L, InterruptVectors.INT2_T0L);
-                return true;
-            }
-
-            if ((!highPriority || interruptPriority.Int3_BaseTimer) && shouldServiceInterrupt(Interrupts.INT3_BT))
-            {
-                serviceInterrupt(Interrupts.INT3_BT, InterruptVectors.INT3_BT);
-                return true;
-            }
-
-            if ((!highPriority || interruptPriority.T0H) && shouldServiceInterrupt(Interrupts.T0H))
-            {
-                serviceInterrupt(Interrupts.T0H, InterruptVectors.T0H);
-                return true;
-            }
-
-            if ((!highPriority || interruptPriority.T1) && shouldServiceInterrupt(Interrupts.T1))
-            {
-                serviceInterrupt(Interrupts.T1, InterruptVectors.T1);
-                return true;
-            }
-
-            if ((!highPriority || interruptPriority.Sio0) && shouldServiceInterrupt(Interrupts.SIO0))
-            {
-                serviceInterrupt(Interrupts.SIO0, InterruptVectors.SIO0);
-                return true;
-            }
-
-            if ((!highPriority || interruptPriority.Sio1) && shouldServiceInterrupt(Interrupts.SIO1))
-            {
-                serviceInterrupt(Interrupts.SIO1, InterruptVectors.SIO1);
-                return true;
-            }
-
-            if ((!highPriority || interruptPriority.Maple) && shouldServiceInterrupt(Interrupts.Maple))
-            {
-                serviceInterrupt(Interrupts.Maple, InterruptVectors.Maple);
-                return true;
-            }
-
-            if ((!highPriority || interruptPriority.Port3) && shouldServiceInterrupt(Interrupts.P3))
-            {
-                serviceInterrupt(Interrupts.P3, InterruptVectors.P3);
-                return true;
-            }
-
+            _interruptServicingState = InterruptServicingState.Ready;
             return false;
         }
 
-        bool shouldServiceInterrupt(Interrupts candidateInterrupt)
-        {
-            Debug.Assert(BitHelpers.IsPowerOfTwo((int)candidateInterrupt));
+        if (_interruptsCount >= InterruptsCountMax)
+            return false;
 
-            // TODO: does priority factor in at all when interrupting one interrupt with another?
-            // It feels like if so, the "priority bits" in the interrupt control registers need to factor in.
-            return (RequestedInterrupts & candidateInterrupt) != 0
-                && candidateInterrupt.IsHigherPriorityThan(currentInterrupt);
+        if (interrupt == Interrupts.None)
+            return false;
+
+        var routineAddress = interrupt.GetRoutineAddress();
+
+        _servicingInterrupts[_interruptsCount] = interrupt;
+        _interruptsCount++;
+        Logger.LogDebug($"Servicing interrupt '{interrupt}'. Count: '{_interruptsCount}'.", LogCategories.Interrupts);
+        if (_interruptsCount > 1)
+        { // breakpoint holder
         }
+        SFRs.Pcon = SFRs.Pcon with { HaltMode = false };
 
-        void serviceInterrupt(Interrupts interrupt, ushort routineAddress)
-        {
-            Debug.Assert(BitHelpers.IsPowerOfTwo((int)interrupt));
-
-            _servicingInterrupts[_interruptsCount] = interrupt;
-            _interruptsCount++;
-            Logger.LogDebug($"Servicing interrupt '{interrupt}'. Count: '{_interruptsCount}'.", LogCategories.Interrupts);
-            if (_interruptsCount > 1)
-            { // breakpoint holder
-            }
-            RequestedInterrupts &= ~interrupt;
-            SFRs.Pcon = SFRs.Pcon with { HaltMode = false };
-
-            Memory.PushStack((byte)Pc);
-            Memory.PushStack((byte)(Pc >> 8));
-            Pc = routineAddress;
-        }
+        var stackValue = Pc;
+        Memory.PushStack((byte)stackValue);
+        Memory.PushStack((byte)(stackValue >> 8));
+        Pc = routineAddress;
+        StackData.Push(MakeStackEntry(StackValueKind.InterruptReturn, source: stackValue, value: stackValue, interrupt));
+        return true;
     }
 
-    internal void ResetInterruptState()
+    /// <summary>
+    /// VMD-145: During execution of the RETI instruction or an instruction (MOV, ST, etc.) that writes to one of the special function
+    /// registers listed below, or while writing to flash memory, interrupt request flag acceptance processing is not performed.
+    ///
+    /// From empirical testing, it looks like writes to IE, IP, and PCON should also do this.
+    /// </summary>
+    internal void MarkInterruptsNotReady()
     {
-        // TODO this is kind of a hack to ensure that interrupts are not serviced
-        // until one instruction after master interrupt enable is set.
-        // TODO write a test program specifically for investigating how this works properly.
-        _interruptServicingState = InterruptServicingState.ReturnedFromInterrupt;
-    }
-
-    private void AdvanceInterruptState()
-    {
-        if (_interruptServicingState == InterruptServicingState.ReturnedFromInterrupt)
-            _interruptServicingState = InterruptServicingState.Ready;
+        _interruptServicingState = InterruptServicingState.NotReady;
     }
 
     /// <summary>Execute a single instruction and tick the base timer.</summary>
@@ -827,11 +868,6 @@ public class Cpu
             if ((currentBtTicks / int1Rate) < (newBtTicks / int1Rate))
             {
                 btcr.Int1Source = true;
-                if (btcr.Int1Enable)
-                {
-                    Logger.LogDebug("Requesting BTInt1", LogCategories.Interrupts);
-                    RequestedInterrupts |= Interrupts.INT3_BT;
-                }
             }
 
             var int0Rate = btcr.Int0CycleRate;
@@ -840,11 +876,6 @@ public class Cpu
             if ((currentBtTicks / int0Rate) < (newBtTicks / int0Rate))
             {
                 btcr.Int0Source = true;
-                if (btcr.Int0Enable)
-                {
-                    Logger.LogDebug("Requesting BTInt0", LogCategories.Interrupts);
-                    RequestedInterrupts |= Interrupts.INT3_BT;
-                }
             }
 
             BaseTimer = (ushort)(newBtTicks % BaseTimerMax);
@@ -858,25 +889,35 @@ public class Cpu
 
     internal Instruction StepInstruction()
     {
-        ServiceInterruptIfNeeded();
-        AdvanceInterruptState();
-
-        // TODO: hold mode doesn't even tick timers. only external interrupts wake the VMU.
-        if (SFRs.Pcon.HaltMode)
+        if (LazyDebugInfo?.DebuggingState == DebuggingState.Break)
         {
-            tickCpuClockedTimers(1);
-            requestLevelDrivenInterrupts();
-            // TODO: we didn't really execute this (PC not incremented), but, we did consume 1 cycle.
-            // We probably want a different type here or a HALT "pseudo-instruction".
+            // Do not tick any timers, etc.
             return new Instruction(Pc, Operations.NOP);
         }
 
-        var inst = InstructionDecoder.Decode(CurrentROMBank, Pc);
-#if DEBUG
-        InstructionMap[InstructionBank, Pc] = inst;
-#endif
+        // Number of cycles consumed by servicing an interrupt, e.g. calling the interrupt service routine.
+        const byte interruptCallCycles = 2;
+        var interrupt = CheckForInterrupt();
 
-        if (InstructionBank == InstructionBank.ROM
+        if (SFRs.Pcon.HaltMode)
+        {
+            // Number of cycles consumed by each "halt".
+            const byte haltCycles = 1;
+
+            tickCpuClockedTimers(haltCycles);
+            if (handleInterrupts(interrupt))
+            {
+                tickCpuClockedTimers(interruptCallCycles);
+                return new Instruction(Pc, Operations.NOP) { Cycles = haltCycles + interruptCallCycles };
+            }
+
+            return new Instruction(Pc, Operations.NOP);
+        }
+
+        var inst = InstructionDecoder.Decode(CurrentInstructionBank, Pc);
+        LazyDebugInfo?.MarkExecutable(CurrentInstructionBankId, inst);
+
+        if (CurrentInstructionBankId == InstructionBank.ROM
             && Pc == 0x2515
             && inst.ToString() == "DEC 1")
         {
@@ -888,10 +929,15 @@ public class Cpu
             // https://github.com/RikkiGibson/DreamPotato/pull/14#discussion_r2628643313
             Pc += inst.Size;
             tickCpuClockedTimers(inst.Cycles);
-            requestLevelDrivenInterrupts();
+            if (handleInterrupts(interrupt))
+            {
+                tickCpuClockedTimers(interruptCallCycles);
+                inst = inst with { Cycles = (byte)(inst.Cycles + interruptCallCycles) };
+            }
             return inst;
         }
 
+        tickCpuClockedTimers(inst.Cycles);
         switch (inst.Kind)
         {
             case OperationKind.ADD: Op_ADD(inst); break;
@@ -942,12 +988,16 @@ public class Cpu
             default: Throw(inst); break;
         }
 
-        tickCpuClockedTimers(inst.Cycles);
-        requestLevelDrivenInterrupts();
+        if (handleInterrupts(interrupt))
+        {
+            tickCpuClockedTimers(interruptCallCycles);
+            inst = inst with { Cycles = (byte)(inst.Cycles + interruptCallCycles) };
+        }
+
+        HandleBreakpoints();
         return inst;
 
         static void Throw(Instruction inst) => throw new InvalidOperationException($"Unknown operation '{inst}'");
-
 
         void tickCpuClockedTimers(byte cycles)
         {
@@ -986,11 +1036,7 @@ public class Cpu
                             t0lOverflow = true;
                             t0l = SFRs.T0Lr;
                             if (!t0cnt.T0Long) // interrupt for overflow only in 8-bit mode
-                            {
                                 t0cnt.T0lOvf = true;
-                                if (t0cnt.T0lIe)
-                                    RequestedInterrupts |= Interrupts.INT2_T0L;
-                            }
                         }
                     }
 
@@ -1005,8 +1051,6 @@ public class Cpu
                         {
                             t0h = SFRs.T0Hr;
                             t0cnt.T0hOvf = true;
-                            if (t0cnt.T0hIe)
-                                RequestedInterrupts |= Interrupts.T0H;
                         }
                     }
                 }
@@ -1026,22 +1070,18 @@ public class Cpu
                     if (t1cnt.T1lRun)
                     {
                         var t1l = SFRs.T1L;
-                        if (t1cnt.ELDT1C)
+                        if (Audio.IsActive)
                         {
                             var cpuClockHz = SFRs.Ocr.CpuClockHz;
-                            var t1lc = SFRs.T1Lc;
-                            var p1 = SFRs.P1 with { PulseOutput = t1lc <= t1l };
-                            Audio.AddPulse(cpuClockHz, p1.PulseOutput);
-                            SFRs.P1 = p1;
+                            SFRs.P1 = SFRs.P1 with { PulseOutput = Audio.AddPulse(cpuClockHz, t1l) };
                         }
 
                         t1l++;
                         if (t1l == 0)
                         {
                             t1l = SFRs.T1Lr;
+                            Audio.OnT1LReloaded(t1cnt, t1l, SFRs.T1Lc);
                             t1cnt.T1lOvf = true;
-                            if (t1cnt.T1lIe)
-                                RequestedInterrupts |= Interrupts.T1;
                         }
 
                         SFRs.T1L = t1l;
@@ -1057,8 +1097,6 @@ public class Cpu
                             {
                                 t1h = SFRs.T1Hr;
                                 t1cnt.T1hOvf = true;
-                                if (t1cnt.T1hIe)
-                                    RequestedInterrupts |= Interrupts.T1;
                             }
 
                             SFRs.T1H = t1h;
@@ -1119,50 +1157,29 @@ public class Cpu
             }
         }
 
+        bool handleInterrupts(Interrupts interrupt)
+        {
+            requestLevelDrivenInterrupts();
+            return ServiceInterruptRequestIfNeeded(interrupt);
+        }
+
         void requestLevelDrivenInterrupts()
         {
-            // TODO: I suspect master interrupt disable should have an effect here
-            // Level triggered interrupts keep getting triggered each cycle
-            // Edge triggered interrupts are triggered in SFRs when the value changes
             var i01cr = SFRs.I01Cr;
-            if (i01cr.Int0Enable && i01cr.Int0LevelTriggered && i01cr.Int0Source == i01cr.Int0HighTriggered && !currentlyServicing(Interrupts.INT0))
-                RequestedInterrupts |= Interrupts.INT0;
+            var p7 = SFRs.P7;
+            if (i01cr.Int0Enable && i01cr.Int0LevelTriggered && p7.DreamcastConnected == i01cr.Int0HighTriggered)
+            {
+                i01cr.Int0Source = true;
+                SFRs.I01Cr = i01cr;
+            }
 
-            if (i01cr.Int1Enable && i01cr.Int1LevelTriggered && i01cr.Int0Source == i01cr.Int1HighTriggered && !currentlyServicing(Interrupts.INT1))
-                RequestedInterrupts |= Interrupts.INT1;
-
-            // Empirical testing shows that timer interrupts are "level driven"
-            // in that if the source flag is not cleared, the interrupt is generated continuously.
-            var t0cnt = SFRs.T0Cnt;
-            if (t0cnt.T0lIe && t0cnt.T0lOvf && !currentlyServicing(Interrupts.INT2_T0L))
-                RequestedInterrupts |= Interrupts.INT2_T0L;
-
-            if (t0cnt.T0hIe && t0cnt.T0hOvf && !currentlyServicing(Interrupts.T0H))
-                RequestedInterrupts |= Interrupts.T0H;
-
-            var t1cnt = SFRs.T1Cnt;
-            if (t1cnt.T1lIe && t1cnt.T1lOvf && !currentlyServicing(Interrupts.T1))
-                RequestedInterrupts |= Interrupts.T1;
-
-            if (t1cnt.T1hIe && t1cnt.T1hOvf && !currentlyServicing(Interrupts.T1))
-                RequestedInterrupts |= Interrupts.T1;
-
-            var btcr = SFRs.Btcr;
-            if (btcr.Int0Enable && btcr.Int0Source && !currentlyServicing(Interrupts.INT3_BT))
-                RequestedInterrupts |= Interrupts.INT3_BT;
-
-            if (btcr.Int1Enable && btcr.Int1Source && !currentlyServicing(Interrupts.INT3_BT))
-                RequestedInterrupts |= Interrupts.INT3_BT;
-
-            if (SFRs.Scon0 is { InterruptEnable: true, TransferEndFlag: true } && !currentlyServicing(Interrupts.SIO0))
-                RequestedInterrupts |= Interrupts.SIO0;
-
-            if (SFRs.Scon1 is { InterruptEnable: true, TransferEndFlag: true } && !currentlyServicing(Interrupts.SIO1))
-                RequestedInterrupts |= Interrupts.SIO1;
+            if (i01cr.Int1Enable && i01cr.Int1LevelTriggered && p7.LowVoltage == i01cr.Int1HighTriggered)
+            {
+                i01cr.Int1Source = true;
+                SFRs.I01Cr = i01cr;
+            }
 
             var p3int = SFRs.P3Int;
-            // NB: non-continuous interrupts are generated in SFRs.P3.set (i.e. only when P3 changes)
-            // TODO: empirical test if holding a button continuously just keeps setting the source flag.
             if (p3int.Enable && p3int.Continuous)
             {
                 var p3Raw = (byte)SFRs.P3;
@@ -1170,23 +1187,29 @@ public class Cpu
                 {
                     Logger.LogDebug($"Requesting interrupt P3 Continuous={p3int.Continuous} Value=0b{p3Raw:b}", LogCategories.Interrupts);
                     p3int.Source = true;
-                    RequestedInterrupts |= Interrupts.P3;
+                    SFRs.P3Int = p3int;
                 }
-                SFRs.P3Int = p3int;
             }
+        }
+    }
 
-            // TODO: it might be cleaner to just wait to clear RequestedInterrupts until RETI and the interrupt is popped off of _servicingInterrupts.
-            bool currentlyServicing(Interrupts interrupt)
-            {
-                Debug.Assert(BitHelpers.IsPowerOfTwo((int)interrupt));
-                for (int i = 0; i < _interruptsCount; i++)
-                {
-                    if (_servicingInterrupts[i] == interrupt)
-                        return true;
-                }
+    private void HandleBreakpoints()
+    {
+        if (LazyDebugInfo is null)
+            return;
 
-                return false;
-            }
+        if (LazyDebugInfo.DebuggingState == DebuggingState.StepIn)
+        {
+            LazyDebugInfo.FireDebugBreak();
+            return;
+        }
+
+        var breakpoints = LazyDebugInfo.GetBankInfo(CurrentInstructionBankId).Breakpoints;
+        for (int i = 0; i < breakpoints.Count; i++)
+        {
+            var breakpoint = breakpoints[i];
+            if (breakpoint.Enabled && breakpoint.Offset == Pc)
+                LazyDebugInfo.FireDebugBreak();
         }
     }
 
@@ -1570,7 +1593,7 @@ public class Cpu
         // For a program running in flash memory, bank 0 of flash memory is accessed.
         // TODO: Cannot access bank 1 of flash memory. System BIOS function must be used instead.
         var address = ((SFRs.Trh << 8) | SFRs.Trl) + SFRs.Acc;
-        SFRs.Acc = CurrentROMBank[address];
+        SFRs.Acc = CurrentInstructionBank[address];
         Logger.LogTrace($"{inst} Acc={SFRs.Acc:X} address={address:X}", LogCategories.Instructions);
         Pc += inst.Size;
     }
@@ -1580,16 +1603,28 @@ public class Cpu
         // (SP) <- (SP) + 1, ((SP)) <- (d9)
         var operand = FetchOperand(inst.Parameters[0], inst.Arg0);
         Memory.PushStack(operand);
+        StackData.Push(MakeStackEntry(
+            StackValueKind.Push,
+            source: inst.Arg0,
+            value: operand));
+
         Logger.LogTrace($"{inst} Sp({SFRs.Sp:X})={operand:X}", LogCategories.Instructions);
         Pc += inst.Size;
     }
 
     private void Op_POP(Instruction inst)
     {
+        var stackValue = StackData.Pop();
+        // TODO: As-is, the StackData is corrupted at this point.
+        // If this stack entry is an address, we should probably edit the entry to hold the remaining value
+        if (stackValue.Kind != StackValueKind.Push)
+            Logger.LogError($"{inst} read an unexpected stack value of kind '{stackValue.Kind}'");
+
         // (d9) <- ((SP)), (SP) <- (SP) - 1
         var dAddress = GetOperandAddress(inst.Parameters[0], inst.Arg0);
         var value = Memory.PopStack();
         WriteRam(dAddress, value);
+
         Logger.LogTrace($"{inst} value={value:X}", LogCategories.Instructions);
 
         Pc += inst.Size;
@@ -1816,12 +1851,16 @@ public class Cpu
         ushort a12 = inst.Arg0;
 
         Logger.LogTrace($"{inst}", LogCategories.Instructions);
+        var stackSource = Pc;
         Pc += inst.Size;
-        Memory.PushStack((byte)Pc);
-        Memory.PushStack((byte)(Pc >> 8));
+        var stackValue = Pc;
+        Memory.PushStack((byte)stackValue);
+        Memory.PushStack((byte)(stackValue >> 8));
 
         Pc &= 0b1111_0000__0000_0000;
         Pc |= a12;
+
+        StackData.Push(MakeStackEntry(StackValueKind.CallReturn, source: stackSource, value: stackValue));
     }
 
     /// <summary>Far absolute subroutine call</summary>
@@ -1832,10 +1871,14 @@ public class Cpu
         // (SP) <- (SP) + 1, ((SP)) <- (PC15 to 8), (PC) <- a16
         var a16 = inst.Arg0;
         Logger.LogTrace($"{inst}", LogCategories.Instructions);
-        Pc += 3;
-        Memory.PushStack((byte)Pc);
-        Memory.PushStack((byte)(Pc >> 8));
+        var stackSource = Pc;
+        Pc += inst.Size;
+        var stackValue = Pc;
+        Memory.PushStack((byte)stackValue);
+        Memory.PushStack((byte)(stackValue >> 8));
         Pc = a16;
+
+        StackData.Push(MakeStackEntry(StackValueKind.CallReturn, source: stackSource, value: stackValue));
     }
 
     /// <summary>Far relative subroutine call</summary>
@@ -1845,36 +1888,89 @@ public class Cpu
         // (SP) <- (SP) + 1, ((SP)) <- (PC15 to 8), (PC) <- (PC) - 1 + r16
         var r16 = inst.Arg0;
         Logger.LogTrace($"{inst}", LogCategories.Instructions);
+        var stackSource = Pc;
         Pc += inst.Size;
-        Memory.PushStack((byte)Pc);
-        Memory.PushStack((byte)(Pc >> 8));
+        var stackValue = Pc;
+        Memory.PushStack((byte)stackValue);
+        Memory.PushStack((byte)(stackValue >> 8));
         Pc = (ushort)(Pc - 1 + r16);
+        StackData.Push(MakeStackEntry(StackValueKind.CallReturn, source: stackSource, value: stackValue));
     }
 
     /// <summary>Return from subroutine</summary>
     private void Op_RET(Instruction inst)
     {
+        var stackEntry = StackData.Pop();
+        if (stackEntry.Kind == StackValueKind.Push)
+        {
+            var littleStackEntry = StackData.Pop();
+            if (littleStackEntry.Kind != StackValueKind.Push)
+                Logger.LogError($"Returned to a mix of a Push value and a {littleStackEntry.Kind} value. Stack debug data is corrupted. {littleStackEntry}");
+
+            var address = (ushort)(stackEntry.Value << 8 | (littleStackEntry.Value & 0xff));
+            if (LazyDebugInfo?.CurrentBankInfo is { } currentBankInfo
+                && currentBankInfo.AddDynamicBranch(inst, address))
+            {
+                Logger.LogDebug($"Detected a PUSH+RET to {address:X4}H");
+            }
+        }
+        else if (stackEntry.Kind != StackValueKind.CallReturn)
+        {
+            Logger.LogDebug($"{inst} used unexpected stack value {stackEntry}");
+        }
+
         // (PC15 to 8) <- ((SP)), (SP) <- (SP) - 1, (PC7 to 0) <- ((SP)), (SP) <- (SP) -1
         Logger.LogTrace($"{inst}", LogCategories.Instructions);
         var Pc15_8 = Memory.PopStack();
         var Pc7_0 = Memory.PopStack();
         Pc = (ushort)(Pc15_8 << 8 | Pc7_0);
+
+
+        if (LazyDebugInfo is { DebuggingState: DebuggingState.StepOut, StepOutOffset: var offset } debugInfo
+            && stackEntry.Offset == offset)
+        {
+            debugInfo.FireDebugBreak();
+        }
     }
 
     /// <summary>Return from interrupt</summary>
     private void Op_RETI(Instruction inst)
     {
+
+        var stackEntry = StackData.Pop();
+        if (stackEntry.Kind == StackValueKind.Push)
+        {
+            Logger.LogWarning("Detected a PUSH/RETI.");
+            if (StackData.Pop() is { Kind: not StackValueKind.Push } badValue)
+                Logger.LogError($"Returned to a mix of a Push value and a {badValue.Kind} value. Stack debug data is corrupted. {badValue}");
+        }
+        else if (stackEntry.Kind != StackValueKind.InterruptReturn)
+        {
+            Logger.LogDebug($"{inst} used unexpected stack value {stackEntry}");
+        }
+
         // (PC15 to 8) <- ((SP)), (SP) <- (SP) - 1, (PC7 to 0) <- ((SP)), (SP) <- (SP) -1
-        _interruptServicingState = InterruptServicingState.ReturnedFromInterrupt;
+        MarkInterruptsNotReady();
         if (_interruptsCount > 0)
+        {
             _interruptsCount--;
+            _servicingInterrupts[_interruptsCount] = Interrupts.None;
+        }
         else
+        {
             Logger.LogError($"Returning from interrupt, but no interrupt was being serviced!", LogCategories.Interrupts);
+        }
 
         Logger.LogTrace($"{inst}", LogCategories.Instructions);
         var Pc15_8 = Memory.PopStack();
         var Pc7_0 = Memory.PopStack();
         Pc = (ushort)(Pc15_8 << 8 | Pc7_0);
+
+        if (LazyDebugInfo is { DebuggingState: DebuggingState.StepOut, StepOutOffset: var offset } debugInfo
+            && stackEntry.Offset == offset)
+        {
+            debugInfo.FireDebugBreak();
+        }
     }
 
     /// <summary>Clear direct bit</summary>
@@ -1930,10 +2026,10 @@ public class Cpu
     /// <summary>Store the accumulator to flash memory. Intended for use only by BIOS. Undocumented.</summary>
     private void Op_STF(Instruction inst)
     {
-        if (InstructionBank != InstructionBank.ROM)
+        if (CurrentInstructionBankId != InstructionBank.ROM)
             Logger.LogWarning("Executing STF outside of ROM!");
 
-        var a16 = SFRs.Trl | (SFRs.Trh << 8);
+        var a16 = (ushort)(SFRs.Trl | (SFRs.Trh << 8));
         var value = SFRs.Acc;
 
         // Sequence number when flash is first unlocked for writing
@@ -1971,17 +2067,12 @@ public class Cpu
         {
             var a17 = a16 | (SFRs.FPR.FlashAddressBank ? InstructionBankSize : 0);
             Flash[a17] = value;
-#if DEBUG
-            InstructionMap[InstructionBank, (ushort)a16] = default;
-#endif
+            LazyDebugInfo?.CurrentBankInfo.ClearInstruction(a16);
+
+            FileSystem.OnFlashBlockModified(a17 / FileSystem.BlockSize, DateTime.Now);
             if (VmuFileHandle is not null)
             {
-                var absoluteAddress = (SFRs.FPR.FlashAddressBank ? (1 << 16) : 0) | a16;
-                RandomAccess.Write(VmuFileHandle, [value], absoluteAddress);
-            }
-            else
-            {
-                HasUnsavedChanges = true;
+                RandomAccess.Write(VmuFileHandle, [value], a17);
             }
 
             _flashWriteUnlockSequence++;
@@ -2004,4 +2095,12 @@ public class Cpu
         Logger.LogTrace($"{inst}", LogCategories.Instructions);
         Pc += inst.Size;
     }
+}
+
+public enum DebuggingState
+{
+    Run,
+    Break,
+    StepIn,
+    StepOut,
 }

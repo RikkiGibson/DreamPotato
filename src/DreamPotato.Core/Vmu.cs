@@ -2,63 +2,76 @@ using System.Buffers.Binary;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Text;
+using System.Text.Json;
 
 using DreamPotato.Core.SFRs;
+using DreamPotato.Core.Waterbear;
 
 namespace DreamPotato.Core;
 
 public class Vmu
 {
     public readonly Cpu _cpu; // TODO: probably want to wrap everything a front-end would want to use thru here
-    private readonly FileSystem _fileSystem;
+    private FileSystem FileSystem => _cpu.FileSystem;
     public Audio Audio => _cpu.Audio;
     public Display Display => _cpu.Display;
-    public string? LoadedFilePath { get; private set; }
-    public (byte a, byte r, byte g, byte b) Color => _fileSystem.VmuColor;
+    public string? LoadedPath => _cpu.FileSystem.LoadedPath;
+    public (byte a, byte r, byte g, byte b)? Color => FileSystem.VmuColor;
 
-    public bool HasUnsavedChanges => _cpu.HasUnsavedChanges;
+    public bool HasUnsavedChanges => _cpu.FileSystem.HasUnsavedChanges;
     public event Action UnsavedChangesDetected
     {
-        add => _cpu.UnsavedChangesDetected += value;
-        remove => _cpu.UnsavedChangesDetected -= value;
+        add => _cpu.FileSystem.UnsavedChangesDetected += value;
+        remove => _cpu.FileSystem.UnsavedChangesDetected -= value;
+    }
+
+    public event Action<string> OpenFileRequested
+    {
+        add => _cpu.FileSystem.OpenFileRequested += value;
+        remove => _cpu.FileSystem.OpenFileRequested += value;
     }
 
     public Vmu(MapleMessageBroker? mapleMessageBroker = null)
     {
         _cpu = new Cpu(mapleMessageBroker);
         _cpu.Reset();
-        _fileSystem = new FileSystem(_cpu.Flash);
     }
 
     public void InitializeFlash(DateTimeOffset date)
     {
-        _fileSystem.InitializeFileSystem(date);
+        FileSystem.InitializeFileSystem(date);
     }
 
-    public void InitializeDate(DateTimeOffset date)
+    public void SetPreferredFileFormat(FileFormat preferredFileFormat)
     {
-        if (_cpu.Pc != 0 || _cpu.InstructionBank != InstructionBank.ROM)
+        FileSystem.PreferredFileFormat = preferredFileFormat;
+    }
+
+    public void InitializeRTCDate(DateTimeOffset date)
+    {
+        if (_cpu.Pc != 0 || _cpu.CurrentInstructionBankId != InstructionBank.ROM)
             throw new InvalidOperationException("Date should only be initialized at startup");
 
         _cpu.Pc = BuiltInCodeSymbols.BIOSAfterDateIsSet;
 
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Century_Bcd, FileSystem.ToBinaryCodedDecimal(date.Year / 100 % 100));
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Year_Bcd, FileSystem.ToBinaryCodedDecimal(date.Year % 100));
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Month_Bcd, FileSystem.ToBinaryCodedDecimal(date.Month));
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Day_Bcd, FileSystem.ToBinaryCodedDecimal(date.Day));
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Hour_Bcd, FileSystem.ToBinaryCodedDecimal(date.Hour));
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Minute_Bcd, FileSystem.ToBinaryCodedDecimal(date.Minute));
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Second_Bcd, FileSystem.ToBinaryCodedDecimal(date.Second));
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Year_Msb, (byte)(date.Year >> 8 & 0xff));
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Year_Lsb, (byte)(date.Year & 0xff));
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Month, (byte)date.Month);
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Day, (byte)date.Day);
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Hour, (byte)date.Hour);
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Minute, (byte)date.Minute);
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_Second, (byte)date.Second);
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_HalfSecond, (byte)(date.Millisecond >= 500 ? 1 : 0));
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_LeapYear, (byte)(DateTime.IsLeapYear(date.Year) ? 1 : 0));
-        _cpu.Memory.Write(BuiltInRamSymbols.DateTime_DateSet, 0xff);
+        var ramBank0 = _cpu.Memory.Direct_AccessMainRam0();
+        ramBank0[BuiltInRamSymbols.DateTime_Century_Bcd] = FileSystem.ToBinaryCodedDecimal(date.Year / 100 % 100);
+        ramBank0[BuiltInRamSymbols.DateTime_Year_Bcd] = FileSystem.ToBinaryCodedDecimal(date.Year % 100);
+        ramBank0[BuiltInRamSymbols.DateTime_Month_Bcd] = FileSystem.ToBinaryCodedDecimal(date.Month);
+        ramBank0[BuiltInRamSymbols.DateTime_Day_Bcd] = FileSystem.ToBinaryCodedDecimal(date.Day);
+        ramBank0[BuiltInRamSymbols.DateTime_Hour_Bcd] = FileSystem.ToBinaryCodedDecimal(date.Hour);
+        ramBank0[BuiltInRamSymbols.DateTime_Minute_Bcd] = FileSystem.ToBinaryCodedDecimal(date.Minute);
+        ramBank0[BuiltInRamSymbols.DateTime_Second_Bcd] = FileSystem.ToBinaryCodedDecimal(date.Second);
+        ramBank0[BuiltInRamSymbols.DateTime_Year_Msb] = (byte)(date.Year >> 8 & 0xff);
+        ramBank0[BuiltInRamSymbols.DateTime_Year_Lsb] = (byte)(date.Year & 0xff);
+        ramBank0[BuiltInRamSymbols.DateTime_Month] = (byte)date.Month;
+        ramBank0[BuiltInRamSymbols.DateTime_Day] = (byte)date.Day;
+        ramBank0[BuiltInRamSymbols.DateTime_Hour] = (byte)date.Hour;
+        ramBank0[BuiltInRamSymbols.DateTime_Minute] = (byte)date.Minute;
+        ramBank0[BuiltInRamSymbols.DateTime_Second] = (byte)date.Second;
+        ramBank0[BuiltInRamSymbols.DateTime_HalfSecond] = (byte)(date.Millisecond >= 500 ? 1 : 0);
+        ramBank0[BuiltInRamSymbols.DateTime_LeapYear] = (byte)(DateTime.IsLeapYear(date.Year) ? 1 : 0);
+        ramBank0[BuiltInRamSymbols.DateTime_DateSet] = 0xff;
 
         // Following SFR writes are based on examining memory state from manual date initialization.
         _cpu.SFRs.Ie = new Ie { PriorityControl0 = true, PriorityControl1 = true, MasterInterruptEnable = true };
@@ -79,104 +92,189 @@ public class Vmu
         _cpu.SFRs.Btcr = new Btcr(0x79);
     }
 
-    public void Reset(DateTimeOffset? date)
+    public void Reset(DateTimeOffset? rtcDate)
     {
         _cpu.Reset();
-        if (date.HasValue)
-            InitializeDate(date.GetValueOrDefault());
+        if (rtcDate.HasValue)
+            InitializeRTCDate(rtcDate.GetValueOrDefault());
     }
 
     public void LoadRom()
     {
         try
         {
-            var filePath = Path.Combine(DataFolder, RomFileName);
+            var filePath = RomFilePath;
             var bios = File.ReadAllBytes(filePath);
             if (bios.Length != Cpu.InstructionBankSize)
-                throw new ArgumentException($"VMU ROM '{filePath}' needs to be exactly 64KB in size.", nameof(filePath));
+                throw new InvalidOperationException($"VMU ROM '{filePath}' needs to be exactly 64KB in size.");
             bios.AsSpan().CopyTo(_cpu.ROM);
         }
-        catch (FileNotFoundException ex)
+        catch (IOException ex)
         {
-            throw new InvalidOperationException($"'{RomFileName}' must be included in '{DataFolder}'.", ex);
+            throw new InvalidOperationException($"'{RomFileName}' must be included in '{UserDataFolder}'.", ex);
         }
     }
 
     public void LoadNewVmu(DateTimeOffset date, bool autoInitializeRTCDate)
     {
-        LoadedFilePath = null;
         Reset(autoInitializeRTCDate ? date : null);
-        InitializeFlash(date);
 
-        LoadedFilePath = null;
-        _cpu.HasUnsavedChanges = false;
-        _cpu.VmuFileWriteStream = null;
+        FileSystem.FlushAndSetHostFileInfo(loadedPath: null, vmuFileWriteStream: null);
+        FileSystem.InitializeFileSystem(date);
         _cpu.ResyncMapleOutbound();
+        _cpu.LazyDebugInfo?.ClearFlash();
     }
 
-    public void LoadGameVms(string filePath, DateTimeOffset? date)
+    public (bool ok, string? error) LoadDci(string filePath, DateTimeOffset date, bool autoInitializeRTCDate)
+    {
+        if (!filePath.EndsWith(".dci", StringComparison.OrdinalIgnoreCase))
+            return (false, $"DCI file '{filePath}' must have .dci extension.");
+
+        var fileInfo = new FileInfo(filePath);
+        if (!fileInfo.Exists)
+            return (false, $"'{filePath}' does not exist.");
+
+        if (fileInfo.Length > Cpu.InstructionBankSize + DirectoryEntry.Size)
+            return (false, $"'{filePath}': Invalid format");
+
+        Reset(autoInitializeRTCDate ? date : null);
+
+        FileSystem.FlushAndSetHostFileInfo(filePath, vmuFileWriteStream: null);
+        FileSystem.InitializeFileSystem(date);
+        FileSystem.TryWriteDciFile(fileInfo);
+
+        _cpu.LazyDebugInfo?.ClearFlash();
+        _cpu.LazyDebugInfo?.GetBankInfo(InstructionBank.FlashBank0).WaterbearInfo = GetWaterbearInfo(filePath);
+
+        _cpu.ResyncMapleOutbound();
+        return (true, null);
+    }
+
+    public (bool ok, string? error) LoadVms(string filePath, DateTimeOffset date, bool autoInitializeRTCDate)
     {
         if (!filePath.EndsWith(".vms", StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException($"VMS file '{filePath}' must have .vms extension.", nameof(filePath));
+            return (false, $"VMS file '{filePath}' must have .vms extension.");
 
         var fileInfo = new FileInfo(filePath);
+        if (!fileInfo.Exists)
+            return (false, $"'{filePath}' does not exist.");
+
         if (fileInfo.Length > Cpu.InstructionBankSize)
-            throw new ArgumentException($"VMS file '{filePath}' must be 64KB or smaller to be loaded.", nameof(filePath));
+            return (false, $"VMS file '{filePath}' must be 64KB or smaller to be loaded.");
 
-        _cpu.Reset();
-        if (date.HasValue)
-            InitializeDate(date.GetValueOrDefault());
+        Reset(autoInitializeRTCDate ? date : null);
 
-        var fileSystemDate = date ?? DateTime.Now;
-        _fileSystem.InitializeFileSystem(fileSystemDate);
+        FileSystem.FlushAndSetHostFileInfo(filePath, vmuFileWriteStream: null);
+        FileSystem.InitializeFileSystem(date);
 
-        var gameData = File.ReadAllBytes(filePath);
-        var fileName = Path.GetFileNameWithoutExtension(filePath);
-        fileName = fileName.Substring(0, Math.Min(FileSystem.DirectoryEntryFileNameLength, fileName.Length));
-        _fileSystem.WriteGameFile(gameData, fileName, fileSystemDate);
-        LoadedFilePath = filePath;
-        _cpu.HasUnsavedChanges = false;
-        _cpu.VmuFileWriteStream = null;
+        using var vmsFile = File.OpenRead(filePath);
+
+        var vmiFilePath = Path.ChangeExtension(filePath, ".vmi");
+        if (File.Exists(vmiFilePath))
+        {
+            var vmiInfo = new VmiInfo(File.ReadAllBytes(vmiFilePath));
+            if (!vmiInfo.FileMode.HasFlag(VmuFileMode.Game))
+            {
+                // Note: this will search from the end of the volume toward the start for a free block
+                var currentBlock = FileSystem.UserRegionLastBlockId;
+                if (FileSystem.TryWriteDataFileWithVmi(ref currentBlock, vmsFile, vmiInfo) is (false, var error))
+                    return (false, error);
+            }
+            else
+            {
+                if (FileSystem.TryWriteGameFileWithVmi(vmsFile, onDiskFileName: fileInfo.Name, vmiInfo) is (false, var error))
+                    return (false, error);
+            }
+        }
+        else
+        {
+            // No .vmi file. Assume it is a game file and invent some defaults for the directory entry.
+            var fileName = Path.GetFileNameWithoutExtension(filePath);
+            fileName = fileName[..Math.Min(DirectoryEntry.FileNameLength, fileName.Length)];
+            var onVmuFileName = FileSystem.Encoding.GetBytes(fileName);
+            if (FileSystem.TryWriteVmsOnlyGame(vmsFile, onDiskFileName: fileInfo.Name, onVmuFileName, date, FileCopyProtection.NotCopyProtected) is (false, var error))
+                return (false, error);
+        }
+
+        _cpu.LazyDebugInfo?.ClearFlash();
+        _cpu.LazyDebugInfo?.GetBankInfo(InstructionBank.FlashBank0).WaterbearInfo = GetWaterbearInfo(filePath);
 
         _cpu.ResyncMapleOutbound();
+        return (true, null);
     }
 
-    public void LoadVmu(string filePath, DateTimeOffset? date)
+    public (bool ok, string? error) LoadVmu(string filePath, DateTimeOffset? rtcDate)
     {
-        // TODO: loading a wrong file type should just show a toast or something, not crash the emu.
         if (!filePath.EndsWith(".vmu", StringComparison.OrdinalIgnoreCase) && !filePath.EndsWith(".bin", StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException($"VMU file '{filePath}' must have .vmu or .bin extension.", nameof(filePath));
+            return (false, $"VMU file '{filePath}' must have .vmu or .bin extension.");
 
         var fileInfo = new FileInfo(filePath);
+        if (!fileInfo.Exists)
+            return (false, $"'{filePath}' does not exist.");
+
         if (fileInfo.Length != Cpu.InstructionBankSize * 2)
-            throw new ArgumentException($"VMU file '{filePath}' needs to be exactly 128KB in size.", nameof(filePath));
+            return (false, $"VMU file '{filePath}' needs to be exactly 128KB in size.");
 
         // NB: lifetime of the VMU file stream is managed by _cpu.
         var fileStream = fileInfo.Open(FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
 
-        _cpu.Reset();
-        if (date.HasValue)
-            InitializeDate(date.GetValueOrDefault());
+        Reset(rtcDate);
 
+        _cpu.FileSystem.FlushAndSetHostFileInfo(filePath, fileStream);
+        _cpu.LazyDebugInfo?.ClearFlash();
         fileStream.ReadExactly(_cpu.Flash);
-        LoadedFilePath = filePath;
-        _cpu.HasUnsavedChanges = false;
-        _cpu.VmuFileWriteStream = fileStream;
         _cpu.ResyncMapleOutbound();
+        return (true, null);
     }
 
-    public void SaveVmuAs(string filePath)
+    /// <summary>Note: this call is transactional for flash and cpu state.</summary>
+    public (bool ok, string? error) LoadFolder(string folderPath, DateTimeOffset date, bool autoInitializeRtcDate)
+    {
+        var folderInfo = new DirectoryInfo(folderPath);
+        if (!folderInfo.Exists)
+            return (false, $"Folder '{folderInfo.Name}' does not exist.");
+
+        FileSystem.FlushIfNeeded();
+        if (FileSystem.TryInitializeFromFolder(sourceDirectory: folderInfo, fallbackDate: date) is (false, var error))
+            return (false, error);
+
+        _cpu.FileSystem.SetHostFileInfo(folderPath, vmuFileWriteStream: null);
+        Reset(autoInitializeRtcDate ? date : null);
+        _cpu.LazyDebugInfo?.ClearFlash();
+        _cpu.ResyncMapleOutbound();
+
+        return (true, null);
+    }
+
+    public void SaveVmuAsFile(string filePath)
     {
         if (IsDockedToDreamcast)
             _cpu.ResyncMapleInbound();
 
         var fileStream = File.Open(filePath, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite);
+        _cpu.FileSystem.FlushAndSetHostFileInfo(filePath, fileStream);
         fileStream.Write(_cpu.Flash);
-        LoadedFilePath = filePath;
-        _cpu.HasUnsavedChanges = false;
-        _cpu.VmuFileWriteStream = fileStream;
         if (IsDockedToDreamcast)
             _cpu.ResyncMapleOutbound();
+    }
+
+    public (bool ok, string? error) SaveVmuAsFolder(string folderPath)
+    {
+        if (IsDockedToDreamcast)
+            _cpu.ResyncMapleInbound();
+
+        var info = new DirectoryInfo(folderPath);
+        if (!info.Exists)
+            return (false, $"The folder '{info.Name}' does not exist.");
+
+        if (FileSystem.TryReadAllFiles(destDirectory: info) is (false, var error))
+            return (false, error);
+
+        _cpu.FileSystem.FlushAndSetHostFileInfo(folderPath, vmuFileWriteStream: null);
+        if (IsDockedToDreamcast)
+            _cpu.ResyncMapleOutbound();
+
+        return (true, null);
     }
 
     public bool IsServerConnected
@@ -195,10 +293,10 @@ public class Vmu
 
     // Toggle the docked/ejected state.
     public void DockOrEjectToDreamcast()
-        => DockOrEjectToDreamcast(connect: !IsDockedToDreamcast);
+        => DockOrEjectToDreamcast(dock: !IsDockedToDreamcast);
 
     // Dock or eject depending on a bool argument.
-    public void DockOrEjectToDreamcast(bool connect)
+    public void DockOrEjectToDreamcast(bool dock)
     {
         if (IsOtherVmuConnected)
         {
@@ -206,7 +304,7 @@ public class Vmu
             _cpu.DisconnectVmu();
         }
 
-        _cpu.ConnectDreamcast(connect);
+        _cpu.ConnectDreamcast(dock);
     }
 
     public void ConnectOrDisconnectVmu(Vmu other)
@@ -229,30 +327,84 @@ public class Vmu
             _cpu.ConnectVmu(other._cpu);
     }
 
-    public static string DataFolder => Path.Combine(AppContext.BaseDirectory, "Data");
+    public static string EmbeddedDataFolder => IsMacAppBundle
+        ? Path.Combine(AppContext.BaseDirectory, "..", "Resources", "Data")
+        : Path.Combine(AppContext.BaseDirectory, "Data");
+
+    private static bool IsLinuxAppImage => OperatingSystem.IsLinux() && Environment.GetEnvironmentVariable("APPIMAGE") != null;
+    private static bool IsMacAppBundle => OperatingSystem.IsMacOS() && AppContext.BaseDirectory.Contains(".app/Contents/", StringComparison.Ordinal);
+    private static bool UseNonEmbeddedUserDataFolder => IsLinuxAppImage || IsMacAppBundle;
+
+    public static string UserDataRootFolder => UseNonEmbeddedUserDataFolder
+        ? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
+        : AppContext.BaseDirectory;
+
+    public static string UserDataFolder => UseNonEmbeddedUserDataFolder
+        ? Path.Combine(UserDataRootFolder, "DreamPotato")
+        : EmbeddedDataFolder;
 
     public DreamcastSlot DreamcastSlot { get => _cpu.DreamcastSlot; set => _cpu.DreamcastSlot = value; }
+    public DebugInfo GetOrCreateDebugInfo()
+    {
+        if (_cpu.LazyDebugInfo is { } existingDebugInfo)
+        {
+            return existingDebugInfo;
+        }
+
+        var debugInfo = _cpu.InitializeDebugInfo();
+        debugInfo.GetBankInfo(InstructionBank.ROM).WaterbearInfo = GetWaterbearInfo(RomFilePath);
+        debugInfo.GetBankInfo(InstructionBank.FlashBank0).WaterbearInfo = GetWaterbearInfo(LoadedPath);
+        return debugInfo;
+    }
+
+    private WB.DebugInfo? GetWaterbearInfo(string? filePath)
+    {
+        if (filePath is null)
+            return null;
+
+        var debugInfoPath = $"{filePath}.debug.json";
+        if (!File.Exists(debugInfoPath))
+            return null;
+
+        try
+        {
+            using var fileStream = File.OpenRead(debugInfoPath);
+            var waterbearInfo = JsonSerializer.Deserialize(fileStream, WaterbearJsonSerializerContext.Default.DebugInfo);
+            if (waterbearInfo?.Version != "1")
+                return null;
+
+            return waterbearInfo;
+        }
+        catch (Exception ex)
+        {
+            _cpu.Logger.LogError(ex.Message);
+            return null;
+        }
+    }
+
+    public DebugInfo? LazyDebugInfo => _cpu.LazyDebugInfo;
 
     public const string RomFileName = "american_v1.05.bin";
     public const string SaveStateHeaderMessage = $"DreamPotatoSaveStateV{SaveStateVersion}";
-    public const string SaveStateVersion = "4";
+    public const string SaveStateVersion = "6";
+    public string RomFilePath => Path.Combine(EmbeddedDataFolder, RomFileName);
 
     public static string GetSaveStatePath(string loadedFilePath, string id)
     {
         var filePath = $"{Path.GetFileNameWithoutExtension(loadedFilePath)}_{id}.dpstate";
-        return Path.Combine(DataFolder, "SaveStates", filePath);
+        return Path.Combine(UserDataFolder, "SaveStates", filePath);
     }
 
     public bool SaveState(string id)
     {
-        if (LoadedFilePath is null || GetSaveStatePath(LoadedFilePath, id) is not string filePath)
+        if (LoadedPath is null || GetSaveStatePath(LoadedPath, id) is not string filePath)
             return false;
 
         if (IsOtherVmuConnected)
            return false;
 
         var directory = Path.GetDirectoryName(filePath);
-        Debug.Assert(directory != null && directory.StartsWith(DataFolder, StringComparison.Ordinal));
+        Debug.Assert(directory != null && directory.StartsWith(UserDataFolder, StringComparison.Ordinal));
         Directory.CreateDirectory(directory);
         using var fileStream = File.Create(filePath);
         using var zipArchive = new ZipArchive(fileStream, ZipArchiveMode.Create);
@@ -278,10 +430,10 @@ public class Vmu
 
     public (bool success, string? error) LoadStateById(string id, bool saveOopsFile)
     {
-        if (LoadedFilePath is null)
+        if (LoadedPath is null)
             return (success: false, error: "Cannot load state because no VMU/VMS file is currently open.");
 
-        var filePath = GetSaveStatePath(LoadedFilePath, id);
+        var filePath = GetSaveStatePath(LoadedPath, id);
         if (filePath is null)
             return (success: false, "");
 
@@ -307,7 +459,7 @@ public class Vmu
             using var readStream = File.OpenRead(filePath);
             using var zipArchive = new ZipArchive(readStream);
             if (zipArchive.Comment != SaveStateHeaderMessage)
-                return (success: false, $"Outdated '{zipArchive.Comment}' is not supported. '{SaveStateHeaderMessage}'.");
+                return (success: false, $"Outdated '{zipArchive.Comment}' is not supported. Expected '{SaveStateHeaderMessage}'.");
 
             if (zipArchive.GetEntry(SaveState_CpuStateFile) is not { } cpuStateEntry)
                 return (success: false, $"'{SaveState_CpuStateFile}' not found.");
@@ -324,5 +476,43 @@ public class Vmu
         {
             return (false, $"Invalid or outdated save state: '{filePath}'");
         }
+    }
+
+    public bool PollFileSystem(DateTimeOffset now)
+    {
+        if (LoadedPath is null)
+            return false;
+
+        var vmsFolder = new DirectoryInfo(LoadedPath);
+        if (!vmsFolder.Exists)
+            // Either a folder is not currently open (i.e. a file is open instead), or the folder was deleted/renamed.
+            return false;
+
+        if (FileSystem.ShouldFlushToFolder(now))
+        {
+            if (IsDockedToDreamcast)
+                _cpu.ResyncMapleInbound();
+
+            FileSystem.FlushToFolder(vmsFolder);
+            return true;
+        }
+
+        return false;
+    }
+
+    public void FlushFileSystem()
+    {
+        if (LoadedPath is null)
+            return;
+
+        var vmsFolder = new DirectoryInfo(LoadedPath);
+        if (!vmsFolder.Exists)
+            // Either a folder is not currently open (i.e. a file is open instead), or the folder was deleted/renamed.
+            return;
+
+        if (IsDockedToDreamcast)
+            _cpu.ResyncMapleInbound();
+
+        FileSystem.FlushToFolder(vmsFolder);
     }
 }
