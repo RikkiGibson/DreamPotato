@@ -39,7 +39,6 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ImGui.NET" Version="1.91.6.1" />
     <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.4" />
     <PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.4" />
     <PackageReference Include="NativeFileDialogSharp" Version="0.6.0-alpha" />
@@ -47,6 +46,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../DreamPotato.Core/DreamPotato.Core.csproj" />
+    <ProjectReference Include="../ImGui.NET/src/ImGui.NET/ImGui.NET.csproj" />
   </ItemGroup>
   <Target Name="RestoreDotnetTools" BeforeTargets="Restore">
     <Message Text="Restoring dotnet tools" Importance="High" />

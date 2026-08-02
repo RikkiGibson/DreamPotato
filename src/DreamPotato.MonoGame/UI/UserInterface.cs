@@ -223,6 +223,10 @@ partial class UserInterface
     {
         _imGuiRenderer = new ImGuiRenderer(_game);
 
+        unsafe {
+            var x = ImGui.GetStyle().NativePtr->FontSizeBase;
+        }
+
         var stream = typeof(UserInterface).Assembly.GetManifestResourceStream("Fonts/NanumGothic-Regular.ttf.zip") ?? throw new InvalidOperationException();
         using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
 

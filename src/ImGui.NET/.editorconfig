@@ -1,0 +1,2 @@
+[src/ImGui.NET/Generated/*.cs]
+generated_code = true
