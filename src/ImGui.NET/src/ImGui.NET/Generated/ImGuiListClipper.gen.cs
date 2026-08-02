@@ -7,13 +7,15 @@ namespace ImGuiNET
 {
     public unsafe partial struct ImGuiListClipper
     {
-        public IntPtr Ctx;
         public int DisplayStart;
         public int DisplayEnd;
+        public int UserIndex;
         public int ItemsCount;
         public float ItemsHeight;
-        public float StartPosY;
+        public ImGuiListClipperFlags Flags;
+        public double StartPosY;
         public double StartSeekOffsetY;
+        public IntPtr Ctx;
         public void* TempData;
     }
     public unsafe partial struct ImGuiListClipperPtr
@@ -24,13 +26,15 @@ namespace ImGuiNET
         public static implicit operator ImGuiListClipperPtr(ImGuiListClipper* nativePtr) => new ImGuiListClipperPtr(nativePtr);
         public static implicit operator ImGuiListClipper* (ImGuiListClipperPtr wrappedPtr) => wrappedPtr.NativePtr;
         public static implicit operator ImGuiListClipperPtr(IntPtr nativePtr) => new ImGuiListClipperPtr(nativePtr);
-        public ref IntPtr Ctx => ref Unsafe.AsRef<IntPtr>(&NativePtr->Ctx);
         public ref int DisplayStart => ref Unsafe.AsRef<int>(&NativePtr->DisplayStart);
         public ref int DisplayEnd => ref Unsafe.AsRef<int>(&NativePtr->DisplayEnd);
+        public ref int UserIndex => ref Unsafe.AsRef<int>(&NativePtr->UserIndex);
         public ref int ItemsCount => ref Unsafe.AsRef<int>(&NativePtr->ItemsCount);
         public ref float ItemsHeight => ref Unsafe.AsRef<float>(&NativePtr->ItemsHeight);
-        public ref float StartPosY => ref Unsafe.AsRef<float>(&NativePtr->StartPosY);
+        public ref ImGuiListClipperFlags Flags => ref Unsafe.AsRef<ImGuiListClipperFlags>(&NativePtr->Flags);
+        public ref double StartPosY => ref Unsafe.AsRef<double>(&NativePtr->StartPosY);
         public ref double StartSeekOffsetY => ref Unsafe.AsRef<double>(&NativePtr->StartSeekOffsetY);
+        public ref IntPtr Ctx => ref Unsafe.AsRef<IntPtr>(&NativePtr->Ctx);
         public IntPtr TempData { get => (IntPtr)NativePtr->TempData; set => NativePtr->TempData = (void*)value; }
         public void Begin(int items_count)
         {

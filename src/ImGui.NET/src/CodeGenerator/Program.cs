@@ -91,7 +91,22 @@ namespace CodeGenerator
                     {
                         writer.WriteLine("[System.Flags]");
                     }
-                    writer.PushBlock($"public enum {ed.FriendlyNames[0]}");
+
+                    // Some flags enums contain values that exceed int.MaxValue (e.g. sign bit set); back them with uint.
+                    bool useUint = false;
+                    bool hasNegative = false;
+                    foreach (EnumMember member in ed.Members)
+                    {
+                        if (long.TryParse(ed.SanitizeNames(member.Value), out long v))
+                        {
+                            if (v < 0) { hasNegative = true; }
+                            else if (v > int.MaxValue && v <= uint.MaxValue) { useUint = true; }
+                        }
+                    }
+
+                    string enumHeader = $"public enum {ed.FriendlyNames[0]}";
+                    if (useUint && !hasNegative) { enumHeader += " : uint"; }
+                    writer.PushBlock(enumHeader);
                     foreach (EnumMember member in ed.Members)
                     {
                         string sanitizedName = ed.SanitizeNames(member.Name);
@@ -179,9 +194,12 @@ namespace CodeGenerator
                                 vectorElementType = wellKnown;
                             }
 
+                            // Some fields are a pointer to a vector (ImVector*); dereference to get the vector by value.
+                            string vectorAccess = typeStr.TrimEnd().EndsWith("*") ? $"*NativePtr->{field.Name}" : $"NativePtr->{field.Name}";
+
                             if (GetWrappedType(vectorElementType + "*", out string wrappedElementType))
                             {
-                                writer.WriteLine($"public ImPtrVector<{wrappedElementType}> {field.Name} => new ImPtrVector<{wrappedElementType}>(NativePtr->{field.Name}, Unsafe.SizeOf<{vectorElementType}>());");
+                                writer.WriteLine($"public ImPtrVector<{wrappedElementType}> {field.Name} => new ImPtrVector<{wrappedElementType}>({vectorAccess}, Unsafe.SizeOf<{vectorElementType}>());");
                             }
                             else
                             {
@@ -189,7 +207,7 @@ namespace CodeGenerator
                                 {
                                     vectorElementType = wrappedElementType;
                                 }
-                                writer.WriteLine($"public ImVector<{vectorElementType}> {field.Name} => new ImVector<{vectorElementType}>(NativePtr->{field.Name});");
+                                writer.WriteLine($"public ImVector<{vectorElementType}> {field.Name} => new ImVector<{vectorElementType}>({vectorAccess});");
                             }
                         }
                         else
@@ -638,6 +656,11 @@ namespace CodeGenerator
                     string nativeArgName = "native_" + tr.Name;
                     marshalledParameters[i] = new MarshalledParameter("IntPtr", false, nativeArgName, false);
                     preCallLines.Add($"{nativePtrTypeName} {nativeArgName} = ({nativePtrTypeName}){correctedIdentifier}.ToPointer();");
+                }
+                else if (tr.Type.EndsWith("*") && GetTypeString(tr.Type, false) == "IntPtr")
+                {
+                    // Opaque pointer type mapped directly to IntPtr; pass by value (native signature takes IntPtr).
+                    marshalledParameters[i] = new MarshalledParameter("IntPtr", false, correctedIdentifier, false);
                 }
                 else if (GetWrappedType(tr.Type, out string wrappedParamType)
                     && !TypeInfo.WellKnownTypes.ContainsKey(tr.Type)

@@ -37,7 +37,6 @@ namespace DreamPotato.MonoGame.UI
         private readonly Dictionary<IntPtr, Texture2D> _loadedTextures;
 
         private int _textureId;
-        private IntPtr? _fontTextureId;
 
         // Input
         private int _scrollWheelValue;
@@ -49,6 +48,7 @@ namespace DreamPotato.MonoGame.UI
         {
             var context = ImGui.CreateContext();
             ImGui.SetCurrentContext(context);
+            ImGui.GetIO().BackendFlags |= ImGuiBackendFlags.RendererHasTextures;
 
             _game = game ?? throw new ArgumentNullException(nameof(game));
             _graphicsDevice = game.GraphicsDevice;
@@ -71,34 +71,6 @@ namespace DreamPotato.MonoGame.UI
         #region ImGuiRenderer
 
         /// <summary>
-        /// Creates a texture and loads the font data from ImGui. Should be called when the <see cref="GraphicsDevice" /> is initialized but before any rendering is done
-        /// </summary>
-        public virtual unsafe void RebuildFontAtlas()
-        {
-            // Get font texture from ImGui
-            var io = ImGui.GetIO();
-            io.Fonts.GetTexDataAsRGBA32(out byte* pixelData, out int width, out int height, out int bytesPerPixel);
-
-            // Copy the data to a managed array
-            var pixels = new byte[width * height * bytesPerPixel];
-            unsafe { Marshal.Copy(new IntPtr(pixelData), pixels, 0, pixels.Length); }
-
-            // Create and register the texture as an XNA texture
-            var tex2d = new Texture2D(_graphicsDevice, width, height, false, SurfaceFormat.Color);
-            tex2d.SetData(pixels);
-
-            // Should a texture already have been build previously, unbind it first so it can be deallocated
-            if (_fontTextureId.HasValue) UnbindTexture(_fontTextureId.Value);
-
-            // Bind the new texture to an ImGui-friendly id
-            _fontTextureId = BindTexture(tex2d);
-
-            // Let ImGui know where to find the texture
-            io.Fonts.SetTexID(_fontTextureId.Value);
-            io.Fonts.ClearTexData(); // Clears CPU side texture data
-        }
-
-        /// <summary>
         /// Creates a pointer to a texture, which can be passed through ImGui calls such as <see cref="ImGui.Image" />. That pointer is then used by ImGui to let us know what texture to draw
         /// </summary>
         public virtual IntPtr BindTexture(Texture2D texture)
@@ -109,6 +81,11 @@ namespace DreamPotato.MonoGame.UI
 
             return id;
         }
+
+        /// <summary>
+        /// Wraps a texture id (from <see cref="BindTexture" />) in an <see cref="ImTextureRef" /> for use with ImGui calls such as <see cref="ImGui.Image" />.
+        /// </summary>
+        public static ImTextureRef ToTextureRef(IntPtr textureId) => new ImTextureRef { _TexID = textureId };
 
         /// <summary>
         /// Removes a previously created texture pointer, releasing its reference and allowing it to be deallocated
@@ -316,6 +293,16 @@ namespace DreamPotato.MonoGame.UI
             // Setup projection
             _graphicsDevice.Viewport = new Viewport(0, 0, _graphicsDevice.PresentationParameters.BackBufferWidth, _graphicsDevice.PresentationParameters.BackBufferHeight);
 
+            // Create/update/destroy any textures ImGui requested this frame (ImGui 1.92+).
+            for (int i = 0; i < drawData.Textures.Size; i++)
+            {
+                ImTextureDataPtr tex = drawData.Textures[i];
+                if (tex.Status != ImTextureStatus.OK)
+                {
+                    UpdateTexture(tex);
+                }
+            }
+
             UpdateBuffers(drawData);
 
             RenderCommandLists(drawData);
@@ -327,6 +314,58 @@ namespace DreamPotato.MonoGame.UI
             _graphicsDevice.DepthStencilState = lastDepthStencil;
             _graphicsDevice.BlendState = lastBlendState;
             _graphicsDevice.BlendFactor = lastBlendFactor;
+        }
+
+        /// <summary>
+        /// Handles creating, updating and destroying the textures ImGui manages (ImGui 1.92+).
+        /// </summary>
+        private unsafe void UpdateTexture(ImTextureDataPtr tex)
+        {
+            switch (tex.Status)
+            {
+                case ImTextureStatus.WantCreate:
+                {
+                    var pixels = new byte[tex.Width * tex.Height * tex.BytesPerPixel];
+                    Marshal.Copy(tex.GetPixels(), pixels, 0, pixels.Length);
+
+                    var tex2d = new Texture2D(_graphicsDevice, tex.Width, tex.Height, false, SurfaceFormat.Color);
+                    tex2d.SetData(pixels);
+
+                    var id = BindTexture(tex2d);
+                    tex.SetTexID(id);
+                    tex.SetStatus(ImTextureStatus.OK);
+                    break;
+                }
+                case ImTextureStatus.WantUpdates:
+                {
+                    var tex2d = _loadedTextures[tex.TexID];
+                    int bpp = tex.BytesPerPixel;
+                    for (int i = 0; i < tex.Updates.Size; i++)
+                    {
+                        ImTextureRectPtr r = tex.Updates[i];
+                        var rectPixels = new byte[r.w * r.h * bpp];
+                        for (int y = 0; y < r.h; y++)
+                        {
+                            IntPtr src = tex.GetPixelsAt(r.x, r.y + y);
+                            Marshal.Copy(src, rectPixels, y * r.w * bpp, r.w * bpp);
+                        }
+                        tex2d.SetData(0, new Rectangle(r.x, r.y, r.w, r.h), rectPixels, 0, rectPixels.Length);
+                    }
+                    tex.SetStatus(ImTextureStatus.OK);
+                    break;
+                }
+                case ImTextureStatus.WantDestroy when tex.UnusedFrames > 0:
+                {
+                    if (_loadedTextures.TryGetValue(tex.TexID, out var tex2d))
+                    {
+                        tex2d.Dispose();
+                        UnbindTexture(tex.TexID);
+                    }
+                    tex.SetTexID(IntPtr.Zero);
+                    tex.SetStatus(ImTextureStatus.Destroyed);
+                    break;
+                }
+            }
         }
 
         private unsafe void UpdateBuffers(ImDrawDataPtr drawData)
@@ -400,9 +439,10 @@ namespace DreamPotato.MonoGame.UI
                         continue;
                     }
 
-                    if (!_loadedTextures.ContainsKey(drawCmd.TextureId))
+                    IntPtr texId = drawCmd.GetTexID();
+                    if (!_loadedTextures.ContainsKey(texId))
                     {
-                        throw new InvalidOperationException($"Could not find a texture with id '{drawCmd.TextureId}', please check your bindings");
+                        throw new InvalidOperationException($"Could not find a texture with id '{texId}', please check your bindings");
                     }
 
                     _graphicsDevice.ScissorRectangle = new Rectangle(
@@ -412,7 +452,7 @@ namespace DreamPotato.MonoGame.UI
                         (int)(drawCmd.ClipRect.W - drawCmd.ClipRect.Y)
                     );
 
-                    var effect = UpdateEffect(_loadedTextures[drawCmd.TextureId]);
+                    var effect = UpdateEffect(_loadedTextures[texId]);
 
                     foreach (var pass in effect.CurrentTechnique.Passes)
                     {

@@ -9,5 +9,6 @@ namespace ImGuiNET
         MouseButtonMiddle = 4,
         MouseButtonMask = 7,
         EnableNav = 8,
+        AllowOverlap = 4096,
     }
 }

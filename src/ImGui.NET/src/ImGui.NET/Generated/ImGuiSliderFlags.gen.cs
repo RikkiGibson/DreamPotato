@@ -10,6 +10,8 @@ namespace ImGuiNET
         WrapAround = 256,
         ClampOnInput = 512,
         ClampZeroRange = 1024,
+        NoSpeedTweaks = 2048,
+        ColorMarkers = 4096,
         AlwaysClamp = 1536,
         InvalidMask = 1879048207,
     }

@@ -16,6 +16,7 @@ namespace ImGuiNET
         public ImGuiDockNodeFlags DockNodeFlagsOverrideSet;
         public byte DockingAlwaysTabBar;
         public byte DockingAllowUnclassed;
+        public void* PlatformIconData;
     }
     public unsafe partial struct ImGuiWindowClassPtr
     {
@@ -34,6 +35,7 @@ namespace ImGuiNET
         public ref ImGuiDockNodeFlags DockNodeFlagsOverrideSet => ref Unsafe.AsRef<ImGuiDockNodeFlags>(&NativePtr->DockNodeFlagsOverrideSet);
         public ref bool DockingAlwaysTabBar => ref Unsafe.AsRef<bool>(&NativePtr->DockingAlwaysTabBar);
         public ref bool DockingAllowUnclassed => ref Unsafe.AsRef<bool>(&NativePtr->DockingAllowUnclassed);
+        public IntPtr PlatformIconData { get => (IntPtr)NativePtr->PlatformIconData; set => NativePtr->PlatformIconData = (void*)value; }
         public void Destroy()
         {
             ImGuiNative.ImGuiWindowClass_destroy((ImGuiWindowClass*)(NativePtr));

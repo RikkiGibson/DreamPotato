@@ -15,7 +15,12 @@ namespace ImGuiNET
         public IntPtr Platform_SetImeDataFn;
         public void* Platform_ImeUserData;
         public ushort Platform_LocaleDecimalPoint;
+        public int Renderer_TextureMaxWidth;
+        public int Renderer_TextureMaxHeight;
         public void* Renderer_RenderState;
+        public IntPtr DrawCallback_ResetRenderState;
+        public IntPtr DrawCallback_SetSamplerLinear;
+        public IntPtr DrawCallback_SetSamplerNearest;
         public IntPtr Platform_CreateWindow;
         public IntPtr Platform_DestroyWindow;
         public IntPtr Platform_ShowWindow;
@@ -23,6 +28,7 @@ namespace ImGuiNET
         public IntPtr Platform_GetWindowPos;
         public IntPtr Platform_SetWindowSize;
         public IntPtr Platform_GetWindowSize;
+        public IntPtr Platform_GetWindowFramebufferScale;
         public IntPtr Platform_SetWindowFocus;
         public IntPtr Platform_GetWindowFocus;
         public IntPtr Platform_GetWindowMinimized;
@@ -41,6 +47,7 @@ namespace ImGuiNET
         public IntPtr Renderer_RenderWindow;
         public IntPtr Renderer_SwapBuffers;
         public ImVector Monitors;
+        public ImVector Textures;
         public ImVector Viewports;
     }
     public unsafe partial struct ImGuiPlatformIOPtr
@@ -59,7 +66,12 @@ namespace ImGuiNET
         public ref IntPtr Platform_SetImeDataFn => ref Unsafe.AsRef<IntPtr>(&NativePtr->Platform_SetImeDataFn);
         public IntPtr Platform_ImeUserData { get => (IntPtr)NativePtr->Platform_ImeUserData; set => NativePtr->Platform_ImeUserData = (void*)value; }
         public ref ushort Platform_LocaleDecimalPoint => ref Unsafe.AsRef<ushort>(&NativePtr->Platform_LocaleDecimalPoint);
+        public ref int Renderer_TextureMaxWidth => ref Unsafe.AsRef<int>(&NativePtr->Renderer_TextureMaxWidth);
+        public ref int Renderer_TextureMaxHeight => ref Unsafe.AsRef<int>(&NativePtr->Renderer_TextureMaxHeight);
         public IntPtr Renderer_RenderState { get => (IntPtr)NativePtr->Renderer_RenderState; set => NativePtr->Renderer_RenderState = (void*)value; }
+        public ref IntPtr DrawCallback_ResetRenderState => ref Unsafe.AsRef<IntPtr>(&NativePtr->DrawCallback_ResetRenderState);
+        public ref IntPtr DrawCallback_SetSamplerLinear => ref Unsafe.AsRef<IntPtr>(&NativePtr->DrawCallback_SetSamplerLinear);
+        public ref IntPtr DrawCallback_SetSamplerNearest => ref Unsafe.AsRef<IntPtr>(&NativePtr->DrawCallback_SetSamplerNearest);
         public ref IntPtr Platform_CreateWindow => ref Unsafe.AsRef<IntPtr>(&NativePtr->Platform_CreateWindow);
         public ref IntPtr Platform_DestroyWindow => ref Unsafe.AsRef<IntPtr>(&NativePtr->Platform_DestroyWindow);
         public ref IntPtr Platform_ShowWindow => ref Unsafe.AsRef<IntPtr>(&NativePtr->Platform_ShowWindow);
@@ -67,6 +79,7 @@ namespace ImGuiNET
         public ref IntPtr Platform_GetWindowPos => ref Unsafe.AsRef<IntPtr>(&NativePtr->Platform_GetWindowPos);
         public ref IntPtr Platform_SetWindowSize => ref Unsafe.AsRef<IntPtr>(&NativePtr->Platform_SetWindowSize);
         public ref IntPtr Platform_GetWindowSize => ref Unsafe.AsRef<IntPtr>(&NativePtr->Platform_GetWindowSize);
+        public ref IntPtr Platform_GetWindowFramebufferScale => ref Unsafe.AsRef<IntPtr>(&NativePtr->Platform_GetWindowFramebufferScale);
         public ref IntPtr Platform_SetWindowFocus => ref Unsafe.AsRef<IntPtr>(&NativePtr->Platform_SetWindowFocus);
         public ref IntPtr Platform_GetWindowFocus => ref Unsafe.AsRef<IntPtr>(&NativePtr->Platform_GetWindowFocus);
         public ref IntPtr Platform_GetWindowMinimized => ref Unsafe.AsRef<IntPtr>(&NativePtr->Platform_GetWindowMinimized);
@@ -85,7 +98,16 @@ namespace ImGuiNET
         public ref IntPtr Renderer_RenderWindow => ref Unsafe.AsRef<IntPtr>(&NativePtr->Renderer_RenderWindow);
         public ref IntPtr Renderer_SwapBuffers => ref Unsafe.AsRef<IntPtr>(&NativePtr->Renderer_SwapBuffers);
         public ImPtrVector<ImGuiPlatformMonitorPtr> Monitors => new ImPtrVector<ImGuiPlatformMonitorPtr>(NativePtr->Monitors, Unsafe.SizeOf<ImGuiPlatformMonitor>());
+        public ImVector<ImTextureDataPtr> Textures => new ImVector<ImTextureDataPtr>(NativePtr->Textures);
         public ImVector<ImGuiViewportPtr> Viewports => new ImVector<ImGuiViewportPtr>(NativePtr->Viewports);
+        public void ClearPlatformHandlers()
+        {
+            ImGuiNative.ImGuiPlatformIO_ClearPlatformHandlers((ImGuiPlatformIO*)(NativePtr));
+        }
+        public void ClearRendererHandlers()
+        {
+            ImGuiNative.ImGuiPlatformIO_ClearRendererHandlers((ImGuiPlatformIO*)(NativePtr));
+        }
         public void Destroy()
         {
             ImGuiNative.ImGuiPlatformIO_destroy((ImGuiPlatformIO*)(NativePtr));

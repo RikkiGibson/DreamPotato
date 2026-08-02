@@ -16,6 +16,7 @@ namespace ImGuiNET
         public Vector2 DisplaySize;
         public Vector2 FramebufferScale;
         public ImGuiViewport* OwnerViewport;
+        public ImVector* Textures;
     }
     public unsafe partial struct ImDrawDataPtr
     {
@@ -34,6 +35,7 @@ namespace ImGuiNET
         public ref Vector2 DisplaySize => ref Unsafe.AsRef<Vector2>(&NativePtr->DisplaySize);
         public ref Vector2 FramebufferScale => ref Unsafe.AsRef<Vector2>(&NativePtr->FramebufferScale);
         public ImGuiViewportPtr OwnerViewport => new ImGuiViewportPtr(NativePtr->OwnerViewport);
+        public ImVector<ImTextureDataPtr> Textures => new ImVector<ImTextureDataPtr>(*NativePtr->Textures);
         public void AddDrawList(ImDrawListPtr draw_list)
         {
             ImDrawList* native_draw_list = draw_list.NativePtr;

@@ -10,5 +10,6 @@ namespace ImGuiNET
         ButtonRepeat = 8,
         AutoClosePopups = 16,
         AllowDuplicateId = 32,
+        Disabled = 64,
     }
 }

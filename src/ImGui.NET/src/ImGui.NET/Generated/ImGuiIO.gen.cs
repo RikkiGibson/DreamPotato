@@ -10,16 +10,15 @@ namespace ImGuiNET
         public ImGuiConfigFlags ConfigFlags;
         public ImGuiBackendFlags BackendFlags;
         public Vector2 DisplaySize;
+        public Vector2 DisplayFramebufferScale;
         public float DeltaTime;
         public float IniSavingRate;
         public byte* IniFilename;
         public byte* LogFilename;
         public void* UserData;
         public ImFontAtlas* Fonts;
-        public float FontGlobalScale;
-        public byte FontAllowUserScaling;
         public ImFont* FontDefault;
-        public Vector2 DisplayFramebufferScale;
+        public byte FontAllowUserScaling;
         public byte ConfigNavSwapGamepadButtons;
         public byte ConfigNavMoveSetMousePos;
         public byte ConfigNavCaptureKeyboard;
@@ -28,6 +27,7 @@ namespace ImGuiNET
         public byte ConfigNavCursorVisibleAuto;
         public byte ConfigNavCursorVisibleAlways;
         public byte ConfigDockingNoSplit;
+        public byte ConfigDockingNoDockingOver;
         public byte ConfigDockingWithShift;
         public byte ConfigDockingAlwaysTabBar;
         public byte ConfigDockingTransparentPayload;
@@ -35,6 +35,9 @@ namespace ImGuiNET
         public byte ConfigViewportsNoTaskBarIcon;
         public byte ConfigViewportsNoDecoration;
         public byte ConfigViewportsNoDefaultParent;
+        public byte ConfigViewportsPlatformFocusSetsImGuiFocus;
+        public byte ConfigDpiScaleFonts;
+        public byte ConfigDpiScaleViewports;
         public byte MouseDrawCursor;
         public byte ConfigMacOSXBehaviors;
         public byte ConfigInputTrickleEventQueue;
@@ -57,6 +60,7 @@ namespace ImGuiNET
         public byte ConfigErrorRecoveryEnableTooltip;
         public byte ConfigDebugIsDebuggerPresent;
         public byte ConfigDebugHighlightIdConflicts;
+        public byte ConfigDebugHighlightIdConflictsShowItemPicker;
         public byte ConfigDebugBeginReturnValueOnce;
         public byte ConfigDebugBeginReturnValueLoop;
         public byte ConfigDebugIgnoreFocusLoss;
@@ -245,6 +249,7 @@ namespace ImGuiNET
         public ImGuiKeyData KeysData_151;
         public ImGuiKeyData KeysData_152;
         public ImGuiKeyData KeysData_153;
+        public ImGuiKeyData KeysData_154;
         public byte WantCaptureMouseUnlessPopupClose;
         public Vector2 MousePosPrev;
         public Vector2 MouseClickedPos_0;
@@ -258,6 +263,7 @@ namespace ImGuiNET
         public fixed ushort MouseClickedCount[5];
         public fixed ushort MouseClickedLastCount[5];
         public fixed byte MouseReleased[5];
+        public fixed double MouseReleasedTime[5];
         public fixed byte MouseDownOwned[5];
         public fixed byte MouseDownOwnedUnlessPopupClose[5];
         public byte MouseWheelRequestAxisSwap;
@@ -287,16 +293,15 @@ namespace ImGuiNET
         public ref ImGuiConfigFlags ConfigFlags => ref Unsafe.AsRef<ImGuiConfigFlags>(&NativePtr->ConfigFlags);
         public ref ImGuiBackendFlags BackendFlags => ref Unsafe.AsRef<ImGuiBackendFlags>(&NativePtr->BackendFlags);
         public ref Vector2 DisplaySize => ref Unsafe.AsRef<Vector2>(&NativePtr->DisplaySize);
+        public ref Vector2 DisplayFramebufferScale => ref Unsafe.AsRef<Vector2>(&NativePtr->DisplayFramebufferScale);
         public ref float DeltaTime => ref Unsafe.AsRef<float>(&NativePtr->DeltaTime);
         public ref float IniSavingRate => ref Unsafe.AsRef<float>(&NativePtr->IniSavingRate);
         public NullTerminatedString IniFilename => new NullTerminatedString(NativePtr->IniFilename);
         public NullTerminatedString LogFilename => new NullTerminatedString(NativePtr->LogFilename);
         public IntPtr UserData { get => (IntPtr)NativePtr->UserData; set => NativePtr->UserData = (void*)value; }
         public ImFontAtlasPtr Fonts => new ImFontAtlasPtr(NativePtr->Fonts);
-        public ref float FontGlobalScale => ref Unsafe.AsRef<float>(&NativePtr->FontGlobalScale);
-        public ref bool FontAllowUserScaling => ref Unsafe.AsRef<bool>(&NativePtr->FontAllowUserScaling);
         public ImFontPtr FontDefault => new ImFontPtr(NativePtr->FontDefault);
-        public ref Vector2 DisplayFramebufferScale => ref Unsafe.AsRef<Vector2>(&NativePtr->DisplayFramebufferScale);
+        public ref bool FontAllowUserScaling => ref Unsafe.AsRef<bool>(&NativePtr->FontAllowUserScaling);
         public ref bool ConfigNavSwapGamepadButtons => ref Unsafe.AsRef<bool>(&NativePtr->ConfigNavSwapGamepadButtons);
         public ref bool ConfigNavMoveSetMousePos => ref Unsafe.AsRef<bool>(&NativePtr->ConfigNavMoveSetMousePos);
         public ref bool ConfigNavCaptureKeyboard => ref Unsafe.AsRef<bool>(&NativePtr->ConfigNavCaptureKeyboard);
@@ -305,6 +310,7 @@ namespace ImGuiNET
         public ref bool ConfigNavCursorVisibleAuto => ref Unsafe.AsRef<bool>(&NativePtr->ConfigNavCursorVisibleAuto);
         public ref bool ConfigNavCursorVisibleAlways => ref Unsafe.AsRef<bool>(&NativePtr->ConfigNavCursorVisibleAlways);
         public ref bool ConfigDockingNoSplit => ref Unsafe.AsRef<bool>(&NativePtr->ConfigDockingNoSplit);
+        public ref bool ConfigDockingNoDockingOver => ref Unsafe.AsRef<bool>(&NativePtr->ConfigDockingNoDockingOver);
         public ref bool ConfigDockingWithShift => ref Unsafe.AsRef<bool>(&NativePtr->ConfigDockingWithShift);
         public ref bool ConfigDockingAlwaysTabBar => ref Unsafe.AsRef<bool>(&NativePtr->ConfigDockingAlwaysTabBar);
         public ref bool ConfigDockingTransparentPayload => ref Unsafe.AsRef<bool>(&NativePtr->ConfigDockingTransparentPayload);
@@ -312,6 +318,9 @@ namespace ImGuiNET
         public ref bool ConfigViewportsNoTaskBarIcon => ref Unsafe.AsRef<bool>(&NativePtr->ConfigViewportsNoTaskBarIcon);
         public ref bool ConfigViewportsNoDecoration => ref Unsafe.AsRef<bool>(&NativePtr->ConfigViewportsNoDecoration);
         public ref bool ConfigViewportsNoDefaultParent => ref Unsafe.AsRef<bool>(&NativePtr->ConfigViewportsNoDefaultParent);
+        public ref bool ConfigViewportsPlatformFocusSetsImGuiFocus => ref Unsafe.AsRef<bool>(&NativePtr->ConfigViewportsPlatformFocusSetsImGuiFocus);
+        public ref bool ConfigDpiScaleFonts => ref Unsafe.AsRef<bool>(&NativePtr->ConfigDpiScaleFonts);
+        public ref bool ConfigDpiScaleViewports => ref Unsafe.AsRef<bool>(&NativePtr->ConfigDpiScaleViewports);
         public ref bool MouseDrawCursor => ref Unsafe.AsRef<bool>(&NativePtr->MouseDrawCursor);
         public ref bool ConfigMacOSXBehaviors => ref Unsafe.AsRef<bool>(&NativePtr->ConfigMacOSXBehaviors);
         public ref bool ConfigInputTrickleEventQueue => ref Unsafe.AsRef<bool>(&NativePtr->ConfigInputTrickleEventQueue);
@@ -334,6 +343,7 @@ namespace ImGuiNET
         public ref bool ConfigErrorRecoveryEnableTooltip => ref Unsafe.AsRef<bool>(&NativePtr->ConfigErrorRecoveryEnableTooltip);
         public ref bool ConfigDebugIsDebuggerPresent => ref Unsafe.AsRef<bool>(&NativePtr->ConfigDebugIsDebuggerPresent);
         public ref bool ConfigDebugHighlightIdConflicts => ref Unsafe.AsRef<bool>(&NativePtr->ConfigDebugHighlightIdConflicts);
+        public ref bool ConfigDebugHighlightIdConflictsShowItemPicker => ref Unsafe.AsRef<bool>(&NativePtr->ConfigDebugHighlightIdConflictsShowItemPicker);
         public ref bool ConfigDebugBeginReturnValueOnce => ref Unsafe.AsRef<bool>(&NativePtr->ConfigDebugBeginReturnValueOnce);
         public ref bool ConfigDebugBeginReturnValueLoop => ref Unsafe.AsRef<bool>(&NativePtr->ConfigDebugBeginReturnValueLoop);
         public ref bool ConfigDebugIgnoreFocusLoss => ref Unsafe.AsRef<bool>(&NativePtr->ConfigDebugIgnoreFocusLoss);
@@ -368,7 +378,7 @@ namespace ImGuiNET
         public ref bool KeyAlt => ref Unsafe.AsRef<bool>(&NativePtr->KeyAlt);
         public ref bool KeySuper => ref Unsafe.AsRef<bool>(&NativePtr->KeySuper);
         public ref ImGuiKey KeyMods => ref Unsafe.AsRef<ImGuiKey>(&NativePtr->KeyMods);
-        public RangeAccessor<ImGuiKeyData> KeysData => new RangeAccessor<ImGuiKeyData>(&NativePtr->KeysData_0, 154);
+        public RangeAccessor<ImGuiKeyData> KeysData => new RangeAccessor<ImGuiKeyData>(&NativePtr->KeysData_0, 155);
         public ref bool WantCaptureMouseUnlessPopupClose => ref Unsafe.AsRef<bool>(&NativePtr->WantCaptureMouseUnlessPopupClose);
         public ref Vector2 MousePosPrev => ref Unsafe.AsRef<Vector2>(&NativePtr->MousePosPrev);
         public RangeAccessor<Vector2> MouseClickedPos => new RangeAccessor<Vector2>(&NativePtr->MouseClickedPos_0, 5);
@@ -378,6 +388,7 @@ namespace ImGuiNET
         public RangeAccessor<ushort> MouseClickedCount => new RangeAccessor<ushort>(NativePtr->MouseClickedCount, 5);
         public RangeAccessor<ushort> MouseClickedLastCount => new RangeAccessor<ushort>(NativePtr->MouseClickedLastCount, 5);
         public RangeAccessor<bool> MouseReleased => new RangeAccessor<bool>(NativePtr->MouseReleased, 5);
+        public RangeAccessor<double> MouseReleasedTime => new RangeAccessor<double>(NativePtr->MouseReleasedTime, 5);
         public RangeAccessor<bool> MouseDownOwned => new RangeAccessor<bool>(NativePtr->MouseDownOwned, 5);
         public RangeAccessor<bool> MouseDownOwnedUnlessPopupClose => new RangeAccessor<bool>(NativePtr->MouseDownOwnedUnlessPopupClose, 5);
         public ref bool MouseWheelRequestAxisSwap => ref Unsafe.AsRef<bool>(&NativePtr->MouseWheelRequestAxisSwap);

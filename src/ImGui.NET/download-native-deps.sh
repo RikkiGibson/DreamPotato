@@ -39,3 +39,8 @@ echo ""
 echo -n "Downloading structs and enums json file: "
 curl -sfLo "$SCRIPT_ROOT/src/CodeGenerator/definitions/cimgui/structs_and_enums.json" "https://github.com/mellinoe/imgui.net-nativebuild/releases/download/$TAG/structs_and_enums.json"
 echo ""
+
+# Strip the quarantine flag so macOS Gatekeeper doesn't block the freshly downloaded native libs
+if [[ "$(uname)" == "Darwin" ]]; then
+    xattr -dr com.apple.quarantine "$SCRIPT_ROOT/deps" 2>/dev/null || true
+fi

@@ -17,8 +17,11 @@ namespace ImGuiNET
         ClearOnClickVoid = 1024,
         ScopeWindow = 2048,
         ScopeRect = 4096,
-        SelectOnClick = 8192,
-        SelectOnClickRelease = 16384,
+        SelectOnAuto = 8192,
+        SelectOnClickAlways = 16384,
+        SelectOnClickRelease = 32768,
         NavWrapX = 65536,
+        NoSelectOnRightClick = 131072,
+        SelectOnMask = 57344,
     }
 }

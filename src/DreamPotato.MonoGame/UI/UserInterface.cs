@@ -224,7 +224,7 @@ partial class UserInterface
         _imGuiRenderer = new ImGuiRenderer(_game);
 
         unsafe {
-            var x = ImGui.GetStyle().NativePtr->FontSizeBase;
+            // ImGui.GetStyle().FontScaleDpi = 2.0f;
         }
 
         var stream = typeof(UserInterface).Assembly.GetManifestResourceStream("Fonts/NanumGothic-Regular.ttf.zip") ?? throw new InvalidOperationException();
@@ -243,8 +243,6 @@ partial class UserInterface
                 ImGui.GetIO().Fonts.AddFontFromMemoryTTF((nint)ptr, array.Length, size_pixels: 12);
             }
         }
-
-        _imGuiRenderer.RebuildFontAtlas();
 
         unsafe
         {
@@ -478,7 +476,7 @@ partial class UserInterface
                 if (toastInfo.ShowImage)
                 {
                     var imageSize = new Numerics.Vector2(x: Display.ScreenWidth, y: Display.ScreenHeight);
-                    ImGui.Image(toastInfo.RawImageTexture, imageSize);
+                    ImGui.Image(ImGuiRenderer.ToTextureRef(toastInfo.RawImageTexture), imageSize);
                     ImGui.SameLine();
                 }
                 ImGui.TextWrapped(toastInfo.Message.Replace("%", "%%"));
@@ -593,7 +591,7 @@ partial class UserInterface
 
         if (_game.PrimaryVmu.IsServerConnected)
         {
-            ImGui.Image(_rawDreamcastConnectedIconTexture, new Numerics.Vector2(18));
+            ImGui.Image(ImGuiRenderer.ToTextureRef(_rawDreamcastConnectedIconTexture), new Numerics.Vector2(18));
             if (ImGui.IsItemHovered())
             {
                 ImGui.BeginTooltip();
@@ -684,7 +682,7 @@ partial class UserInterface
                 {
                     // Select Save Slot
                     ImGui.BeginGroup();
-                    ImGui.Image(stateInfo.RawThumbnailTexture, image_size: new Numerics.Vector2(Display.ScreenWidth, Display.ScreenHeight));
+                    ImGui.Image(ImGuiRenderer.ToTextureRef(stateInfo.RawThumbnailTexture), image_size: new Numerics.Vector2(Display.ScreenWidth, Display.ScreenHeight));
 
                     ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 1); // make the prev/next buttons align nicely with the thumbnail.
                     if (ImGui.ArrowButton(str_id: "PrevSaveState", dir: ImGuiDir.Left))
@@ -889,7 +887,7 @@ partial class UserInterface
         if (_game.PrimaryVmu.IsOtherVmuConnected)
         {
             Debug.Assert(_game.SecondaryVmu!.IsOtherVmuConnected);
-            ImGui.Image(_rawVmusConnectedIconTexture, new Numerics.Vector2(x: 36, y: 18));
+            ImGui.Image(ImGuiRenderer.ToTextureRef(_rawVmusConnectedIconTexture), new Numerics.Vector2(x: 36, y: 18));
             if (ImGui.IsItemHovered())
             {
                 ImGui.BeginTooltip();

@@ -13,6 +13,7 @@ namespace ImGuiNET
         Float = 8,
         Double = 9,
         Bool = 10,
-        COUNT = 11,
+        String = 11,
+        COUNT = 12,
     }
 }

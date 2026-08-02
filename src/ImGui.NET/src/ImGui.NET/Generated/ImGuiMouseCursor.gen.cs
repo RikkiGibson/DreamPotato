@@ -11,7 +11,9 @@ namespace ImGuiNET
         ResizeNESW = 5,
         ResizeNWSE = 6,
         Hand = 7,
-        NotAllowed = 8,
-        COUNT = 9,
+        Wait = 8,
+        Progress = 9,
+        NotAllowed = 10,
+        COUNT = 11,
     }
 }

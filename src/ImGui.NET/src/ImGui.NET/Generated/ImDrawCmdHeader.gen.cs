@@ -8,7 +8,7 @@ namespace ImGuiNET
     public unsafe partial struct ImDrawCmdHeader
     {
         public Vector4 ClipRect;
-        public IntPtr TextureId;
+        public ImTextureRef TexRef;
         public uint VtxOffset;
     }
     public unsafe partial struct ImDrawCmdHeaderPtr
@@ -20,7 +20,7 @@ namespace ImGuiNET
         public static implicit operator ImDrawCmdHeader* (ImDrawCmdHeaderPtr wrappedPtr) => wrappedPtr.NativePtr;
         public static implicit operator ImDrawCmdHeaderPtr(IntPtr nativePtr) => new ImDrawCmdHeaderPtr(nativePtr);
         public ref Vector4 ClipRect => ref Unsafe.AsRef<Vector4>(&NativePtr->ClipRect);
-        public ref IntPtr TextureId => ref Unsafe.AsRef<IntPtr>(&NativePtr->TextureId);
+        public ref ImTextureRef TexRef => ref Unsafe.AsRef<ImTextureRef>(&NativePtr->TexRef);
         public ref uint VtxOffset => ref Unsafe.AsRef<uint>(&NativePtr->VtxOffset);
     }
 }

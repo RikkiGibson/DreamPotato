@@ -11,12 +11,14 @@ namespace ImGuiNET
         public ImGuiInputTextFlags EventFlag;
         public ImGuiInputTextFlags Flags;
         public void* UserData;
-        public ushort EventChar;
+        public uint ID;
         public ImGuiKey EventKey;
+        public ushort EventChar;
+        public byte EventActivated;
+        public byte BufDirty;
         public byte* Buf;
         public int BufTextLen;
         public int BufSize;
-        public byte BufDirty;
         public int CursorPos;
         public int SelectionStart;
         public int SelectionEnd;
@@ -33,12 +35,14 @@ namespace ImGuiNET
         public ref ImGuiInputTextFlags EventFlag => ref Unsafe.AsRef<ImGuiInputTextFlags>(&NativePtr->EventFlag);
         public ref ImGuiInputTextFlags Flags => ref Unsafe.AsRef<ImGuiInputTextFlags>(&NativePtr->Flags);
         public IntPtr UserData { get => (IntPtr)NativePtr->UserData; set => NativePtr->UserData = (void*)value; }
-        public ref ushort EventChar => ref Unsafe.AsRef<ushort>(&NativePtr->EventChar);
+        public ref uint ID => ref Unsafe.AsRef<uint>(&NativePtr->ID);
         public ref ImGuiKey EventKey => ref Unsafe.AsRef<ImGuiKey>(&NativePtr->EventKey);
+        public ref ushort EventChar => ref Unsafe.AsRef<ushort>(&NativePtr->EventChar);
+        public ref bool EventActivated => ref Unsafe.AsRef<bool>(&NativePtr->EventActivated);
+        public ref bool BufDirty => ref Unsafe.AsRef<bool>(&NativePtr->BufDirty);
         public IntPtr Buf { get => (IntPtr)NativePtr->Buf; set => NativePtr->Buf = (byte*)value; }
         public ref int BufTextLen => ref Unsafe.AsRef<int>(&NativePtr->BufTextLen);
         public ref int BufSize => ref Unsafe.AsRef<int>(&NativePtr->BufSize);
-        public ref bool BufDirty => ref Unsafe.AsRef<bool>(&NativePtr->BufDirty);
         public ref int CursorPos => ref Unsafe.AsRef<int>(&NativePtr->CursorPos);
         public ref int SelectionStart => ref Unsafe.AsRef<int>(&NativePtr->SelectionStart);
         public ref int SelectionEnd => ref Unsafe.AsRef<int>(&NativePtr->SelectionEnd);
@@ -116,6 +120,10 @@ namespace ImGuiNET
         public void SelectAll()
         {
             ImGuiNative.ImGuiInputTextCallbackData_SelectAll((ImGuiInputTextCallbackData*)(NativePtr));
+        }
+        public void SetSelection(int s, int e)
+        {
+            ImGuiNative.ImGuiInputTextCallbackData_SetSelection((ImGuiInputTextCallbackData*)(NativePtr), s, e);
         }
     }
 }

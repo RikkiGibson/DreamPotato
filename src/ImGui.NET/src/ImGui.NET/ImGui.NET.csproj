@@ -54,6 +54,35 @@
       <Pack>true</Pack>
     </Content>
   </ItemGroup>
+  <!--
+    Copy the native cimgui library for the current OS into the output directory so that
+    ProjectReference consumers (which do not import the NuGet build/net40/ImGui.NET.targets)
+    get the native library next to their executable. Gated by OS so only the matching
+    native is copied (avoids name collisions between the win-x86/win-x64 cimgui.dll files).
+  -->
+  <ItemGroup>
+    <None Include="..\..\deps\cimgui\osx\cimgui.dylib"
+          Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))' == 'true'">
+      <Link>libcimgui.dylib</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Visible>false</Visible>
+      <Pack>false</Pack>
+    </None>
+    <None Include="..\..\deps\cimgui\linux-x64\cimgui.so"
+          Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))' == 'true'">
+      <Link>libcimgui.so</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Visible>false</Visible>
+      <Pack>false</Pack>
+    </None>
+    <None Include="..\..\deps\cimgui\win-x64\cimgui.dll"
+          Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))' == 'true'">
+      <Link>cimgui.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Visible>false</Visible>
+      <Pack>false</Pack>
+    </None>
+  </ItemGroup>
   <ItemGroup>
     <Folder Include="Generated\" />
   </ItemGroup>

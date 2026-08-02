@@ -7,11 +7,15 @@ namespace ImGuiNET
 {
     public unsafe partial struct ImGuiStyle
     {
+        public float FontSizeBase;
+        public float FontScaleMain;
+        public float FontScaleDpi;
         public float Alpha;
         public float DisabledAlpha;
         public Vector2 WindowPadding;
         public float WindowRounding;
         public float WindowBorderSize;
+        public float WindowBorderHoverPadding;
         public Vector2 WindowMinSize;
         public Vector2 WindowTitleAlign;
         public ImGuiDir WindowMenuButtonPosition;
@@ -30,24 +34,39 @@ namespace ImGuiNET
         public float ColumnsMinSpacing;
         public float ScrollbarSize;
         public float ScrollbarRounding;
+        public float ScrollbarPadding;
         public float GrabMinSize;
         public float GrabRounding;
         public float LogSliderDeadzone;
+        public float ImageRounding;
+        public float ImageBorderSize;
         public float TabRounding;
         public float TabBorderSize;
-        public float TabMinWidthForCloseButton;
+        public float TabMinWidthBase;
+        public float TabMinWidthShrink;
+        public float TabCloseButtonMinWidthSelected;
+        public float TabCloseButtonMinWidthUnselected;
         public float TabBarBorderSize;
         public float TabBarOverlineSize;
         public float TableAngledHeadersAngle;
         public Vector2 TableAngledHeadersTextAlign;
+        public ImGuiTreeNodeFlags TreeLinesFlags;
+        public float TreeLinesSize;
+        public float TreeLinesRounding;
+        public float DragDropTargetRounding;
+        public float DragDropTargetBorderSize;
+        public float DragDropTargetPadding;
+        public float ColorMarkerSize;
         public ImGuiDir ColorButtonPosition;
         public Vector2 ButtonTextAlign;
         public Vector2 SelectableTextAlign;
+        public float SeparatorSize;
         public float SeparatorTextBorderSize;
         public Vector2 SeparatorTextAlign;
         public Vector2 SeparatorTextPadding;
         public Vector2 DisplayWindowPadding;
         public Vector2 DisplaySafeAreaPadding;
+        public byte DockingNodeHasCloseButton;
         public float DockingSeparatorSize;
         public float MouseCursorScale;
         public byte AntiAliasedLines;
@@ -113,11 +132,18 @@ namespace ImGuiNET
         public Vector4 Colors_55;
         public Vector4 Colors_56;
         public Vector4 Colors_57;
+        public Vector4 Colors_58;
+        public Vector4 Colors_59;
+        public Vector4 Colors_60;
+        public Vector4 Colors_61;
+        public Vector4 Colors_62;
         public float HoverStationaryDelay;
         public float HoverDelayShort;
         public float HoverDelayNormal;
         public ImGuiHoveredFlags HoverFlagsForTooltipMouse;
         public ImGuiHoveredFlags HoverFlagsForTooltipNav;
+        public float _MainScale;
+        public float _NextFrameFontSizeBase;
     }
     public unsafe partial struct ImGuiStylePtr
     {
@@ -127,11 +153,15 @@ namespace ImGuiNET
         public static implicit operator ImGuiStylePtr(ImGuiStyle* nativePtr) => new ImGuiStylePtr(nativePtr);
         public static implicit operator ImGuiStyle* (ImGuiStylePtr wrappedPtr) => wrappedPtr.NativePtr;
         public static implicit operator ImGuiStylePtr(IntPtr nativePtr) => new ImGuiStylePtr(nativePtr);
+        public ref float FontSizeBase => ref Unsafe.AsRef<float>(&NativePtr->FontSizeBase);
+        public ref float FontScaleMain => ref Unsafe.AsRef<float>(&NativePtr->FontScaleMain);
+        public ref float FontScaleDpi => ref Unsafe.AsRef<float>(&NativePtr->FontScaleDpi);
         public ref float Alpha => ref Unsafe.AsRef<float>(&NativePtr->Alpha);
         public ref float DisabledAlpha => ref Unsafe.AsRef<float>(&NativePtr->DisabledAlpha);
         public ref Vector2 WindowPadding => ref Unsafe.AsRef<Vector2>(&NativePtr->WindowPadding);
         public ref float WindowRounding => ref Unsafe.AsRef<float>(&NativePtr->WindowRounding);
         public ref float WindowBorderSize => ref Unsafe.AsRef<float>(&NativePtr->WindowBorderSize);
+        public ref float WindowBorderHoverPadding => ref Unsafe.AsRef<float>(&NativePtr->WindowBorderHoverPadding);
         public ref Vector2 WindowMinSize => ref Unsafe.AsRef<Vector2>(&NativePtr->WindowMinSize);
         public ref Vector2 WindowTitleAlign => ref Unsafe.AsRef<Vector2>(&NativePtr->WindowTitleAlign);
         public ref ImGuiDir WindowMenuButtonPosition => ref Unsafe.AsRef<ImGuiDir>(&NativePtr->WindowMenuButtonPosition);
@@ -150,24 +180,39 @@ namespace ImGuiNET
         public ref float ColumnsMinSpacing => ref Unsafe.AsRef<float>(&NativePtr->ColumnsMinSpacing);
         public ref float ScrollbarSize => ref Unsafe.AsRef<float>(&NativePtr->ScrollbarSize);
         public ref float ScrollbarRounding => ref Unsafe.AsRef<float>(&NativePtr->ScrollbarRounding);
+        public ref float ScrollbarPadding => ref Unsafe.AsRef<float>(&NativePtr->ScrollbarPadding);
         public ref float GrabMinSize => ref Unsafe.AsRef<float>(&NativePtr->GrabMinSize);
         public ref float GrabRounding => ref Unsafe.AsRef<float>(&NativePtr->GrabRounding);
         public ref float LogSliderDeadzone => ref Unsafe.AsRef<float>(&NativePtr->LogSliderDeadzone);
+        public ref float ImageRounding => ref Unsafe.AsRef<float>(&NativePtr->ImageRounding);
+        public ref float ImageBorderSize => ref Unsafe.AsRef<float>(&NativePtr->ImageBorderSize);
         public ref float TabRounding => ref Unsafe.AsRef<float>(&NativePtr->TabRounding);
         public ref float TabBorderSize => ref Unsafe.AsRef<float>(&NativePtr->TabBorderSize);
-        public ref float TabMinWidthForCloseButton => ref Unsafe.AsRef<float>(&NativePtr->TabMinWidthForCloseButton);
+        public ref float TabMinWidthBase => ref Unsafe.AsRef<float>(&NativePtr->TabMinWidthBase);
+        public ref float TabMinWidthShrink => ref Unsafe.AsRef<float>(&NativePtr->TabMinWidthShrink);
+        public ref float TabCloseButtonMinWidthSelected => ref Unsafe.AsRef<float>(&NativePtr->TabCloseButtonMinWidthSelected);
+        public ref float TabCloseButtonMinWidthUnselected => ref Unsafe.AsRef<float>(&NativePtr->TabCloseButtonMinWidthUnselected);
         public ref float TabBarBorderSize => ref Unsafe.AsRef<float>(&NativePtr->TabBarBorderSize);
         public ref float TabBarOverlineSize => ref Unsafe.AsRef<float>(&NativePtr->TabBarOverlineSize);
         public ref float TableAngledHeadersAngle => ref Unsafe.AsRef<float>(&NativePtr->TableAngledHeadersAngle);
         public ref Vector2 TableAngledHeadersTextAlign => ref Unsafe.AsRef<Vector2>(&NativePtr->TableAngledHeadersTextAlign);
+        public ref ImGuiTreeNodeFlags TreeLinesFlags => ref Unsafe.AsRef<ImGuiTreeNodeFlags>(&NativePtr->TreeLinesFlags);
+        public ref float TreeLinesSize => ref Unsafe.AsRef<float>(&NativePtr->TreeLinesSize);
+        public ref float TreeLinesRounding => ref Unsafe.AsRef<float>(&NativePtr->TreeLinesRounding);
+        public ref float DragDropTargetRounding => ref Unsafe.AsRef<float>(&NativePtr->DragDropTargetRounding);
+        public ref float DragDropTargetBorderSize => ref Unsafe.AsRef<float>(&NativePtr->DragDropTargetBorderSize);
+        public ref float DragDropTargetPadding => ref Unsafe.AsRef<float>(&NativePtr->DragDropTargetPadding);
+        public ref float ColorMarkerSize => ref Unsafe.AsRef<float>(&NativePtr->ColorMarkerSize);
         public ref ImGuiDir ColorButtonPosition => ref Unsafe.AsRef<ImGuiDir>(&NativePtr->ColorButtonPosition);
         public ref Vector2 ButtonTextAlign => ref Unsafe.AsRef<Vector2>(&NativePtr->ButtonTextAlign);
         public ref Vector2 SelectableTextAlign => ref Unsafe.AsRef<Vector2>(&NativePtr->SelectableTextAlign);
+        public ref float SeparatorSize => ref Unsafe.AsRef<float>(&NativePtr->SeparatorSize);
         public ref float SeparatorTextBorderSize => ref Unsafe.AsRef<float>(&NativePtr->SeparatorTextBorderSize);
         public ref Vector2 SeparatorTextAlign => ref Unsafe.AsRef<Vector2>(&NativePtr->SeparatorTextAlign);
         public ref Vector2 SeparatorTextPadding => ref Unsafe.AsRef<Vector2>(&NativePtr->SeparatorTextPadding);
         public ref Vector2 DisplayWindowPadding => ref Unsafe.AsRef<Vector2>(&NativePtr->DisplayWindowPadding);
         public ref Vector2 DisplaySafeAreaPadding => ref Unsafe.AsRef<Vector2>(&NativePtr->DisplaySafeAreaPadding);
+        public ref bool DockingNodeHasCloseButton => ref Unsafe.AsRef<bool>(&NativePtr->DockingNodeHasCloseButton);
         public ref float DockingSeparatorSize => ref Unsafe.AsRef<float>(&NativePtr->DockingSeparatorSize);
         public ref float MouseCursorScale => ref Unsafe.AsRef<float>(&NativePtr->MouseCursorScale);
         public ref bool AntiAliasedLines => ref Unsafe.AsRef<bool>(&NativePtr->AntiAliasedLines);
@@ -175,12 +220,14 @@ namespace ImGuiNET
         public ref bool AntiAliasedFill => ref Unsafe.AsRef<bool>(&NativePtr->AntiAliasedFill);
         public ref float CurveTessellationTol => ref Unsafe.AsRef<float>(&NativePtr->CurveTessellationTol);
         public ref float CircleTessellationMaxError => ref Unsafe.AsRef<float>(&NativePtr->CircleTessellationMaxError);
-        public RangeAccessor<Vector4> Colors => new RangeAccessor<Vector4>(&NativePtr->Colors_0, 58);
+        public RangeAccessor<Vector4> Colors => new RangeAccessor<Vector4>(&NativePtr->Colors_0, 63);
         public ref float HoverStationaryDelay => ref Unsafe.AsRef<float>(&NativePtr->HoverStationaryDelay);
         public ref float HoverDelayShort => ref Unsafe.AsRef<float>(&NativePtr->HoverDelayShort);
         public ref float HoverDelayNormal => ref Unsafe.AsRef<float>(&NativePtr->HoverDelayNormal);
         public ref ImGuiHoveredFlags HoverFlagsForTooltipMouse => ref Unsafe.AsRef<ImGuiHoveredFlags>(&NativePtr->HoverFlagsForTooltipMouse);
         public ref ImGuiHoveredFlags HoverFlagsForTooltipNav => ref Unsafe.AsRef<ImGuiHoveredFlags>(&NativePtr->HoverFlagsForTooltipNav);
+        public ref float _MainScale => ref Unsafe.AsRef<float>(&NativePtr->_MainScale);
+        public ref float _NextFrameFontSizeBase => ref Unsafe.AsRef<float>(&NativePtr->_NextFrameFontSizeBase);
         public void Destroy()
         {
             ImGuiNative.ImGuiStyle_destroy((ImGuiStyle*)(NativePtr));

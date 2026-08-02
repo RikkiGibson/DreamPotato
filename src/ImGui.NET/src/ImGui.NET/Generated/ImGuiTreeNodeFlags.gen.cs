@@ -17,9 +17,13 @@ namespace ImGuiNET
         FramePadding = 1024,
         SpanAvailWidth = 2048,
         SpanFullWidth = 4096,
-        SpanTextWidth = 8192,
+        SpanLabelWidth = 8192,
         SpanAllColumns = 16384,
-        NavLeftJumpsBackHere = 32768,
+        LabelSpanAllColumns = 32768,
+        NavLeftJumpsToParent = 131072,
         CollapsingHeader = 26,
+        DrawLinesNone = 262144,
+        DrawLinesFull = 524288,
+        DrawLinesToNodes = 1048576,
     }
 }

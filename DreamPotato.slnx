@@ -10,4 +10,9 @@
     <Project Path="src/DreamPotato.SaveStateDiff/DreamPotato.SaveStateDiff.csproj" />
     <Project Path="src/DreamPotato.Tests/DreamPotato.Tests.csproj" />
   </Folder>
+  <Folder Name="/src/ImGui.NET/" />
+  <Folder Name="/src/ImGui.NET/src/">
+    <Project Path="src/ImGui.NET/src/CodeGenerator/CodeGenerator.csproj" />
+    <Project Path="src/ImGui.NET/src/ImGui.NET/ImGui.NET.csproj" />
+  </Folder>
 </Solution>
