@@ -29,7 +29,7 @@ public class AudioTests
         cpu.SFRs.T1Cnt = cpu.SFRs.T1Cnt with { T1lRun = false };
         Assert.NotNull(audioArgs.Buffer);
 
-        int widthSamples = width * Audio.SampleRate / cpuClockHz;
+        int widthSamples = width * Audio.OutputSampleRate / cpuClockHz;
         byte[] referencePulse = new byte[widthSamples * 2];
         vmu.Audio.IsActive = true;
         vmu.Audio.Generate(referencePulse);
@@ -60,7 +60,7 @@ public class AudioTests
         cpu.SFRs.T1Cnt = cpu.SFRs.T1Cnt with { T1lRun = false };
         Assert.NotNull(audioArgs.Buffer);
 
-        int widthSamples = width * Audio.SampleRate / cpuClockHz;
+        int widthSamples = width * Audio.OutputSampleRate / cpuClockHz;
         int widthBytes = widthSamples * 2;
         Assert.Equal(12, widthSamples);
 

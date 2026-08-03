@@ -100,7 +100,7 @@ class VmuPresenter
         _vmuBorderTexture = new Texture2D(graphics.GraphicsDevice, 1, 1);
         _vmuMarginTexture = new Texture2D(graphics.GraphicsDevice, 1, 1);
 
-        _dynamicSound = new DynamicSoundEffectInstance(Audio.SampleRate, AudioChannels.Mono);
+        _dynamicSound = new DynamicSoundEffectInstance(Audio.OutputSampleRate, AudioChannels.Mono);
         _dynamicSound.Play();
         vmu.Audio.AudioBufferReady += Audio_BufferReady;
         vmu.OpenFileRequested += path => _game1.LoadAndStartVmsOrVmuFile(this, path);

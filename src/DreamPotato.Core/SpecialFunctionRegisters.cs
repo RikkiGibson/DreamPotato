@@ -190,6 +190,7 @@ public class SpecialFunctionRegisters
                 if (oldOcr.CpuClockHz != ocr.CpuClockHz)
                     _logger.LogDebug($"System clock changed from (CGC={oldOcr.ClockGeneratorControl}, {oldOcr.SystemClockSelector}, Hz={oldOcr.CpuClockHz}) to (CGC={ocr.ClockGeneratorControl}, {ocr.SystemClockSelector}, Hz={ocr.CpuClockHz})", LogCategories.SystemClock);
 
+                // TODO2: should probably notify audio system right here so it can submit it to libsamplerate.
                 goto default;
 
             case Ids.Ext:

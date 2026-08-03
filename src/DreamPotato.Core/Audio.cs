@@ -1,7 +1,6 @@
 using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Text;
 
 using DreamPotato.Core.SFRs;
 
@@ -11,12 +10,9 @@ namespace DreamPotato.Core;
 
 public class Audio
 {
-    // This won't work well with RC oscillator sounds.
-    // Could consider using a separate sample rate of like 43600 there (872000 / 43600 = 20).
-    // But that would really just be a way to avoid doing our own resampling
-    public const int SampleRate = OscillatorHz.Quartz;
-    public const int SampleSize = 2; // 16-bit
-    public const int BufferDurationMilliseconds = 100;
+    public const int OutputSampleRate = 48000;
+    private const int SampleSize = 2; // 16-bit
+    private const int BufferDurationMilliseconds = 100;
 
     public const int DefaultVolume = 50;
 
@@ -26,14 +22,24 @@ public class Audio
     private readonly Cpu _cpu;
     private readonly Logger _logger;
 
-    private const int PcmBufferFilledSize = SampleRate * SampleSize * BufferDurationMilliseconds / 1000;
+    /// <summary>Note: can change whenever the cycle clock oscillator changes.</summary>
+    private int InputSampleRate => _cpu.SFRs.Ocr.CpuClockHz;
+    private int PcmBufferFilledSize => InputSampleRate * SampleSize * BufferDurationMilliseconds / 1000;
+
     /// <summary>
-    /// PCM data at <see cref="SampleRate"/> and <see cref="SampleSize"/>.
+    /// PCM buffer used by MonoGame. 16-bit sample size.
     /// </summary>
-    private readonly byte[] _pcmBuffer = new byte[2 * PcmBufferFilledSize];
+    private readonly byte[] _monoGameOutBuffer = new byte[2 * OutputSampleRate * SampleSize * BufferDurationMilliseconds / 1000];
+
+    /// <summary>PCM input buffer used by libsamplerate (Secret Rabbit Code).</summary>
+    private readonly float[] _srcInBuffer = new float[2 * MaxInputSampleRate * BufferDurationMilliseconds / 1000];
+
+    private const int MaxInputSampleRate = OscillatorHz.Rc / 6;
+    /// <summary>PCM output buffer used by libsamplerate (Secret Rabbit Code).</summary>
+    private readonly float[] _srcOutBuffer = new float[2 * OutputSampleRate * BufferDurationMilliseconds / 1000];
 
     // Note: if we ever care about tearing down these instances, then, 'Audio' and its containers should probably be IDisposable
-    private unsafe SRC_STATE_tag* srcState;
+    private readonly unsafe SRC_STATE_tag* srcState;
 
     /// <summary>
     /// Pulse generator compare value.
@@ -139,17 +145,22 @@ public class Audio
             ArgumentOutOfRangeException.ThrowIfNegative(sampleVolume);
             BinaryPrimitives.WriteInt16LittleEndian(_highSignal, sampleVolume);
             BinaryPrimitives.WriteInt16LittleEndian(_lowSignal, (short)-sampleVolume);
+            _highSignalFloat = (float)sampleVolume / short.MaxValue;
+            _lowSignalFloat = -_highSignalFloat;
         }
     }
 
     private readonly byte[] _highSignal = new byte[2];
     private readonly byte[] _lowSignal = new byte[2];
 
-    /// <summary>How many samples we have written into the pcm buffer so far.</summary>
-    private int _pcmBufferIndex;
+    private float _highSignalFloat;
+    private float _lowSignalFloat;
 
-    /// <summary>When CPU speed is not evenly divisible by sample rate, tracks how far we were into a single sample.</summary>
-    private int _pcmRemainder;
+    /// <summary>Writer-index into <see cref="_srcInBuffer"/>.</summary>
+    private int _srcInBufferIndex;
+
+    /// <summary>Writer-index into <see cref="_srcOutBuffer"/>.</summary>
+    private int _srcOutBufferIndex;
 
     /// <summary>
     /// Fills <paramref name="buffer"/> with PCM data based on the current audio state.
@@ -184,8 +195,8 @@ public class Audio
         }
         Debug.Assert(timerTicksAtLowSignal < timerTicksPerPeriod);
 
-        var samplesPerTimerPeriod = timerTicksPerPeriod * SampleRate / cpuClockHz;
-        var samplesAtLowSignal = timerTicksAtLowSignal * SampleRate / cpuClockHz;
+        var samplesPerTimerPeriod = timerTicksPerPeriod * OutputSampleRate / cpuClockHz;
+        var samplesAtLowSignal = timerTicksAtLowSignal * OutputSampleRate / cpuClockHz;
 
         var sampleVolume = GetSampleVolume();
         BinaryPrimitives.WriteInt16LittleEndian(_highSignal, sampleVolume);
@@ -218,32 +229,55 @@ public class Audio
     {
         Debug.Assert(IsActive);
 
-        if (cpuClockHz is not (OscillatorHz.Quartz / 6 or OscillatorHz.Quartz / 12))
-        {
-            _logger.LogWarning(
-                $"Sample rate not compatible with clock {_cpu.SFRs.Ocr.SystemClockSelector}.",
-                LogCategories.Audio);
-        }
-
-        var sampleRateAndRemainder = SampleRate + _pcmRemainder;
-        var samplesPerCycle = sampleRateAndRemainder / cpuClockHz;
-        _pcmRemainder = sampleRateAndRemainder % cpuClockHz;
-
+        // 1 clock cycle = 1 sample at all times
         var pulseValue = t1l >= _compare;
-        var signal = pulseValue ? _highSignal : _lowSignal;
-        for (int i = 0; i < samplesPerCycle; i++)
-        {
-            _pcmBuffer[_pcmBufferIndex++] = signal[0];
-            _pcmBuffer[_pcmBufferIndex++] = signal[1];
-        }
+        var signal = pulseValue ? _highSignalFloat : _lowSignalFloat;
+        _srcInBuffer[_srcInBufferIndex++] = signal;
 
-        if (_pcmBufferIndex >= PcmBufferFilledSize)
+        if (_srcOutBufferIndex + (_srcInBufferIndex * (double)OutputSampleRate / InputSampleRate) >= PcmBufferFilledSize)
         {
-            _logger.LogDebug($"Submitting audio buffer of length {_pcmBufferIndex}", LogCategories.Audio);
-            // TODO: actually resample, using the src_process and src_short_to_float_array and similar helper functions.
-            AudioBufferReady?.Invoke(new(_pcmBuffer, Start: 0, Length: _pcmBufferIndex));
-            _pcmBufferIndex = 0;
-            _pcmRemainder = 0;
+            // Time to resample then submit the audio buffer.
+            _logger.LogDebug($"Submitting audio buffer of length {_srcInBufferIndex}", LogCategories.Audio);
+            unsafe
+            {
+                fixed (float* srcInPtr = _srcInBuffer)
+                fixed (float* srcOutPtr = _srcOutBuffer)
+                fixed (byte* monogameOutPtr = _monoGameOutBuffer)
+                {
+                    // See 'libsamplerate/source/docs/api_full.md', section 'Process'.
+                    var srcData = new SRC_DATA()
+                    {
+                        // : A pointer to the input data samples.
+                        data_in = srcInPtr,
+                        // : The number of frames of data pointed to by data_in.
+                        input_frames = new CLong(_srcInBufferIndex),
+                        // : A pointer to the output data samples.
+                        data_out = srcOutPtr + _srcOutBufferIndex,
+                        // : Maximum number of frames pointer to by data_out.
+                        output_frames = new CLong(_srcOutBuffer.Length - _srcOutBufferIndex),
+                        // : Equal to output_sample_rate / input_sample_rate.
+                        src_ratio = (double)OutputSampleRate / InputSampleRate,
+                        // : Equal to 0 if more input data is available and 1 otherwise.
+                        end_of_input = 0
+                    };
+
+                    if (LibSampleRate.src_process(this.srcState, &srcData) is not 0 and var errorCode)
+                    {
+                        var errorString = Marshal.PtrToStringUTF8((IntPtr)LibSampleRate.src_strerror(errorCode));
+                        throw new Exception($"LibSampleRate error: {errorString}");
+                    }
+
+                    if (srcData.input_frames_used.Value != _srcInBufferIndex)
+                        throw new Exception($"LibSampleRate did not use all input frames: _srcInBufferIndex: {_srcInBufferIndex}, input_frames_used: {srcData.input_frames_used.Value}");
+
+                    _srcOutBufferIndex += (int)srcData.output_frames_gen.Value;
+                    LibSampleRate.src_float_to_short_array(srcOutPtr, (short*)monogameOutPtr, _srcOutBufferIndex);
+                }
+            }
+
+            AudioBufferReady?.Invoke(new(_monoGameOutBuffer, Start: 0, Length: _srcOutBufferIndex * SampleSize));
+            _srcInBufferIndex = 0;
+            _srcOutBufferIndex = 0;
         }
 
         return pulseValue;
@@ -251,10 +285,10 @@ public class Audio
 
     internal void SubmitAudioBuffer()
     {
-        if (_pcmBufferIndex == 0)
+        if (_srcInBufferIndex == 0)
             return;
 
-        _logger.LogDebug($"EndAudio: Submitting audio buffer of length {_pcmBufferIndex}", LogCategories.Audio);
+        _logger.LogDebug($"EndAudio: Submitting audio buffer of length {_srcInBufferIndex}", LogCategories.Audio);
         if (_cpu.SFRs.Ocr.CpuClockHz is not (OscillatorHz.Quartz / 6 or OscillatorHz.Quartz / 12))
         {
             _logger.LogWarning(
@@ -262,7 +296,7 @@ public class Audio
                 LogCategories.Audio);
         }
 
-        AudioBufferReady?.Invoke(new(_pcmBuffer, 0, _pcmBufferIndex));
-        _pcmBufferIndex = 0;
+        // AudioBufferReady?.Invoke(new(_monoGameOutBuffer, 0, _srcInBufferIndex));
+        _srcInBufferIndex = 0;
     }
 }
