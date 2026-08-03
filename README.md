@@ -91,6 +91,13 @@ Key and button mappings can be changed in Settings -> Keyboard Config / Gamepad 
 - Run the emulator: `dotnet run --project src/DreamPotato.MonoGame`.
 - Run tests: `dotnet test`
 
+- Rebuild native libsamplerate dependency (only needed when updating libsamplerate):
+    - This will only build the dependency for the current platform
+
+```shell
+./eng/update-libsamplerate.sh <tag-or-commit>
+```
+
 ## Project Overview
 
 Under `src/`:

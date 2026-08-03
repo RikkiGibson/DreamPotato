@@ -8,16 +8,16 @@ namespace LibSampleRateDotNet
         public float* data_out;
 
         [NativeTypeName("long")]
-        public int input_frames;
+        public System.Runtime.InteropServices.CLong input_frames;
 
         [NativeTypeName("long")]
-        public int output_frames;
+        public System.Runtime.InteropServices.CLong output_frames;
 
         [NativeTypeName("long")]
-        public int input_frames_used;
+        public System.Runtime.InteropServices.CLong input_frames_used;
 
         [NativeTypeName("long")]
-        public int output_frames_gen;
+        public System.Runtime.InteropServices.CLong output_frames_gen;
 
         public int end_of_input;
 

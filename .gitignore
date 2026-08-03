@@ -74,6 +74,7 @@ BenchmarkDotNet.Artifacts/
 project.lock.json
 project.fragment.lock.json
 artifacts/
+/src/native/libsamplerate/build/
 
 # Tye
 .tye/

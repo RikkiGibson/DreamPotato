@@ -31,6 +31,12 @@
       "commands": [
         "mgcb-editor-mac"
       ]
+    },
+    "clangsharppinvokegenerator": {
+      "version": "21.1.8.4",
+      "commands": [
+        "ClangSharpPInvokeGenerator"
+      ]
     }
   }
 }

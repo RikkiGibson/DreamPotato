@@ -6,11 +6,15 @@
     <Nullable>enable</Nullable>
     <LangVersion>preview</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <NativeRuntimeIdentifier Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</NativeRuntimeIdentifier>
+    <NativeRuntimeIdentifier Condition="'$(NativeRuntimeIdentifier)' == ''">$(NETCoreSdkRuntimeIdentifier)</NativeRuntimeIdentifier>
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="samplerate.dll">
+    <Content Include="runtimes/$(NativeRuntimeIdentifier)/native/*" Condition="Exists('runtimes/$(NativeRuntimeIdentifier)/native')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <Link>%(Filename)%(Extension)</Link>
     </Content>
   </ItemGroup>
 
