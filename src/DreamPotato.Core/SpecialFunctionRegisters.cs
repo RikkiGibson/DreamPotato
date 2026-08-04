@@ -187,11 +187,15 @@ public class SpecialFunctionRegisters
                     _logger.LogWarning($"Setting unsupported Ocr configuration: 0b{value:b8}", LogCategories.SystemClock);
 
                 var oldOcr = new Ocr(_rawMemory[address]);
-                if (oldOcr.CpuClockHz != ocr.CpuClockHz)
-                    _logger.LogDebug($"System clock changed from (CGC={oldOcr.ClockGeneratorControl}, {oldOcr.SystemClockSelector}, Hz={oldOcr.CpuClockHz}) to (CGC={ocr.ClockGeneratorControl}, {ocr.SystemClockSelector}, Hz={ocr.CpuClockHz})", LogCategories.SystemClock);
+                _rawMemory[address] = value;
 
-                // TODO2: should probably notify audio system right here so it can submit it to libsamplerate.
-                goto default;
+                if (oldOcr.CpuClockHz != ocr.CpuClockHz)
+                {
+                    _logger.LogDebug($"System clock changed from (CGC={oldOcr.ClockGeneratorControl}, {oldOcr.SystemClockSelector}, Hz={oldOcr.CpuClockHz}) to (CGC={ocr.ClockGeneratorControl}, {ocr.SystemClockSelector}, Hz={ocr.CpuClockHz})", LogCategories.SystemClock);
+                    _cpu.Audio.OnSystemClockChanged();
+                }
+
+                return;
 
             case Ids.Ext:
                 var ext = new Ext(value);
