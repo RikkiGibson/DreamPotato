@@ -265,7 +265,7 @@ public class Memory
             if ((address & 0xf) is >= 0xc and <= 0xf)
             {
                 if (doSideEffects)
-                    _logger.LogDebug($"Reading skipped XRAM {SFRs.Xbnk} 0x{address:X}!");
+                    _logger.LogTrace($"Reading skipped XRAM {SFRs.Xbnk} 0x{address:X}!");
 
                 return 0xff;
             }
@@ -286,7 +286,7 @@ public class Memory
             if (address >= XramBank2Size)
             {
                 if (doSideEffects)
-                    _logger.LogDebug($"Reading skipped XRAM 2 0x{address:X}!");
+                    _logger.LogTrace($"Reading skipped XRAM 2 0x{address:X}!");
 
                 return 0xff;
             }
@@ -325,7 +325,7 @@ public class Memory
         {
             if ((address & 0xf) is >= 0xc and <= 0xf)
             {
-                _logger.LogDebug($"Writing skipped XRAM {SFRs.Xbnk} {address:X}!");
+                _logger.LogTrace($"Writing skipped XRAM {SFRs.Xbnk} {address:X}!");
                 return;
             }
 

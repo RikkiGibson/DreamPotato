@@ -95,7 +95,7 @@ public class Audio
             var ended = field && !value;
             field = value;
             if (ended)
-                SubmitAudioBufferIfNeeded();
+                TryEndAudio();
         }
     }
 
@@ -258,66 +258,85 @@ public class Audio
         {
             fixed (float* srcInPtr = _srcInBuffer)
             fixed (float* srcOutPtr = _srcOutBuffer)
-            fixed (byte* monogameOutPtr = _monoGameOutBuffer)
             {
-                // See 'libsamplerate/source/docs/api_full.md', section 'Process'.
-                var srcData = new SRC_DATA()
+                while (_srcInBufferIndex > 0)
                 {
-                    // : A pointer to the input data samples.
-                    data_in = srcInPtr,
-                    // : The number of frames of data pointed to by data_in.
-                    input_frames = new CLong(_srcInBufferIndex),
-                    // : A pointer to the output data samples.
-                    data_out = srcOutPtr + _srcOutBufferIndex,
-                    // : Maximum number of frames pointer to by data_out.
-                    output_frames = new CLong(_srcOutBuffer.Length - _srcOutBufferIndex),
-                    // : Equal to output_sample_rate / input_sample_rate.
-                    src_ratio = (double)OutputSampleRate / InputSampleRate,
-                    // : Equal to 0 if more input data is available and 1 otherwise.
-                    end_of_input = 0
-                };
-
-                var framesUsed = 0;
-                while (framesUsed == 0)
-                {
-                    if (LibSampleRate.src_process(this.srcState, &srcData) is not 0 and var errorCode)
-                    {
-                        var errorString = Marshal.PtrToStringUTF8((IntPtr)LibSampleRate.src_strerror(errorCode));
-                        throw new Exception($"LibSampleRate error: {errorString}");
-                    }
-
-                    framesUsed = (int)srcData.input_frames_used.Value;
-                    // TODO2: we might need to repeat calls until all our data is used up OR the out buffer is big enough to submit
-                    // ...or both?
-                    // either way, if we do that, we need to be updating srcData as we go
+                    resampleOne(srcInPtr, srcOutPtr);
+                    submitIfNeeded();
                 }
-
-                // Push unused frames back to start of buffer
-                _srcInBuffer[framesUsed.._srcInBufferIndex].CopyTo(_srcInBuffer);
-                _srcInBufferIndex -= framesUsed;
-                _srcOutBufferIndex += (int)srcData.output_frames_gen.Value;
-                LibSampleRate.src_float_to_short_array(srcOutPtr, (short*)monogameOutPtr, _srcOutBufferIndex);
             }
         }
 
-        if (_srcOutBufferIndex > OutBufferFilledSize)
+        return;
+
+        unsafe void resampleOne(float* srcInPtr, float* srcOutPtr)
         {
+            // See 'libsamplerate/source/docs/api_full.md', section 'Process'.
+            var srcData = new SRC_DATA()
+            {
+                // : A pointer to the input data samples.
+                data_in = srcInPtr,
+                // : The number of frames of data pointed to by data_in.
+                input_frames = new CLong(_srcInBufferIndex),
+                // : A pointer to the output data samples.
+                data_out = srcOutPtr + _srcOutBufferIndex,
+                // : Maximum number of frames pointer to by data_out.
+                output_frames = new CLong(_srcOutBuffer.Length - _srcOutBufferIndex),
+                // : Equal to output_sample_rate / input_sample_rate.
+                src_ratio = (double)OutputSampleRate / InputSampleRate,
+                // : Equal to 0 if more input data is available and 1 otherwise.
+                end_of_input = 0
+            };
+
+            if (LibSampleRate.src_process(this.srcState, &srcData) is not 0 and var errorCode)
+            {
+                var errorString = Marshal.PtrToStringUTF8((IntPtr)LibSampleRate.src_strerror(errorCode));
+                throw new Exception($"LibSampleRate error: {errorString}");
+            }
+
+            var framesUsed = (int)srcData.input_frames_used.Value;
+
+            if (framesUsed != 0)
+            {
+                // Push unused frames back to start of buffer
+                _srcInBuffer[framesUsed.._srcInBufferIndex].CopyTo(_srcInBuffer);
+                _srcInBufferIndex -= framesUsed;
+            }
+
+            _srcOutBufferIndex += (int)srcData.output_frames_gen.Value;
+        }
+
+        void submitIfNeeded()
+        {
+            if (_srcOutBufferIndex < OutBufferFilledSize)
+                return;
+
+            unsafe
+            {
+                fixed (float* srcOutPtr = _srcOutBuffer)
+                fixed (byte* monogameOutPtr = _monoGameOutBuffer)
+                {
+                    LibSampleRate.src_float_to_short_array(srcOutPtr, (short*)monogameOutPtr, _srcOutBufferIndex);
+                }
+            }
+
             AudioBufferReady?.Invoke(new(_monoGameOutBuffer, Start: 0, Length: _srcOutBufferIndex * OutputSampleSize));
             _srcOutBufferIndex = 0;
         }
     }
 
-    internal void SubmitAudioBufferIfNeeded()
+    internal void TryEndAudio()
     {
         if (_srcInBufferIndex == 0)
             return;
 
-        _logger.LogDebug($"EndAudio: Submitting audio buffer", LogCategories.Audio);
+        _logger.LogTrace($"TryEndAudio: Submitting audio buffer", LogCategories.Audio);
         ResampleAndSubmit();
     }
 
     internal void OnSystemClockChanged()
     {
+        _logger.LogDebug($"New input sample rate: {InputSampleRate}", LogCategories.Audio);
         if (_srcInBufferIndex > 0)
             ResampleAndSubmit();
 

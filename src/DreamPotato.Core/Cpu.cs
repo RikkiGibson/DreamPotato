@@ -178,7 +178,7 @@ public class Cpu
 
     public Cpu(MapleMessageBroker? mapleMessageBroker = null)
     {
-        var categories = LogCategories.General | LogCategories.SerialTransfer | LogCategories.Instructions;
+        var categories = LogCategories.General | LogCategories.SerialTransfer | LogCategories.Instructions | LogCategories.Audio;
         Logger = new Logger(LogLevel.Default, categories, this);
         Memory = new Memory(this, Logger);
         Audio = new Audio(this, Logger);
