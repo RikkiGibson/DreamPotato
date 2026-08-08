@@ -28,5 +28,8 @@
         "XRAM",
         "Xunit"
     ],
-    "cSpell.minWordLength": 4
+    "cSpell.minWordLength": 4,
+    "dotnet.defaultSolution": "DreamPotato.slnf",
+    // "maui.configuration.androidSdkPreferredPath": "${workspaceFolder}/artifacts/tools/android-sdk/",
+    // "maui.configuration.javaSdkPreferredPath": "${workspaceFolder}/artifacts/tools/jdk/"
 }

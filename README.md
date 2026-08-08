@@ -83,11 +83,30 @@ Key and button mappings can be changed in Settings -> Keyboard Config / Gamepad 
   - `dotnet build src\DreamPotato.MonoGame.Android\DreamPotato.MonoGame.Android.csproj -c Debug`
 - Debug APK output:
   - `artifacts\bin\DreamPotato.MonoGame.Android\debug\com.dreampotato.monogame-Signed.apk`
-- Required ROM:
-  - `american_v1.05.bin` (64KB), selected on first launch through the Android file picker.
 - Intentional Android UI difference:
   - `Open Data Folder` is hidden in Android.
 - Keep parity items for this milestone in [docs/android.md](./docs/android.md).
+
+#### Android Emulator (AVD)
+
+The project's local Android SDK (in `artifacts/tools/android-sdk`) can be used directly. Set `ANDROID_SDK_ROOT` and `JAVA_HOME` to the local paths, then install a system image and create an AVD:
+
+```pwsh
+$sdk = "artifacts\tools\android-sdk"
+$env:ANDROID_SDK_ROOT = $sdk
+$env:JAVA_HOME = "artifacts\tools\jdk"
+
+# Install system image (one-time)
+& "$sdk\cmdline-tools\12.0\bin\sdkmanager.bat" "system-images;android-35;google_apis;x86_64"
+
+# Create AVD (one-time)
+& "$sdk\cmdline-tools\12.0\bin\avdmanager.bat" create avd `
+  --name DreamPotato_test `
+  --package "system-images;android-35;google_apis;x86_64" `
+  --device "pixel_6"
+```
+
+Then launch the emulator from the SDK's `emulator` directory and deploy the signed APK with `adb install`.
 
 ## Project Overview
 

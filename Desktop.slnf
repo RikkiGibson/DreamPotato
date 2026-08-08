@@ -1,0 +1,11 @@
+{
+    "solution": {
+        "path": "DreamPotato.slnx",
+        "projects": [
+            "src\\DreamPotato.Core\\DreamPotato.Core.csproj",
+            "src\\DreamPotato.MonoGame\\DreamPotato.MonoGame.csproj",
+            "src\\DreamPotato.SaveStateDiff\\DreamPotato.SaveStateDiff.csproj",
+            "src\\DreamPotato.Tests\\DreamPotato.Tests.csproj"
+        ]
+    }
+}

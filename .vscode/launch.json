@@ -5,10 +5,21 @@
     "version": "0.2.0",
     "configurations": [
       {
+        "name": ".NET MAUI",
+        "type": "maui",
+        "request": "launch",
+      },
+      {
         "name": "C#: DreamPotato.MonoGame Debug",
         "type": "dotnet",
         "request": "launch",
         "projectPath": "${workspaceFolder}/src/DreamPotato.MonoGame/DreamPotato.MonoGame.csproj"
+      },
+      {
+        "name": "C#: DreamPotato.MonoGame.Android Debug",
+        "type": "dotnet",
+        "request": "launch",
+        "projectPath": "${workspaceFolder}/src/DreamPotato.MonoGame.Android/DreamPotato.MonoGame.Android.csproj"
       },
 
       {
