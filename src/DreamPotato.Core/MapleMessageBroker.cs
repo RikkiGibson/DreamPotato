@@ -21,7 +21,7 @@ public class MapleMessageBroker
     private readonly int? _integratedModeTcpPort;
 
     /// <summary>A logger independent from Cpu for thread safety reasons.</summary>
-    private readonly Logger Logger;
+    public Logger Logger { get; }
 
     /// <summary>
     /// Guards <see cref="_slot1"/>, <see cref="_slot2"/>, <see cref="_clientSocket"/>, <see cref="_clientNeedsRefresh"/>.
@@ -44,10 +44,10 @@ public class MapleMessageBroker
     private Task? _serverTask;
     private CancellationTokenSource? _cancellationTokenSource;
 
-    public MapleMessageBroker(int? integratedModePort, LogLevel minimumLogLevel)
+    public MapleMessageBroker(int? integratedModePort)
     {
         _integratedModeTcpPort = integratedModePort;
-        Logger = new Logger(minimumLogLevel, LogCategories.Maple, _cpu: null);
+        Logger = new Logger();
     }
 
     public bool IsRunning => _serverTask != null;

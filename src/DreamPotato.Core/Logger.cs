@@ -7,14 +7,20 @@ public enum LogLevel
 {
     Trace,
     Debug,
+    Info,
     Warning,
     Error,
 
 #if DEBUG
-    Default = Trace,
+    Default = Debug,
 #else
-    Default = Warning,
+    Default = Info,
 #endif
+}
+
+public static class LogLevelExtensions
+{
+    public static string[] Names { get; } = ["Trace", "Debug", "Info", "Warning", "Error"];
 }
 
 public enum LogCategories
@@ -29,13 +35,18 @@ public enum LogCategories
     Audio = 1 << 6,
     Maple = 1 << 7,
     SerialTransfer = 1 << 8,
+
+    Default = General | SerialTransfer | Instructions | Audio,
 }
 
-public class Logger(LogLevel _minimumLogLevel, LogCategories _categories, Cpu? _cpu = null)
+public class Logger(Cpu? cpu = null)
 {
-    private readonly LogLevel _minimumLogLevel = _minimumLogLevel;
-    private readonly LogCategories _categories = _categories;
-    private readonly Cpu? _cpu = _cpu;
+    private readonly Cpu? _cpu = cpu;
+
+    public LogCategories Categories { get; set; } = LogCategories.Default;
+    public LogLevel MinimumLogLevel { get; set; } = LogLevel.Default;
+
+    public StreamWriter? FileWriter { get; set { field?.Dispose(); field = value; } }
 
     // Rolling buffer of log messages.
     private readonly string?[] _messages = new string[1000];
@@ -71,21 +82,25 @@ public class Logger(LogLevel _minimumLogLevel, LogCategories _categories, Cpu? _
     // TODO: do we need ISpanFormattable impl to avoid work on Instruction.ToString() etc?
     private void LogCore(LogLevel level, DefaultInterpolatedStringHandler handler, LogCategories category)
     {
-        if (level < _minimumLogLevel)
+        if (level < MinimumLogLevel)
             return;
 
         // Do write errors even if we didn't subscribe to the category
-        if (level < LogLevel.Error && (_categories & category) == 0)
+        if (level < LogLevel.Error && (Categories & category) == 0)
             return;
 
         var timestamp = DateTimeOffset.Now;
         var cpuDescription = _cpu is null ? $"" : (DefaultInterpolatedStringHandler)$" {_cpu.DisplayName}.{_cpu.CurrentInstructionBankId}@[{_cpu.Pc:X4}]";
         string message = $"{timestamp.TimeOfDay}{cpuDescription.ToStringAndClear()}: [{level}] {handler.ToStringAndClear()}";
-        if (level is LogLevel.Debug or LogLevel.Warning)
+
+        // Trace logs are too noisy for console even when explicitly enabled
+        if (level > LogLevel.Trace)
             Console.WriteLine(message);
 
         if (level == LogLevel.Error)
             Console.Error.WriteLine(message);
+
+        FileWriter?.WriteLine(message);
 
         var index = _nextMessageIndex % _messages.Length;
         _messages[index] = message;

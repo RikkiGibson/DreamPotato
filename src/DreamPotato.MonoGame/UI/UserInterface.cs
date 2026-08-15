@@ -1104,6 +1104,47 @@ partial class UserInterface
                     _game.Configuration_DreamcastPortChanged((DreamcastPort)selectedIndex);
             }
 
+            // Logging
+            {
+                ImGui.Text("Log to File");
+                ImGui.SameLine();
+
+                var logToFile = configuration.LogToFile;
+                ImGui.PushID("LogToFile");
+                if (ImGui.Checkbox("", ref logToFile))
+                {
+                    _game.Configuration_LogToFileChanged(logToFile);
+                }
+                ImGui.PopID();
+
+                ImGui.Text("Log Level");
+                ImGui.SameLine();
+
+                var logLevel = configuration.LogLevel;
+                var selectedIndex = (int)logLevel;
+                ImGui.SetNextItemWidth(CalcComboWidth(longestItem: LogLevelExtensions.Names[(int)LogLevel.Warning]));
+                ImGui.PushID("LogLevelCombo");
+                ImGui.Combo("", ref selectedIndex, LogLevelExtensions.Names, LogLevelExtensions.Names.Length);
+                ImGui.PopID();
+                if ((int)logLevel != selectedIndex)
+                    _game.Configuration_LogLevelChanged((LogLevel)selectedIndex);
+
+                if (_game.Configuration.LogLevel == LogLevel.Trace)
+                {
+                    ImGui.SameLine();
+                    ImGui.Text("(!)");
+                    if (ImGui.IsItemHovered())
+                    {
+                        ImGui.BeginTooltip();
+                        ImGui.Text("""
+                            Caution: Trace level can quickly
+                            use a lot of disk space.
+                            """);
+                        ImGui.EndTooltip();
+                    }
+                }
+            }
+
             ImGui.EndPopup();
         }
 

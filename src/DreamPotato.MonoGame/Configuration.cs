@@ -33,7 +33,9 @@ public record Configuration(
     int CurrentSaveStateSlot = 0,
     VmuConnectionState VmuConnectionState = VmuConnectionState.None,
     ExpansionSlots ExpansionSlots = ExpansionSlots.Slot1,
-    DreamcastPort DreamcastPort = DreamcastPort.A)
+    DreamcastPort DreamcastPort = DreamcastPort.A,
+    bool LogToFile = false,
+    LogLevel LogLevel = LogLevel.Default)
 {
     private const string FileName = "configuration.json";
     private static string FilePath => Path.Combine(Vmu.UserDataFolder, FileName);

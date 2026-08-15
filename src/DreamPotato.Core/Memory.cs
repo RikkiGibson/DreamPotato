@@ -68,11 +68,12 @@ public class Memory
     public const int WorkRamSize = 0x200;
     private readonly byte[] _workRam = new byte[WorkRamSize];
 
-    private readonly Logger _logger;
-    public Memory(Cpu cpu, Logger logger)
+    private readonly Cpu _cpu;
+    private Logger _logger => _cpu.Logger;
+    public Memory(Cpu cpu)
     {
-        SFRs = new SpecialFunctionRegisters(cpu, workRam: _workRam, logger);
-        _logger = logger;
+        _cpu = cpu;
+        SFRs = new SpecialFunctionRegisters(cpu, workRam: _workRam);
     }
 
     public void Reset()

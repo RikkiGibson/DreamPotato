@@ -21,14 +21,13 @@ public class SpecialFunctionRegisters
     private readonly byte[] _rawMemory = new byte[Size];
     private readonly Cpu _cpu;
     private readonly byte[] _workRam;
-    private readonly Logger _logger;
+    private Logger _logger => _cpu.Logger;
 
-    public SpecialFunctionRegisters(Cpu cpu, byte[] workRam, Logger logger)
+    public SpecialFunctionRegisters(Cpu cpu, byte[] workRam)
     {
         Debug.Assert(workRam.Length == 0x200);
         _cpu = cpu;
         _workRam = workRam;
-        _logger = logger;
     }
 
     /// <summary>

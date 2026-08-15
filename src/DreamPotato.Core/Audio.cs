@@ -20,7 +20,7 @@ public class Audio
     public const int MaxVolume = 100;
 
     private readonly Cpu _cpu;
-    private readonly Logger _logger;
+    private Logger _logger => _cpu.Logger;
 
     private const int PcmBufferFilledSize = SampleRate * SampleSize * BufferDurationMilliseconds / 1000;
     /// <summary>
@@ -34,10 +34,9 @@ public class Audio
     /// </summary>
     private byte _compare;
 
-    internal Audio(Cpu cpu, Logger logger)
+    internal Audio(Cpu cpu)
     {
         _cpu = cpu;
-        _logger = logger;
         Volume = DefaultVolume;
     }
 
@@ -64,9 +63,18 @@ public class Audio
         internal set
         {
             var ended = field && !value;
+            var started = !field && value;
             field = value;
+
             if (ended)
                 SubmitAudioBuffer();
+
+            if (started && _cpu.SFRs.Ocr.CpuClockHz is not (OscillatorHz.Quartz / 6 or OscillatorHz.Quartz / 12))
+            {
+                _logger.LogDebug(
+                    $"Sample rate not compatible with clock {_cpu.SFRs.Ocr.SystemClockSelector}.",
+                    LogCategories.Audio);
+            }
         }
     }
 
@@ -197,13 +205,6 @@ public class Audio
     {
         Debug.Assert(IsActive);
 
-        if (cpuClockHz is not (OscillatorHz.Quartz / 6 or OscillatorHz.Quartz / 12))
-        {
-            _logger.LogWarning(
-                $"Sample rate not compatible with clock {_cpu.SFRs.Ocr.SystemClockSelector}.",
-                LogCategories.Audio);
-        }
-
         var sampleRateAndRemainder = SampleRate + _pcmRemainder;
         var samplesPerCycle = sampleRateAndRemainder / cpuClockHz;
         _pcmRemainder = sampleRateAndRemainder % cpuClockHz;
@@ -233,12 +234,6 @@ public class Audio
             return;
 
         _logger.LogDebug($"EndAudio: Submitting audio buffer of length {_pcmBufferIndex}", LogCategories.Audio);
-        if (_cpu.SFRs.Ocr.CpuClockHz is not (OscillatorHz.Quartz / 6 or OscillatorHz.Quartz / 12))
-        {
-            _logger.LogWarning(
-                $"Sample rate not compatible with clock {_cpu.SFRs.Ocr.SystemClockSelector}.",
-                LogCategories.Audio);
-        }
 
         AudioBufferReady?.Invoke(new(_pcmBuffer, 0, _pcmBufferIndex));
         _pcmBufferIndex = 0;

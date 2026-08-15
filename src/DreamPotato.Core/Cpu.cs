@@ -178,13 +178,12 @@ public class Cpu
 
     public Cpu(MapleMessageBroker? mapleMessageBroker = null)
     {
-        var categories = LogCategories.General | LogCategories.SerialTransfer | LogCategories.Instructions;
-        Logger = new Logger(LogLevel.Default, categories, this);
-        Memory = new Memory(this, Logger);
-        Audio = new Audio(this, Logger);
+        Logger = new Logger(this);
+        Memory = new Memory(this);
+        Audio = new Audio(this);
         Display = new Display(this);
         FileSystem = new FileSystem(Flash);
-        MapleMessageBroker = mapleMessageBroker ?? new MapleMessageBroker(integratedModePort: null, LogLevel.Default);
+        MapleMessageBroker = mapleMessageBroker ?? new MapleMessageBroker(integratedModePort: null);
         SetInstructionBank(InstructionBank.ROM);
     }
 

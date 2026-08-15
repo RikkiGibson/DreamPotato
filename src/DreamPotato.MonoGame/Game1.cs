@@ -103,7 +103,7 @@ public class Game1 : Game
         _userInterface = new UserInterface(this);
         _userInterface.Initialize(textures.IconDreamcastConnectedTexture, textures.IconVmusConnectedTexture);
 
-        MapleMessageBroker = new MapleMessageBroker(_commandLineIntegratedModeInfo?.TcpPort, LogLevel.Default);
+        MapleMessageBroker = new MapleMessageBroker(_commandLineIntegratedModeInfo?.TcpPort);
         MapleMessageBroker.RestartServer(_commandLineIntegratedModeInfo?.Port ?? Configuration.DreamcastPort);
         RecentFilesInfo = IsIntegratedMode ? null : RecentFilesInfo.Load();
 
@@ -119,6 +119,8 @@ public class Game1 : Game
         initializeVmu(_primaryVmuPresenter, date, _commandLineFilePath ?? RecentFilesInfo?.PrimaryVmuMostRecent);
         initializeVmu(_secondaryVmuPresenter, date, RecentFilesInfo?.SecondaryVmuMostRecent);
 
+        UpdateLogLevels();
+        UpdateLogFiles();
         UpdateScaleMatrix();
         UpdateAudioVolume();
         UpdateWindowTitle();
@@ -409,6 +411,43 @@ public class Game1 : Game
         Debug.Assert(!IsIntegratedMode);
         Configuration = Configuration with { DreamcastPort = dreamcastPort };
         MapleMessageBroker.RestartServer(dreamcastPort);
+    }
+
+    internal void Configuration_LogToFileChanged(bool logToFile)
+    {
+        Configuration = Configuration with { LogToFile = logToFile };
+        UpdateLogFiles();
+    }
+
+    internal void Configuration_LogLevelChanged(LogLevel logLevel)
+    {
+        Configuration = Configuration with { LogLevel = logLevel };
+        UpdateLogLevels();
+    }
+
+    private void UpdateLogLevels()
+    {
+        MapleMessageBroker.Logger.MinimumLogLevel = Configuration.LogLevel;
+        PrimaryVmu.Logger.MinimumLogLevel = Configuration.LogLevel;
+        _secondaryVmuPresenter.Vmu.Logger.MinimumLogLevel = Configuration.LogLevel;
+    }
+
+    private void UpdateLogFiles()
+    {
+        if (Configuration.LogToFile)
+        {
+            MapleMessageBroker.Logger.FileWriter = new StreamWriter(Path.Combine(Vmu.UserDataFolder, "DreamPotato.Maple.log")) { AutoFlush = true };
+
+            var vmuLogFile = new StreamWriter(Path.Combine(Vmu.UserDataFolder, "DreamPotato.log")) { AutoFlush = true };
+            PrimaryVmu.Logger.FileWriter = vmuLogFile;
+            _secondaryVmuPresenter.Vmu.Logger.FileWriter = vmuLogFile;
+        }
+        else
+        {
+            MapleMessageBroker.Logger.FileWriter = null;
+            PrimaryVmu.Logger.FileWriter = null;
+            _secondaryVmuPresenter.Vmu.Logger.FileWriter = null;
+        }
     }
 
     internal void Configuration_ExpansionSlotsChanged(ExpansionSlots newExpansionSlots)

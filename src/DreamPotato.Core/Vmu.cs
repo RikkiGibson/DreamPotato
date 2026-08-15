@@ -13,6 +13,8 @@ public class Vmu
 {
     public readonly Cpu _cpu; // TODO: probably want to wrap everything a front-end would want to use thru here
     private FileSystem FileSystem => _cpu.FileSystem;
+
+    public Logger Logger => _cpu.Logger;
     public Audio Audio => _cpu.Audio;
     public Display Display => _cpu.Display;
     public string? LoadedPath => _cpu.FileSystem.LoadedPath;
