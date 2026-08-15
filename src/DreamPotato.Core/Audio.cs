@@ -58,17 +58,7 @@ public class Audio
     /// <summary>
     /// 'true' if the emulation state is currently playing sound; otherwise, 'false'.
     /// </summary>
-    public bool IsActive
-    {
-        get;
-        internal set
-        {
-            var ended = field && !value;
-            field = value;
-            if (ended)
-                SubmitAudioBuffer();
-        }
-    }
+    public bool IsActive { get => true; private set; }
 
     private bool CalcIsActive(bool t1lRun, byte t1lr, byte t1lc)
     {
@@ -123,6 +113,7 @@ public class Audio
 
     private readonly byte[] _highSignal = new byte[2];
     private readonly byte[] _lowSignal = new byte[2];
+    private readonly byte[] _neutralSignal = new byte[2];
 
     /// <summary>How many samples we have written into the pcm buffer so far.</summary>
     private int _pcmBufferIndex;
@@ -193,7 +184,7 @@ public class Audio
     /// Appends a pulse <see cref="value"/> to the PCM buffer for 1 cycle at <see cref="cpuClockHz"/>
     /// Returns the pulse value that was appended (low or high)
     /// </summary>
-    internal bool AddPulse(int cpuClockHz, byte t1l)
+    internal bool? AddPulse(int cpuClockHz, byte t1l)
     {
         Debug.Assert(IsActive);
 
@@ -208,8 +199,14 @@ public class Audio
         var samplesPerCycle = sampleRateAndRemainder / cpuClockHz;
         _pcmRemainder = sampleRateAndRemainder % cpuClockHz;
 
-        var pulseValue = t1l >= _compare;
-        var signal = pulseValue ? _highSignal : _lowSignal;
+        var t1lRun = _cpu.SFRs.T1Cnt.T1lRun;
+
+        var (signal, pulse) = (enable: t1lRun, t1l >= _compare) switch
+        {
+            (true, true) => (_highSignal, true),
+            (true, false) => (_lowSignal, false),
+            (false, _) => (_lowSignal, false),
+        };
         for (int i = 0; i < samplesPerCycle; i++)
         {
             _pcmBuffer[_pcmBufferIndex++] = signal[0];
@@ -222,9 +219,10 @@ public class Audio
             AudioBufferReady?.Invoke(new(_pcmBuffer, Start: 0, Length: _pcmBufferIndex));
             _pcmBufferIndex = 0;
             _pcmRemainder = 0;
+            IsActive = CalcIsActive(t1lRun, _cpu.SFRs.T1Lr, _cpu.SFRs.T1Lc);
         }
 
-        return pulseValue;
+        return pulse;
     }
 
     internal void SubmitAudioBuffer()
@@ -232,7 +230,7 @@ public class Audio
         if (_pcmBufferIndex == 0)
             return;
 
-        _logger.LogDebug($"EndAudio: Submitting audio buffer of length {_pcmBufferIndex}", LogCategories.Audio);
+        _logger.LogDebug($"Submitting audio buffer of length {_pcmBufferIndex}", LogCategories.Audio);
         if (_cpu.SFRs.Ocr.CpuClockHz is not (OscillatorHz.Quartz / 6 or OscillatorHz.Quartz / 12))
         {
             _logger.LogWarning(

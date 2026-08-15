@@ -1073,7 +1073,10 @@ public class Cpu
                         if (Audio.IsActive)
                         {
                             var cpuClockHz = SFRs.Ocr.CpuClockHz;
-                            SFRs.P1 = SFRs.P1 with { PulseOutput = Audio.AddPulse(cpuClockHz, t1l) };
+                            if (Audio.AddPulse(cpuClockHz, t1l) is bool pulse)
+                            {
+                                SFRs.P1 = SFRs.P1 with { PulseOutput = pulse };
+                            }
                         }
 
                         t1l++;
