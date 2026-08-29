@@ -110,6 +110,7 @@ public class Logger(Cpu? cpu = null)
     // TODO: this could be some enumerable struct instead
     public List<string> GetLogs(int recentCount)
     {
+        recentCount = Math.Min(recentCount, _messages.Length);
         List<string> result = [];
         var startIndex = _nextMessageIndex - recentCount;
         for (int i = 0; i < recentCount; i++)
