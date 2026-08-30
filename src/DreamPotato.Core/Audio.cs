@@ -12,7 +12,7 @@ public class Audio
     // But that would really just be a way to avoid doing our own resampling
     public const int SampleRate = OscillatorHz.Quartz;
     public const int SampleSize = 2; // 16-bit
-    public const int BufferDurationMilliseconds = 100;
+    public const int BufferDurationMilliseconds = 8;
 
     public const int DefaultVolume = 50;
 
@@ -22,11 +22,12 @@ public class Audio
     private readonly Cpu _cpu;
     private Logger _logger => _cpu.Logger;
 
-    private const int PcmBufferFilledSize = SampleRate * SampleSize * BufferDurationMilliseconds / 1000;
+    private const int PcmBufferFilledSize = SampleRate * BufferDurationMilliseconds / 1000 * SampleSize;
     /// <summary>
     /// PCM data at <see cref="SampleRate"/> and <see cref="SampleSize"/>.
     /// </summary>
-    private readonly byte[] _pcmBuffer = new byte[2 * PcmBufferFilledSize];
+    private readonly byte[] _pcmBuffer = new byte[PcmBufferFilledSize];
+    private readonly byte[] _emptyPcmBuffer = new byte[PcmBufferFilledSize];
 
     /// <summary>
     /// Pulse generator compare value.
@@ -40,61 +41,15 @@ public class Audio
         Volume = DefaultVolume;
     }
 
-    internal void OnT1LRunChanged(bool t1lRun, byte t1lr, byte t1lc)
+    internal void OnT1LRunChanged(byte t1lc)
     {
         _compare = t1lc;
-        IsActive = CalcIsActive(t1lRun, t1lr, t1lc);
     }
 
-    internal void OnT1LReloaded(T1Cnt t1cnt, byte t1lr, byte t1lc)
+    internal void OnT1LReloaded(T1Cnt t1cnt, byte t1lc)
     {
         if (t1cnt.ELDT1C)
             _compare = t1lc;
-
-        IsActive = CalcIsActive(t1cnt.T1lRun, t1lr, t1lc);
-    }
-
-    /// <summary>
-    /// 'true' if the emulation state is currently playing sound; otherwise, 'false'.
-    /// </summary>
-    public bool IsActive
-    {
-        get;
-        internal set
-        {
-            var ended = field && !value;
-            var started = !field && value;
-            field = value;
-
-            if (ended)
-                SubmitAudioBuffer();
-
-            if (started && _cpu.SFRs.Ocr.CpuClockHz is not (OscillatorHz.Quartz / 6 or OscillatorHz.Quartz / 12))
-            {
-                _logger.LogDebug(
-                    $"Sample rate not compatible with clock {_cpu.SFRs.Ocr.SystemClockSelector}.",
-                    LogCategories.Audio);
-            }
-        }
-    }
-
-    private bool CalcIsActive(bool t1lRun, byte t1lr, byte t1lc)
-    {
-        if (Volume == 0)
-            return false;
-
-        if (!t1lRun)
-            return false;
-
-        // Audio signal goes from low to high according to the following pattern:
-        // T1Lr       T1Lc       0xff
-        // |__________|‾‾‾‾‾‾‾‾‾‾|
-        // T1L starts at T1Lr, and signal is low,
-        // until it reaches T1Lc where it is high until we reload again.
-        // For example, the highest pitch the timer can produce, is
-        // with T1Lr=254, T1Lc=255, which alternates low and high every cycle.
-        // If T1Lc is not greater than T1Lr, there is no point where the signal is low, and thus no sound.
-        return t1lc > t1lr;
     }
 
     public record struct AudioBufferReadyEventArgs(byte[] Buffer, int Start, int Length);
@@ -139,72 +94,11 @@ public class Audio
     private int _pcmRemainder;
 
     /// <summary>
-    /// Fills <paramref name="buffer"/> with PCM data based on the current audio state.
-    /// </summary>
-    /// <returns>End index of the PCM data in <paramref name="buffer"/>.</returns>
-    /// <remarks>This is currently only used for testing</remarks>
-    public int Generate(Span<byte> buffer)
-    {
-        if (!IsActive)
-            return -1;
-
-        _logger.LogDebug($"Generating audio buffer of size {buffer.Length}", LogCategories.Audio);
-
-        var cpuClockHz = _cpu.SFRs.Ocr.CpuClockHz;
-        // NOTE: this is likely wrong now that audio internally stores a compare value
-        var t1lc = _cpu.SFRs.T1Lc;
-        var t1lr = _cpu.SFRs.T1Lr;
-
-        // Duty cycle:
-        // while t1lc < t1l, signal is low.
-        // while t1lc >= t1l, signal is high.
-
-        // Typical setup: (R=Reload, C=Compare, M=Max)
-        // R----C----M
-
-        var timerTicksPerPeriod = 0xff - t1lr + 1;
-        var timerTicksAtLowSignal = t1lc - t1lr;
-        if (timerTicksPerPeriod < 2 || timerTicksAtLowSignal <= 0)
-        {
-            _logger.LogWarning($"Could not play sound with T1lc={t1lc:X} T1lr={t1lr:X}");
-            return -1;
-        }
-        Debug.Assert(timerTicksAtLowSignal < timerTicksPerPeriod);
-
-        var samplesPerTimerPeriod = timerTicksPerPeriod * SampleRate / cpuClockHz;
-        var samplesAtLowSignal = timerTicksAtLowSignal * SampleRate / cpuClockHz;
-
-        var sampleVolume = GetSampleVolume();
-        BinaryPrimitives.WriteInt16LittleEndian(_highSignal, sampleVolume);
-        BinaryPrimitives.WriteInt16LittleEndian(_lowSignal, (short)-sampleVolume);
-
-        int bufferIndex;
-        for (bufferIndex = 0; bufferIndex <= buffer.Length - samplesPerTimerPeriod * 2;)
-        {
-            for (int i = 0; i < samplesAtLowSignal; i++)
-            {
-                buffer[bufferIndex++] = _lowSignal[0];
-                buffer[bufferIndex++] = _lowSignal[1];
-            }
-
-            for (int i = samplesAtLowSignal; i < samplesPerTimerPeriod; i++)
-            {
-                buffer[bufferIndex++] = _highSignal[0];
-                buffer[bufferIndex++] = _highSignal[1];
-            }
-        }
-
-        return bufferIndex;
-    }
-
-    /// <summary>
     /// Appends a pulse <see cref="value"/> to the PCM buffer for 1 cycle at <see cref="cpuClockHz"/>
     /// Returns the pulse value that was appended (low or high)
     /// </summary>
     internal bool AddPulse(int cpuClockHz, byte t1l)
     {
-        Debug.Assert(IsActive);
-
         var sampleRateAndRemainder = SampleRate + _pcmRemainder;
         var samplesPerCycle = sampleRateAndRemainder / cpuClockHz;
         _pcmRemainder = sampleRateAndRemainder % cpuClockHz;
@@ -215,27 +109,36 @@ public class Audio
         {
             _pcmBuffer[_pcmBufferIndex++] = signal[0];
             _pcmBuffer[_pcmBufferIndex++] = signal[1];
+
+            if (_pcmBufferIndex == _pcmBuffer.Length)
+            {
+                if (!hasRealSignal())
+                {
+                    Debug.Assert(_emptyPcmBuffer.All(b => b == 0));
+                    AudioBufferReady?.Invoke(new(_emptyPcmBuffer, Start: 0, Length: _pcmBufferIndex));
+                }
+                else
+                {
+                    AudioBufferReady?.Invoke(new(_pcmBuffer, Start: 0, Length: _pcmBufferIndex));
+                }
+
+                _pcmBufferIndex = 0;
+                _pcmRemainder = 0;
+            }
         }
 
-        if (_pcmBufferIndex >= PcmBufferFilledSize)
+        // TODO2: This seems to cut off some signals in practice
+        bool hasRealSignal()
         {
-            _logger.LogDebug($"Submitting audio buffer of length {_pcmBufferIndex}", LogCategories.Audio);
-            AudioBufferReady?.Invoke(new(_pcmBuffer, Start: 0, Length: _pcmBufferIndex));
-            _pcmBufferIndex = 0;
-            _pcmRemainder = 0;
+            for (var j = 0; j < _pcmBuffer.Length; j += 2)
+            {
+                if (_pcmBuffer[j] != signal[0] || _pcmBuffer[j + 1] != signal[1])
+                    return true;
+            }
+
+            return false;
         }
 
         return pulseValue;
-    }
-
-    internal void SubmitAudioBuffer()
-    {
-        if (_pcmBufferIndex == 0)
-            return;
-
-        _logger.LogDebug($"EndAudio: Submitting audio buffer of length {_pcmBufferIndex}", LogCategories.Audio);
-
-        AudioBufferReady?.Invoke(new(_pcmBuffer, 0, _pcmBufferIndex));
-        _pcmBufferIndex = 0;
     }
 }

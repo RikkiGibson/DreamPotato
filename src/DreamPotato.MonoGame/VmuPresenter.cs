@@ -332,7 +332,10 @@ class VmuPresenter
 
     private void Audio_BufferReady(Audio.AudioBufferReadyEventArgs args)
     {
-        _dynamicSound.SubmitBuffer(args.Buffer, args.Start, args.Length);
+        // TODO2: Ideally we could play audio while fast forwarding
+        // However, CPU needs to: (1) know the speed factor and (2) ideally time stretch to make things sound right
+        if (!IsFastForwarding)
+            _dynamicSound.SubmitBuffer(args.Buffer, args.Start, args.Length);
     }
 
     internal void DockOrEject()

@@ -1061,25 +1061,18 @@ public class Cpu
             void tickTimer1()
             {
                 var t1cnt = SFRs.T1Cnt;
-                if (t1cnt is { T1lRun: false, T1hRun: false })
-                    return;
-
+                var cpuClockHz = SFRs.Ocr.CpuClockHz;
                 for (var i = 0; i < cycles; i++)
                 {
+                    var t1l = SFRs.T1L;
+                    SFRs.P1 = SFRs.P1 with { PulseOutput = Audio.AddPulse(cpuClockHz, t1l) };
                     if (t1cnt.T1lRun)
                     {
-                        var t1l = SFRs.T1L;
-                        if (Audio.IsActive)
-                        {
-                            var cpuClockHz = SFRs.Ocr.CpuClockHz;
-                            SFRs.P1 = SFRs.P1 with { PulseOutput = Audio.AddPulse(cpuClockHz, t1l) };
-                        }
-
                         t1l++;
                         if (t1l == 0)
                         {
                             t1l = SFRs.T1Lr;
-                            Audio.OnT1LReloaded(t1cnt, t1l, SFRs.T1Lc);
+                            Audio.OnT1LReloaded(t1cnt, SFRs.T1Lc);
                             t1cnt.T1lOvf = true;
                         }
 
