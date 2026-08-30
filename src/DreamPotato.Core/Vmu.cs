@@ -30,7 +30,7 @@ public class Vmu
     public event Action<string> OpenFileRequested
     {
         add => _cpu.FileSystem.OpenFileRequested += value;
-        remove => _cpu.FileSystem.OpenFileRequested += value;
+        remove => _cpu.FileSystem.OpenFileRequested -= value;
     }
 
     public Vmu(MapleMessageBroker? mapleMessageBroker = null)
