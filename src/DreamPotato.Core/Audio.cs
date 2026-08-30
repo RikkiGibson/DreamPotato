@@ -13,6 +13,8 @@ public class Audio
     public const int SampleRate = OscillatorHz.Quartz;
     public const int SampleSize = 2; // 16-bit
     public const int BufferDurationMilliseconds = 8;
+    private const int MaxTotalBufferDurationMilliseconds = 96;
+    public const int MaxQueuedBufferCount = MaxTotalBufferDurationMilliseconds / BufferDurationMilliseconds;
 
     public const int DefaultVolume = 50;
 
