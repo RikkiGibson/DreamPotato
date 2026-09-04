@@ -94,7 +94,7 @@ public class Audio
     internal bool AddPulse(int cpuClockHz, byte t1l)
     {
         Debug.Assert(_partialSample is >= 0 and < 1.0);
-        Debug.Assert(Math.Abs(_partialSignal) is >= 0 and <= short.MaxValue);
+        Debug.Assert(_partialSignal is >= short.MinValue and <= short.MaxValue);
 
         var samplesPerCycle = (double)SampleRate / cpuClockHz;
         var pulseValue = t1l >= _compare;
