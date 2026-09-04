@@ -332,7 +332,9 @@ class VmuPresenter
 
     private void Audio_BufferReady(Audio.AudioBufferReadyEventArgs args)
     {
-        _dynamicSound.SubmitBuffer(args.Buffer, args.Start, args.Length);
+        // Drop some buffers as needed when fast forwarding
+        if (_dynamicSound.PendingBufferCount < Audio.MaxQueuedBufferCount)
+            _dynamicSound.SubmitBuffer(args.Buffer, args.Start, args.Length);
     }
 
     internal void DockOrEject()
