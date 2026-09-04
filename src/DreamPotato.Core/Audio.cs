@@ -1,4 +1,3 @@
-using System.Buffers.Binary;
 using System.Diagnostics;
 
 using DreamPotato.Core.SFRs;
@@ -7,9 +6,7 @@ namespace DreamPotato.Core;
 
 public class Audio
 {
-    // This won't work well with RC oscillator sounds.
-    // Could consider using a separate sample rate of like 43600 there (872000 / 43600 = 20).
-    // But that would really just be a way to avoid doing our own resampling
+    // Max sample rate supported by MonoGame.
     public const int SampleRate = 48000;
     public const int SampleSize = 2; // 16-bit
     public const int BufferDurationMilliseconds = 8;
@@ -57,17 +54,19 @@ public class Audio
     public record struct AudioBufferReadyEventArgs(byte[] Buffer, int Start, int Length);
     public event Action<AudioBufferReadyEventArgs>? AudioBufferReady;
 
-    public short GetSampleVolume()
+    private static short ComputeSampleVolume(int volume)
     {
-        ArgumentOutOfRangeException.ThrowIfLessThan(Volume, 0);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(Volume, 100);
+        ArgumentOutOfRangeException.ThrowIfLessThan(volume, MinVolume);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(volume, MaxVolume);
 
         // Audio perception is logarithmic. Approximate this by squaring the volume setting value.
         // Take the fraction of the total possible squared volume and multiply by the maximum sample amplitude.
-        var percentage = Math.Pow(Volume, 2) / Math.Pow(MaxVolume, 2);
+        var percentage = Math.Pow(volume, 2) / Math.Pow(MaxVolume, 2);
         Debug.Assert(percentage is >= 0 and <= 1);
         return (short)(percentage * short.MaxValue);
     }
+
+    public short SampleVolume { get; private set; }
 
     /// <summary>
     /// Sets the volume of audio output (between <see cref="MinVolume"/> and <see cref="MaxVolume"/>).
@@ -78,24 +77,18 @@ public class Audio
         set
         {
             field = value;
-            var sampleVolume = GetSampleVolume();
-            _logger.LogDebug($"New Volume: {value}, SampleVolume: {sampleVolume}", LogCategories.Audio);
-            ArgumentOutOfRangeException.ThrowIfNegative(sampleVolume);
-            BinaryPrimitives.WriteInt16LittleEndian(_highSignal, sampleVolume);
-            BinaryPrimitives.WriteInt16LittleEndian(_lowSignal, (short)-sampleVolume);
+            SampleVolume = ComputeSampleVolume(value);
+            _logger.LogDebug($"New Volume: {value}, SampleVolume: {SampleVolume}", LogCategories.Audio);
         }
     }
 
-    private readonly byte[] _highSignal = new byte[2];
-    private readonly byte[] _lowSignal = new byte[2];
-
-    /// <summary>How many samples we have written into the pcm buffer so far.</summary>
+    /// <summary>How many samples we have written into <see cref="_pcmBuffer"/> so far.</summary>
     private int _pcmBufferIndex;
 
-    /// <summary>When CPU speed is not evenly divisible by sample rate, tracks how far we were into a single sample.</summary>
-    private int _pcmRemainder;
-
+    /// <summary>Partially accumulated value of the partial sample.</summary>
     private double _partialSignal;
+
+    /// <summary>A value between [0, 1) which represents the proportion of a partial sample which has elapsed so far.</summary>
     private double _partialSample;
 
     internal bool AddPulse(int cpuClockHz, byte t1l)
@@ -103,14 +96,9 @@ public class Audio
         Debug.Assert(_partialSample is >= 0 and < 1.0);
         Debug.Assert(Math.Abs(_partialSignal) is >= 0 and <= short.MaxValue);
 
-        // Step 1:
-        // Compute samplesPerCycle.
-        // Subtract an amount not exceeding samplesPerCycle or _sampleRemainder from _sampleRemainder.
-        // Add signal value to _signalRemainder proportional to _sampleRemainder.
-        // Assuming _sampleRemainder was reduced to zero, enqueue the sample into buffer.
         var samplesPerCycle = (double)SampleRate / cpuClockHz;
         var pulseValue = t1l >= _compare;
-        var sampleVolume = GetSampleVolume();
+        var sampleVolume = SampleVolume;
         if (!pulseValue)
             sampleVolume = (short)-sampleVolume;
 
@@ -119,10 +107,10 @@ public class Audio
             // Append to partial sample.
             var remaining = 1.0 - _partialSample;
             var isComplete = remaining < samplesPerCycle;
-            var toRemove = isComplete ? remaining : samplesPerCycle;
-            _partialSignal += sampleVolume * (double)toRemove;
-            _partialSample += toRemove;
-            samplesPerCycle -= toRemove;
+            var toAdd = isComplete ? remaining : samplesPerCycle;
+            _partialSignal += sampleVolume * (double)toAdd;
+            _partialSample += toAdd;
+            samplesPerCycle -= toAdd;
 
             if (isComplete)
             {
@@ -165,7 +153,6 @@ public class Audio
                 }
 
                 _pcmBufferIndex = 0;
-                _pcmRemainder = 0;
             }
         }
 
@@ -180,54 +167,5 @@ public class Audio
 
             return false;
         }
-    }
-
-    /// <summary>
-    /// Appends a pulse <see cref="value"/> to the PCM buffer for 1 cycle at <see cref="cpuClockHz"/>
-    /// Returns the pulse value that was appended (low or high)
-    /// </summary>
-    internal bool AddPulse2(int cpuClockHz, byte t1l)
-    {
-        var sampleRateAndRemainder = SampleRate + _pcmRemainder;
-        var samplesPerCycle = sampleRateAndRemainder / cpuClockHz;
-        _pcmRemainder = sampleRateAndRemainder % cpuClockHz;
-
-        var pulseValue = t1l >= _compare;
-        var signal = pulseValue ? _highSignal : _lowSignal;
-        for (int i = 0; i < samplesPerCycle; i++)
-        {
-            _pcmBuffer[_pcmBufferIndex++] = signal[0];
-            _pcmBuffer[_pcmBufferIndex++] = signal[1];
-
-            if (_pcmBufferIndex == _pcmBuffer.Length)
-            {
-                if (!hasRealSignal())
-                {
-                    Debug.Assert(_emptyPcmBuffer.All(b => b == 0));
-                    AudioBufferReady?.Invoke(new(_emptyPcmBuffer, Start: 0, Length: _pcmBufferIndex));
-                }
-                else
-                {
-                    AudioBufferReady?.Invoke(new(_pcmBuffer, Start: 0, Length: _pcmBufferIndex));
-                }
-
-                _pcmBufferIndex = 0;
-                _pcmRemainder = 0;
-            }
-        }
-
-        // TODO2: This seems to cut off some signals in practice
-        bool hasRealSignal()
-        {
-            for (var j = 0; j < _pcmBuffer.Length; j += 2)
-            {
-                if (_pcmBuffer[j] != signal[0] || _pcmBuffer[j + 1] != signal[1])
-                    return true;
-            }
-
-            return false;
-        }
-
-        return pulseValue;
     }
 }

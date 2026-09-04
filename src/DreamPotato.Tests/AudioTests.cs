@@ -25,32 +25,27 @@ public class AudioTests
         int width = (0xff - cpu.SFRs.T1Lr) * 2;
         while (data is null)
             cpu.Step();
-        cpu.SFRs.T1Cnt = cpu.SFRs.T1Cnt with { T1lRun = false };
-        Assert.NotNull(data);
 
-        int widthSamples = width * Audio.SampleRate / cpuClockHz;
         Assert.Equal<object>("""
                | 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F 
             00 | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
             01 | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
             02 | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
-            03 | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 FF 1F FF 1F 
-            04 | FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
-            05 | FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
+            03 | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
+            04 | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
+            05 | 01 E0 01 E0 01 E0 55 E3 FF 1F FF 1F FF 1F FF 1F 
             06 | FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
-            07 | FF 1F FF 1F FF 1F FF 1F 01 E0 01 E0 01 E0 01 E0 
-            08 | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
-            09 | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
-            0A | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
-            0B | 01 E0 01 E0 FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
-            0C | FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
-            0D | FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
-            0E | FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
+            07 | FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
+            08 | FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
+            09 | FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
+            0A | FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 57 19 
+            0B | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
+            0C | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
+            0D | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
+            0E | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
             0F | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
-            10 | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
-            11 | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
-            12 | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 FF 1F FF 1F 
-            """, new ReadOnlySpan<byte>(data, 0, 0x130).AsHexBlock());
+            10 | 01 E0 01 E0 01 E0 FD E9 FF 1F FF 1F FF 1F FF 1F 
+            """, new ReadOnlySpan<byte>(data, 0, 0x110).AsHexBlock());
     }
 
     [Fact]
@@ -74,17 +69,27 @@ public class AudioTests
         while (data is null)
             cpu.Step();
 
-        cpu.SFRs.T1Cnt = cpu.SFRs.T1Cnt with { T1lRun = false };
-
         Assert.Equal<object>("""
                | 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F 
-            00 | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 FF 1F FF 1F 
-            01 | FF 1F FF 1F FF 1F FF 1F 01 E0 01 E0 01 E0 01 E0 
-            02 | 01 E0 01 E0 FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
-            03 | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 FF 1F FF 1F 
-            04 | FF 1F FF 1F FF 1F FF 1F 01 E0 01 E0 01 E0 01 E0 
-            05 | 01 E0 01 E0 FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
-            """, new ReadOnlySpan<byte>(data, 0, length: 0x60).AsHexBlock());
+            00 | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
+            01 | 78 ED FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
+            02 | FF 1F 11 05 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
+            03 | 01 E0 01 E0 65 08 FF 1F FF 1F FF 1F FF 1F FF 1F 
+            04 | FF 1F FF 1F FF 1F 24 EA 01 E0 01 E0 01 E0 01 E0 
+            05 | 01 E0 01 E0 01 E0 55 E3 FF 1F FF 1F FF 1F FF 1F 
+            06 | FF 1F FF 1F FF 1F FF 1F 34 0F 01 E0 01 E0 01 E0 
+            07 | 01 E0 01 E0 01 E0 01 E0 01 E0 43 FE FF 1F FF 1F 
+            08 | FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 47 F4 01 E0 
+            09 | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 30 19 
+            0A | FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 57 19 
+            0B | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
+            0C | 20 F4 FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
+            0D | FF 1F 6A FE 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
+            0E | 01 E0 01 E0 0D 0F FF 1F FF 1F FF 1F FF 1F FF 1F 
+            0F | FF 1F FF 1F FF 1F 7C E3 01 E0 01 E0 01 E0 01 E0 
+            10 | 01 E0 01 E0 01 E0 FD E9 FF 1F FF 1F FF 1F FF 1F 
+            11 | FF 1F FF 1F FF 1F FF 1F 8C 08 01 E0 01 E0 01 E0 
+            """, new ReadOnlySpan<byte>(data, 0, length: 0x120).AsHexBlock());
     }
 
     // TODO: Test program which generates pcm audio a la SoulCalibur 3-in-1
