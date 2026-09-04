@@ -6,8 +6,7 @@ namespace DreamPotato.Core;
 
 public class Audio
 {
-    // Max sample rate supported by MonoGame.
-    public const int SampleRate = 48000;
+    public const int SampleRate = 44100;
     public const int SampleSize = 2; // 16-bit
     public const int BufferDurationMilliseconds = 8;
     private const int MaxTotalBufferDurationMilliseconds = 96;
