@@ -49,7 +49,12 @@ Statuses:
   <tr>
     <td>Soul Calibur 3-in-1 (Soul Calibur)</td>
     <td>🟡</td>
-    <td>Playable, but, the NAMCO shout at the start doesn't work (RC oscillator sounds are broken). Runs faster than real hardware.</td>
+    <td>Playable. Runs faster than real hardware.</td>
+  </tr>
+  <tr>
+    <td>Pop'n Music Anywhere (どこでもポップンミュージック)</td>
+    <td>🔴</td>
+    <td>Runs slowly and controls are unresponsive.</td>
   </tr>
 </tbody>
 </table>
