@@ -22,7 +22,14 @@ public class AudioTests
         cpu.SFRs.T1Lc = 251;
         cpu.SFRs.T1Cnt = new T1Cnt() { ELDT1C = true, T1lRun = true };
 
-        int width = (0xff - cpu.SFRs.T1Lr) * 2;
+        while (data is null)
+            cpu.Step();
+
+        // Audio is double buffered, so the first buffer we receive is empty
+        for (int i = 0; i < data.Length; i++)
+            Assert.Equal(0, data[i]);
+
+        data = null;
         while (data is null)
             cpu.Step();
 
@@ -33,18 +40,18 @@ public class AudioTests
             02 | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
             03 | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
             04 | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
-            05 | 01 E0 01 E0 01 E0 55 E3 FF 1F FF 1F FF 1F FF 1F 
+            05 | DB 07 FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
             06 | FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
             07 | FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
             08 | FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
             09 | FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
-            0A | FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 57 19 
+            0A | 48 10 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
             0B | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
             0C | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
             0D | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
             0E | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
-            0F | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
-            10 | 01 E0 01 E0 01 E0 FD E9 FF 1F FF 1F FF 1F FF 1F 
+            0F | 01 E0 92 17 FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
+            10 | FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
             """, new ReadOnlySpan<byte>(data, 0, 0x110).AsHexBlock());
     }
 
@@ -65,32 +72,40 @@ public class AudioTests
         cpu.SFRs.T1Lc = 255;
         cpu.SFRs.T1Cnt = new T1Cnt() { ELDT1C = true, T1lRun = true };
 
-        int width = (0xff - cpu.SFRs.T1Lr) * 2;
+        while (data is null)
+            cpu.Step();
+
+        // Audio is double buffered, so the first buffer we receive is empty
+        for (int i = 0; i < data.Length; i++)
+            Assert.Equal(0, data[i]);
+
+        data = null;
         while (data is null)
             cpu.Step();
 
         Assert.Equal<object>("""
                | 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F 
             00 | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
-            01 | 78 ED FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
-            02 | FF 1F 11 05 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
-            03 | 01 E0 01 E0 65 08 FF 1F FF 1F FF 1F FF 1F FF 1F 
-            04 | FF 1F FF 1F FF 1F 24 EA 01 E0 01 E0 01 E0 01 E0 
-            05 | 01 E0 01 E0 01 E0 55 E3 FF 1F FF 1F FF 1F FF 1F 
-            06 | FF 1F FF 1F FF 1F FF 1F 34 0F 01 E0 01 E0 01 E0 
-            07 | 01 E0 01 E0 01 E0 01 E0 01 E0 43 FE FF 1F FF 1F 
-            08 | FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 47 F4 01 E0 
-            09 | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 30 19 
-            0A | FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 57 19 
-            0B | 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
-            0C | 20 F4 FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
-            0D | FF 1F 6A FE 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
-            0E | 01 E0 01 E0 0D 0F FF 1F FF 1F FF 1F FF 1F FF 1F 
-            0F | FF 1F FF 1F FF 1F 7C E3 01 E0 01 E0 01 E0 01 E0 
-            10 | 01 E0 01 E0 01 E0 FD E9 FF 1F FF 1F FF 1F FF 1F 
-            11 | FF 1F FF 1F FF 1F FF 1F 8C 08 01 E0 01 E0 01 E0 
+            01 | 2B 1B FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
+            02 | A9 E9 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
+            03 | 83 11 FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
+            04 | 51 F3 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
+            05 | DB 07 FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
+            06 | F9 FC 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
+            07 | 34 FE FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
+            08 | A0 06 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
+            09 | 8C F4 FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
+            0A | 48 10 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
+            0B | E4 EA FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
+            0C | F0 19 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
+            0D | 3C E1 FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
+            0E | FF 1F 9A E3 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
+            0F | 01 E0 92 17 FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
+            10 | FF 1F 42 ED 01 E0 01 E0 01 E0 01 E0 01 E0 01 E0 
+            11 | 01 E0 EA 0D FF 1F FF 1F FF 1F FF 1F FF 1F FF 1F 
             """, new ReadOnlySpan<byte>(data, 0, length: 0x120).AsHexBlock());
     }
 
     // TODO: Test program which generates pcm audio a la SoulCalibur 3-in-1
+    // TODO: Test pop filtering
 }
