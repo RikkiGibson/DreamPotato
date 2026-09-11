@@ -8,7 +8,7 @@ public class Audio
 {
     public const int SampleRate = 44100;
     public const int SampleSize = 2; // 16-bit
-    public const int BufferDurationMilliseconds = 8;
+    public const int BufferDurationMilliseconds = 4;
     private const int MaxTotalBufferDurationMilliseconds = 96;
     public const int MaxQueuedBufferCount = MaxTotalBufferDurationMilliseconds / BufferDurationMilliseconds;
 
@@ -20,12 +20,28 @@ public class Audio
     private readonly Cpu _cpu;
     private Logger _logger => _cpu.Logger;
 
-    private const int PcmBufferFilledSize = SampleRate * BufferDurationMilliseconds / 1000 * SampleSize;
+    private const int PcmBufferSampleCount = SampleRate * BufferDurationMilliseconds / 1000;
+    private const int PcmBufferFilledSize = PcmBufferSampleCount * SampleSize;
+
     /// <summary>
     /// PCM data at <see cref="SampleRate"/> and <see cref="SampleSize"/>.
+    /// Note: data is double-buffered (hence 2 different arrays.)
     /// </summary>
-    private readonly byte[] _pcmBuffer = new byte[PcmBufferFilledSize];
-    private readonly byte[] _emptyPcmBuffer = new byte[PcmBufferFilledSize];
+    private readonly byte[] _pcmBuffer1 = new byte[PcmBufferFilledSize];
+
+    /// <summary>
+    /// PCM data at <see cref="SampleRate"/> and <see cref="SampleSize"/>.
+    /// Note: data is double-buffered (hence 2 different arrays.)
+    /// </summary>
+    private readonly byte[] _pcmBuffer2 = new byte[PcmBufferFilledSize];
+
+    private byte[] _currentPcmBuffer;
+
+    /// <summary>
+    /// Counter of how long (in samples) T1LRUN has been reset.
+    /// </summary>
+    private int _t1lDisabledCount = T1lDisabledMaxCount;
+    private const int T1lDisabledMaxCount = PcmBufferSampleCount;
 
     /// <summary>
     /// Pulse generator compare value.
@@ -36,6 +52,7 @@ public class Audio
     internal Audio(Cpu cpu)
     {
         _cpu = cpu;
+        _currentPcmBuffer = _pcmBuffer1;
         Volume = DefaultVolume;
     }
 
@@ -90,7 +107,7 @@ public class Audio
     /// <summary>A value between [0, 1) which represents the proportion of a partial sample which has elapsed so far.</summary>
     private double _partialSample;
 
-    internal bool AddPulse(int cpuClockHz, byte t1l)
+    internal bool AddPulse(int cpuClockHz, byte t1l, bool t1lRun)
     {
         Debug.Assert(_partialSample is >= 0 and < 1.0);
         Debug.Assert(_partialSignal is >= short.MinValue and <= short.MaxValue);
@@ -136,35 +153,78 @@ public class Audio
 
         void appendSample(short sample)
         {
-            _pcmBuffer[_pcmBufferIndex++] = (byte)(sample & 0xff);
-            _pcmBuffer[_pcmBufferIndex++] = (byte)(sample >> 8 & 0xff);
+            _currentPcmBuffer[_pcmBufferIndex++] = (byte)(sample & 0xff);
+            _currentPcmBuffer[_pcmBufferIndex++] = (byte)(sample >> 8 & 0xff);
 
-            if (_pcmBufferIndex == _pcmBuffer.Length)
+            // TODO2: all the code in most recent commit needs more scrutiny
+            if (t1lRun)
             {
-                if (!hasRealSignal())
+                if (_t1lDisabledCount == T1lDisabledMaxCount)
                 {
-                    Debug.Assert(_emptyPcmBuffer.All(b => b == 0));
-                    AudioBufferReady?.Invoke(new(_emptyPcmBuffer, Start: 0, Length: _pcmBufferIndex));
-                }
-                else
-                {
-                    AudioBufferReady?.Invoke(new(_pcmBuffer, Start: 0, Length: _pcmBufferIndex));
+                    // Transitioning from stagnant to running.
+                    filter(_currentPcmBuffer,
+                        prevBuffer: _currentPcmBuffer == _pcmBuffer1 ? _pcmBuffer2 : _pcmBuffer1,
+                        endIndex: _pcmBufferIndex);
                 }
 
-                _pcmBufferIndex = 0;
+                _t1lDisabledCount = 0;
             }
+            else
+            {
+                _t1lDisabledCount = Math.Min(_t1lDisabledCount + 1, T1lDisabledMaxCount);
+            }
+
+            if (_pcmBufferIndex != _currentPcmBuffer.Length)
+                return;
+
+            var prevBuffer = _currentPcmBuffer == _pcmBuffer1 ? _pcmBuffer2 : _pcmBuffer1;
+            Debug.Assert(prevBuffer.Length == _currentPcmBuffer.Length);
+            if (_t1lDisabledCount == T1lDisabledMaxCount)
+            {
+                filter(_currentPcmBuffer, prevBuffer, _pcmBufferIndex);
+            }
+
+            AudioBufferReady?.Invoke(new(prevBuffer, Start: 0, Length: prevBuffer.Length));
+            _pcmBufferIndex = 0;
+            _currentPcmBuffer = prevBuffer;
         }
 
-        // TODO2: This seems to cut off some signals in practice
-        bool hasRealSignal()
+        void filter(byte[] currentBuffer, byte[] prevBuffer, int endIndex)
         {
-            for (var j = 2; j < _pcmBuffer.Length; j += 2)
+            Debug.Assert(endIndex % SampleSize == 0);
+            if (endIndex < SampleSize)
+                return; // Nothing to filter.
+
+            var last0 = currentBuffer[endIndex - 2];
+            var last1 = currentBuffer[endIndex - 1];
+            var i = endIndex / 2 - 1;
+            for (; i >= 0; i--)
             {
-                if (_pcmBuffer[j] != _pcmBuffer[0] || _pcmBuffer[j + 1] != _pcmBuffer[1])
-                    return true;
+                if (currentBuffer[i * 2] != last0
+                    || currentBuffer[i * 2 + 1] != last1)
+                {
+                    break;
+                }
+
+                currentBuffer[i * 2] = 0;
+                currentBuffer[i * 2 + 1] = 0;
             }
 
-            return false;
+            if (i != -1)
+                return; // Done filtering, didn't exhaust 'currentBuffer'.
+
+            // Still more filtering to do.
+            for (var j = prevBuffer.Length / 2 - 1; j >= 0; j--)
+            {
+                if (prevBuffer[j * 2] != last0
+                    || prevBuffer[j * 2 + 1] != last1)
+                {
+                    break;
+                }
+
+                prevBuffer[j * 2] = 0;
+                prevBuffer[j * 2 + 1] = 0;
+            }
         }
     }
 }

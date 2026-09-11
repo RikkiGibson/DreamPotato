@@ -1065,7 +1065,7 @@ public class Cpu
                 for (var i = 0; i < cycles; i++)
                 {
                     var t1l = SFRs.T1L;
-                    SFRs.P1 = SFRs.P1 with { PulseOutput = Audio.AddPulse(cpuClockHz, t1l) };
+                    SFRs.P1 = SFRs.P1 with { PulseOutput = Audio.AddPulse(cpuClockHz, t1l, t1cnt.T1lRun) };
                     if (t1cnt.T1lRun)
                     {
                         t1l++;
