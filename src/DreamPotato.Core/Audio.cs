@@ -24,22 +24,28 @@ public class Audio
     private const int PcmBufferFilledSize = PcmBufferSampleCount * SampleSize;
 
     /// <summary>
-    /// PCM data at <see cref="SampleRate"/> and <see cref="SampleSize"/>.
-    /// Note: data is double-buffered (hence 2 different arrays.)
+    /// Buffer which samples are currently being appended to.
+    /// Both this and <see cref="_prevPcmBuffer"/> contain PCM data at <see cref="SampleRate"/> and <see cref="SampleSize"/>.
     /// </summary>
-    private readonly byte[] _pcmBuffer1 = new byte[PcmBufferFilledSize];
+    private byte[] _currentPcmBuffer = new byte[PcmBufferFilledSize];
 
     /// <summary>
-    /// PCM data at <see cref="SampleRate"/> and <see cref="SampleSize"/>.
-    /// Note: data is double-buffered (hence 2 different arrays.)
+    /// Buffer which will be filtered and submitted once <see cref="_currentPcmBuffer"/> is filled.
     /// </summary>
-    private readonly byte[] _pcmBuffer2 = new byte[PcmBufferFilledSize];
-
-    private byte[] _currentPcmBuffer;
+    private byte[] _prevPcmBuffer = new byte[PcmBufferFilledSize];
 
     /// <summary>
     /// Counter of how long (in samples) T1LRUN has been reset.
+    /// When the value is <see cref="T1lDisabledMaxCount"/>, we consider the timer to be stagnant.
     /// </summary>
+    /// <remarks>
+    /// This is used for filtering. We could alternatively consider filtering
+    /// based on a signal value remaining unchanged for certain number of samples.
+    /// It's not obvious whether the subtle differences in purely signal-based filtering are desirable.
+    /// For example, if enabling the timer causes signal to remain the same for a while, before changing,
+    /// then filtering on signal alone might cause us to miss one of the edges in an "intended" PWM cycle.
+    /// Empirical testing (maybe direct recording of the audio pin on real hardware) would be needed.
+    /// </remarks>
     private int _t1lDisabledCount = T1lDisabledMaxCount;
     private const int T1lDisabledMaxCount = PcmBufferSampleCount;
 
@@ -51,8 +57,8 @@ public class Audio
 
     internal Audio(Cpu cpu)
     {
+        Debug.Assert(_currentPcmBuffer.Length == _prevPcmBuffer.Length);
         _cpu = cpu;
-        _currentPcmBuffer = _pcmBuffer1;
         Volume = DefaultVolume;
     }
 
@@ -98,7 +104,7 @@ public class Audio
         }
     }
 
-    /// <summary>How many samples we have written into <see cref="_pcmBuffer"/> so far.</summary>
+    /// <summary>How many samples we have written into <see cref="_currentPcmBuffer"/> so far.</summary>
     private int _pcmBufferIndex;
 
     /// <summary>Partially accumulated value of the partial sample.</summary>
@@ -153,77 +159,65 @@ public class Audio
 
         void appendSample(short sample)
         {
+            Debug.Assert(_pcmBufferIndex % SampleSize == 0);
+
+            if (t1lRun)
+                filterIfNeeded(); // May need to filter when transitioning from disabled to enabled.
+
+            _t1lDisabledCount = t1lRun ? 0 : Math.Min(_t1lDisabledCount + 1, T1lDisabledMaxCount);
+
+            // Append the sample.
             _currentPcmBuffer[_pcmBufferIndex++] = (byte)(sample & 0xff);
             _currentPcmBuffer[_pcmBufferIndex++] = (byte)(sample >> 8 & 0xff);
 
-            // TODO2: all the code in most recent commit needs more scrutiny
-            if (t1lRun)
-            {
-                if (_t1lDisabledCount == T1lDisabledMaxCount)
-                {
-                    // Transitioning from stagnant to running.
-                    filter(_currentPcmBuffer,
-                        prevBuffer: _currentPcmBuffer == _pcmBuffer1 ? _pcmBuffer2 : _pcmBuffer1,
-                        endIndex: _pcmBufferIndex);
-                }
-
-                _t1lDisabledCount = 0;
-            }
-            else
-            {
-                _t1lDisabledCount = Math.Min(_t1lDisabledCount + 1, T1lDisabledMaxCount);
-            }
-
             if (_pcmBufferIndex != _currentPcmBuffer.Length)
-                return;
+                return; // Current buffer not yet filled
 
-            var prevBuffer = _currentPcmBuffer == _pcmBuffer1 ? _pcmBuffer2 : _pcmBuffer1;
-            Debug.Assert(prevBuffer.Length == _currentPcmBuffer.Length);
-            if (_t1lDisabledCount == T1lDisabledMaxCount)
-            {
-                filter(_currentPcmBuffer, prevBuffer, _pcmBufferIndex);
-            }
-
-            AudioBufferReady?.Invoke(new(prevBuffer, Start: 0, Length: prevBuffer.Length));
+            filterIfNeeded();
+            AudioBufferReady?.Invoke(new(_prevPcmBuffer, Start: 0, Length: _prevPcmBuffer.Length));
             _pcmBufferIndex = 0;
-            _currentPcmBuffer = prevBuffer;
+
+            var tmp = _currentPcmBuffer;
+            _currentPcmBuffer = _prevPcmBuffer;
+            _prevPcmBuffer = tmp;
         }
 
-        void filter(byte[] currentBuffer, byte[] prevBuffer, int endIndex)
+        void filterIfNeeded()
         {
-            Debug.Assert(endIndex % SampleSize == 0);
-            if (endIndex < SampleSize)
-                return; // Nothing to filter.
+            if (_t1lDisabledCount != T1lDisabledMaxCount)
+                return; // Timer is not stagnant. No need to filter.
 
-            var last0 = currentBuffer[endIndex - 2];
-            var last1 = currentBuffer[endIndex - 1];
-            var i = endIndex / 2 - 1;
+            var (last0, last1) = _pcmBufferIndex < SampleSize
+                ? (_prevPcmBuffer[^2], _currentPcmBuffer[^1])
+                : (_currentPcmBuffer[_pcmBufferIndex - 2], _currentPcmBuffer[_pcmBufferIndex - 1]);
+
+            var i = _pcmBufferIndex / 2 - 1;
             for (; i >= 0; i--)
             {
-                if (currentBuffer[i * 2] != last0
-                    || currentBuffer[i * 2 + 1] != last1)
+                if (_currentPcmBuffer[i * 2] != last0
+                    || _currentPcmBuffer[i * 2 + 1] != last1)
                 {
                     break;
                 }
 
-                currentBuffer[i * 2] = 0;
-                currentBuffer[i * 2 + 1] = 0;
+                _currentPcmBuffer[i * 2] = 0;
+                _currentPcmBuffer[i * 2 + 1] = 0;
             }
 
             if (i != -1)
-                return; // Done filtering, didn't exhaust 'currentBuffer'.
+                return; // Finished filtering without exhausting '_currentPcmBuffer'
 
             // Still more filtering to do.
-            for (var j = prevBuffer.Length / 2 - 1; j >= 0; j--)
+            for (var j = _prevPcmBuffer.Length / 2 - 1; j >= 0; j--)
             {
-                if (prevBuffer[j * 2] != last0
-                    || prevBuffer[j * 2 + 1] != last1)
+                if (_prevPcmBuffer[j * 2] != last0
+                    || _prevPcmBuffer[j * 2 + 1] != last1)
                 {
                     break;
                 }
 
-                prevBuffer[j * 2] = 0;
-                prevBuffer[j * 2 + 1] = 0;
+                _prevPcmBuffer[j * 2] = 0;
+                _prevPcmBuffer[j * 2 + 1] = 0;
             }
         }
     }
