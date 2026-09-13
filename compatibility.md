@@ -85,9 +85,14 @@ Statuses:
     <td>Plays well, but have not verified differences with real hardware.</td>
   </tr>
   <tr>
+    <td>BitFlood by jvsTSX</td>
+    <td>🟡</td>
+    <td>Audio plays an octave too low.</td>
+  </tr>
+  <tr>
     <td>ADVM audiotest (Audio Driver for VMU) by jvsTSX</td>
-    <td>🔴</td>
-    <td>Audio playback is entirely glitched out.</td>
+    <td>🟡</td>
+    <td>Audio plays too fast due to a bug in the VMU program.</td>
   </tr>
 </tbody>
 </table>

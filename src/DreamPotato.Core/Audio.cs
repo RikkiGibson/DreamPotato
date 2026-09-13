@@ -6,6 +6,8 @@ namespace DreamPotato.Core;
 
 public class Audio
 {
+    // Note: 44.1kHz is observed to produce less artifacting in MonoGame than 48kHz.
+    // There might be something in the audio stack which always resamples to this rate.
     public const int SampleRate = 44100;
     public const int SampleSize = 2; // 16-bit
     public const int BufferDurationMilliseconds = 4;
