@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Diagnostics;
 
 using DreamPotato.Core.SFRs;
@@ -162,7 +163,7 @@ public class Audio
             Debug.Assert(_pcmBufferIndex % SampleSize == 0);
 
             if (t1lRun)
-                filterIfNeeded(); // May need to filter when transitioning from disabled to enabled.
+                filter1(); // May need to filter when transitioning from disabled to enabled.
 
             _t1lDisabledCount = t1lRun ? 0 : Math.Min(_t1lDisabledCount + 1, T1lDisabledMaxCount);
 
@@ -173,7 +174,8 @@ public class Audio
             if (_pcmBufferIndex != _currentPcmBuffer.Length)
                 return; // Current buffer not yet filled
 
-            filterIfNeeded();
+            filter1();
+            filter2();
             AudioBufferReady?.Invoke(new(_prevPcmBuffer, Start: 0, Length: _prevPcmBuffer.Length));
             _pcmBufferIndex = 0;
 
@@ -182,7 +184,11 @@ public class Audio
             _prevPcmBuffer = tmp;
         }
 
-        void filterIfNeeded()
+        // When the timer is stagnant it leaves the signal at a constant level for a long period.
+        // These signals sound like pops or distortion.
+        // In our case the period we care about is 'T1lDisabledMaxCount' or more samples.
+        // These artifacts will generally be before/after a meaningful tone.
+        void filter1()
         {
             if (_t1lDisabledCount != T1lDisabledMaxCount)
                 return; // Timer is not stagnant. No need to filter.
@@ -218,6 +224,49 @@ public class Audio
 
                 _prevPcmBuffer[j * 2] = 0;
                 _prevPcmBuffer[j * 2 + 1] = 0;
+            }
+        }
+
+        // Ensure that the double-buffers have a reasonable minimum number of edge transitions.
+        // That is, points where signal changes between positive/negative.
+        // If there are only a very small number of such transitions, the signal is likely just a pop.
+        void filter2()
+        {
+            const int MinTransitions = 3;
+            var numTransitions = 0;
+            var firstSample = BinaryPrimitives.ReadInt16LittleEndian(_prevPcmBuffer.AsSpan(0, length: 2));
+            bool positive = firstSample >= 0;
+            for (int i = 1; i < PcmBufferSampleCount; i++)
+            {
+                if (!checkSample(_prevPcmBuffer, i))
+                    return;
+            }
+
+            for (int i = 0; i < PcmBufferSampleCount; i++)
+            {
+                if (!checkSample(_currentPcmBuffer, i))
+                    return;
+            }
+
+            if (numTransitions < MinTransitions)
+                Array.Clear(_prevPcmBuffer);
+
+            return;
+
+            // returns false if filtering should stop
+            bool checkSample(byte[] buffer, int sampleIndex)
+            {
+                var sample = BinaryPrimitives.ReadInt16LittleEndian(buffer.AsSpan(sampleIndex * 2, length: 2));
+                var newPositive = sample >= 0;
+                if (newPositive != positive)
+                {
+                    numTransitions++;
+                    if (numTransitions >= MinTransitions)
+                        return false;
+                }
+
+                positive = newPositive;
+                return true;
             }
         }
     }
