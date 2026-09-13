@@ -36,18 +36,21 @@ public class Audio
 
     /// <summary>
     /// Counter of how long (in samples) T1LRUN has been reset.
-    /// When the value is <see cref="T1lDisabledMaxCount"/>, we consider the timer to be stagnant.
+    /// When the value is <see cref="T1lStagnantCount"/> or higher, we consider the timer to be stagnant.
+    /// Capped at <see cref="T1lDisabledMaxCount"/> the net size of the buffers.
     /// </summary>
     /// <remarks>
-    /// This is used for filtering. We could alternatively consider filtering
-    /// based on a signal value remaining unchanged for certain number of samples.
+    /// This is used for filtering. We could alternatively consider filtering based on signal only.
+    /// With signal alone, though, it's difficult to distinguish "intended" short signals,
+    /// from "unintended" pops created by changing timer parameters while timer is disabled.
     /// It's not obvious whether the subtle differences in purely signal-based filtering are desirable.
     /// For example, if enabling the timer causes signal to remain the same for a while, before changing,
     /// then filtering on signal alone might cause us to miss one of the edges in an "intended" PWM cycle.
     /// Empirical testing (maybe direct recording of the audio pin on real hardware) would be needed.
     /// </remarks>
     private int _t1lDisabledCount = T1lDisabledMaxCount;
-    private const int T1lDisabledMaxCount = PcmBufferSampleCount;
+    private const int T1lStagnantCount = PcmBufferSampleCount;
+    private const int T1lDisabledMaxCount = PcmBufferSampleCount * 2;
 
     /// <summary>
     /// Pulse generator compare value.
@@ -184,40 +187,30 @@ public class Audio
 
         void filterIfNeeded()
         {
-            if (_t1lDisabledCount != T1lDisabledMaxCount)
+            if (_t1lDisabledCount < T1lStagnantCount)
                 return; // Timer is not stagnant. No need to filter.
 
-            var (last0, last1) = _pcmBufferIndex < SampleSize
-                ? (_prevPcmBuffer[^2], _currentPcmBuffer[^1])
-                : (_currentPcmBuffer[_pcmBufferIndex - 2], _currentPcmBuffer[_pcmBufferIndex - 1]);
-
+            // Filter the samples taken when the timer was stagnant.
+            var nToDelete = _t1lDisabledCount;
             var i = _pcmBufferIndex / 2 - 1;
             for (; i >= 0; i--)
             {
-                if (_currentPcmBuffer[i * 2] != last0
-                    || _currentPcmBuffer[i * 2 + 1] != last1)
-                {
-                    break;
-                }
-
                 _currentPcmBuffer[i * 2] = 0;
                 _currentPcmBuffer[i * 2 + 1] = 0;
+
+                nToDelete--;
+                if (nToDelete == 0)
+                    return;
             }
 
-            if (i != -1)
-                return; // Finished filtering without exhausting '_currentPcmBuffer'
-
-            // Still more filtering to do.
-            for (var j = _prevPcmBuffer.Length / 2 - 1; j >= 0; j--)
+            for (var j = PcmBufferSampleCount - 1; j >= 0; j--)
             {
-                if (_prevPcmBuffer[j * 2] != last0
-                    || _prevPcmBuffer[j * 2 + 1] != last1)
-                {
-                    break;
-                }
-
                 _prevPcmBuffer[j * 2] = 0;
                 _prevPcmBuffer[j * 2 + 1] = 0;
+
+                nToDelete--;
+                if (nToDelete == 0)
+                    return;
             }
         }
     }
