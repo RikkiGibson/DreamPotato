@@ -232,10 +232,11 @@ public class Audio
         // If there are only a very small number of such transitions, the signal is likely just a pop.
         void filter2()
         {
-            const int MinTransitions = 3;
+            const int MinTransitions = 2;
             var numTransitions = 0;
             var firstSample = BinaryPrimitives.ReadInt16LittleEndian(_prevPcmBuffer.AsSpan(0, length: 2));
             bool positive = firstSample >= 0;
+            var sampleCount = PcmBufferSampleCount;
             for (int i = 1; i < PcmBufferSampleCount; i++)
             {
                 if (!checkSample(_prevPcmBuffer, i))
@@ -247,6 +248,10 @@ public class Audio
                 if (!checkSample(_currentPcmBuffer, i))
                     return;
             }
+
+            // Treat end of buffer as potentially a transition
+            if (sampleCount < PcmBufferSampleCount)
+                numTransitions++;
 
             if (numTransitions < MinTransitions)
                 Array.Clear(_prevPcmBuffer);
@@ -260,12 +265,17 @@ public class Audio
                 var newPositive = sample >= 0;
                 if (newPositive != positive)
                 {
-                    numTransitions++;
+                    // A transition is only counted if the edge was short enough
+                    if (sampleCount < PcmBufferSampleCount)
+                        numTransitions++;
+
+                    sampleCount = 0;
                     if (numTransitions >= MinTransitions)
                         return false;
                 }
 
                 positive = newPositive;
+                sampleCount = Math.Min(sampleCount + 1, PcmBufferSampleCount);
                 return true;
             }
         }
