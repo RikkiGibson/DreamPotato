@@ -49,7 +49,12 @@ Statuses:
   <tr>
     <td>Soul Calibur 3-in-1 (Soul Calibur)</td>
     <td>🟡</td>
-    <td>Playable, but, the NAMCO shout at the start doesn't work (RC oscillator sounds are broken). Runs faster than real hardware.</td>
+    <td>Playable. Runs faster than real hardware.</td>
+  </tr>
+  <tr>
+    <td>Pop'n Music Anywhere (どこでもポップンミュージック)</td>
+    <td>🔴</td>
+    <td>Runs slowly and controls are unresponsive.</td>
   </tr>
 </tbody>
 </table>
@@ -78,6 +83,16 @@ Statuses:
     <td>NvmU (NASU on the go!)</td>
     <td>🟡</td>
     <td>Plays well, but have not verified differences with real hardware.</td>
+  </tr>
+  <tr>
+    <td>BitFlood by jvsTSX</td>
+    <td>🟢</td>
+    <td>Plays well. Sound is accurate (mode 3 audio frequency doubling is emulated).</td>
+  </tr>
+  <tr>
+    <td>ADVM audiotest (Audio Driver for VMU) by jvsTSX</td>
+    <td>🟡</td>
+    <td>Audio plays too fast due to a bug in the VMU program.</td>
   </tr>
 </tbody>
 </table>

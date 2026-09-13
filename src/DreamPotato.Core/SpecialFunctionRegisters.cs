@@ -300,9 +300,8 @@ public class SpecialFunctionRegisters
                 var t1lRun = t1cnt.T1lRun;
                 if (oldT1cnt.T1lRun != t1lRun)
                 {
-                    var t1lr = T1Lr;
-                    T1L = t1lr;
-                    _cpu.Audio.OnT1LRunChanged(t1lRun, t1lr, T1Lc);
+                    T1L = T1Lr;
+                    _cpu.Audio.OnT1LRunChanged(T1Lc);
                 }
 
                 if (oldT1cnt.T1hRun != t1cnt.T1hRun)

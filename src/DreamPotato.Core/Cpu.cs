@@ -1061,25 +1061,26 @@ public class Cpu
             void tickTimer1()
             {
                 var t1cnt = SFRs.T1Cnt;
-                if (t1cnt is { T1lRun: false, T1hRun: false })
-                    return;
 
-                for (var i = 0; i < cycles; i++)
+                // VMD-80: When using the 16-bit mode, the clock can be the cycle clock or the cycle clock divided by 2.
+                // Ttc = Tcyc: T1HRUN=1, T1LRUN=1, T1LONG=1
+                // Ttc = 1/2Tcyc: T1HRUN=0, T1LRUN=1, T1LONG=1
+                // When the timer ticks at double speed, we tick 2x per cycle, and pass 2x speed for audio sampling
+                var (nTicks, timerTickHz) = t1cnt is { T1hRun: false, T1lRun: true, T1Long: true }
+                    ? (cycles * 2, SFRs.Ocr.CpuClockHz * 2)
+                    : (cycles, SFRs.Ocr.CpuClockHz);
+
+                for (var i = 0; i < nTicks; i++)
                 {
+                    var t1l = SFRs.T1L;
+                    SFRs.P1 = SFRs.P1 with { PulseOutput = Audio.AddPulse(timerTickHz, t1l, t1cnt.T1lRun) };
                     if (t1cnt.T1lRun)
                     {
-                        var t1l = SFRs.T1L;
-                        if (Audio.IsActive)
-                        {
-                            var cpuClockHz = SFRs.Ocr.CpuClockHz;
-                            SFRs.P1 = SFRs.P1 with { PulseOutput = Audio.AddPulse(cpuClockHz, t1l) };
-                        }
-
                         t1l++;
                         if (t1l == 0)
                         {
                             t1l = SFRs.T1Lr;
-                            Audio.OnT1LReloaded(t1cnt, t1l, SFRs.T1Lc);
+                            Audio.OnT1LReloaded(t1cnt, SFRs.T1Lc);
                             t1cnt.T1lOvf = true;
                         }
 
