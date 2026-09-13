@@ -86,8 +86,8 @@ Statuses:
   </tr>
   <tr>
     <td>BitFlood by jvsTSX</td>
-    <td>🟡</td>
-    <td>Audio plays an octave too low.</td>
+    <td>🟢</td>
+    <td>Plays well. Sound is accurate (mode 3 audio frequency doubling is emulated).</td>
   </tr>
   <tr>
     <td>ADVM audiotest (Audio Driver for VMU) by jvsTSX</td>
