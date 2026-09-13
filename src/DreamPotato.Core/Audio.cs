@@ -118,12 +118,12 @@ public class Audio
     /// <summary>A value between [0, 1) which represents the proportion of a partial sample which has elapsed so far.</summary>
     private double _partialSample;
 
-    internal bool AddPulse(int cpuClockHz, byte t1l, bool t1lRun)
+    internal bool AddPulse(int timerTickHz, byte t1l, bool t1lRun)
     {
         Debug.Assert(_partialSample is >= 0 and < 1.0);
         Debug.Assert(_partialSignal is >= short.MinValue and <= short.MaxValue);
 
-        var samplesPerCycle = (double)SampleRate / cpuClockHz;
+        var samplesPerCycle = (double)SampleRate / timerTickHz;
         var pulseValue = t1l >= _compare;
         var sampleVolume = SampleVolume;
         if (!pulseValue)
