@@ -84,5 +84,10 @@ Statuses:
     <td>🟡</td>
     <td>Plays well, but have not verified differences with real hardware.</td>
   </tr>
+  <tr>
+    <td>ADVM audiotest (Audio Driver for VMU) by jvsTSX</td>
+    <td>🔴</td>
+    <td>Audio playback is entirely glitched out.</td>
+  </tr>
 </tbody>
 </table>
