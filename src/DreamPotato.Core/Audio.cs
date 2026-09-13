@@ -91,7 +91,7 @@ public class Audio
         return (short)(percentage * short.MaxValue);
     }
 
-    public short SampleVolume { get; private set; }
+    private short SampleVolume { get; set; }
 
     /// <summary>
     /// Sets the volume of audio output (between <see cref="MinVolume"/> and <see cref="MaxVolume"/>).
