@@ -40,7 +40,7 @@ public record Configuration(
     private const string FileName = "configuration.json";
     private static string FilePath => Path.Combine(Vmu.UserDataFolder, FileName);
 
-    public string ColorPaletteName { get; init; } = ColorPaletteName ?? ColorPalette.White.Name;
+    public string ColorPaletteName { get; init; } = ColorPaletteName ?? ColorPalette.DarkGreen.Name;
     public InputMappings PrimaryInput { get; init; } = SetupPrimaryInput(PrimaryInput);
     public InputMappings SecondaryInput { get; init; } = SetupSecondaryInput(SecondaryInput);
 
