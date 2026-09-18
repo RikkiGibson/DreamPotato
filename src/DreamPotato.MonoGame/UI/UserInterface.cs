@@ -886,7 +886,7 @@ partial class UserInterface
     private void LayoutNewOpenSaveMenuItems(VmuPresenter presenter)
     {
         Debug.Assert(!_game.IsIntegratedMode && _game.RecentFilesInfo is { });
-        
+
         var vmu = presenter.Vmu;
         if (vmu.LoadedPath != null)
         {
@@ -916,9 +916,12 @@ partial class UserInterface
                 if (recentFilePath is null)
                     continue;
 
+                ImGui.PushID(recentFilePath);
                 var fileName = displayFileNames[i];
                 if (ImGui.MenuItem(fileName))
                     OpenRecentFile(presenter, recentFilePath);
+
+                ImGui.PopID();
             }
 
             ImGui.EndMenu();
