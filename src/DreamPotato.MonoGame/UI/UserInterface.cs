@@ -913,9 +913,7 @@ partial class UserInterface
             for (int i = 0; i < recentFilePaths.Length; i++)
             {
                 var recentFilePath = recentFilePaths[i];
-                if (recentFilePath is null)
-                    continue;
-
+                Debug.Assert(recentFilePath is not null); // Should have been filtered out earlier
                 ImGui.PushID(recentFilePath);
                 var fileName = displayFileNames[i];
                 if (ImGui.MenuItem(fileName))
