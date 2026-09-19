@@ -56,6 +56,8 @@ public class Game1 : Game
     /// </summary>
     internal bool UIPaused;
 
+    internal readonly WindowSizeConstraints WindowSizeConstraints = new WindowSizeConstraints();
+
     /// <summary>The screen region in which to render the primary VMU.</summary>
     internal Rectangle PrimaryMenuBarRectangle;
 
@@ -83,11 +85,7 @@ public class Game1 : Game
     {
         Configuration = Configuration.Load();
         ColorPalette = ColorPalette.AllPalettes.FirstOrDefault(palette => palette.Name == Configuration.ColorPaletteName) ?? ColorPalette.AllPalettes[0];
-
-        var windowSize = Configuration.ViewportSize;
-        _graphics.PreferredBackBufferWidth = windowSize.Width;
-        _graphics.PreferredBackBufferHeight = windowSize.Height;
-        _graphics.ApplyChanges();
+        WindowSizeConstraints.AddOrUpdate(new(WindowSizeConstraintKind.UserPreference, Configuration.ViewportSize));
 
         var textures = new IconTextures
         {
@@ -570,25 +568,47 @@ public class Game1 : Game
         Configuration.Save();
     }
 
+    private void ApplyWindowMinSizeConstraint()
+    {
+        var windowSize = WindowSizeConstraints.GetWindowSize();
+        var viewport = _graphics.GraphicsDevice.Viewport;
+        if (viewport.Width != windowSize.Width || viewport.Height != windowSize.Height)
+        {
+            _graphics.PreferredBackBufferWidth = windowSize.Width;
+            _graphics.PreferredBackBufferHeight = windowSize.Height;
+            _graphics.ApplyChanges();
+            UpdateScaleMatrix();
+        }
+    }
+
     private void Window_ClientSizeChanged(object? sender, EventArgs e)
     {
-        const int MinHeight = VmuPresenter.TotalContentHeight + MenuBarHeight;
-
         var viewport = _graphics.GraphicsDevice.Viewport;
-        _graphics.PreferredBackBufferWidth = Math.Max(viewport.Width, VmuPresenter.TotalContentWidth);
-        _graphics.PreferredBackBufferHeight = Math.Max(viewport.Height, MinHeight);
-        _graphics.ApplyChanges();
-        UpdateScaleMatrix();
+        WindowSizeConstraints.AddOrUpdate(new(WindowSizeConstraintKind.UserPreference, new(viewport.Width, viewport.Height)));
+
+        var windowSize = WindowSizeConstraints.GetWindowSize();
+        if (viewport.Width == windowSize.Width && viewport.Height == windowSize.Height)
+        {
+            // The new constraint value matches the resulting constrained window size.
+            // We need to update the window size now because the 'ApplyWindowMinSizeConstraint' will not detect a change
+            _graphics.PreferredBackBufferWidth = windowSize.Width;
+            _graphics.PreferredBackBufferHeight = windowSize.Height;
+            _graphics.ApplyChanges();
+            UpdateScaleMatrix();
+        }
+
         SaveWindowSize();
     }
 
     private void SaveWindowSize()
     {
-        var viewport = _graphics.GraphicsDevice.Viewport;
+        var preferredUserSize = WindowSizeConstraints.GetConstraint(WindowSizeConstraintKind.UserPreference);
+        Debug.Assert(preferredUserSize.Kind == WindowSizeConstraintKind.UserPreference);
+        var savedViewportSize = preferredUserSize.MinSize;
         var position = Window.Position;
         Configuration = Configuration with
         {
-            ViewportSize = new ViewportSize(viewport.Width, viewport.Height),
+            ViewportSize = new ViewportSize(savedViewportSize.Width, savedViewportSize.Height),
             WindowPosition = new WindowPosition(position.X, position.Y),
         };
         Configuration.Save();
@@ -688,11 +708,10 @@ public class Game1 : Game
     /// <summary>Sets a window size which is a multiple of <see cref="MinWidth"/>.</summary>
     internal void SetWindowSizeMultiple(int multiple)
     {
-        _graphics.PreferredBackBufferWidth = VmuPresenter.TotalContentWidth * multiple;
+        var width = VmuPresenter.TotalContentWidth * multiple;
         var vmuCount = UseSecondaryVmu ? 2 : 1;
-        _graphics.PreferredBackBufferHeight = vmuCount * (VmuPresenter.TotalContentHeight * multiple + MenuBarHeight);
-        _graphics.ApplyChanges();
-        UpdateScaleMatrix();
+        var height = vmuCount * (VmuPresenter.TotalContentHeight * multiple + MenuBarHeight);
+        WindowSizeConstraints.AddOrUpdate(new(WindowSizeConstraintKind.UserPreference, new(width, height)));
         SaveWindowSize();
     }
 
@@ -750,6 +769,7 @@ public class Game1 : Game
 
     protected override void Draw(GameTime gameTime)
     {
+        ApplyWindowMinSizeConstraint();
         GraphicsDevice.Clear(ColorPalette.Margin);
         _primaryVmuPresenter.Draw(_spriteBatch);
         if (UseSecondaryVmu)

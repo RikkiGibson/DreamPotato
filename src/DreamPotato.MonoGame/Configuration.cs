@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
+using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -326,7 +327,11 @@ public record InputMappings
 }
 
 /// <summary>Size of the rendered content (i.e. not including the operating system menu bar.)</summary>
-public record ViewportSize(int Width, int Height);
+public record ViewportSize(int Width, int Height)
+{
+    public Vector2 ToVector2() => new(Width, Height);
+}
+
 public record WindowPosition(int X, int Y);
 
 [JsonSourceGenerationOptions(WriteIndented = true)]

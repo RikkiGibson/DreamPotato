@@ -334,9 +334,15 @@ partial class UserInterface
         presenter.Reset();
     }
 
-    private void OpenPopupAndPause(string name)
+    private void OpenPopupAndPause(string name, WindowSizeConstraint constraint)
     {
+        _game.WindowSizeConstraints.AddOrUpdate(constraint);
         Pause();
+
+        var size = _game.WindowSizeConstraints.GetWindowSize();
+        ImGui.SetNextWindowPos(pos: new(size.Width / 2, size.Height / 2), ImGuiCond.FirstUseEver, pivot: new(0.5f, 0.5f));
+        var padding = ImGui.GetStyle().FramePadding.X * 2;
+        ImGui.SetNextWindowSize(new(constraint.MinSize.Width - padding, constraint.MinSize.Height - padding));
         ImGui.OpenPopup(name);
     }
 
@@ -583,7 +589,7 @@ partial class UserInterface
         ImGui.End();
 
         if (doOpenSettings)
-            OpenPopupAndPause("Settings");
+            OpenPopupAndPause("Settings", new(WindowSizeConstraintKind.SettingsWindow, new(300, 300)));
     }
 
     private void LayoutEmulationMenu(VmuPresenter presenter)
@@ -1005,15 +1011,29 @@ partial class UserInterface
 
     private void LayoutSettings()
     {
-        if (ImGui.BeginPopupModal("Settings"))
-        {
-            if (ImGui.Button("Done"))
-            {
-                _game.Configuration_DoneEditing();
-                ClosePopupAndUnpause();
-            }
+        if (!ImGui.BeginPopupModal("Settings", ImGuiWindowFlags.NoResize))
+            return;
 
-            var configuration = _game.Configuration;
+        if (ImGui.Button("Done"))
+        {
+            _game.WindowSizeConstraints.Remove(WindowSizeConstraintKind.SettingsWindow);
+            _game.Configuration_DoneEditing();
+            ClosePopupAndUnpause();
+        }
+
+        var configuration = _game.Configuration;
+        layoutCheckboxes();
+        layoutVolume();
+        layoutColorPalette();
+        layoutFileFormat();
+        layoutDreamcastControllerPort();
+        layoutLogging();
+
+        ImGui.EndPopup();
+        return;
+
+        void layoutCheckboxes()
+        {
             var autoInitializeDate = configuration.AutoInitializeDate;
             if (Checkbox("Auto-initialize date on startup", ref autoInitializeDate, paddingY: 1))
                 _game.Configuration_AutoInitializeDateChanged(autoInitializeDate);
@@ -1029,8 +1049,10 @@ partial class UserInterface
             var autoDockEject = configuration.AutoDockEject;
             if (Checkbox("Dock/eject when Flycast connected", ref autoDockEject, paddingY: 1))
                 _game.Configuration_AutoDockEjectChanged(autoDockEject);
+        }
 
-            // Volume
+        void layoutVolume()
+        {
             ImGui.Text("Volume");
             ImGui.SameLine();
 
@@ -1040,56 +1062,58 @@ partial class UserInterface
             ImGui.PopID();
             if (configuration.Volume != sliderVolume)
                 _game.Configuration_VolumeChanged(sliderVolume);
+        }
 
-            // Color Palette
+        void layoutColorPalette()
+        {
+            ImGui.Text("Color Palette");
+            ImGui.SameLine();
+
+            var palette = configuration.ColorPaletteName;
+            var paletteIndex = Array.IndexOf(ColorPalette.AllPaletteNames, palette);
+            var selectedIndex = paletteIndex == -1 ? 0 : paletteIndex;
+            ImGui.SetNextItemWidth(CalcComboWidth(ColorPalette.AllPaletteNames[1]));
+            ImGui.PushID("ColorPaletteCombo");
+            ImGui.Combo(label: "", ref selectedIndex, items: ColorPalette.AllPaletteNames, items_count: ColorPalette.AllPaletteNames.Length);
+            ImGui.PopID();
+            if (paletteIndex != selectedIndex)
             {
-                ImGui.Text("Color Palette");
-                ImGui.SameLine();
-
-                var palette = configuration.ColorPaletteName;
-                var paletteIndex = Array.IndexOf(ColorPalette.AllPaletteNames, palette);
-                var selectedIndex = paletteIndex == -1 ? 0 : paletteIndex;
-                ImGui.SetNextItemWidth(CalcComboWidth(ColorPalette.AllPaletteNames[1]));
-                ImGui.PushID("ColorPaletteCombo");
-                ImGui.Combo(label: "", ref selectedIndex, items: ColorPalette.AllPaletteNames, items_count: ColorPalette.AllPaletteNames.Length);
-                ImGui.PopID();
-                if (paletteIndex != selectedIndex)
-                {
-                    _game.Configuration_PaletteChanged(ColorPalette.AllPalettes[selectedIndex]);
-                    _primarySaveStateInfo.InvalidateThumbnail();
-                    _secondarySaveStateInfo.InvalidateThumbnail();
-                }
+                _game.Configuration_PaletteChanged(ColorPalette.AllPalettes[selectedIndex]);
+                _primarySaveStateInfo.InvalidateThumbnail();
+                _secondarySaveStateInfo.InvalidateThumbnail();
             }
+        }
 
-            // File Format
+        void layoutFileFormat()
+        {
+            ImGui.Text("Preferred File Format");
+            ImGui.SameLine();
+
+            ImGui.SameLine();
+            ImGui.Text("(?)");
+            if (ImGui.IsItemHovered())
             {
-                ImGui.Text("Preferred File Format");
-                ImGui.SameLine();
-
-                ImGui.SameLine();
-                ImGui.Text("(?)");
-                if (ImGui.IsItemHovered())
-                {
-                    ImGui.BeginTooltip();
-                    ImGui.Text("""
-                        Sets the file format used for
-                        "Save As Folder" and similar commands.
-                        """);
-                    ImGui.EndTooltip();
-                }
-                ImGui.SameLine();
-
-                var fileFormat = configuration.PreferredFileFormat;
-                var selectedIndex = (int)fileFormat;
-                ImGui.SetNextItemWidth(CalcComboWidth(longestItem: FileFormatExtensions.Names[0]));
-                ImGui.PushID("PreferredFileFormatCombo");
-                ImGui.Combo("", ref selectedIndex, FileFormatExtensions.Names, FileFormatExtensions.Names.Length);
-                ImGui.PopID();
-                if ((int)fileFormat != selectedIndex)
-                    _game.Configuration_PreferredFileFormatChanged((FileFormat)selectedIndex);
+                ImGui.BeginTooltip();
+                ImGui.Text("""
+                    Sets the file format used for
+                    "Save As Folder" and similar commands.
+                    """);
+                ImGui.EndTooltip();
             }
+            ImGui.SameLine();
 
-            // Dreamcast Port
+            var fileFormat = configuration.PreferredFileFormat;
+            var selectedIndex = (int)fileFormat;
+            ImGui.SetNextItemWidth(CalcComboWidth(longestItem: FileFormatExtensions.Names[0]));
+            ImGui.PushID("PreferredFileFormatCombo");
+            ImGui.Combo("", ref selectedIndex, FileFormatExtensions.Names, FileFormatExtensions.Names.Length);
+            ImGui.PopID();
+            if ((int)fileFormat != selectedIndex)
+                _game.Configuration_PreferredFileFormatChanged((FileFormat)selectedIndex);
+        }
+
+        void layoutDreamcastControllerPort()
+        {
             if (!_game.IsIntegratedMode)
             {
                 ImGui.Text("Dreamcast controller port");
@@ -1104,49 +1128,47 @@ partial class UserInterface
                 if ((int)port != selectedIndex)
                     _game.Configuration_DreamcastPortChanged((DreamcastPort)selectedIndex);
             }
+        }
 
-            // Logging
+        void layoutLogging()
+        {
+            ImGui.Text("Log to File");
+            ImGui.SameLine();
+
+            var logToFile = configuration.LogToFile;
+            ImGui.PushID("LogToFile");
+            if (ImGui.Checkbox("", ref logToFile))
             {
-                ImGui.Text("Log to File");
+                _game.Configuration_LogToFileChanged(logToFile);
+            }
+            ImGui.PopID();
+
+            ImGui.Text("Log Level");
+            ImGui.SameLine();
+
+            var logLevel = configuration.LogLevel;
+            var selectedIndex = (int)logLevel;
+            ImGui.SetNextItemWidth(CalcComboWidth(longestItem: LogLevelExtensions.Names[(int)LogLevel.Warning]));
+            ImGui.PushID("LogLevelCombo");
+            ImGui.Combo("", ref selectedIndex, LogLevelExtensions.Names, LogLevelExtensions.Names.Length);
+            ImGui.PopID();
+            if ((int)logLevel != selectedIndex)
+                _game.Configuration_LogLevelChanged((LogLevel)selectedIndex);
+
+            if (_game.Configuration.LogLevel == LogLevel.Trace)
+            {
                 ImGui.SameLine();
-
-                var logToFile = configuration.LogToFile;
-                ImGui.PushID("LogToFile");
-                if (ImGui.Checkbox("", ref logToFile))
+                ImGui.Text("(!)");
+                if (ImGui.IsItemHovered())
                 {
-                    _game.Configuration_LogToFileChanged(logToFile);
-                }
-                ImGui.PopID();
-
-                ImGui.Text("Log Level");
-                ImGui.SameLine();
-
-                var logLevel = configuration.LogLevel;
-                var selectedIndex = (int)logLevel;
-                ImGui.SetNextItemWidth(CalcComboWidth(longestItem: LogLevelExtensions.Names[(int)LogLevel.Warning]));
-                ImGui.PushID("LogLevelCombo");
-                ImGui.Combo("", ref selectedIndex, LogLevelExtensions.Names, LogLevelExtensions.Names.Length);
-                ImGui.PopID();
-                if ((int)logLevel != selectedIndex)
-                    _game.Configuration_LogLevelChanged((LogLevel)selectedIndex);
-
-                if (_game.Configuration.LogLevel == LogLevel.Trace)
-                {
-                    ImGui.SameLine();
-                    ImGui.Text("(!)");
-                    if (ImGui.IsItemHovered())
-                    {
-                        ImGui.BeginTooltip();
-                        ImGui.Text("""
-                            Caution: Trace level can quickly
-                            use a lot of disk space.
-                            """);
-                        ImGui.EndTooltip();
-                    }
+                    ImGui.BeginTooltip();
+                    ImGui.Text("""
+                        Caution: Trace level can quickly
+                        use a lot of disk space.
+                        """);
+                    ImGui.EndTooltip();
                 }
             }
-
-            ImGui.EndPopup();
         }
 
         static float CalcComboWidth(string longestItem)
