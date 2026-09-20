@@ -27,7 +27,11 @@ public class Vmu
         remove => _cpu.FileSystem.UnsavedChangesDetected -= value;
     }
 
-    public event Action<string> OpenFileRequested
+    /// <summary>
+    /// Notify the host of a request to open a file by path.
+    /// Note: a null/empty path means the currently open file should be closed.
+    /// </summary>
+    public event Action<string?> OpenFileRequested
     {
         add => _cpu.FileSystem.OpenFileRequested += value;
         remove => _cpu.FileSystem.OpenFileRequested -= value;

@@ -43,9 +43,9 @@ internal class FileSystem
         }
     }
 
-    public event Action<string>? OpenFileRequested;
+    public event Action<string?>? OpenFileRequested;
 
-    public void RequestOpenFile(string path) => OpenFileRequested?.Invoke(path);
+    public void RequestOpenFile(string? path) => OpenFileRequested?.Invoke(path);
 
     internal string? LoadedPath { get; private set; }
 

@@ -228,13 +228,16 @@ public class Game1 : Game
 
     internal void LoadNewVmu(VmuPresenter presenter)
     {
-        Debug.Assert(!IsIntegratedMode && RecentFilesInfo is { });
         var vmu = presenter.Vmu;
         vmu.LoadNewVmu(date: DateTime.Now, autoInitializeRTCDate: Configuration.AutoInitializeDate);
         presenter.LocalPaused = false;
         UpdateWindowTitle();
-        RecentFilesInfo = RecentFilesInfo.AddRecentFile(forPrimary: presenter == _primaryVmuPresenter, newRecentFile: null);
-        RecentFilesInfo.Save();
+
+        if (RecentFilesInfo is { })
+        {
+            RecentFilesInfo = RecentFilesInfo.AddRecentFile(forPrimary: presenter == _primaryVmuPresenter, newRecentFile: null);
+            RecentFilesInfo.Save();
+        }
     }
 
     internal void LoadAndStartVmsOrVmuFile(VmuPresenter presenter, string filePath)

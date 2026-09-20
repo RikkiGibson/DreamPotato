@@ -103,7 +103,13 @@ class VmuPresenter
         _dynamicSound = new DynamicSoundEffectInstance(Audio.SampleRate, AudioChannels.Mono);
         _dynamicSound.Play();
         vmu.Audio.AudioBufferReady += Audio_BufferReady;
-        vmu.OpenFileRequested += path => _game1.LoadAndStartVmsOrVmuFile(this, path);
+        vmu.OpenFileRequested += path =>
+        {
+            if (string.IsNullOrEmpty(path))
+                _game1.LoadNewVmu(this);
+            else
+                _game1.LoadAndStartVmsOrVmuFile(this, path);
+        };
     }
 
     [MemberNotNull(nameof(MonoGame.ButtonChecker))]

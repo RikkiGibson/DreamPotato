@@ -51,10 +51,13 @@ internal record struct MapleMessage()
         return buffer;
     }
 
-    public string ReadContentString()
+    public string? ReadContentString()
     {
         Debug.Assert(Type == MapleMessageType.DPOpenFile);
         var sourceSpan = AdditionalWords.AsSpan(startIndex: 1);
+        if (sourceSpan.Length == 0)
+            return null;
+
         byte[] destBuffer = new byte[sourceSpan.Length * 4];
         for (int i = 0; i < sourceSpan.Length; i++)
         {

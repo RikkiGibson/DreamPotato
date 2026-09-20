@@ -521,6 +521,8 @@ public class Cpu
             {
                 // Open file messages are handled even while ejected
                 FileSystem.RequestOpenFile(message.ReadContentString());
+                var sent = MapleMessageBroker.TrySendAckMessage(DreamcastSlot);
+                Debug.Assert(sent);
                 continue;
             }
 

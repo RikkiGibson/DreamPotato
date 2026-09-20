@@ -40,6 +40,7 @@ public class MapleMessageBroker
     private readonly VmuInfo _slot2 = new VmuInfo();
 
     private DreamcastPort _dreamcastPort;
+    internal DreamcastPort DreamcastPort => _dreamcastPort;
 
     private Task? _serverTask;
     private CancellationTokenSource? _cancellationTokenSource;
@@ -134,6 +135,20 @@ public class MapleMessageBroker
     internal bool TryReceiveCpuMessage(DreamcastSlot slot, out MapleMessage mapleMessage)
     {
         return GetVmuInfo(slot)._inboundCpuMessages.Reader.TryRead(out mapleMessage);
+    }
+
+    /// <summary>Allows main game thread to acknowledge a message only after it is done processing it.</summary>
+    internal bool TrySendAckMessage(DreamcastSlot senderSlots)
+    {
+        var ack = new MapleMessage()
+        {
+            Type = MapleMessageType.Ack,
+            Recipient = new MapleAddress { Port = _dreamcastPort, Slot = DreamcastSlot.Dreamcast },
+            Sender = new MapleAddress { Port = _dreamcastPort, Slot = senderSlots },
+            Length = 0,
+            AdditionalWords = [],
+        };
+        return _outboundMessages.Writer.TryWrite(ack);
     }
 
     /// <summary>Can be called by threads besides the socket server thread.</summary>
@@ -283,7 +298,7 @@ public class MapleMessageBroker
                 return handleCompleteWriteStorage(vmuInfo, message);
             case (MapleMessageType.DPOpenFile, MapleFunction.Storage):
                 handleCpuMessage(vmuInfo, message);
-                return default; // No reply
+                return default; // A reply is required, but cpu will make its own call to ack.
             default:
                 Debug.Fail($"Unhandled Maple message '({message.Type}, {message.Function})'");
                 Logger.LogError($"Unhandled Maple message '({message.Type}, {message.Function})'", category: LogCategories.Maple);
