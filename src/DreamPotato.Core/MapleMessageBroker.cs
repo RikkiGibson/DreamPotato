@@ -592,16 +592,17 @@ public class MapleMessageBroker
                 }
 
                 OnDisconnect();
-                await Task.Delay(1000); // Retry connection after a delay
+                await Task.Delay(100, cancellationToken); // Retry connection after a delay
             }
         }
         catch (Exception ex)
         {
-            // We failed to reconnect and won't attempt again here.
-            // I would consider exiting the process, but, I don't like the idea of
-            // user losing something they were doing on the VMU just because the server crashed.
-            Logger.LogError($"Exception in SocketListenerEntryPoint: {ex.Message}", LogCategories.Maple);
-            throw;
+            // Failed to reconnect. The most likely reason is that the server crashed or was force closed.
+            // If the server exited normally, we would expect it to terminate this process as well.
+            // So, just exit now to avoid leaving behind a vestigial instance.
+            // This could possibly disrupt VMU gameplay, but, at least anything which is saved to flash storage will be preserved.
+            Logger.LogError($"Exception in SocketClientEntryPoint: {ex.Message}", LogCategories.Maple);
+            Environment.Exit(1);
         }
     }
 
