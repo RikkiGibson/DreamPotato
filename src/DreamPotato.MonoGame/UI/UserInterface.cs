@@ -557,8 +557,8 @@ partial class UserInterface
 
         if (ImGui.BeginMenu("About"))
         {
-            ImGui.Text($"Version: {_displayVersion}");
-            ImGui.Text($"Commit: {_commitId}");
+            ImGui.TextUnformatted($"Version: {_displayVersion}");
+            ImGui.TextUnformatted($"Commit: {_commitId}");
             ImGui.Separator();
 
             if (ImGui.MenuItem("Copy to clipboard"))
@@ -573,7 +573,7 @@ partial class UserInterface
             if (ImGui.IsItemHovered())
             {
                 ImGui.BeginTooltip();
-                ImGui.Text("Dreamcast connected over TCP");
+                ImGui.TextUnformatted("Dreamcast connected over TCP");
                 ImGui.EndTooltip();
             }
         }
@@ -679,9 +679,9 @@ partial class UserInterface
 
                     ImGui.SameLine();
                     ImGui.BeginGroup();
-                    ImGui.Text($"Slot {_game.Configuration.CurrentSaveStateSlot + 1}");
+                    ImGui.TextUnformatted($"Slot {_game.Configuration.CurrentSaveStateSlot + 1}");
                     // Note: this 13 is kind of a magic number. It would need to be adjusted if the names of other menu items changed.
-                    ImGui.Text(BreakLines(stateInfo.StateTimeDescription, maxLineLength: 13));
+                    ImGui.TextUnformatted(BreakLines(stateInfo.StateTimeDescription, maxLineLength: 13));
                     ImGui.EndGroup();
                 }
             }
@@ -869,7 +869,7 @@ partial class UserInterface
             if (ImGui.IsItemHovered())
             {
                 ImGui.BeginTooltip();
-                ImGui.Text("VMU-to-VMU connection active");
+                ImGui.TextUnformatted("VMU-to-VMU connection active");
                 ImGui.EndTooltip();
             }
         }
@@ -1031,7 +1031,8 @@ partial class UserInterface
                 _game.Configuration_AutoDockEjectChanged(autoDockEject);
 
             // Volume
-            ImGui.Text("Volume");
+            ImGui.AlignTextToFramePadding();
+            ImGui.TextUnformatted("Volume");
             ImGui.SameLine();
 
             var sliderVolume = configuration.Volume;
@@ -1043,7 +1044,8 @@ partial class UserInterface
 
             // Color Palette
             {
-                ImGui.Text("Color Palette");
+                ImGui.AlignTextToFramePadding();
+                ImGui.TextUnformatted("Color Palette");
                 ImGui.SameLine();
 
                 var palette = configuration.ColorPaletteName;
@@ -1063,15 +1065,17 @@ partial class UserInterface
 
             // File Format
             {
-                ImGui.Text("Preferred File Format");
+                ImGui.AlignTextToFramePadding();
+                ImGui.TextUnformatted("Preferred File Format");
                 ImGui.SameLine();
 
                 ImGui.SameLine();
-                ImGui.Text("(?)");
+                ImGui.AlignTextToFramePadding();
+                ImGui.TextUnformatted("(?)");
                 if (ImGui.IsItemHovered())
                 {
                     ImGui.BeginTooltip();
-                    ImGui.Text("""
+                    ImGui.TextUnformatted("""
                         Sets the file format used for
                         "Save As Folder" and similar commands.
                         """);
@@ -1092,7 +1096,8 @@ partial class UserInterface
             // Dreamcast Port
             if (!_game.IsIntegratedMode)
             {
-                ImGui.Text("Dreamcast controller port");
+                ImGui.AlignTextToFramePadding();
+                ImGui.TextUnformatted("Dreamcast controller port");
                 ImGui.SameLine();
 
                 var port = configuration.DreamcastPort;
@@ -1107,7 +1112,8 @@ partial class UserInterface
 
             // Logging
             {
-                ImGui.Text("Log to File");
+                ImGui.AlignTextToFramePadding();
+                ImGui.TextUnformatted("Log to File");
                 ImGui.SameLine();
 
                 var logToFile = configuration.LogToFile;
@@ -1118,7 +1124,8 @@ partial class UserInterface
                 }
                 ImGui.PopID();
 
-                ImGui.Text("Log Level");
+                ImGui.AlignTextToFramePadding();
+                ImGui.TextUnformatted("Log Level");
                 ImGui.SameLine();
 
                 var logLevel = configuration.LogLevel;
@@ -1133,11 +1140,12 @@ partial class UserInterface
                 if (_game.Configuration.LogLevel == LogLevel.Trace)
                 {
                     ImGui.SameLine();
-                    ImGui.Text("(!)");
+                    ImGui.AlignTextToFramePadding();
+                    ImGui.TextUnformatted("(!)");
                     if (ImGui.IsItemHovered())
                     {
                         ImGui.BeginTooltip();
-                        ImGui.Text("""
+                        ImGui.TextUnformatted("""
                             Caution: Trace level can quickly
                             use a lot of disk space.
                             """);
@@ -1264,7 +1272,7 @@ partial class UserInterface
 
                             if (ImGui.BeginPopup("label_ReachableFrom"))
                             {
-                                ImGui.Text("Reachable from:");
+                                ImGui.TextUnformatted("Reachable from:");
                                 ImGui.Separator();
                                 foreach (var reachableFrom in label.ReachableFrom)
                                 {
@@ -1345,7 +1353,8 @@ partial class UserInterface
                         ImGui.PopID();
 
                         ImGui.SameLine();
-                        ImGui.Text(inst.Offset.ToString("X4"));
+                        ImGui.AlignTextToFramePadding();
+                        ImGui.TextUnformatted(inst.Offset.ToString("X4"));
 
                         ImGui.SameLine();
 
@@ -1359,7 +1368,8 @@ partial class UserInterface
                         }
                         else
                         {
-                            ImGui.Text(inst.DisplayInstruction(waterbearInfo));
+                            ImGui.AlignTextToFramePadding();
+                            ImGui.TextUnformatted(inst.DisplayInstruction(waterbearInfo));
                         }
 
                         ImGui.PopID();
@@ -1375,7 +1385,7 @@ partial class UserInterface
                             var argumentValues = inst.DisplayArgumentValues(_game.PrimaryVmu._cpu);
                             if (argumentValues.Length != 0 && ImGui.BeginTooltip())
                             {
-                                ImGui.Text(argumentValues);
+                                ImGui.TextUnformatted(argumentValues);
                                 ImGui.EndTooltip();
                             }
                         }
@@ -1426,7 +1436,7 @@ partial class UserInterface
                     }
                     else
                     {
-                        ImGui.Text($"{label.DisplayLabel(bankInfo.WaterbearInfo)} (data)");
+                        ImGui.TextUnformatted($"{label.DisplayLabel(bankInfo.WaterbearInfo)} (data)");
                     }
 
                     ImGui.PopID();
@@ -1470,7 +1480,7 @@ partial class UserInterface
                     }
 
                     ImGui.TableNextColumn();
-                    ImGui.Text(inst.DisplayInstruction(bankInfo.WaterbearInfo));
+                    ImGui.TextUnformatted(inst.DisplayInstruction(bankInfo.WaterbearInfo));
                     ImGui.PopID();
                 }
 
@@ -1517,9 +1527,9 @@ partial class UserInterface
                 {
                     ImGui.TableNextColumn();
                     ImGui.TableNextColumn();
-                    ImGui.Text($"INTERRUPT");
+                    ImGui.TextUnformatted($"INTERRUPT");
                     ImGui.TableNextColumn();
-                    ImGui.Text(entry.Interrupt.ToString());
+                    ImGui.TextUnformatted(entry.Interrupt.ToString());
                 }
 
                 ImGui.TableNextColumn();
@@ -1549,9 +1559,9 @@ partial class UserInterface
                 {
                     // If we got here, it means the code we were returning to,
                     // was overwritten in flash, while we were still going to return to it.
-                    ImGui.Text("ERROR");
+                    ImGui.TextUnformatted("ERROR");
                     ImGui.TableNextColumn();
-                    ImGui.Text("");
+                    ImGui.TextUnformatted("");
                 }
                 else
                 {
@@ -1561,7 +1571,7 @@ partial class UserInterface
                         Debugger_ScrollToDisasm(bankInfo.BinarySearchDisasm(inst.Offset), entry.BankId);
                     }
                     ImGui.TableNextColumn();
-                    ImGui.Text(inst.DisplayInstruction(bankInfo.WaterbearInfo));
+                    ImGui.TextUnformatted(inst.DisplayInstruction(bankInfo.WaterbearInfo));
                 }
 
                 ImGui.PopID();
@@ -1609,10 +1619,10 @@ partial class UserInterface
                     {
                         var watch = watches[i];
                         ImGui.TableNextColumn();
-                        ImGui.Text(watch.ToString());
+                        ImGui.TextUnformatted(watch.ToString());
 
                         ImGui.TableNextColumn();
-                        ImGui.Text($"{memory.Read(watch.Offset, doSideEffects: false):X2}H");
+                        ImGui.TextUnformatted($"{memory.Read(watch.Offset, doSideEffects: false):X2}H");
                     }
 
                     ImGui.EndTable();
@@ -1635,10 +1645,10 @@ partial class UserInterface
                         continue;
 
                     ImGui.TableNextColumn();
-                    ImGui.Text(constant.Name);
+                    ImGui.TextUnformatted(constant.Name);
 
                     ImGui.TableNextColumn();
-                    ImGui.Text($"{memory.Read((ushort)constant.Value, doSideEffects: false):X2}H");
+                    ImGui.TextUnformatted($"{memory.Read((ushort)constant.Value, doSideEffects: false):X2}H");
                 }
 
                 ImGui.EndTable();
@@ -1702,7 +1712,7 @@ partial class UserInterface
 
                     if (ImGui.BeginItemTooltip())
                     {
-                        ImGui.Text(keyPresets[i].description);
+                        ImGui.TextUnformatted(keyPresets[i].description);
                         ImGui.EndTooltip();
                     }
                 }
@@ -1712,7 +1722,7 @@ partial class UserInterface
 
             if (ImGui.BeginItemTooltip())
             {
-                ImGui.Text(keyPresets[_mappingEditState.PresetIndex].description);
+                ImGui.TextUnformatted(keyPresets[_mappingEditState.PresetIndex].description);
                 ImGui.EndTooltip();
             }
 
@@ -1739,7 +1749,7 @@ partial class UserInterface
                     var mapping = _mappingEditState.KeyMappings[i];
                     ImGui.TableNextRow();
                     ImGui.TableSetColumnIndex(0);
-                    ImGui.Text(mapping.TargetButton.ToString());
+                    ImGui.TextUnformatted(mapping.TargetButton.ToString());
 
                     ImGui.TableSetColumnIndex(1);
                     if (ImGui.Button(mapping.SourceKey.ToString()))
@@ -1836,7 +1846,7 @@ partial class UserInterface
 
                     if (ImGui.BeginItemTooltip())
                     {
-                        ImGui.Text(Configuration.AllButtonPresets[i].description);
+                        ImGui.TextUnformatted(Configuration.AllButtonPresets[i].description);
                         ImGui.EndTooltip();
                     }
                 }
@@ -1846,7 +1856,7 @@ partial class UserInterface
 
             if (ImGui.BeginItemTooltip())
             {
-                ImGui.Text(Configuration.AllButtonPresets[_mappingEditState.PresetIndex].description);
+                ImGui.TextUnformatted(Configuration.AllButtonPresets[_mappingEditState.PresetIndex].description);
                 ImGui.EndTooltip();
             }
 
@@ -1873,7 +1883,7 @@ partial class UserInterface
                     var mapping = _mappingEditState.ButtonMappings[i];
                     ImGui.TableNextRow();
                     ImGui.TableSetColumnIndex(0);
-                    ImGui.Text(mapping.TargetButton.ToString());
+                    ImGui.TextUnformatted(mapping.TargetButton.ToString());
 
                     ImGui.TableSetColumnIndex(1);
                     if (ImGui.Button(mapping.SourceButton.ToString()))
@@ -1901,8 +1911,8 @@ partial class UserInterface
             if (_mappingEditState.KeyMappings is not { } keyMappings)
                 throw new InvalidOperationException();
 
-            ImGui.Text("Press a key.");
-            ImGui.Text($"Target button: {keyMappings[_mappingEditState.EditedIndex].TargetButton}");
+            ImGui.TextUnformatted("Press a key.");
+            ImGui.TextUnformatted($"Target button: {keyMappings[_mappingEditState.EditedIndex].TargetButton}");
 
             if (ImGui.Button("Cancel (ESC)"))
                 ImGui.CloseCurrentPopup();
@@ -1937,8 +1947,8 @@ partial class UserInterface
             if (_mappingEditState.ButtonMappings is not { } buttonMappings)
                 throw new InvalidOperationException();
 
-            ImGui.Text("Press a button.");
-            ImGui.Text($"Target button: {buttonMappings[_mappingEditState.EditedIndex].TargetButton}");
+            ImGui.TextUnformatted("Press a button.");
+            ImGui.TextUnformatted($"Target button: {buttonMappings[_mappingEditState.EditedIndex].TargetButton}");
 
             if (ImGui.Button("Cancel (ESC)"))
                 ImGui.CloseCurrentPopup();
@@ -1991,7 +2001,7 @@ partial class UserInterface
 
         if (ImGui.Begin(title, ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.Modal | ImGuiWindowFlags.NoResize))
         {
-            ImGui.Text("Unsaved progress will be lost.");
+            ImGui.TextUnformatted("Unsaved progress will be lost.");
 
             var confirmLabel = PendingCommand.Kind switch
             {
