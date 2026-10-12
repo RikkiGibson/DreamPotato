@@ -576,7 +576,11 @@ public class MapleMessageBroker
             {
                 using var socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
                 Logger.LogDebug($"Connecting to server at port {tcpPort}", LogCategories.Maple);
-                await socket.ConnectAsync(new IPEndPoint(IPAddress.IPv6Loopback, tcpPort));
+                using (var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
+                {
+                    timeoutSource.CancelAfter(millisecondsDelay: 1000);
+                    await socket.ConnectAsync(new IPEndPoint(IPAddress.IPv6Loopback, tcpPort), timeoutSource.Token);
+                }
                 Logger.LogDebug("Connected to server", LogCategories.Maple);
                 lock (_lock)
                 {
