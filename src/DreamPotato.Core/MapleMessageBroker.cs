@@ -644,7 +644,7 @@ public class MapleMessageBroker
 
     private async Task HandleOneClientAsync(Socket? listener, Socket clientSocket, CancellationToken cancellationToken)
     {
-        var clientCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        using var clientCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cancellationToken = clientCancellationSource.Token;
 
         if (listener != null)
