@@ -18,7 +18,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v5
     - name: Download resources
-      run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.Tests/Data/american_v1.05.bin
+      run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.Core/Data/american_v1.05.bin
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
@@ -50,12 +50,12 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v5
     - name: Download resources
-      run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.MonoGame/Data/american_v1.05.bin
+      run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.Core/Data/american_v1.05.bin
     - name: Restore dependencies
       run: dotnet restore
 
     - name: Run pack-x64.sh
-      run: ./src/DreamPotato.MonoGame/Linux/pack-x64.sh
+      run: ./src/DreamPotato.MonoGame.Desktop/Linux/pack-x64.sh
     - name: Upload Linux x64
       uses: actions/upload-artifact@v6
       with:
@@ -71,10 +71,10 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
       - name: Download resources
-        run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.MonoGame/Data/american_v1.05.bin
+        run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.Core/Data/american_v1.05.bin
 
       - name: dotnet publish win-x64
-        run: dotnet publish src/DreamPotato.MonoGame -r win-x64 -p:DebugSymbols=False
+        run: dotnet publish src/DreamPotato.MonoGame.Desktop -r win-x64 -p:DebugSymbols=False
 
       - if: ${{ github.event_name != 'pull_request' }}
         name: Azure login
@@ -110,7 +110,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v5
     - name: Download resources
-      run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.MonoGame/Data/american_v1.05.bin
+      run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.Core/Data/american_v1.05.bin
 
     - if: ${{ github.event_name != 'pull_request' }}
       name: Import signing certificate
@@ -140,7 +140,7 @@ jobs:
         APPLE_ID: ${{ github.event_name != 'pull_request' && secrets.APPLE_ID || '' }}
         APPLE_ID_PASSWORD: ${{ github.event_name != 'pull_request' && secrets.APPLE_ID_PASSWORD || '' }}
         APPLE_TEAM_ID: ${{ github.event_name != 'pull_request' && secrets.APPLE_TEAM_ID || '' }}
-      run: ./src/DreamPotato.MonoGame/Mac/pack-arm64.sh
+      run: ./src/DreamPotato.MonoGame.Desktop/Mac/pack-arm64.sh
 
     - name: Cleanup keychain
       if: ${{ always() && github.event_name != 'pull_request' }}

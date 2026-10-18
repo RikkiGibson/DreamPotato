@@ -96,7 +96,8 @@ Key and button mappings can be changed in Settings -> Keyboard Config / Gamepad 
 Under `src/`:
 - `DreamPotato.Core` is where the emulator implementation resides.
 - `DreamPotato.Tests` includes unit tests for the emulator implementation.
-- `DreamPotato.MonoGame` is the front-end, including UI and config file handling.
+- `DreamPotato.MonoGame` is most of the front-end, including UI and config file handling.
+- `DreamPotato.MonoGame.Desktop` is the desktop (Windows/macOS/Linux) application.
 - `dreampotato-vscode` is the VS Code extension--in *very* barebones/"alpha" state.
     - Currently, it contains only a TextMate grammar for LC86k assembly.
 

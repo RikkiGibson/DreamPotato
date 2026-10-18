@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <RollForward>Major</RollForward>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <TieredCompilation>false</TieredCompilation>
+    <Nullable>enable</Nullable>
+    <LangVersion>preview</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PublishAot>true</PublishAot>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Looking outside this project folder for icons is slightly weird, but, this appears to be the best way to centralize/reuse them -->
+    <!-- The ico file controls the appearance in the windows file explorer, while the bmp file controls the taskbar/title bar. -->
+    <ApplicationIcon>../DreamPotato.MonoGame/Content/Icon.ico</ApplicationIcon>
+    <AssemblyName>DreamPotato</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="../DreamPotato.MonoGame/Content/Icon.bmp">
+        <LogicalName>Icon.bmp</LogicalName>
+    </EmbeddedResource>
+    <Content Include="Data/*.bin">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Data/*.debug.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="ImGui.NET" Version="1.91.6.1" />
+    <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.4" />
+    <PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.4" />
+    <PackageReference Include="NativeFileDialogSharp" Version="0.6.0-alpha" />
+    <PackageReference Include="Humanizer" Version="3.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <MonoGameContentReference Include="../DreamPotato.MonoGame/Content/Content.mgcb">
+      <Link>Content/Content.mgcb</Link>
+    </MonoGameContentReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../DreamPotato.Core/DreamPotato.Core.csproj" />
+    <ProjectReference Include="../DreamPotato.MonoGame/DreamPotato.MonoGame.csproj" />
+  </ItemGroup>
+  <Target Name="RestoreDotnetTools" BeforeTargets="Restore">
+    <Message Text="Restoring dotnet tools" Importance="High" />
+    <Exec Command="dotnet tool restore" />
+  </Target>
+</Project>
