@@ -17,16 +17,13 @@ namespace DreamPotato.MonoGame;
 public class Game1 : Game
 {
     private readonly GraphicsDeviceManager _graphics;
-    private readonly string? _commandLineFilePath;
-
-    /// <summary>When non-null, indicates the emulator is running in integrated mode.</summary>
-    private readonly (int TcpPort, DreamcastPort Port, ExpansionSlots Slots)? _commandLineIntegratedModeInfo;
+    private readonly CommandLineArgs? _commandLineArgs;
 
     internal Vmu PrimaryVmu => _primaryVmuPresenter.Vmu;
     internal VmuPresenter PrimaryVmuPresenter => _primaryVmuPresenter;
 
     [MemberNotNullWhen(true, nameof(SecondaryVmu), nameof(SecondaryVmuPresenter))]
-    internal bool UseSecondaryVmu => (_commandLineIntegratedModeInfo?.Slots ?? Configuration.ExpansionSlots) == ExpansionSlots.Slot1And2;
+    internal bool UseSecondaryVmu => (IntegratedModeInfo?.Slots ?? Configuration.ExpansionSlots) == ExpansionSlots.Slot1And2;
     internal Vmu? SecondaryVmu => SecondaryVmuPresenter?.Vmu;
     internal VmuPresenter? SecondaryVmuPresenter => UseSecondaryVmu ? _secondaryVmuPresenter : null;
     internal UserInterface UserInterface => _userInterface;
@@ -65,18 +62,19 @@ public class Game1 : Game
     /// <summary>Only meaningful when <see cref="UseSecondaryVmu"/> is true.</summary>
     internal bool IsHorizontalLayout;
 
-    public Game1(string? gameFilePath, (int TcpPort, DreamcastPort Port, ExpansionSlots Slots)? integratedModeInfo)
+    public Game1(CommandLineArgs? commandLineArgs)
     {
         _graphics = new GraphicsDeviceManager(this);
         Window.AllowUserResizing = true;
         Window.ClientSizeChanged += Window_ClientSizeChanged;
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
-        _commandLineFilePath = gameFilePath;
-        _commandLineIntegratedModeInfo = integratedModeInfo;
+        _commandLineArgs = commandLineArgs;
     }
 
-    public bool IsIntegratedMode => _commandLineIntegratedModeInfo is not null;
+    private IntegratedModeArgs? IntegratedModeInfo => _commandLineArgs?.IntegratedModeInfo;
+    [MemberNotNullWhen(true, nameof(IntegratedModeInfo))]
+    public bool IsIntegratedMode => _commandLineArgs?.IntegratedModeInfo is not null;
 
     [MemberNotNull(nameof(_spriteBatch), nameof(MapleMessageBroker), nameof(_primaryVmuPresenter), nameof(_secondaryVmuPresenter), nameof(_userInterface), nameof(Configuration), nameof(ColorPalette))]
     protected override void Initialize()
@@ -103,11 +101,11 @@ public class Game1 : Game
         _userInterface = new UserInterface(this);
         _userInterface.Initialize(textures.IconDreamcastConnectedTexture, textures.IconVmusConnectedTexture);
 
-        MapleMessageBroker = new MapleMessageBroker(_commandLineIntegratedModeInfo?.TcpPort);
-        MapleMessageBroker.RestartServer(_commandLineIntegratedModeInfo?.Port ?? Configuration.DreamcastPort);
+        MapleMessageBroker = new MapleMessageBroker(IntegratedModeInfo?.TcpPort);
+        MapleMessageBroker.RestartServer(IntegratedModeInfo?.Port ?? Configuration.DreamcastPort);
         RecentFilesInfo = IsIntegratedMode ? null : RecentFilesInfo.Load();
 
-        var slots = _commandLineIntegratedModeInfo?.Slots ?? Configuration.ExpansionSlots;
+        var slots = IntegratedModeInfo?.Slots ?? Configuration.ExpansionSlots;
         var primaryVmu = new Vmu(MapleMessageBroker) { DreamcastSlot = slots is ExpansionSlots.Slot1 or ExpansionSlots.Slot1And2 ? DreamcastSlot.Slot1 : DreamcastSlot.Slot2 };
         primaryVmu.UnsavedChangesDetected += Vmu_UnsavedChangesDetected;
         _primaryVmuPresenter = new VmuPresenter(this, primaryVmu, textures, _graphics, Configuration.PrimaryInput);
@@ -116,7 +114,7 @@ public class Game1 : Game
         _secondaryVmuPresenter = new VmuPresenter(this, secondaryVmu, textures, _graphics, Configuration.SecondaryInput);
 
         var date = DateTimeOffset.Now;
-        initializeVmu(_primaryVmuPresenter, date, _commandLineFilePath ?? RecentFilesInfo?.PrimaryVmuMostRecent);
+        initializeVmu(_primaryVmuPresenter, date, _commandLineArgs?.GameFilePath ?? RecentFilesInfo?.PrimaryVmuMostRecent);
         initializeVmu(_secondaryVmuPresenter, date, RecentFilesInfo?.SecondaryVmuMostRecent);
 
         UpdateLogLevels();
@@ -210,7 +208,7 @@ public class Game1 : Game
         if (IsIntegratedMode)
         {
             Debug.Assert(!PrimaryVmu.HasUnsavedChanges && SecondaryVmu?.HasUnsavedChanges != true);
-            var port = _commandLineIntegratedModeInfo!.Value.Port;
+            var port = IntegratedModeInfo.Port;
             Window.Title = $"DreamPotato (port {port})";
             return;
         }
