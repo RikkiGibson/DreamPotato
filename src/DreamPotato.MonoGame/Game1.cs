@@ -19,6 +19,8 @@ public class Game1 : Game
     private readonly GraphicsDeviceManager _graphics;
     private readonly CommandLineArgs? _commandLineArgs;
 
+    internal IPlatformServices PlatformServices { get; }
+
     internal Vmu PrimaryVmu => _primaryVmuPresenter.Vmu;
     internal VmuPresenter PrimaryVmuPresenter => _primaryVmuPresenter;
 
@@ -62,8 +64,9 @@ public class Game1 : Game
     /// <summary>Only meaningful when <see cref="UseSecondaryVmu"/> is true.</summary>
     internal bool IsHorizontalLayout;
 
-    public Game1(CommandLineArgs? commandLineArgs)
+    public Game1(IPlatformServices platformServices, CommandLineArgs? commandLineArgs)
     {
+        PlatformServices = platformServices;
         _graphics = new GraphicsDeviceManager(this);
         Window.AllowUserResizing = true;
         Window.ClientSizeChanged += Window_ClientSizeChanged;

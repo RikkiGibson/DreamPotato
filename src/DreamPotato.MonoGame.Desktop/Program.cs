@@ -161,6 +161,6 @@ if (showHelp)
 var commandLineArgs = new CommandLineArgs(
     gameFilePath,
     integrated ? new(tcpPort!.Value, port!.Value, slots!.Value) : null);
-using var game = new Game1(commandLineArgs);
+using var game = new Game1(new DesktopPlatformServices(), commandLineArgs);
 game.Run();
 return 0;
