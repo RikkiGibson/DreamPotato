@@ -6,6 +6,7 @@ set -e
 # See https://docs.appimage.org/packaging-guide/manual.html
 scriptroot="$(dirname "$0")"
 project="$scriptroot/.."
+iconpath="$project/../DreamPotato.MonoGame/Content/Icon.png"
 reporoot="$(realpath "$scriptroot/../../..")"
 artifacts="$reporoot/artifacts"
 publishdir="$artifacts/publish/DreamPotato.MonoGame.Desktop/release_linux-x64"
@@ -59,8 +60,8 @@ cp -R "$publishdir/Content" "$appdir/usr/bin/Content"
 
 # Desktop entry, icon, and AppRun
 cp "$scriptroot/DreamPotato.desktop" "$appdir/"
-cp "$project/Icon.png" "$appdir/DreamPotato.png"
-cp "$project/Icon.png" "$appdir/usr/share/icons/hicolor/32x32/apps/DreamPotato.png"
+cp "$iconpath" "$appdir/DreamPotato.png"
+cp "$iconpath" "$appdir/usr/share/icons/hicolor/32x32/apps/DreamPotato.png"
 cp "$scriptroot/AppRun" "$appdir/"
 
 # Some libraries like libcimgui.so have a high glibc requirement.
