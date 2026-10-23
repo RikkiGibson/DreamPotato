@@ -2,7 +2,6 @@
 set -e
 
 # Runs a publish and creates a Linux AppImage for x64.
-# Requires appimagetool to be available on PATH.
 # See https://docs.appimage.org/packaging-guide/manual.html
 scriptroot="$(dirname "$0")"
 project="$scriptroot/.."
@@ -44,7 +43,7 @@ if [ ! -x "$polyfill_glibc" ]; then
 fi
 
 echo "Running dotnet publish..."
-dotnet publish "$project" -c Release -r linux-x64 --self-contained -p:DebugSymbols=False -p:LinuxAppImage=True
+dotnet publish "$project" -c Release -r linux-x64 --self-contained -p:DebugSymbols=False -p:UseBmpIcon=False
 
 echo "Assembling AppDir at '$appdir'..."
 rm -rf "$appdir"

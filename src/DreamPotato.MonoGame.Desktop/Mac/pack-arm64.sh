@@ -10,7 +10,7 @@ artifacts="$reporoot/artifacts"
 icon="$project/../DreamPotato.MonoGame/Content/Icon.png"
 
 echo "Running dotnet publish..."
-dotnet publish $project -c Release -r osx-arm64 --self-contained -p:DebugSymbols=False
+dotnet publish $project -c Release -r osx-arm64 --self-contained -p:DebugSymbols=False -p:UseBmpIcon=False
 
 echo "Copying artifacts to app bundle '$artifacts/mac-arm64/DreamPotato.app'..."
 mkdir -p $artifacts/mac-arm64/DreamPotato.app/Contents/MacOS/

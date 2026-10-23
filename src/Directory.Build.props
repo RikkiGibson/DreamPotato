@@ -6,5 +6,6 @@
   <PropertyGroup>
     <UseArtifactsOutput>true</UseArtifactsOutput>
     <ArtifactsPath>$(MSBuildThisFileDirectory)../artifacts</ArtifactsPath>
+    <RestoreAdditionalProjectSources>$(MSBuildThisFileDirectory)../local-feed</RestoreAdditionalProjectSources>
   </PropertyGroup>
 </Project>
