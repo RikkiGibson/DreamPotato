@@ -13,7 +13,8 @@
   <PropertyGroup>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- Looking outside this project folder for icons is slightly weird, but, this appears to be the best way to centralize/reuse them -->
-    <!-- The ico file controls the appearance in the windows file explorer, while the bmp file controls the taskbar/title bar. -->
+    <!-- The ico file controls the appearance in the windows file explorer. -->
+    <!-- The bmp file, when present, controls the taskbar/title bar. -->
     <ApplicationIcon>../DreamPotato.MonoGame/Content/Icon.ico</ApplicationIcon>
     <AssemblyName>DreamPotato</AssemblyName>
 
