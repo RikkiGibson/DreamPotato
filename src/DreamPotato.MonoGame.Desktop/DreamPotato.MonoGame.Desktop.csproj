@@ -18,7 +18,7 @@
     <AssemblyName>DreamPotato</AssemblyName>
 
     <!-- The icon bmp is needed for non-packaged mac/linux builds -->
-    <UseBmpIcon Condition="'$(UseBmpIcon)' == ''">$([MSBuild]::IsOSPlatform('Windows')).Equals(false)</UseBmpIcon>
+    <UseBmpIcon Condition="'$(UseBmpIcon)' == ''">$([MSBuild]::IsOSPlatform('Windows').Equals(false))</UseBmpIcon>
   </PropertyGroup>
   <ItemGroup>
     <EmbeddedResource Include="../DreamPotato.MonoGame/Content/Icon.bmp" Condition="'$(UseBmpIcon)' == 'true'">
