@@ -19,7 +19,6 @@
     <PackageReference Include="MonoGame.Framework.Native" Version="3.8.4">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="NativeFileDialogSharp" Version="0.6.0-alpha" />
     <PackageReference Include="Humanizer" Version="3.0.1" />
   </ItemGroup>
   <ItemGroup>
