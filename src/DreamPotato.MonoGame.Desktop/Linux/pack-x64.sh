@@ -35,7 +35,7 @@ if [ ! -x "$polyfill_glibc" ]; then
     fi
 
     git init "$artifacts/tools/polyfill-glibc-src"
-    git -C "$artifacts/tools/polyfill-glibc-src" remote add origin https://github.com/corsix/polyfill-glibc
+    git -C "$artifacts/tools/polyfill-glibc-src" remote add origin https://github.com/corsix/polyfill-glibc || true
     git -C "$artifacts/tools/polyfill-glibc-src" fetch origin dd59051faaa10ee63c1b96f1b47bf9fcd3770ee2
     git -C "$artifacts/tools/polyfill-glibc-src" checkout dd59051faaa10ee63c1b96f1b47bf9fcd3770ee2
     "$ninja_bin" -C "$artifacts/tools/polyfill-glibc-src" polyfill-glibc
@@ -70,11 +70,14 @@ cp "$scriptroot/AppRun" "$appdir/"
 # https://github.com/ImGuiNET/ImGui.NET/issues/491
 echo "Patching binaries for glibc 2.34 compatibility..."
 for f in "$appdir/usr/bin/DreamPotato" "$appdir"/usr/bin/*.so; do
-    [ -f "$f" ] && "$polyfill_glibc" --target-glibc=2.34 "$f" && echo "  patched $f"
+    if [ -f "$f" ]; then
+        "$polyfill_glibc" --target-glibc=2.34 "$f"
+        echo "  patched $f"
+    fi
 done
 
 echo "Building AppImage..."
-$appimagetool "$appdir" "$artifacts/DreamPotato-linux-x64.AppImage"
+"$appimagetool" "$appdir" "$artifacts/DreamPotato-linux-x64.AppImage"
 chmod +x "$artifacts/DreamPotato-linux-x64.AppImage"
 
 echo "Done: $artifacts/DreamPotato-linux-x64.AppImage"
