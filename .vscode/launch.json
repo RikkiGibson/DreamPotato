@@ -32,7 +32,7 @@
         "request": "launch",
         "preLaunchTask": "dotnet: build DreamPotato.SaveStateDiff.csproj",
         "program": "${workspaceFolder}/artifacts/bin/DreamPotato.SaveStateDiff/Debug/DreamPotato.SaveStateDiff.exe",
-        "args": ["./artifacts/bin/DreamPotato.MonoGame/debug/Data/vmu-date-skip-1_0.dpstate", "./artifacts/bin/DreamPotato.MonoGame/debug/Data/vmu-date-skip-2_0.dpstate"],
+        // "args": ["path-to-first.dpstate", "path-to-second.dpstate"],
         "cwd": "${workspaceFolder}",
         "stopAtEntry": false,
         "console": "internalConsole"

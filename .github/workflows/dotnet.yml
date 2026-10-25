@@ -94,7 +94,7 @@ jobs:
           endpoint: https://wus2.codesigning.azure.net
           signing-account-name: DreamPotatoSigning
           certificate-profile-name: DreamPotatoPublicCert
-          files-folder: artifacts/publish/DreamPotato.MonoGame/release_win-x64/
+          files-folder: artifacts/publish/DreamPotato.MonoGame.Desktop/release_win-x64/
           files-folder-filter: exe,dll
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
@@ -104,7 +104,7 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: DreamPotato-Windows-x64-dev
-          path: artifacts/publish/DreamPotato.MonoGame/release_win-x64/
+          path: artifacts/publish/DreamPotato.MonoGame.Desktop/release_win-x64/
 
   PublishMac:
     runs-on: macos-latest
