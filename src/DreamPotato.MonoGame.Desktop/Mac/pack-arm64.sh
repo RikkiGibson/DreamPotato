@@ -7,7 +7,8 @@ scriptroot="$(dirname $0)"
 project="$scriptroot/.."
 reporoot="$(realpath $scriptroot/../../..)"
 artifacts="$reporoot/artifacts"
-icon="$project/../DreamPotato.MonoGame/Content/Icon.png"
+iconflat="$project/../DreamPotato.MonoGame/Content/Icon-full-flat.png"
+iconrich="$project/../DreamPotato.MonoGame/Content/Icon-full-rich.png"
 
 echo "Running dotnet publish..."
 dotnet publish $project -c Release -r osx-arm64 --self-contained -p:DebugSymbols=False -p:UseBmpIcon=False
@@ -25,16 +26,16 @@ cp -R $artifacts/publish/DreamPotato.MonoGame.Desktop/release_osx-arm64/Content/
 # Icons
 echo "Writing icons..."
 mkdir -p $artifacts/obj/DreamPotato.MonoGame.Desktop/release_osx-arm64/DreamPotato.iconset
-sips -z 16 16 $icon --out $artifacts/obj/DreamPotato.MonoGame.Desktop/release_osx-arm64/DreamPotato.iconset/icon_16x16.png 1>/dev/null
-sips -z 32 32 $icon --out $artifacts/obj/DreamPotato.MonoGame.Desktop/release_osx-arm64/DreamPotato.iconset/icon_16x16@2x.png  1>/dev/null
-sips -z 32 32 $icon --out $artifacts/obj/DreamPotato.MonoGame.Desktop/release_osx-arm64/DreamPotato.iconset/icon_32x32.png  1>/dev/null
-sips -z 64 64 $icon --out $artifacts/obj/DreamPotato.MonoGame.Desktop/release_osx-arm64/DreamPotato.iconset/icon_32x32@2x.png  1>/dev/null
-sips -z 128 128 $icon --out $artifacts/obj/DreamPotato.MonoGame.Desktop/release_osx-arm64/DreamPotato.iconset/icon_128x128.png  1>/dev/null
-sips -z 256 256 $icon --out $artifacts/obj/DreamPotato.MonoGame.Desktop/release_osx-arm64/DreamPotato.iconset/icon_128x128@2x.png  1>/dev/null
-sips -z 256 256 $icon --out $artifacts/obj/DreamPotato.MonoGame.Desktop/release_osx-arm64/DreamPotato.iconset/icon_256x256.png  1>/dev/null
-sips -z 512 512 $icon --out $artifacts/obj/DreamPotato.MonoGame.Desktop/release_osx-arm64/DreamPotato.iconset/icon_256x256@2x.png  1>/dev/null
-sips -z 512 512 $icon --out $artifacts/obj/DreamPotato.MonoGame.Desktop/release_osx-arm64/DreamPotato.iconset/icon_512x512.png  1>/dev/null
-sips -z 1024 1024 $icon --out $artifacts/obj/DreamPotato.MonoGame.Desktop/release_osx-arm64/DreamPotato.iconset/icon_512x512@2x.png 1>/dev/null
+sips -z 16 16 $iconflat --out $artifacts/obj/DreamPotato.MonoGame.Desktop/release_osx-arm64/DreamPotato.iconset/icon_16x16.png 1>/dev/null
+sips -z 32 32 $iconflat --out $artifacts/obj/DreamPotato.MonoGame.Desktop/release_osx-arm64/DreamPotato.iconset/icon_16x16@2x.png  1>/dev/null
+sips -z 32 32 $iconflat --out $artifacts/obj/DreamPotato.MonoGame.Desktop/release_osx-arm64/DreamPotato.iconset/icon_32x32.png  1>/dev/null
+sips -z 64 64 $iconflat --out $artifacts/obj/DreamPotato.MonoGame.Desktop/release_osx-arm64/DreamPotato.iconset/icon_32x32@2x.png  1>/dev/null
+sips -z 128 128 $iconrich --out $artifacts/obj/DreamPotato.MonoGame.Desktop/release_osx-arm64/DreamPotato.iconset/icon_128x128.png  1>/dev/null
+sips -z 256 256 $iconrich --out $artifacts/obj/DreamPotato.MonoGame.Desktop/release_osx-arm64/DreamPotato.iconset/icon_128x128@2x.png  1>/dev/null
+sips -z 256 256 $iconrich --out $artifacts/obj/DreamPotato.MonoGame.Desktop/release_osx-arm64/DreamPotato.iconset/icon_256x256.png  1>/dev/null
+sips -z 512 512 $iconrich --out $artifacts/obj/DreamPotato.MonoGame.Desktop/release_osx-arm64/DreamPotato.iconset/icon_256x256@2x.png  1>/dev/null
+sips -z 512 512 $iconrich --out $artifacts/obj/DreamPotato.MonoGame.Desktop/release_osx-arm64/DreamPotato.iconset/icon_512x512.png  1>/dev/null
+sips -z 1024 1024 $iconrich --out $artifacts/obj/DreamPotato.MonoGame.Desktop/release_osx-arm64/DreamPotato.iconset/icon_512x512@2x.png 1>/dev/null
 iconutil -c icns $artifacts/obj/DreamPotato.MonoGame.Desktop/release_osx-arm64/DreamPotato.iconset --output $artifacts/obj/DreamPotato.MonoGame.Desktop/release_osx-arm64/DreamPotato.icns
 cp $artifacts/obj/DreamPotato.MonoGame.Desktop/release_osx-arm64/DreamPotato.icns $artifacts/mac-arm64/DreamPotato.app/Contents/Resources/DreamPotato.icns
 
