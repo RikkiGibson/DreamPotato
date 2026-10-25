@@ -1,6 +1,6 @@
 # DreamPotato
 
-DreamPotato is a Dreamcast VMU emulator currently in beta.
+DreamPotato is a Dreamcast VMU emulator.
 
 > [!WARNING]
 > When opening a `.vmu` or `.bin` file, the emulator will modify the file on disk while running in order to persist changes, such as save file changes on the memory card, saving your progress in minigames, or when using the Load State command.
@@ -17,27 +17,22 @@ See [compatibility.md](compatibility.md) for the current compatibility status of
     <img width="270px" alt="Sonic Adventure (Dreamcast integration)" src="./docs/images/sonic-adventure.png" />
 </div>
 
-## Flycast Integration
+## Hollycast Integration
 
-[![DreamPotato Flycast Integration Demo](./docs/images/demo-video-thumbnail.png)](https://www.youtube.com/watch?v=EN8Y3UX_TDM)
+[![Hollycast + DreamPotato Demo](./docs/images/demo-video-thumbnail.png)](https://www.youtube.com/watch?v=HkwDi5smav4)
 
-DreamPotato can connect to [Flycast](https://github.com/flyinghead/flycast) to support an experience similar to using a real Dreamcast and VMU together.
-
-**NOTE**: The latest Flycast 2.6 stable release has a known issue with DreamPotato. Currently it's necessary to use a [master branch build](https://flyinghead.github.io/flycast-builds/) of Flycast. At time of writing, the build from 2026-01-28 (commit 21eb24f) is known to work.
+DreamPotato can connect to [Hollycast](https://github.com/OrangeFox86/Hollycast) to support an experience similar to using a real Dreamcast and VMU together.
 
 Instructions:
-1) Open the Flycast controller settings. Enable "**Use Physical VMU Memory**". Enable "**Use Network Expansion Devices**" for the controller port you want to use to connect.
-2) Once both Flycast and DreamPotato are running, start a game in Flycast. After a moment, the swirl icon should appear in the DreamPotato menu bar indicating things are connected.
-3) If you get disconnected, pause Flycast and hit the Connect button to reconnect.
+1) Download the Hollycast release, which has compatible versions of Hollycast + DreamPotato to use together. Make sure the two apps are kept in the same folder.
+2) Open the Hollycast controller settings. Pick DreamPotato as the expansion device type for the desired ports/slots. (i.e. use "DreamPotato" instead of "Sega VMU".)
+    - Settings **Use External VMU Memory** and **DreamPotato Integrated Mode** are enabled by default. They should be left enabled for best results.
+3) Hit "Done". DreamPotato should launch automatically. You should see the swirl icon in the DreamPotato menu bar indicating things are connected.
+4) If you get disconnected, you can close DreamPotato if needed, and open/close the settings page to relaunch it.
 
 Additional notes/caveats:
-1) DreamPotato defaults to connecting to slot A1. You can go into the settings and change this if you wish.
-2) If you disable **Use Physical VMU Memory**, then Flycast will use its own internal VMU files for saving/loading games. DreamPotato will still display VMU graphics in that case.
-    - When loading state in Flycast, Use Physical VMU Memory will be temporarily disabled. You'll need to pause the game and disconnect/reconnect DreamLink in order to resume using DreamPotato's VMU memory.
-2) DreamPotato will "take over" all the expansion devices for a given controller. So, if you want to do stuff like copy between Flycast-managed and DreamPotato-managed VMUs, you'll have to put them in separate controllers.
-3) DreamPotato does not play sound while docked to a controller. You should leave the Flycast VMU sound setting enabled if you want that. (DreamPotato *does* play sound in standalone mode.)
-4) If you want to use DreamPotato with multiple ports, you can launch multiple instance, and set a different Dreamcast Slot setting for each one.
-5) In Chao Adventure, you need to hit Mode to exit the game before inserting the VMU, or your progress may not be saved.
+1) DreamPotato does not play sound while docked to a controller. You should leave the Hollycast VMU sound setting enabled if you want that. (DreamPotato *does* play sound in standalone mode.)
+2) You can use DreamPotatoes with as many slots/ports as you want. A separate window will open for each port.
 
 ## Usage
 
@@ -61,7 +56,7 @@ Download the latest bits from the [Releases](https://github.com/RikkiGibson/Drea
 
 ### Open Folder
 
-DreamPotato [dev build](https://github.com/RikkiGibson/DreamPotato/actions/runs/27885462097) has "Open Folder" and "Save As Folder" commands inspired by the "GCI Folder" support in Dolphin. When a folder is opened, DreamPotato loads all the `.vmi`/`.vms` files found in it. When the VMU's file contents change during gameplay, DreamPotato will automatically update the corresponding files in the folder.
+DreamPotato has "Open Folder" and "Save As Folder" commands inspired by the "GCI Folder" support in Dolphin. When a folder is opened, DreamPotato loads all the `.vmi`/`.vms` files found in it. When the VMU's file contents change during gameplay, DreamPotato will automatically update the corresponding files in the folder.
 
 Notes:
 - "Save As Folder" is a convenient way to extract individual `.vmi`/`.vms` saves from your `.vmu`/`.bin` memory card file.
