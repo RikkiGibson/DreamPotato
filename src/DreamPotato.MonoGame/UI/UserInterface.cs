@@ -23,8 +23,6 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
-using NativeFileDialogSharp;
-
 using Numerics = System.Numerics;
 using WB = DreamPotato.Core.Waterbear;
 
@@ -300,7 +298,7 @@ partial class UserInterface
             return;
         }
 
-        var result = Dialog.FileOpen("vmu,bin,vms,dci", defaultPath: null);
+        var result = _game.PlatformServices.OpenVmuDialog();
         if (result.IsOk)
         {
             _game.LoadAndStartVmsOrVmuFile(presenter, result.Path);
@@ -316,7 +314,7 @@ partial class UserInterface
             return;
         }
 
-        var result = Dialog.FolderPicker(defaultPath: null);
+        var result = _game.PlatformServices.PickFolderDialog();
         if (result.IsOk)
         {
             _game.LoadAndStartVmsOrVmuFile(presenter, result.Path);
@@ -929,7 +927,7 @@ partial class UserInterface
 
         if (ImGui.MenuItem("Save As"))
         {
-            var result = Dialog.FileSave(filterList: "vmu,bin", defaultPath: null);
+            var result = _game.PlatformServices.SaveVmuDialog();
             if (result.IsOk)
             {
                 _game.SaveVmuFileAs(presenter.Vmu, result.Path);
@@ -938,7 +936,7 @@ partial class UserInterface
 
         if (ImGui.MenuItem("Save As Folder"))
         {
-            var result = Dialog.FolderPicker(defaultPath: null);
+            var result = _game.PlatformServices.PickFolderDialog();
             if (result.IsOk)
             {
                 if (_game.SaveVmuAsFolder(presenter.Vmu, result.Path) is (false, var error))

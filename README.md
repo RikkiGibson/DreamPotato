@@ -86,9 +86,9 @@ Key and button mappings can be changed in Settings -> Keyboard Config / Gamepad 
 - Install a .NET SDK 9 matching the version in `global.json`.
     - Easiest: install [`dotnetup`](https://github.com/dotnet/sdk/tree/release/dnup/documentation/general/dotnetup), then run `dotnetup` in this folder.
     - Alternatively: [download](https://dotnet.microsoft.com/en-us/download/dotnet) and run .NET SDK from Microsoft's website.
-- Copy your `american_v1.05.bin` VMU ROM into `src/DreamPotato.MonoGame/Data/`.
+- Copy your `american_v1.05.bin` VMU ROM into `src/DreamPotato.Core/Data/`.
 - Build everything: `dotnet build`.
-- Run the emulator: `dotnet run --project src/DreamPotato.MonoGame`.
+- Run the emulator: `dotnet run --project src/DreamPotato.MonoGame.Desktop`.
 - Run tests: `dotnet test`
 
 ## Project Overview
@@ -96,7 +96,8 @@ Key and button mappings can be changed in Settings -> Keyboard Config / Gamepad 
 Under `src/`:
 - `DreamPotato.Core` is where the emulator implementation resides.
 - `DreamPotato.Tests` includes unit tests for the emulator implementation.
-- `DreamPotato.MonoGame` is the front-end, including UI and config file handling.
+- `DreamPotato.MonoGame` is most of the front-end, including UI and config file handling.
+- `DreamPotato.MonoGame.Desktop` is the desktop (Windows/macOS/Linux) application.
 - `dreampotato-vscode` is the VS Code extension--in *very* barebones/"alpha" state.
     - Currently, it contains only a TextMate grammar for LC86k assembly.
 

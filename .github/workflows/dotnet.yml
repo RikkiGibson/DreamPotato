@@ -10,6 +10,9 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
+env:
+  SignedBuild: ${{ github.event_name != 'pull_request' && github.ref_name == 'main' || '' }}
+
 jobs:
   Test:
     runs-on: ubuntu-latest
@@ -18,7 +21,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v5
     - name: Download resources
-      run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.Tests/Data/american_v1.05.bin
+      run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.Core/Data/american_v1.05.bin
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
@@ -50,12 +53,12 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v5
     - name: Download resources
-      run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.MonoGame/Data/american_v1.05.bin
+      run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.Core/Data/american_v1.05.bin
     - name: Restore dependencies
       run: dotnet restore
 
     - name: Run pack-x64.sh
-      run: ./src/DreamPotato.MonoGame/Linux/pack-x64.sh
+      run: ./src/DreamPotato.MonoGame.Desktop/Linux/pack-x64.sh
     - name: Upload Linux x64
       uses: actions/upload-artifact@v6
       with:
@@ -71,12 +74,12 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
       - name: Download resources
-        run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.MonoGame/Data/american_v1.05.bin
+        run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.Core/Data/american_v1.05.bin
 
       - name: dotnet publish win-x64
-        run: dotnet publish src/DreamPotato.MonoGame -r win-x64 -p:DebugSymbols=False
+        run: dotnet publish src/DreamPotato.MonoGame.Desktop -r win-x64 -p:DebugSymbols=False
 
-      - if: ${{ github.event_name != 'pull_request' }}
+      - if: ${{ env.SignedBuild }}
         name: Azure login
         uses: azure/login@v3
         with:
@@ -84,14 +87,14 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - if: ${{ github.event_name != 'pull_request' }}
+      - if: ${{ env.SignedBuild }}
         name: Sign files
         uses: azure/artifact-signing-action@v2
         with:
           endpoint: https://wus2.codesigning.azure.net
           signing-account-name: DreamPotatoSigning
           certificate-profile-name: DreamPotatoPublicCert
-          files-folder: artifacts/publish/DreamPotato.MonoGame/release_win-x64/
+          files-folder: artifacts/publish/DreamPotato.MonoGame.Desktop/release_win-x64/
           files-folder-filter: exe,dll
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
@@ -101,7 +104,7 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: DreamPotato-Windows-x64-dev
-          path: artifacts/publish/DreamPotato.MonoGame/release_win-x64/
+          path: artifacts/publish/DreamPotato.MonoGame.Desktop/release_win-x64/
 
   PublishMac:
     runs-on: macos-latest
@@ -110,9 +113,9 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v5
     - name: Download resources
-      run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.MonoGame/Data/american_v1.05.bin
+      run: curl https://dreampotato.blob.core.windows.net/resources/Data/american_v1.05.bin -o src/DreamPotato.Core/Data/american_v1.05.bin
 
-    - if: ${{ github.event_name != 'pull_request' }}
+    - if: ${{ env.SignedBuild }}
       name: Import signing certificate
       env:
         APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
@@ -137,13 +140,13 @@ jobs:
 
     - name: Run pack-arm64.sh
       env:
-        APPLE_ID: ${{ github.event_name != 'pull_request' && secrets.APPLE_ID || '' }}
-        APPLE_ID_PASSWORD: ${{ github.event_name != 'pull_request' && secrets.APPLE_ID_PASSWORD || '' }}
-        APPLE_TEAM_ID: ${{ github.event_name != 'pull_request' && secrets.APPLE_TEAM_ID || '' }}
-      run: ./src/DreamPotato.MonoGame/Mac/pack-arm64.sh
+        APPLE_ID: ${{ env.SignedBuild && secrets.APPLE_ID || '' }}
+        APPLE_ID_PASSWORD: ${{ env.SignedBuild && secrets.APPLE_ID_PASSWORD || '' }}
+        APPLE_TEAM_ID: ${{ env.SignedBuild && secrets.APPLE_TEAM_ID || '' }}
+      run: ./src/DreamPotato.MonoGame.Desktop/Mac/pack-arm64.sh
 
     - name: Cleanup keychain
-      if: ${{ always() && github.event_name != 'pull_request' }}
+      if: ${{ always() && env.SignedBuild }}
       run: security delete-keychain $RUNNER_TEMP/app-signing.keychain-db
 
     - name: Upload Mac arm64

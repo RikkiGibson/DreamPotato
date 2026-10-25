@@ -158,6 +158,9 @@ if (showHelp)
     return 1;
 }
 
-using var game = new Game1(gameFilePath, integrated ? (tcpPort!.Value, port!.Value, slots!.Value) : null);
+var commandLineArgs = new CommandLineArgs(
+    gameFilePath,
+    integrated ? new(tcpPort!.Value, port!.Value, slots!.Value) : null);
+using var game = new Game1(new DesktopPlatformServices(), commandLineArgs);
 game.Run();
 return 0;

@@ -18,11 +18,11 @@
         },
         {
             "type": "dotnet",
-            "task": "build DreamPotato.MonoGame.csproj",
-            "file": "${workspaceFolder}/src/DreamPotato.MonoGame/DreamPotato.MonoGame.csproj",
+            "task": "build DreamPotato.MonoGame.Desktop.csproj",
+            "file": "${workspaceFolder}/src/DreamPotato.MonoGame.Desktop/DreamPotato.MonoGame.Desktop.csproj",
             "group": "build",
             "problemMatcher": [],
-            "label": "dotnet: build DreamPotato.MonoGame.csproj"
+            "label": "dotnet: build DreamPotato.MonoGame.Desktop.csproj"
         },
         {
             "type": "dotnet",

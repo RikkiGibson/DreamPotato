@@ -1,10 +1,11 @@
 <Project>
   <PropertyGroup>
-    <Version>0.3.1</Version>
+    <Version>1.0.0</Version>
   </PropertyGroup>
 
   <PropertyGroup>
     <UseArtifactsOutput>true</UseArtifactsOutput>
     <ArtifactsPath>$(MSBuildThisFileDirectory)../artifacts</ArtifactsPath>
+    <RestoreAdditionalProjectSources>$(MSBuildThisFileDirectory)../local-feed</RestoreAdditionalProjectSources>
   </PropertyGroup>
 </Project>

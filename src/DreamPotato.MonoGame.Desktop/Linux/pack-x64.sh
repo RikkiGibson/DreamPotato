@@ -2,13 +2,13 @@
 set -e
 
 # Runs a publish and creates a Linux AppImage for x64.
-# Requires appimagetool to be available on PATH.
 # See https://docs.appimage.org/packaging-guide/manual.html
 scriptroot="$(dirname "$0")"
 project="$scriptroot/.."
+iconspath="$project/../DreamPotato.MonoGame/Content"
 reporoot="$(realpath "$scriptroot/../../..")"
 artifacts="$reporoot/artifacts"
-publishdir="$artifacts/publish/DreamPotato.MonoGame/release_linux-x64"
+publishdir="$artifacts/publish/DreamPotato.MonoGame.Desktop/release_linux-x64"
 appdir="$artifacts/linux-x64/DreamPotato.AppDir"
 appimagetool="$artifacts/tools/appimagetool.AppImage"
 polyfill_glibc="$artifacts/tools/polyfill-glibc"
@@ -35,7 +35,7 @@ if [ ! -x "$polyfill_glibc" ]; then
     fi
 
     git init "$artifacts/tools/polyfill-glibc-src"
-    git -C "$artifacts/tools/polyfill-glibc-src" remote add origin https://github.com/corsix/polyfill-glibc
+    git -C "$artifacts/tools/polyfill-glibc-src" remote add origin https://github.com/corsix/polyfill-glibc || true
     git -C "$artifacts/tools/polyfill-glibc-src" fetch origin dd59051faaa10ee63c1b96f1b47bf9fcd3770ee2
     git -C "$artifacts/tools/polyfill-glibc-src" checkout dd59051faaa10ee63c1b96f1b47bf9fcd3770ee2
     "$ninja_bin" -C "$artifacts/tools/polyfill-glibc-src" polyfill-glibc
@@ -44,12 +44,13 @@ if [ ! -x "$polyfill_glibc" ]; then
 fi
 
 echo "Running dotnet publish..."
-dotnet publish "$project" -c Release -r linux-x64 --self-contained -p:DebugSymbols=False -p:LinuxAppImage=True
+# Linux version needs the bmp icon for title bar and taskbar
+dotnet publish "$project" -c Release -r linux-x64 --self-contained -p:DebugSymbols=False -p:UseBmpIcon=True
 
 echo "Assembling AppDir at '$appdir'..."
 rm -rf "$appdir"
 mkdir -p "$appdir/usr/bin"
-mkdir -p "$appdir/usr/share/icons/hicolor/32x32/apps"
+mkdir -p "$appdir/usr/share/icons/hicolor/48x48/apps"
 
 # Copy published output
 cp "$publishdir/DreamPotato" "$appdir/usr/bin/"
@@ -59,8 +60,8 @@ cp -R "$publishdir/Content" "$appdir/usr/bin/Content"
 
 # Desktop entry, icon, and AppRun
 cp "$scriptroot/DreamPotato.desktop" "$appdir/"
-cp "$project/Icon.png" "$appdir/DreamPotato.png"
-cp "$project/Icon.png" "$appdir/usr/share/icons/hicolor/32x32/apps/DreamPotato.png"
+cp "$iconspath/Icon-256px.png" "$appdir/DreamPotato.png"
+cp "$iconspath/Icon-48px.png" "$appdir/usr/share/icons/hicolor/48x48/apps/DreamPotato.png"
 cp "$scriptroot/AppRun" "$appdir/"
 
 # Some libraries like libcimgui.so have a high glibc requirement.
@@ -69,11 +70,14 @@ cp "$scriptroot/AppRun" "$appdir/"
 # https://github.com/ImGuiNET/ImGui.NET/issues/491
 echo "Patching binaries for glibc 2.34 compatibility..."
 for f in "$appdir/usr/bin/DreamPotato" "$appdir"/usr/bin/*.so; do
-    [ -f "$f" ] && "$polyfill_glibc" --target-glibc=2.34 "$f" && echo "  patched $f"
+    if [ -f "$f" ]; then
+        "$polyfill_glibc" --target-glibc=2.34 "$f"
+        echo "  patched $f"
+    fi
 done
 
 echo "Building AppImage..."
-$appimagetool "$appdir" "$artifacts/DreamPotato-linux-x64.AppImage"
+"$appimagetool" "$appdir" "$artifacts/DreamPotato-linux-x64.AppImage"
 chmod +x "$artifacts/DreamPotato-linux-x64.AppImage"
 
 echo "Done: $artifacts/DreamPotato-linux-x64.AppImage"
