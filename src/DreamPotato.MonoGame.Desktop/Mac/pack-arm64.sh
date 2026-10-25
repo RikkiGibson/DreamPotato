@@ -7,8 +7,8 @@ scriptroot="$(dirname $0)"
 project="$scriptroot/.."
 reporoot="$(realpath $scriptroot/../../..)"
 artifacts="$reporoot/artifacts"
-iconflat="$project/../DreamPotato.MonoGame/Content/Icon-full-flat.png"
-iconrich="$project/../DreamPotato.MonoGame/Content/Icon-full-rich.png"
+iconflat="$project/../DreamPotato.MonoGame/Content/Icon-flat-mac.png"
+iconrich="$project/../DreamPotato.MonoGame/Content/Icon-rich-mac.png"
 
 echo "Running dotnet publish..."
 dotnet publish $project -c Release -r osx-arm64 --self-contained -p:DebugSymbols=False -p:UseBmpIcon=False
