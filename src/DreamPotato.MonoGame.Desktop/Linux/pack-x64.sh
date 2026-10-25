@@ -44,7 +44,8 @@ if [ ! -x "$polyfill_glibc" ]; then
 fi
 
 echo "Running dotnet publish..."
-dotnet publish "$project" -c Release -r linux-x64 --self-contained -p:DebugSymbols=False -p:UseBmpIcon=False
+# Linux version needs the bmp icon for title bar and taskbar
+dotnet publish "$project" -c Release -r linux-x64 --self-contained -p:DebugSymbols=False -p:UseBmpIcon=True
 
 echo "Assembling AppDir at '$appdir'..."
 rm -rf "$appdir"
