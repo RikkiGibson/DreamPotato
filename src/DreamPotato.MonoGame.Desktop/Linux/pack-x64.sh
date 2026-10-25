@@ -50,7 +50,7 @@ dotnet publish "$project" -c Release -r linux-x64 --self-contained -p:DebugSymbo
 echo "Assembling AppDir at '$appdir'..."
 rm -rf "$appdir"
 mkdir -p "$appdir/usr/bin"
-mkdir -p "$appdir/usr/share/icons/hicolor/32x32/apps"
+mkdir -p "$appdir/usr/share/icons/hicolor/48x48/apps"
 
 # Copy published output
 cp "$publishdir/DreamPotato" "$appdir/usr/bin/"
