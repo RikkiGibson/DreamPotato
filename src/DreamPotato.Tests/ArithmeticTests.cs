@@ -608,6 +608,25 @@ public class ArithmeticTests
     }
 
     [Fact]
+    public void ADDC_Carry_WhenWrappedResultEqualsLeftOperand()
+    {
+        var cpu = new Cpu();
+        ReadOnlySpan<byte> instructions = [
+            OpcodeMask.ADDC | AddressModeMask.Immediate, 0xff,
+        ];
+        instructions.CopyTo(cpu.ROM);
+        cpu.SFRs.Acc = 0xa7;
+        cpu.SFRs.Psw = new() { Cy = true };
+
+        cpu.Step();
+
+        Assert.Equal(0xa7, cpu.SFRs.Acc);
+        Assert.True(cpu.SFRs.Psw.Cy);
+        Assert.True(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
+    }
+
+    [Fact]
     public void SUB_Immediate_Example()
     {
         var cpu = new Cpu();
@@ -741,6 +760,25 @@ public class ArithmeticTests
         Assert.Equal(0xbe, cpu.SFRs.Acc);
         Assert.False(cpu.SFRs.Psw.Cy);
         Assert.False(cpu.SFRs.Psw.Ac);
+        Assert.False(cpu.SFRs.Psw.Ov);
+    }
+
+    [Fact]
+    public void SUBC_Carry_WhenWrappedResultEqualsLeftOperand()
+    {
+        var cpu = new Cpu();
+        ReadOnlySpan<byte> instructions = [
+            OpcodeMask.SUBC | AddressModeMask.Immediate, 0xff,
+        ];
+        instructions.CopyTo(cpu.ROM);
+        cpu.SFRs.Acc = 0xa7;
+        cpu.SFRs.Psw = new() { Cy = true };
+
+        cpu.Step();
+
+        Assert.Equal(0xa7, cpu.SFRs.Acc);
+        Assert.True(cpu.SFRs.Psw.Cy);
+        Assert.True(cpu.SFRs.Psw.Ac);
         Assert.False(cpu.SFRs.Psw.Ov);
     }
 
