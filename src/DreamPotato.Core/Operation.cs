@@ -4,21 +4,8 @@ using System.Collections.Immutable;
 
 namespace DreamPotato.Core;
 
-// what does an instruction need to do?
-// - disassemble, dude.
-// what does it consist of?
-// - everything which is statically known from the code. i.e. state of status registers etc must not factor in.
-// - things which are statically known from the code should factor in.
-// - should be able to hand one off to a cpu and execute.
-
-// can we code up a set of "valid instruction symbols?"
-// e.g. show which modes are valid. think of this as doing a lookup.
-
-// TODO: eventually would like to be able to debug the emulated program
-// https://vscode-docs.readthedocs.io/en/stable/extensions/example-debuggers/
-
 /// <summary>
-/// Definition of an instruction, including opcode and parameters.
+/// Definition of an operation performed by an <see cref="Instruction"/>, including opcode and parameters.
 /// Note that order of parameters comes from assembly mnemonics, *not* from memory layout of instructions.
 /// </summary>
 record Operation(OperationKind Kind, ImmutableArray<Parameter> Parameters, byte Size, byte Cycles)
