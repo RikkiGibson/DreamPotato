@@ -386,6 +386,25 @@ public class DataTransferTests
     }
 
     [Fact]
+    public void POP_WithoutPUSH()
+    {
+        var cpu = new Cpu();
+        ReadOnlySpan<byte> instructions = [
+            OpcodeMask.POP | 1, 0x00, // acc
+        ];
+        instructions.CopyTo(cpu.ROM);
+        cpu.SFRs.Sp = Memory.StackStart;
+        cpu.Memory.Direct_AccessMainRam0()[Memory.StackStart] = 0xff;
+
+        Assert.Empty(cpu.StackData); // cpu tolerates pop despite StackData being empty
+        Assert.Equal(0, cpu.SFRs.Acc);
+        Assert.Equal(2, cpu.Step());
+        Assert.Equal(0xff, cpu.SFRs.Acc);
+        Assert.Equal(Memory.StackStart - 1, cpu.SFRs.Sp);
+        Assert.Empty(cpu.StackData);
+    }
+
+    [Fact]
     public void XCH_Direct_Example1()
     {
         // VMC-195
