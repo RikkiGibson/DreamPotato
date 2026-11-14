@@ -1298,10 +1298,11 @@ public class Cpu
         var lhs = SFRs.Acc;
         var psw = SFRs.Psw;
         var carry = psw.Cy ? 1 : 0;
-        var result = (byte)(lhs + carry + rhs);
+        var sum = lhs + carry + rhs;
+        var result = (byte)sum;
         SFRs.Acc = result;
 
-        psw.Cy = result < lhs;
+        psw.Cy = sum > byte.MaxValue;
         psw.Ac = (lhs & 0xf) + carry + (rhs & 0xf) > 0xf;
 
         // Overflow occurs if either:
@@ -1355,11 +1356,12 @@ public class Cpu
         var lhs = SFRs.Acc;
         var psw = SFRs.Psw;
         var carry = psw.Cy ? 1 : 0;
-        var result = (byte)(lhs - carry - rhs);
+        var sum = lhs - carry - rhs;
+        var result = (byte)sum;
         SFRs.Acc = result;
 
         // Carry is set when the subtraction yields a negative result.
-        psw.Cy = lhs - carry - rhs < 0;
+        psw.Cy = sum < 0;
         psw.Ac = (lhs & 0xf) - carry - (rhs & 0xf) < 0;
 
         // Overflow occurs if either:
