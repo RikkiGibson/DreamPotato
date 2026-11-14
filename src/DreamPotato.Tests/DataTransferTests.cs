@@ -388,7 +388,6 @@ public class DataTransferTests
     [Fact]
     public void POP_WithoutPUSH()
     {
-        // VMC-193
         var cpu = new Cpu();
         ReadOnlySpan<byte> instructions = [
             OpcodeMask.POP | 1, 0x00, // acc
